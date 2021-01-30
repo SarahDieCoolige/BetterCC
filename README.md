@@ -6,12 +6,14 @@ Das wird meine Erweiterung fur ChatCity
 
 ### Das sind meine Pläne 
 
-- [ ] Eine bessere Flüster Funktion 
-  - Dauerflüster, welches auch bleibt, wenn sich der angeflüsterte Nutzer neu einloggt
-  - Nie wieder ausversehen im Open landen^^
+- [ ] Eine bessere Dauerflüster Funktion. Nie wieder ausversehen im Open landen^^
+  - Bleibt, wenn man sich selbst neu einloggt, oder die Seite neu lädt
+  - Bleibt, wenn sich der/die angeflüsterte neu einloggt, oder die Seite neu lädt 
 - [ ] Eine Dauerignorier Funktion
   - Eine Liste mit Namen, die automatisch ignoriert werden
   - Bleibt auch wenn man sich neu einloggt
+  - Evtl eine von der Community geführte Blockliste, die man abonnieren kann(??)<br>
+    Weiß nicht, ob das eine gute Idee ist, aber ich schreibs einfach mal auf die Liste
 - [ ] Ein größeres Eingabefeld. Ich finde das Ding ist viel zu winzig 
 - [ ] Die Seite generell etwas schöner und moderner machen
 
