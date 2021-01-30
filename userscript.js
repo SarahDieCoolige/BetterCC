@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Better cc Beta
-// @version  0.1.1
+// @version  0.1.2
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/  
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/* 
@@ -19,6 +19,7 @@
 // @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/userscript.js
 // @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL https://github.com/SarahDieCoolige/BetterCC
+// 
 // @run-at   document-idle
 // ==/UserScript==
 
@@ -33,7 +34,7 @@ cclog("Version: " + GM_info.script.version);
 var bettercc = unsafeWindow.bettercc = {};
 
 const superwhisper = 1;
-const replaceInputField = 1;
+const replaceInputField = 0;
 const hideHeader = 1;
 const hideAds = 1;
 const hideOtherStuff = 1;
@@ -73,6 +74,8 @@ if (/cpop.html/.test(window.location.href)) {
         e.preventDefault();
       }
     });
+  } else {
+    $('form[name="hold"]').children('input[type="text"]').attr("id", "custom_input_text").attr("placeholder", "Du chattest mit allen...");     
   }
   
   // replace long submit function in input form
@@ -130,7 +133,7 @@ if (/cpop.html/.test(window.location.href)) {
     background: #385F7C ;
   }
   
-  .chat_i textarea {
+  .chat_i #custom_input_text {
     width: 95%;
     resize: none;
     font-size: 1.2em;
@@ -181,10 +184,12 @@ if (/cpop.html/.test(window.location.href)) {
     background: transparent;  
   }
   `);
- 
+  
   
   if (superwhisper) {
     let userStoreWhisper = 'whisper_' + userStore;
+    let openMsgCmdRegex = /^\/open\s|^\/o\s/;
+    let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
     
     (async function () {
       try {
@@ -203,11 +208,11 @@ if (/cpop.html/.test(window.location.href)) {
       if (mymsg.toLowerCase() === "/open") {
         bettercc.superwhisper("");
         mymsg = ""
-        document.hold.OUT1.value = mymsg;
         return false;
       }
-      else if (mymsg.toLowerCase().startsWith("/open ")) {
-        mymsg = mymsg.replace(/^\/open\s/gi, '');
+      //else if starts with "/open " or "/o "
+      else if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(openMsgReplaceRegex, '');
       }
       else if (!mymsg.startsWith("/")) {
         mymsg = "/w " + whispernick + " " + mymsg;
@@ -220,10 +225,8 @@ if (/cpop.html/.test(window.location.href)) {
     bettercc.superwhisper = async function (whispernick) {
       var input = $("#custom_input_text");
       var placeholder = input.attr("placeholder");
-      var whispernickclean = whispernick.replace(/[^a-zA-Z0-9_ÄäÖöÜü]/g, '-');
-      var nickRegex = new RegExp(whispernickclean);
       
-      if (nickRegex.test(placeholder, i) || whispernick === "") {
+      if (placeholder.includes(whispernick) || whispernick === "" || whispernick === undefined) {
         $('form[name="hold').attr("onsubmit", "bettercc.onSubmit();");
         $('#custom_input_text').removeClass('superwhisper');
         await GM.setValue(userStoreWhisper, "");
@@ -232,7 +235,7 @@ if (/cpop.html/.test(window.location.href)) {
         $('form[name="hold').attr("onsubmit", 'bettercc.onSubmitSuperwhisper("' + whispernick + '");');
         $('#custom_input_text').addClass('superwhisper');
         await GM.setValue(userStoreWhisper, whispernick);
-        placeholder = "Du flüsterst mit " + whispernickclean + '...\tTipps: "/open", "/open Hi All :)"';
+        placeholder = "Du flüsterst mit " + whispernick + '...\tTipps: "/open", "/open Hi All :)"';
       }
       input.attr("placeholder", placeholder);
       $('.ulist-popup').hide();
