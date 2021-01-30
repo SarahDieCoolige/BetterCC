@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Better cc Beta
-// @version  0.1
+// @version  0.1.1
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/  
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/* 
