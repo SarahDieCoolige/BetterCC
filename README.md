@@ -22,8 +22,6 @@ Das wird meine Erweiterung fur ChatCity
 - [x] Ein größeres Eingabefeld. Ich finde das Ding ist viel zu winzig 
 - [x] Die Seite generell etwas schöner und moderner machen
 
-###### [x]- erledigt / [ ]- ich versuchs^^ 
-
 ### Vorschläge und Anregungen
 Wenn ihr noch andere Ideen oder Vorschläge habt, oder eine Funktion vermisst, 
 die ich noch nicht gemacht habe, sagt mir einfach im Chat oder hier auf der Seite Bescheid.
