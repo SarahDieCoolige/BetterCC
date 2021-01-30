@@ -7,7 +7,6 @@
 // 
 //  
 // @require  http://code.jquery.com/jquery-2.2.4.min.js
-// @require  https://openuserjs.org/src/libs/sizzle/GM_config.js
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
