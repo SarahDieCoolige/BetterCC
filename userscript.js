@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Better cc Beta
-// @version  0.1.3
+// @version  0.1.5
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/  
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/* 
@@ -34,7 +34,7 @@ cclog("Version: " + GM_info.script.version);
 var bettercc = unsafeWindow.bettercc = {};
 
 const superwhisper = 1;
-const replaceInputField = 0;
+const replaceInputField = 1;
 const hideHeader = 1;
 const hideAds = 1;
 const hideOtherStuff = 1;
