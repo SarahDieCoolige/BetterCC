@@ -17,7 +17,8 @@
 //
 // @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/userscript.js
 // @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/userscript.js
-//
+// @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
+// @homepageURL https://github.com/SarahDieCoolige/BetterCC
 // @run-at   document-idle
 // ==/UserScript==
 
