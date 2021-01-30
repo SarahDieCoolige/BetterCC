@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     Better cc Beta
-// @version  0.1.2
+// @version  0.1.3
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/  
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/* 
@@ -208,6 +208,7 @@ if (/cpop.html/.test(window.location.href)) {
       if (mymsg.toLowerCase() === "/open") {
         bettercc.superwhisper("");
         mymsg = ""
+        document.hold.OUT1.value = mymsg;
         return false;
       }
       //else if starts with "/open " or "/o "
