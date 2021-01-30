@@ -16,6 +16,9 @@
 // @grant    GM_getResourceText
 // @grant    GM_log
 //
+// @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/userscript.js
+// @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/userscript.js
+//
 // @run-at   document-idle
 // ==/UserScript==
 
