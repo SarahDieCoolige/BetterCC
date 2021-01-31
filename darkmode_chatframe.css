@@ -19,5 +19,5 @@
     scrollbar-color: #171b1c #484f53;
 }
 font[color] {
-  filter: brightness(400%) contrast(400%) !important
+    filter: brightness(100%) contrast(130%) !important
 }  
