@@ -1,3 +1,23 @@
+/*
+                        _______
+                       /       \
+                      .==.    .==.
+                     ((  ))==((  ))
+                    / "=="    "=="\
+                   /____|| || ||___\
+       ________     ____    ________  ___    ___
+       |  ___  \   /    \   |  ___  \ |  |  /  /
+       |  |  \  \ /  /\  \  |  |  \  \|  |_/  /
+       |  |   )  /  /__\  \ |  |__/  /|  ___  \
+       |  |__/  /  ______  \|  ____  \|  |  \  \
+_______|_______/__/ ____ \__\__|___\__\__|___\__\____
+|  ___  \ |  ____/ /    \   |  ___  \ |  ____|  ___  \
+|  |  \  \|  |___ /  /\  \  |  |  \  \|  |___|  |  \  \
+|  |__/  /|  ____/  /__\  \ |  |   )  |  ____|  |__/  /
+|  ____  \|  |__/  ______  \|  |__/  /|  |___|  ____  \
+|__|   \__\____/__/      \__\_______/ |______|__|   \__\
+                https://darkreader.org
+*/
 /* User-Agent Style */
 html {
     background-color: #0a1822 !important;
@@ -15,9 +35,7 @@ a {
 table {
     border-color: #29618a;
 }
-::placeholder {
-    color: #aaa5a1;
-}
+
 input:-webkit-autofill,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
@@ -66,7 +84,8 @@ select:-webkit-autofill {
 /* Variables Style */
 :root {
    --darkreader-neutral-background: #08131b;
-   --darkreader-neutral-text: #c5c2bf;
+   --darkreader-neutral-text: #d5e0e8;
+   
    --darkreader-selection-background: #004daa;
    --darkreader-selection-text: #dbd9d7;
 }
@@ -312,9 +331,16 @@ a.superwhisper {
     background-image: initial;
     background-color: rgb(45, 76, 99);
 }
-#custom_input_text.superwhisper::placeholder {
-    color: rgb(81, 202, 136);
+::placeholder {
+  opacity: 0.4 !important;
+  color: #8cb1cb !important;
 }
+
+.superwhisper::placeholder {
+  color: #8cb1cb !important;
+  opacity: 0.5 !important;
+}
+
 ::-webkit-scrollbar {
     background-image: initial;
     background-color: transparent;
@@ -326,6 +352,8 @@ a.superwhisper {
     border-color: #d8b013 !important;
     color: #f3e8c8 !important;
 }
-::placeholder {
-    opacity: 0.5 !important;
-}
+
+
+font[color] {
+  filter: brightness(130%) contrast(130%) !important
+}  
