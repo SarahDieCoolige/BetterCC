@@ -69,18 +69,18 @@ a.superwhisper{
 }
 
 .chat_i4 {
-    width: 1%;
+  width: 1%;
 }
 .table{
   border-radius: 10px;
 }
 
 html {
-    overflow: hidden;
-    overflow-x: hidden;
+  overflow: hidden;
+  overflow-x: hidden;
 }
 
 ::-webkit-scrollbar {
-    width: 0px;  /* Remove scrollbar space */
-    background: transparent;  
-}    
+  width: 0px;  /* Remove scrollbar space */
+  background: transparent;  
+}     
