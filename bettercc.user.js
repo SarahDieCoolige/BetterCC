@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC Beta
-// @version  0.2.0
+// @version  0.3.0
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -8,8 +8,8 @@
 // @require  http://code.jquery.com/jquery-2.2.4.min.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.2.0
-// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.2.0
+// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.3.0
+// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.3.0
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -86,12 +86,10 @@ if (/cpop.html/.test(window.location.href)) {
       .attr("placeholder", "Du chattest mit allen...");
   }
 
-  if (superwhisper) {
+  if (superwhisper && !gast) {
     $("#fuu :nth-child(4)").after(
       '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>'
     );
-    // $('<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>' ).insertAfter("#fuu .headline");
-    //
     // replace long submit function in input form
     let onSubmit = new Function($('form[name="hold').attr("onsubmit"));
     bettercc.onSubmit = onSubmit;
@@ -113,15 +111,40 @@ if (/cpop.html/.test(window.location.href)) {
   GM_wrench.addCss(main_css);
 
   if (darkMode) {
-    $(".b15").attr("onclick", "bettercc.toggleTheme()");
     let userStoreTheme = "theme_" + userStore;
+
+    $(".b15").attr("onclick", "bettercc.toggleTheme()");
+
+    function getContrastYIQ(hexcolor) {
+      var r = parseInt(hexcolor.substr(0, 2), 16);
+      var g = parseInt(hexcolor.substr(2, 2), 16);
+      var b = parseInt(hexcolor.substr(4, 2), 16);
+      var yiq = (r * 299 + g * 587 + b * 114) / 1000;
+      return yiq >= 128 ? "black" : "c8dae0";
+    }
+
+    $('form[name="OF"]').wrap("<div id='new'></div>");
+    $('<div id="color"></div>').appendTo("#new");
+    $("#new").css("display", "block");
+    $("#color").css("padding", "5px");
+    $(
+      '<input type="color" id="bgcolorpicker" name="bgcolorpicker" value="#ff0000">'
+    ).appendTo("#color");
+    $("#bgcolorpicker").css("margin", "5px");
+    $("#bgcolorpicker").change(function () {
+      var bg = $("#bgcolorpicker").val().substring(1);
+      var fg = getContrastYIQ(bg);
+      (async () => {
+        //await GM.setValue(userStoreTheme, 0);
+      })();
+      $("head #darkmode").remove();
+      $(iframeWindow).find("head #darkmode").remove();
+      bettercc.setIframeColors(bg, fg);
+    });
 
     bettercc.toggleTheme = async function () {
       let theme = await GM.getValue(userStoreTheme, 1);
-      //alert(theme);
-
-      theme = ++theme % 3;
-      //alert(theme);
+      theme = ++theme % 2;
       await GM.setValue(userStoreTheme, theme);
     };
 
@@ -131,61 +154,61 @@ if (/cpop.html/.test(window.location.href)) {
       setTheme(theme);
     }
 
-    setTimeout(getTheme(), 500);
-
+    setTimeout(getTheme, 1500);
+    var iframe = null;
+    var iContentWindow = null;
+    var iframeWindow = null;
     var bgInterval = 0;
-    async function setTheme(theme) {
-      clearInterval(bgInterval);
 
-      var iframe = document.getElementById("chatframe");
-      var iContentWindow = iframe.contentWindow;
-      var iframeWindow = iContentWindow.document;
+    function setTheme(theme) {
+      //clearInterval(bgInterval);
 
+      iframe = document.getElementById("chatframe");
+      iContentWindow = iframe.contentWindow;
+      iframeWindow = iContentWindow.document;
       if (theme) {
         var dark_mode_css = GM_getResourceText("dark_mode_css");
         //GM_wrench.addCss(dark_mode_css);
-        $("head").append('<style id="darkmode">' + dark_mode_css + "</style>");
-
-        if (theme >= 1) {
+        if (!$("#darkmode").length)
           $("head").append(
             '<style id="darkmode">' + dark_mode_css + "</style>"
           );
-          setTimeout(function () {
-            $(iframeWindow).find("head #darkmode").remove();
-            if (bgInterval) clearInterval(bgInterval);
-            //bgInterval = setInterval(function () { $(iframeWindow).find("body").css('background-color', 'eba096').css('color', 'black'); }, 500);
-            bgInterval = setInterval(function () {
-              iframe.contentWindow.setbgcol("c8dae0", "black");
-            }, 300);
-          }, 1000);
-        }
+
         if (theme == 2) {
-          setTimeout(function () {
-            $(iframeWindow).find("#darkmode").remove();
-            $(iframeWindow)
-              .find("head")
-              .append('<style id="darkmode">' + dark_mode_css + "</style>");
-            if (bgInterval) clearInterval(bgInterval);
-            bgInterval = setInterval(function () {
-              iframe.contentWindow.setbgcol("0a1822", "c8dae0");
-            }, 300);
-          }, 1000);
+          $(iframeWindow).find("head #darkmode").remove();
+          setIframeColors("c8dae0", "black");
+        } else if (theme == 1) {
+          $(iframeWindow)
+            .find("head")
+            .append('<style id="darkmode">' + dark_mode_css + "</style>");
+          setIframeColors("0a1822", "c8dae0");
         }
       } else {
         $("head #darkmode").remove();
-        setTimeout(function () {
-          $(iframeWindow).find("head #darkmode").remove();
-          if (bgInterval) clearInterval(bgInterval);
-          bgInterval = setInterval(function () {
-            iframe.contentWindow.setbgcol("c8dae0", "black");
-          }, 300);
-        }, 1000);
+        $(iframeWindow).find("head #darkmode").remove();
+        setIframeColors("c8dae0", "black");
       }
     }
+
+    function setIframeColors(bg, fg) {
+      if (bgInterval) clearInterval(bgInterval);
+      iframe.contentWindow.setbgcol(bg, fg);
+      $(iframeWindow)
+        .find("*")
+        .css("background", "#" + bg);
+      $(".userlist").css("background", "#" + bg + "70");
+      //$('#custom_input_text').css('background', '#' + fg );
+      bgInterval = setInterval(function () {
+        iframe.contentWindow.setbgcol(bg, fg);
+      }, 1000);
+      $("#bgcolorpicker").val("#" + bg);
+    }
+    bettercc.setIframeColors = setIframeColors;
+
     let themeListener = GM_addValueChangeListener(userStoreTheme, getTheme);
   }
 
-  if (superwhisper) {
+  if (superwhisper && !gast) {
     let userStoreWhisper = "whisper_" + userStore;
     let openMsgCmdRegex = /^\/open\s|^\/o\s/;
     let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
