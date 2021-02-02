@@ -119,8 +119,6 @@ if (/cpop.html/.test(window.location.href)) {
   if (darkMode) {
     let userStoreTheme = "theme_" + userStore;
 
-    $(".b15").attr("onclick", "bettercc.toggleTheme()");
-
     function getContrastYIQ(hexcolor) {
       var r = parseInt(hexcolor.substr(0, 2), 16);
       var g = parseInt(hexcolor.substr(2, 2), 16);
