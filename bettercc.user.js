@@ -129,27 +129,13 @@ if (/cpop.html/.test(window.location.href)) {
       return yiq >= 128 ? "black" : "c8dae0";
     }
 
-    $('form[name="OF"]').wrap("<div id='theme'></div>");
-    $('<div id="color"></div>').appendTo("#theme");
-    $("#theme").css("display", "block");
-    $("#color").css("padding", "5px");
+    $('form[name="OF"]').wrap("<div id='stuff'></div>");
+    $('<div id="color"></div>').appendTo("#stuff");
+    $('form[name="OF"]').detach().appendTo("#stuff").css("display", "");
 
     $(
-      '<input type="color" id="bgcolorpicker" name="bgcolorpicker" value="#ff0000">'
-    ).appendTo("#color");
-    $("#bgcolorpicker").css("margin", "5px");
-    $("#bgcolorpicker").change(function () {
-      var bg = $("#bgcolorpicker").val().substring(1);
-      var fg = getContrastYIQ(bg);
-      (async () => {
-        await GM.setValue(userStoreTheme, 0);
-      })();
-      bettercc.setIframeColors(bg, fg, 0);
-    });
-
-    $(
-      '<input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked>'
-    ).appendTo("#color");
+      '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked>Licht aus</label>'
+    ).appendTo("#stuff");
     $("#darkmodecheck").css("margin", "5px").css("display", "inline");
     $("#darkmodecheck").change(function () {
       GM.setValue(userStoreTheme, Number(this.checked));
@@ -160,6 +146,19 @@ if (/cpop.html/.test(window.location.href)) {
       theme = ++theme % 2;
       await GM.setValue(userStoreTheme, theme);
     };
+
+    $(
+      '<input type="color" id="bgcolorpicker" name="bgcolorpicker" value="#ff0000">'
+    ).appendTo("#stuff");
+    $("#bgcolorpicker").css("margin", "5px");
+    $("#bgcolorpicker").change(function () {
+      var bg = $("#bgcolorpicker").val().substring(1);
+      var fg = getContrastYIQ(bg);
+      (async () => {
+        await GM.setValue(userStoreTheme, 0);
+      })();
+      bettercc.setIframeColors(bg, fg, 0);
+    });
 
     async function getTheme() {
       let theme = await GM.getValue(userStoreTheme, 0);
@@ -196,6 +195,7 @@ if (/cpop.html/.test(window.location.href)) {
       } else {
         $("head #darkmode").remove();
         $(iframeWindow).find("head #darkmode").remove();
+        $("#darkmodecheck").prop("checked", false);
         setIframeColors("c8dae0", "black", 0);
       }
     }
@@ -232,7 +232,6 @@ if (/cpop.html/.test(window.location.href)) {
       }, 1000);
 
       $("#bgcolorpicker").val("#" + bg);
-      $("#darkmode").prop("checked", false);
 
       if (outer == 0) {
         var ulistcolor = "#" + colorShade(bg, 30);
