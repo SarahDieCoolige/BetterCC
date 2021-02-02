@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC Beta
-// @version  0.3.0
+// @version  0.4.0
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -8,8 +8,12 @@
 // @require  http://code.jquery.com/jquery-2.2.4.min.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.3.0
-// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.3.0
+// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.4.0
+// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.4.0
+// @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.4.0
+//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=0.4.0
+//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=0.4.0
+//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=0.4.0
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -20,6 +24,8 @@
 //
 // @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
 // @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
+//// @downloadURL http://0.0.0.0:8080/bettercc.user.js
+//// @updateURL http://0.0.0.0:8080/bettercc.user.js
 // @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL https://github.com/SarahDieCoolige/BetterCC
 // @run-at   document-idle
@@ -123,10 +129,11 @@ if (/cpop.html/.test(window.location.href)) {
       return yiq >= 128 ? "black" : "c8dae0";
     }
 
-    $('form[name="OF"]').wrap("<div id='new'></div>");
-    $('<div id="color"></div>').appendTo("#new");
-    $("#new").css("display", "block");
+    $('form[name="OF"]').wrap("<div id='theme'></div>");
+    $('<div id="color"></div>').appendTo("#theme");
+    $("#theme").css("display", "block");
     $("#color").css("padding", "5px");
+
     $(
       '<input type="color" id="bgcolorpicker" name="bgcolorpicker" value="#ff0000">'
     ).appendTo("#color");
@@ -135,26 +142,32 @@ if (/cpop.html/.test(window.location.href)) {
       var bg = $("#bgcolorpicker").val().substring(1);
       var fg = getContrastYIQ(bg);
       (async () => {
-        //await GM.setValue(userStoreTheme, 0);
+        await GM.setValue(userStoreTheme, 0);
       })();
-      $("head #darkmode").remove();
-      $(iframeWindow).find("head #darkmode").remove();
-      bettercc.setIframeColors(bg, fg);
+      bettercc.setIframeColors(bg, fg, 0);
+    });
+
+    $(
+      '<input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked>'
+    ).appendTo("#color");
+    $("#darkmodecheck").css("margin", "5px").css("display", "inline");
+    $("#darkmodecheck").change(function () {
+      GM.setValue(userStoreTheme, Number(this.checked));
     });
 
     bettercc.toggleTheme = async function () {
-      let theme = await GM.getValue(userStoreTheme, 1);
+      let theme = await GM.getValue(userStoreTheme, 0);
       theme = ++theme % 2;
       await GM.setValue(userStoreTheme, theme);
     };
 
     async function getTheme() {
-      let theme = await GM.getValue(userStoreTheme, 2);
+      let theme = await GM.getValue(userStoreTheme, 0);
       await GM.setValue(userStoreTheme, theme);
       setTheme(theme);
     }
 
-    setTimeout(getTheme, 1500);
+    setTimeout(getTheme, 1000);
     var iframe = null;
     var iContentWindow = null;
     var iframeWindow = null;
@@ -166,42 +179,77 @@ if (/cpop.html/.test(window.location.href)) {
       iframe = document.getElementById("chatframe");
       iContentWindow = iframe.contentWindow;
       iframeWindow = iContentWindow.document;
+
       if (theme) {
         var dark_mode_css = GM_getResourceText("dark_mode_css");
-        //GM_wrench.addCss(dark_mode_css);
-        if (!$("#darkmode").length)
+        var dark_mode_iframe_css = GM_getResourceText("dark_mode_iframe_css");
+
+        if (!$("#darkmode").length) {
           $("head").append(
             '<style id="darkmode">' + dark_mode_css + "</style>"
           );
-
-        if (theme == 2) {
-          $(iframeWindow).find("head #darkmode").remove();
-          setIframeColors("c8dae0", "black");
-        } else if (theme == 1) {
-          $(iframeWindow)
-            .find("head")
-            .append('<style id="darkmode">' + dark_mode_css + "</style>");
-          setIframeColors("0a1822", "c8dae0");
         }
+        $(iframeWindow)
+          .find("head")
+          .append('<style id="darkmode">' + dark_mode_iframe_css + "</style>");
+        setIframeColors("0a1822", "c8dae0", 1);
       } else {
         $("head #darkmode").remove();
         $(iframeWindow).find("head #darkmode").remove();
-        setIframeColors("c8dae0", "black");
+        setIframeColors("c8dae0", "black", 0);
       }
     }
 
-    function setIframeColors(bg, fg) {
+    const colorShade = (col, amt) => {
+      col = col.replace(/^#/, "");
+      if (col.length === 3)
+        col = col[0] + col[0] + col[1] + col[1] + col[2] + col[2];
+
+      let [r, g, b] = col.match(/.{2}/g);
+      [r, g, b] = [
+        parseInt(r, 16) + amt,
+        parseInt(g, 16) + amt,
+        parseInt(b, 16) + amt,
+      ];
+
+      r = Math.max(Math.min(255, r), 0).toString(16);
+      g = Math.max(Math.min(255, g), 0).toString(16);
+      b = Math.max(Math.min(255, b), 0).toString(16);
+
+      const rr = (r.length < 2 ? "0" : "") + r;
+      const gg = (g.length < 2 ? "0" : "") + g;
+      const bb = (b.length < 2 ? "0" : "") + b;
+
+      return `${rr}${gg}${bb}`;
+    };
+
+    function setIframeColors(bg, fg, outer) {
       if (bgInterval) clearInterval(bgInterval);
+
       iframe.contentWindow.setbgcol(bg, fg);
-      $(iframeWindow)
-        .find("*")
-        .css("background", "#" + bg);
-      $(".userlist").css("background", "#" + bg + "70");
-      //$('#custom_input_text').css('background', '#' + fg );
       bgInterval = setInterval(function () {
         iframe.contentWindow.setbgcol(bg, fg);
       }, 1000);
+
       $("#bgcolorpicker").val("#" + bg);
+      $("#darkmode").prop("checked", false);
+
+      if (outer == 0) {
+        var ulistcolor = "#" + colorShade(bg, 30);
+        var inputcolor = colorShade(bg, 80);
+        var placeholderContrast = getContrastYIQ(inputcolor);
+        inputcolor = "#" + inputcolor;
+
+        $(".userlist").css("background", ulistcolor);
+        $("#custom_input_text").css("background", inputcolor);
+
+        if (placeholderContrast == "black")
+          $("#custom_input_text").addClass("light").removeClass("dark");
+        else $("#custom_input_text").addClass("dark").removeClass("light");
+      } else {
+        $(".userlist").css("background", "inherit");
+        $("#custom_input_text").removeAttr("style");
+      }
     }
     bettercc.setIframeColors = setIframeColors;
 

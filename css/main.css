@@ -1,20 +1,20 @@
-.chat_ibg{
+.chat_ibg {
   padding: 5px 0px 0px 20px !important;
   background: transparent;
 }
 
-.superban{
+.superban {
   color: red;
 }
 
-a.superwhisper{
+a.superwhisper {
   color: green;
 }
 
 .ulinner {
   overflow: auto !important;
   overflow-x: hidden !important;
-  padding: 5px 25px 0px 10px;       
+  padding: 5px 25px 0px 10px;
 }
 
 .ulinner.headless {
@@ -22,17 +22,17 @@ a.superwhisper{
 }
 
 .ulinner.headless.gast {
-  top: 50px ;
+  top: 50px;
 }
 
 /* replace Backgound images with simple color */
-.ww_chat_header{
-  background: #385F7C;
+.ww_chat_header {
+  background: #385f7c;
 }
 
 /* replace Backgound images with simple color */
-.ww_chat_footer{
-  background: #385F7C ;
+.ww_chat_footer {
+  background: #385f7c;
 }
 
 .chat_i #custom_input_text {
@@ -49,6 +49,13 @@ a.superwhisper{
 
 .superwhisper::placeholder {
   opacity: 0.5 !important;
+}
+.dark::placeholder {
+  color: white;
+}
+
+.light::placeholder {
+  color: black;
 }
 
 .chat_i {
@@ -71,7 +78,7 @@ a.superwhisper{
 .chat_i4 {
   width: 1%;
 }
-.table{
+.table {
   border-radius: 10px;
 }
 
@@ -81,6 +88,6 @@ html {
 }
 
 ::-webkit-scrollbar {
-  width: 0px;  /* Remove scrollbar space */
-  background: transparent;  
-}     
+  width: 0px; /* Remove scrollbar space */
+  background: transparent;
+}
