@@ -50,6 +50,15 @@ a.superwhisper {
 .superwhisper::placeholder {
   opacity: 0.5 !important;
 }
+
+#custom_input_text.dark {
+  color: white;
+}
+
+#custom_input_text.light {
+  color: black;
+}
+
 .dark::placeholder {
   color: white;
 }
