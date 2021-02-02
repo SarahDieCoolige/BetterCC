@@ -7,10 +7,10 @@ Das wird meine Erweiterung fur ChatCity
 ### Inhaltsverzeichnis
 
 - [BetterCC](#bettercc)
-  - [Das sind meine Pläne](#das-sind-meine-pl%C3%A4ne)
+  - [Funktionen](#funktionen)
   - [Vorschläge und Anregungen](#vorschl%C3%A4ge-und-anregungen)
 
-### Das sind meine Pläne
+### Funktionen
 
 - [x] Eine bessere Dauerflüster Funktion. Nie wieder ausversehen im Open landen^^
   - Bleibt, wenn man sich selbst neu einloggt, oder die Seite neu lädt
