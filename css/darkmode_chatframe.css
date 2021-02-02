@@ -1,23 +1,23 @@
 ::-webkit-scrollbar {
-    background-color: #171b1c;
-    color: #cfc6b7;
-    width: 10px;
+  background-color: #171b1c;
+  color: #cfc6b7;
+  width: 10px;
 }
 ::-webkit-scrollbar-thumb {
-    background-color: #484f53;
+  background-color: #484f53;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background-color: #60696e;
+  background-color: #60696e;
 }
 ::-webkit-scrollbar-thumb:active {
-    background-color: #4c5458;
+  background-color: #4c5458;
 }
 ::-webkit-scrollbar-corner {
-    background-color: #0d0f11;
+  background-color: #0d0f11;
 }
 * {
-    scrollbar-color: #171b1c #484f53;
+  scrollbar-color: #171b1c #484f53;
 }
 font[color] {
-    filter: brightness(100%) contrast(130%) !important
-}  
+  filter: brightness(100%) contrast(130%) !important;
+}
