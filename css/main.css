@@ -14,11 +14,11 @@ a.superwhisper {
 .ulinner {
   overflow: auto !important;
   overflow-x: hidden !important;
-  padding: 5px 25px 0px 10px;
+  padding: 5px 25px 0px 10px !important;
 }
 
 .ulinner.headless {
-  top: 90px;
+  top: 100px;
 }
 
 .ulinner.headless.gast {
@@ -49,6 +49,14 @@ a.superwhisper {
 
 .superwhisper::placeholder {
   opacity: 0.5 !important;
+}
+
+#ul.dark {
+  filter: brightness(1.8);
+}
+
+#ul.light {
+  filter: brightness(1);
 }
 
 #custom_input_text.dark {
@@ -99,4 +107,9 @@ html {
 ::-webkit-scrollbar {
   width: 0px; /* Remove scrollbar space */
   background: transparent;
+}
+
+input,
+textarea {
+  outline: none;
 }
