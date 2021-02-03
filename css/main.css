@@ -14,6 +14,8 @@ a.superwhisper {
 .ulinner {
   overflow: auto !important;
   overflow-x: hidden !important;
+  -ms-overflow-style: none; /* IE 11 */
+  scrollbar-width: none; /* Firefox 64 */
   padding: 5px 25px 0px 10px !important;
 }
 
@@ -103,12 +105,12 @@ html {
   overflow: hidden;
   overflow-x: hidden;
 }
-
+/*
 ::-webkit-scrollbar {
-  width: 0px; /* Remove scrollbar space */
+  width: 0px; 
   background: transparent;
 }
-
+*/
 input,
 textarea {
   outline: none;
