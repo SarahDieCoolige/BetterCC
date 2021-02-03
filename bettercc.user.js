@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC Beta
-// @version  0.5.0
+// @version  0.5.1
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -8,12 +8,12 @@
 // @require  http://code.jquery.com/jquery-2.2.4.min.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.5.0
-// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.5.0
-// @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.5.0
-//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=0.5.0
-//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=0.5.0
-//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=0.5.0
+// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.5.1
+// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.5.1
+// @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.5.1
+//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=0.5.1
+//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=0.5.1
+//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=0.5.1
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -101,19 +101,18 @@ if (/cpop.html/.test(window.location.href)) {
       .attr("id", "custom_input_text")
       .attr("placeholder", "Du chattest mit allen...");
   }
-  
-  
+
   // replace long submit function in input form
   let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit"));
-  
+
   let openMsgCmdRegex = /^\/open\s|^\/o\s/;
   let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
   let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
   let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
-  
+
   bettercc.onSubmit = function (whispernick) {
     let mymsg = document.hold.OUT1.value.trim();
-       
+
     if (superwhisper) {
       // IS "/open"
       if (mymsg.toLowerCase() === "/open") {
@@ -122,12 +121,12 @@ if (/cpop.html/.test(window.location.href)) {
         document.hold.OUT1.value = mymsg;
         return false;
       }
-      
+
       //starts with "/open " or "/o "
       else if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
         mymsg = mymsg.replace(openMsgReplaceRegex, "");
       }
-      
+
       //starts with "/superwhisper " or "/sw "
       else if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
         mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
@@ -136,7 +135,7 @@ if (/cpop.html/.test(window.location.href)) {
         document.hold.OUT1.value = mymsg;
         return false;
       }
-      
+
       // if whispernick arg
       else if (whispernick !== undefined) {
         //starts with "/"
@@ -145,23 +144,22 @@ if (/cpop.html/.test(window.location.href)) {
         }
       }
     }
-    
+
     document.hold.OUT1.value = mymsg;
-    
+
     onSubmitOrig();
   };
-  
+
   $('form[name="hold"]').attr("onsubmit", "bettercc.onSubmit();");
   $('form[name="hold"]').on("submit", function (e) {
     e.preventDefault();
   });
-  
+
   if (superwhisper && !gast) {
     $("#fuu :nth-child(4)").after(
       '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>'
     );
   }
-  
 
   // remove timeout from exit button
   $(".b7").attr("onclick", "bye()");
@@ -359,11 +357,10 @@ if (/cpop.html/.test(window.location.href)) {
       bettercc.superwhisper(whisperUser);
     })();
 
-
     bettercc.superwhisper = async function (whispernick) {
       var input = $("#custom_input_text");
       var placeholder = input.attr("placeholder");
-      
+
       if (
         placeholder.includes(whispernick) ||
         whispernick === "" ||
@@ -381,9 +378,9 @@ if (/cpop.html/.test(window.location.href)) {
         $("#custom_input_text").addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
         placeholder =
-        "Du flüsterst mit " +
-        whispernick +
-        '...\tTipps: "/open", "/open Hi All :)"';
+          "Du flüsterst mit " +
+          whispernick +
+          '...\tTipps: "/open", "/open Hi All :)"';
       }
       input.attr("placeholder", placeholder);
       $(".ulist-popup").hide();
