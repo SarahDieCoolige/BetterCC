@@ -101,19 +101,67 @@ if (/cpop.html/.test(window.location.href)) {
       .attr("id", "custom_input_text")
       .attr("placeholder", "Du chattest mit allen...");
   }
-
+  
+  
+  // replace long submit function in input form
+  let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit"));
+  
+  let openMsgCmdRegex = /^\/open\s|^\/o\s/;
+  let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
+  let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
+  let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
+  
+  bettercc.onSubmit = function (whispernick) {
+    let mymsg = document.hold.OUT1.value.trim();
+       
+    if (superwhisper) {
+      // IS "/open"
+      if (mymsg.toLowerCase() === "/open") {
+        bettercc.superwhisper("");
+        mymsg = "";
+        document.hold.OUT1.value = mymsg;
+        return false;
+      }
+      
+      //starts with "/open " or "/o "
+      else if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(openMsgReplaceRegex, "");
+      }
+      
+      //starts with "/superwhisper " or "/sw "
+      else if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
+        bettercc.superwhisper(mymsg);
+        mymsg = "";
+        document.hold.OUT1.value = mymsg;
+        return false;
+      }
+      
+      // if whispernick arg
+      else if (whispernick !== undefined) {
+        //starts with "/"
+        if (!mymsg.startsWith("/")) {
+          mymsg = "/w " + whispernick + " " + mymsg;
+        }
+      }
+    }
+    
+    document.hold.OUT1.value = mymsg;
+    
+    onSubmitOrig();
+  };
+  
+  $('form[name="hold"]').attr("onsubmit", "bettercc.onSubmit();");
+  $('form[name="hold"]').on("submit", function (e) {
+    e.preventDefault();
+  });
+  
   if (superwhisper && !gast) {
     $("#fuu :nth-child(4)").after(
       '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>'
     );
-    // replace long submit function in input form
-    let onSubmit = new Function($('form[name="hold').attr("onsubmit"));
-    bettercc.onSubmit = onSubmit;
-    $('form[name="hold"]').attr("onsubmit", "bettercc.onSubmit();");
-    $('form[name="hold"]').on("submit", function (e) {
-      e.preventDefault();
-    });
   }
+  
 
   // remove timeout from exit button
   $(".b7").attr("onclick", "bye()");
@@ -311,30 +359,11 @@ if (/cpop.html/.test(window.location.href)) {
       bettercc.superwhisper(whisperUser);
     })();
 
-    bettercc.onSubmitSuperwhisper = function (whispernick) {
-      var mymsg = document.hold.OUT1.value.trim();
-
-      if (mymsg.toLowerCase() === "/open") {
-        bettercc.superwhisper("");
-        mymsg = "";
-        document.hold.OUT1.value = mymsg;
-        return false;
-      }
-      //else if starts with "/open " or "/o "
-      else if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
-        mymsg = mymsg.replace(openMsgReplaceRegex, "");
-      } else if (!mymsg.startsWith("/")) {
-        mymsg = "/w " + whispernick + " " + mymsg;
-      }
-
-      document.hold.OUT1.value = mymsg;
-      bettercc.onSubmit();
-    };
 
     bettercc.superwhisper = async function (whispernick) {
       var input = $("#custom_input_text");
       var placeholder = input.attr("placeholder");
-
+      
       if (
         placeholder.includes(whispernick) ||
         whispernick === "" ||
@@ -347,14 +376,14 @@ if (/cpop.html/.test(window.location.href)) {
       } else {
         $('form[name="hold').attr(
           "onsubmit",
-          'bettercc.onSubmitSuperwhisper("' + whispernick + '");'
+          'bettercc.onSubmit("' + whispernick + '");'
         );
         $("#custom_input_text").addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
         placeholder =
-          "Du flüsterst mit " +
-          whispernick +
-          '...\tTipps: "/open", "/open Hi All :)"';
+        "Du flüsterst mit " +
+        whispernick +
+        '...\tTipps: "/open", "/open Hi All :)"';
       }
       input.attr("placeholder", placeholder);
       $(".ulist-popup").hide();
