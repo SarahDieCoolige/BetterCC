@@ -30,6 +30,9 @@
 // @homepageURL https://github.com/SarahDieCoolige/BetterCC
 // @run-at   document-idle
 // ==/UserScript==
+
+/* globals jQuery, $, GM_wrench */
+
 "use strict";
 
 function cclog(str, tag = "BetterCC") {
@@ -51,8 +54,8 @@ const noChatBackgrounds = 1;
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
-  let gast = chat_ui === "h" ? 1 : 0;
-  let userStore = gast ? "gast" : chat_nick.toLowerCase();
+  let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
+  let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
   if (noChatBackgrounds) {
     var src = $("#chatframe").attr("src");
@@ -220,9 +223,9 @@ if (/cpop.html/.test(window.location.href)) {
 
     const colorShade = (col, amt) => {
       col = col.replace(/^#/, "");
-      if (col.length === 3)
+      if (col.length === 3) {
         col = col[0] + col[0] + col[1] + col[1] + col[2] + col[2];
-
+      }
       let [r, g, b] = col.match(/.{2}/g);
       [r, g, b] = [
         parseInt(r, 16) + amt,
@@ -269,13 +272,17 @@ if (/cpop.html/.test(window.location.href)) {
         $(".userlist").css("background", ulistcolor);
         $("#custom_input_text").css("background", inputcolor);
 
-        if (ulistcolorContrast == "black")
+        if (ulistcolorContrast == "black") {
           $("#ul").addClass("light").removeClass("dark");
-        else $("#ul").addClass("dark").removeClass("light");
+        } else {
+          $("#ul").addClass("dark").removeClass("light");
+        }
 
-        if (placeholderContrast == "black")
+        if (placeholderContrast == "black") {
           $("#custom_input_text").addClass("light").removeClass("dark");
-        else $("#custom_input_text").addClass("dark").removeClass("light");
+        } else {
+          $("#custom_input_text").addClass("dark").removeClass("light");
+        }
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");
@@ -297,7 +304,7 @@ if (/cpop.html/.test(window.location.href)) {
       try {
         var whisperUser = await GM.getValue(userStoreWhisper);
       } catch {
-        var whisperUser = "";
+        whisperUser = "";
       }
 
       await GM.setValue(userStoreWhisper, whisperUser);
