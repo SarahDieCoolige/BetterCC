@@ -105,12 +105,12 @@ html {
   overflow: hidden;
   overflow-x: hidden;
 }
-/*
+
 ::-webkit-scrollbar {
-  width: 0px; 
+  width: 0px;
   background: transparent;
 }
-*/
+
 input,
 textarea {
   outline: none;
