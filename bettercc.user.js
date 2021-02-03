@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC Beta
-// @version  0.5.2
+// @version  0.5.3
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -8,12 +8,12 @@
 // @require  http://code.jquery.com/jquery-2.2.4.min.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.5.2
-// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.5.2
-// @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.5.2
-//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=0.5.2
-//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=0.5.2
-//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=0.5.2
+// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.5.3
+// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.5.3
+// @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.5.3
+//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=0.5.3
+//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=0.5.3
+//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=0.5.3
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -22,10 +22,10 @@
 // @grant    GM_getResourceText
 // @grant    GM_log
 //
-// @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js?r=0.5.2
-// @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js?r=0.5.2
-//// @downloadURL http://0.0.0.0:8080/bettercc.user.js?r=0.5.2
-//// @updateURL http://0.0.0.0:8080/bettercc.user.js?r=0.5.2
+// @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
+// @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
+//// @downloadURL http://0.0.0.0:8080/bettercc.user.js
+//// @updateURL http://0.0.0.0:8080/bettercc.user.js
 // @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL https://github.com/SarahDieCoolige/BetterCC
 // @run-at   document-idle
