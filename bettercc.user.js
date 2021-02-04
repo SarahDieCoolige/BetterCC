@@ -31,7 +31,7 @@
 // @run-at   document-idle
 // ==/UserScript==
 
-/* globals jQuery, $, GM_wrench */
+/* globals jQuery, $, GM_wrench, ajax */
 
 "use strict";
 
