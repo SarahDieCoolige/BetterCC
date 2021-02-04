@@ -1,0 +1,117 @@
+.chat_ibg {
+  padding: 5px 0px 0px 20px !important;
+  background: transparent;
+}
+
+.superban {
+  color: red;
+}
+
+a.superwhisper {
+  color: green;
+}
+
+.ulinner {
+  overflow: auto !important;
+  overflow-x: hidden !important;
+  -ms-overflow-style: none; /* IE 11 */
+  scrollbar-width: none; /* Firefox 64 */
+  padding: 5px 25px 0px 10px !important;
+}
+
+.ulinner.headless {
+  top: 100px;
+}
+
+.ulinner.headless.gast {
+  top: 50px;
+}
+
+/* replace Backgound images with simple color */
+.ww_chat_header {
+  background: #385f7c;
+}
+
+/* replace Backgound images with simple color */
+.ww_chat_footer {
+  background: #385f7c;
+}
+
+.chat_i #custom_input_text {
+  width: 95%;
+  resize: none;
+  font-size: 1.2em;
+  padding: 2px;
+  margin: 2px;
+}
+
+::placeholder {
+  opacity: 0.4 !important;
+}
+
+.superwhisper::placeholder {
+  opacity: 0.5 !important;
+}
+
+#ul.dark {
+  filter: brightness(1.8);
+}
+
+#ul.light {
+  filter: brightness(1);
+}
+
+#custom_input_text.dark {
+  color: white;
+}
+
+#custom_input_text.light {
+  color: black;
+}
+
+.dark::placeholder {
+  color: white;
+}
+
+.light::placeholder {
+  color: black;
+}
+
+.chat_i {
+  padding-left: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-right: 10px;
+}
+
+.chat_i2 {
+  width: 1%;
+  padding-top: 0;
+  padding-right: 10px;
+}
+
+.chat_i3 {
+  width: 20%;
+}
+
+.chat_i4 {
+  width: 1%;
+}
+.table {
+  border-radius: 10px;
+}
+
+html {
+  overflow: hidden;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+input,
+textarea {
+  outline: none;
+}
