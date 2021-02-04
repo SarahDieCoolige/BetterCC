@@ -178,7 +178,7 @@ if (/cpop.html/.test(window.location.href)) {
       //starts with "/superwhisper " or "/sw "
       else if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
         mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
-        bettercc.superwhisper(mymsg);
+        bettercc.superwhisper(mymsg, false);
         mymsg = "";
         document.hold.OUT1.value = mymsg;
         return false;
@@ -398,37 +398,38 @@ if (/cpop.html/.test(window.location.href)) {
       } catch {
         whisperUser = "";
       }
-
       await GM.setValue(userStoreWhisper, whisperUser);
-      bettercc.superwhisper(whisperUser);
+      bettercc.superwhisper(whisperUser, false);
     })();
 
-    bettercc.superwhisper = async function (whispernick) {
-      var input = $("#custom_input_text");
-      var placeholder = input.attr("placeholder");
+    bettercc.superwhisper = async function (whispernick, toggle = true) {
+      let form = $('form[name="hold');
+      let input = $("#custom_input_text");
+      let submitStr = null;
+      let placeholderStr = null;
+      let currentWhisperNick = await GM.getValue(userStoreWhisper);
 
       if (
-        placeholder.includes(whispernick) ||
+        (toggle &&
+          currentWhisperNick.toLowerCase() === whispernick.toLowerCase()) ||
         whispernick === "" ||
         whispernick === undefined
       ) {
-        $('form[name="hold').attr("onsubmit", "bettercc.onSubmit();");
-        $("#custom_input_text").removeClass("superwhisper");
+        submitStr = "bettercc.onSubmit();";
+        placeholderStr = "Du chattest mit allen...";
+        input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
-        placeholder = "Du chattest mit allen...";
       } else {
-        $('form[name="hold').attr(
-          "onsubmit",
-          'bettercc.onSubmit("' + whispernick + '");'
-        );
-        $("#custom_input_text").addClass("superwhisper");
-        await GM.setValue(userStoreWhisper, whispernick);
-        placeholder =
+        submitStr = 'bettercc.onSubmit("' + whispernick + '");';
+        placeholderStr =
           "Du flüsterst mit " +
           whispernick +
           '...\tTipps: "/open", "/open Hi All :)"';
+        input.addClass("superwhisper");
+        await GM.setValue(userStoreWhisper, whispernick);
       }
-      input.attr("placeholder", placeholder);
+      form.attr("onsubmit", submitStr);
+      input.attr("placeholder", placeholderStr);
       $(".ulist-popup").hide();
     };
   }
