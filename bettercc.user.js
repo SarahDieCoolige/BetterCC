@@ -11,9 +11,6 @@
 // @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.5.4
 // @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.5.4
 // @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.5.4
-//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=0.5.4
-//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=0.5.4
-//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=0.5.4
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -24,8 +21,7 @@
 //
 // @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
 // @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
-//// @downloadURL http://0.0.0.0:8080/bettercc.user.js
-//// @updateURL http://0.0.0.0:8080/bettercc.user.js
+//
 // @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL https://github.com/SarahDieCoolige/BetterCC
 // @run-at   document-idle
@@ -130,7 +126,7 @@ if (/cpop.html/.test(window.location.href)) {
       //starts with "/superwhisper " or "/sw "
       else if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
         mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
-        bettercc.superwhisper(mymsg);
+        bettercc.superwhisper(mymsg, false);
         mymsg = "";
         document.hold.OUT1.value = mymsg;
         return false;
@@ -350,37 +346,38 @@ if (/cpop.html/.test(window.location.href)) {
       } catch {
         whisperUser = "";
       }
-
       await GM.setValue(userStoreWhisper, whisperUser);
-      bettercc.superwhisper(whisperUser);
+      bettercc.superwhisper(whisperUser, false);
     })();
 
-    bettercc.superwhisper = async function (whispernick) {
-      var input = $("#custom_input_text");
-      var placeholder = input.attr("placeholder");
+    bettercc.superwhisper = async function (whispernick, toggle = true) {
+      let form = $('form[name="hold');
+      let input = $("#custom_input_text");
+      let submitStr = null;
+      let placeholderStr = null;
+      let currentWhisperNick = await GM.getValue(userStoreWhisper);
 
       if (
-        placeholder.includes(whispernick) ||
+        (toggle &&
+          currentWhisperNick.toLowerCase() === whispernick.toLowerCase()) ||
         whispernick === "" ||
         whispernick === undefined
       ) {
-        $('form[name="hold').attr("onsubmit", "bettercc.onSubmit();");
-        $("#custom_input_text").removeClass("superwhisper");
+        submitStr = "bettercc.onSubmit();";
+        placeholderStr = "Du chattest mit allen...";
+        input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
-        placeholder = "Du chattest mit allen...";
       } else {
-        $('form[name="hold').attr(
-          "onsubmit",
-          'bettercc.onSubmit("' + whispernick + '");'
-        );
-        $("#custom_input_text").addClass("superwhisper");
-        await GM.setValue(userStoreWhisper, whispernick);
-        placeholder =
+        submitStr = 'bettercc.onSubmit("' + whispernick + '");';
+        placeholderStr =
           "Du flüsterst mit " +
           whispernick +
           '...\tTipps: "/open", "/open Hi All :)"';
+        input.addClass("superwhisper");
+        await GM.setValue(userStoreWhisper, whispernick);
       }
-      input.attr("placeholder", placeholder);
+      form.attr("onsubmit", submitStr);
+      input.attr("placeholder", placeholderStr);
       $(".ulist-popup").hide();
     };
   }
