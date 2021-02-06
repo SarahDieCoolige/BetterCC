@@ -7,7 +7,9 @@
 // @include  https://www.chatcity.de/de/nc/index.html
 //// @include  https://www.chatcity.de/cc_chat/chatout?CCSS=//images.chatcity.de/*
 //
-// @require  http://code.jquery.com/jquery-2.2.4.min.js
+// @require  https://code.jquery.com/jquery-3.5.1.min.js
+// @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
+// @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
 // @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=v0.27
@@ -28,7 +30,7 @@
 // @run-at   document-idle
 // ==/UserScript==
 
-/* globals jQuery, $, GM_wrench, ajax */
+/* globals jQuery, $, GM_wrench, ajax, tinycolor*/
 
 "use strict";
 
@@ -227,51 +229,49 @@ if (/cpop.html/.test(window.location.href)) {
     const bgDef = "c8dae0";
     const fgDef = "000000";
 
-    function getContrastYIQ(hexcolor) {
-      var r = parseInt(hexcolor.substr(0, 2), 16);
-      var g = parseInt(hexcolor.substr(2, 2), 16);
-      var b = parseInt(hexcolor.substr(4, 2), 16);
-      var yiq = (r * 299 + g * 587 + b * 114) / 1000;
-      return yiq >= 128 ? "black" : "c8dae0";
-    }
-
-    $('form[name="OF"]').wrap("<div id='stuff'></div>");
-    $('<div id="color"></div>').appendTo("#stuff");
-    $('form[name="OF"]').detach().appendTo("#stuff").css("display", "");
+    $('form[name="OF"]')
+      .wrap("<div id='optionsdiv'></div>")
+      .css("display", "block");
+    //$('form[name="OF"]').detach().appendTo("#optionsdiv").css("display", "");
 
     $(
       '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked>Licht aus</label>'
-    ).appendTo("#stuff");
+    ).appendTo("#optionsdiv");
     $("#darkmodecheck").css("margin", "5px").css("display", "inline");
     $("#darkmodecheck").change(function () {
       GM.setValue(userStoreTheme, Number(this.checked));
       $("#bgcolorpicker").prop("disabled", this.checked);
     });
 
-    $(
-      '<input type="color" id="bgcolorpicker" name="bgcolorpicker" value="#ff0000">'
-    ).appendTo("#stuff");
-    $("#bgcolorpicker").css("margin", "5px");
-    $("#bgcolorpicker").change(function () {
-      var bg = $("#bgcolorpicker").val().substring(1);
-      var fg = getContrastYIQ(bg);
+    $('<input type="color" id="bgcolorpicker" >')
+      .val("#ff0000")
+      .css("border-style", "solid")
+      .css("margin", "5px")
+      .change(function () {
+        var bg = $("#bgcolorpicker").val().substring(1);
+        var fg = fgDef;
 
-      (async () => {
-        await GM.setValue(userStoreColor, bg);
-      })();
+        (async () => {
+          await GM.setValue(userStoreColor, bg);
+        })();
 
-      bettercc.setColors(bg, fg, 0);
-    });
-    $('<input id="resetbutton" type="button" value="R"  />').appendTo("#stuff");
-    $("#resetbutton").click(function () {
-      (async () => {
-        await GM.setValue(userStoreColor, bgDef);
-        await GM.setValue(userStoreTheme, 0);
-      })();
-      setTheme(0);
-      //bettercc.setColors(bgDef, fgDef, 0);
-      $("#bgcolorpicker").prop("disabled", this.checked);
-    });
+        bettercc.setColors(bg, fg, 0);
+      })
+      .appendTo("#optionsdiv");
+
+    $('<input type="button" id="resetbutton" />')
+      .css("border-style", "solid")
+      .val("R")
+      .click(function () {
+        (async () => {
+          await GM.setValue(userStoreColor, bgDef);
+          await GM.setValue(userStoreTheme, 0);
+        })();
+        setTheme(0);
+        //bettercc.setColors(bgDef, fgDef, 0);
+        $("#bgcolorpicker").prop("disabled", this.checked);
+      })
+      .appendTo("#optionsdiv");
 
     async function getTheme() {
       let theme = await GM.getValue(userStoreTheme, 0);
@@ -315,67 +315,135 @@ if (/cpop.html/.test(window.location.href)) {
       }
     }
 
-    const colorShade = (col, amt) => {
-      col = col.replace(/^#/, "");
-      if (col.length === 3) {
-        col = col[0] + col[0] + col[1] + col[1] + col[2] + col[2];
-      }
-      let [r, g, b] = col.match(/.{2}/g);
-      [r, g, b] = [
-        parseInt(r, 16) + amt,
-        parseInt(g, 16) + amt,
-        parseInt(b, 16) + amt,
-      ];
-
-      r = Math.max(Math.min(255, r), 0).toString(16);
-      g = Math.max(Math.min(255, g), 0).toString(16);
-      b = Math.max(Math.min(255, b), 0).toString(16);
-
-      const rr = (r.length < 2 ? "0" : "") + r;
-      const gg = (g.length < 2 ? "0" : "") + g;
-      const bb = (b.length < 2 ? "0" : "") + b;
-
-      return `${rr}${gg}${bb}`;
-    };
-
-    var bgInterval = 0;
-
     function setColors(bg, fg, theme) {
+      var tiny = tinycolor(bg);
+      var ana = tiny.analogous();
+      var mono = tiny.monochromatic();
+      var triad = tiny.triad();
+
+      fg = tinycolor
+        .mostReadable(bg, ana.concat(mono), {
+          includeFallbackColors: true,
+        })
+        .toHexString();
+
       if (noChatBackgrounds) {
         iframeWindow.body.style.backgroundColor = bg;
         iframeWindow.body.style.color = fg;
       }
-      // if (!noChatBackgrounds) {
-      //   if (bgInterval) clearInterval(bgInterval);
-      //   iframe.contentWindow.setbgcol(bg, fg);
-      //   bgInterval = setInterval(function () {
-      //     iframe.contentWindow.setbgcol(bg, fg);
-      //   }, 100);
-      // }
 
       $("#bgcolorpicker").val("#" + bg);
 
       if (theme == 0) {
-        var ulistcolor = colorShade(bg, 30);
-        var inputcolor = colorShade(bg, 80);
-        var ulistcolorContrast = getContrastYIQ(ulistcolor);
-        var placeholderContrast = getContrastYIQ(inputcolor);
-        ulistcolor = "#" + ulistcolor;
-        inputcolor = "#" + inputcolor;
+        var ulistcolor = tiny.clone().darken(5);
+        var inputcolor = tiny.clone().lighten(15).desaturate(5).toHexString();
+        //footercolor = mono[5];
+        //footercolor = tiny.spin(45);
 
-        $(".userlist").css("background", ulistcolor);
+        var footercolor = null;
+
+        if (tiny.isLight()) {
+          cclog("isLight => darken");
+          footercolor = tiny.clone().brighten(0).darken(20);
+        } else {
+          cclog("isDark => lighten");
+          footercolor = tiny.clone().brighten().lighten(5);
+        }
+
+        if (footercolor.getBrightness() < 190) {
+          inputcolor = footercolor
+            .clone()
+            .brighten(20)
+            .lighten(20)
+            .desaturate(0)
+            .toHexString();
+        } else {
+          inputcolor = footercolor
+            .clone()
+            .brighten(30)
+            .darken(10)
+            .desaturate(0)
+            .toHexString();
+        }
+
+        //    footercolor = mono[2];
+        //    if (footercolor.getBrightness() < 30 )  footercolor = mono[2];
+
+        //cclog("brightness:" + footercolor.getBrightness());
+        var inputtextcolor = tinycolor
+          .mostReadable(inputcolor, ["white", "black"], {
+            includeFallbackColors: true,
+          })
+          .toHexString();
+
+        var optionstextcolor = tinycolor
+          .mostReadable(footercolor, ["white", "black"], {
+            includeFallbackColors: true,
+          })
+          .toHexString();
+
+        var placeholdercolor = tinycolor
+          .mostReadable(inputcolor, ana.concat(mono), {
+            includeFallbackColors: false,
+          })
+          .toHexString();
+
+        var ulisttextcolor = tinycolor
+          .mostReadable(ulistcolor, ana.concat(mono).concat(triad), {
+            includeFallbackColors: true,
+          })
+          .toHexString();
+
+        var buttoncolor = footercolor;
+        var buttoncolortextcolor = tinycolor
+          .mostReadable(buttoncolor, ana.concat(mono).concat(triad), {
+            includeFallbackColors: true,
+          })
+          .toHexString();
+
+        $("#bgcolorpicker, #resetbutton")
+          .css("background", buttoncolor)
+          .css("color", buttoncolortextcolor)
+          .css("border-color", inputcolor);
+
+        $("#custom_input_text").css("color", inputtextcolor);
+        $("td.chat_i2").css("color", optionstextcolor);
+
+        $(".userlist").css({ background: ulistcolor.toHexString() });
+        //$(".userlist, .u_reg .chan_text").css({ background: ulistcolor.toHexString() });
+        //$("#u_stats .value.no").css({ color: ulistcolor.toHexString() });
+        //$(".u_reg .chan_text").css({ background: ulistcolor.toHexString() });
         $("#custom_input_text").css("background", inputcolor);
+        $(".ww_chat_footer").css("background", footercolor.toHexString());
 
-        if (ulistcolorContrast == "black") {
+        let ulistcolorstr =
+          '<style id="ulisttext-color">.ulinner a{color:' +
+          ulisttextcolor +
+          "} .u_reg .ulinner{color:" +
+          ulisttextcolor +
+          "}</style>";
+
+        if ($("#ulisttext-color").length) {
+          $("#ulisttext-color").replaceWith(ulistcolorstr);
+        } else {
+          $("head").append(ulistcolorstr);
+        }
+
+        if (tinycolor.isReadable(bg, ulisttextcolor, {})) {
           $("#ul").addClass("light").removeClass("dark");
         } else {
           $("#ul").addClass("dark").removeClass("light");
         }
 
-        if (placeholderContrast == "black") {
-          $("#custom_input_text").addClass("light").removeClass("dark");
+        let placeholdecolorstr =
+          '<style id="placeholder-color">#custom_input_text::placeholder{color:' +
+          placeholdercolor +
+          "}</style>";
+
+        if ($("#placeholder-color").length) {
+          $("#placeholder-color").replaceWith(placeholdecolorstr);
         } else {
-          $("#custom_input_text").addClass("dark").removeClass("light");
+          $("head").append(placeholdecolorstr);
         }
       } else {
         $(".userlist").css("background", "inherit");
