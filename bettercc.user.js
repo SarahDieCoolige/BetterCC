@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC DEV
-// @version  0.28
+// @version  0.33
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -12,13 +12,14 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=v0.28
-// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/dark-blue-gray.css?r=v0.28
-// @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=v0.28
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=v0.33
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/iframe.css?r=v0.33
+// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/dark-blue-gray.css?r=v0.33
+// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=v0.33
 //
-//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=v0.28
-//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=v0.28
-//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=v0.28
+//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=v0.33
+//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=v0.33
+//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=v0.33
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -244,15 +245,17 @@ if (/cpop.html/.test(window.location.href)) {
 
     $('<input type="color" id="bgcolorpicker" >')
       .val("#ff0000")
-      .change(function () {
-        var bg = $("#bgcolorpicker").val().substring(1);
+      .on("input", function (e) {
+        var bg = this.value.substring(1);
         var fg = fgDef;
 
+        bettercc.setColors(bg, fg, 0);
+      })
+      .change(function () {
+        var bg = this.value.substring(1);
         (async () => {
           await GM.setValue(userStoreColor, bg);
         })();
-
-        bettercc.setColors(bg, fg, 0);
       })
       .wrap('<div id="betteroptions"></div>')
       .appendTo("#betteroptions");
@@ -303,6 +306,10 @@ if (/cpop.html/.test(window.location.href)) {
         $("head #darkmode").remove();
         $(iframeWindow).find("head #darkmode").remove();
         $("#darkmodecheck").prop("checked", false);
+        var iframe_css = GM_getResourceText("iframe_css");
+        $(iframeWindow)
+          .find("head")
+          .append('<style id="iframe_css">' + iframe_css + "</style>");
         (async () => {
           let bg = await GM.getValue(userStoreColor, bgDef);
           await GM.setValue(userStoreColor, bg);
@@ -438,7 +445,7 @@ if (/cpop.html/.test(window.location.href)) {
 
   if (superwhisper && !gast) {
     let userStoreWhisper = "whisper_" + userStore;
-    ulistColor(async function () {
+    (async function () {
       try {
         var whisperUser = await GM.getValue(userStoreWhisper);
       } catch {
