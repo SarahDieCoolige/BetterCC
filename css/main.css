@@ -1,6 +1,34 @@
+::root {
+  --chatBackground: a7c1dc;
+  --chatText: #060707;
+  --buttonColor: #5e8ebf;
+  --buttonText: #060707;
+  --inputBackground: #ecf4fd;
+  --ulistBackground: #95b4d5;
+  --ulistText: #060707;
+  --optionsText: #000000;
+  --footerBackground: #5e8ebf;
+  --placeholderText: #060707;
+}
+
+html,
+body,
+input,
+textarea,
+select,
+button {
+  background: var(--footerBackground);
+  border-color: var(--footerBackground);
+}
+
+button {
+  border-color: var(--footerBackground);
+  color: var(--buttonColor);
+}
+
 .chat_ibg {
   padding: 5px 0px 0px 20px !important;
-  background: transparent;
+  background: var(--footerBackground);
 }
 
 a.superban {
@@ -11,12 +39,24 @@ a.superwhisper {
   color: green;
 }
 
+.userlist {
+  background: var(--ulistColor);
+}
+
 .ulinner {
   overflow: auto !important;
   overflow-x: hidden !important;
   -ms-overflow-style: none; /* IE 11 */
   scrollbar-width: none; /* Firefox 64 */
   padding: 5px 25px 0px 10px !important;
+}
+
+.ulinner a {
+  color: var(--ulistText);
+}
+
+.u_reg .ulinner {
+  color: var(--ulistText);
 }
 
 .ulinner.headless {
@@ -29,15 +69,17 @@ a.superwhisper {
 
 /* replace Backgound images with simple color */
 .ww_chat_header {
-  background: #385f7c;
+  background: var(--chatBackground);
 }
 
 /* replace Backgound images with simple color */
 .ww_chat_footer {
-  background: #385f7c;
+  background: var(--footerBackground);
 }
 
 .chat_i #custom_input_text {
+  color: var(--inputText);
+  background: var(--inputBackground);
   width: 95%;
   resize: none;
   font-size: 1.2em;
@@ -46,7 +88,12 @@ a.superwhisper {
 }
 
 ::placeholder {
+  color: var(--placeholderColor);
   opacity: 0.4 !important;
+}
+
+#custom_input_text::placeholder {
+  color: var(--placeholderColor);
 }
 
 .superwhisper::placeholder {
@@ -90,6 +137,10 @@ a.superwhisper {
   padding-right: 10px;
 }
 
+td.chat_i2 {
+  color: var(--optionstextColor);
+}
+
 .chat_i3 {
   width: 20%;
 }
@@ -113,5 +164,36 @@ html {
 
 input,
 textarea {
+  border-color: var(--inputBackground);
+  border-style: solid;
   outline: none;
+}
+
+#resetbutton,
+#bgcolorpicker {
+  background: var(--buttonColor);
+  color: var(--buttonText);
+  border-color: var(--inputBackground);
+  height: 25px;
+  margin: 5px;
+}
+
+#darkmodechecklabel {
+  display: inline;
+  margin: 5px;
+}
+
+#optionsdiv {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#betteroptions {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+form[name="OF"] {
+  display: flex !important;
+  align-items: center !important;
 }
