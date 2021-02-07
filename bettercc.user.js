@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC Beta
-// @version  0.5.6
+// @version  0.6.3
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -10,9 +10,10 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css      https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.5.6
-// @resource  dark_mode_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.5.6
-// @resource  dark_mode_iframe_css https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.5.6
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.6.3
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=0.6.3
+// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.6.3
+// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.6.3
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -52,6 +53,9 @@ const noChatBackgrounds = 1;
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
+  var main_css = GM_getResourceText("main_css");
+  GM_wrench.addCss(main_css);
+
   let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
   let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
@@ -167,48 +171,44 @@ if (/cpop.html/.test(window.location.href)) {
     $("#ul").addClass("gast");
   }
 
-  var main_css = GM_getResourceText("main_css");
-  GM_wrench.addCss(main_css);
-
   if (darkMode) {
     let userStoreTheme = "theme_" + userStore;
     let userStoreColor = "color_" + userStore;
 
-    const bgDef = "c8dae0";
+    //const bgDef = "c8dae0";
+    const bgDef = "6AAED8";
     const fgDef = "000000";
 
-    $('form[name="OF"]')
-      .wrap("<div id='optionsdiv'></div>")
-      .css("display", "block");
-    //$('form[name="OF"]').detach().appendTo("#optionsdiv").css("display", "");
+    $('form[name="OF"]').wrap('<div id="options"></div>');
 
-    $(
-      '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked>Licht aus</label>'
-    ).appendTo("#optionsdiv");
-    $("#darkmodecheck").css("margin", "5px").css("display", "inline");
-    $("#darkmodecheck").change(function () {
-      GM.setValue(userStoreTheme, Number(this.checked));
-      $("#bgcolorpicker").prop("disabled", this.checked);
-    });
+    // $(
+    //   '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked>Licht aus</label>'
+    // ).appendTo("#options");
+    // $("#darkmodecheck").change(function () {
+    //   GM.setValue(userStoreTheme, Number(this.checked));
+    //   $("#bgcolorpicker").prop("disabled", this.checked);
+    // });
+
+    $('<div id="betteroptions"></div>').appendTo("#options");
 
     $('<input type="color" id="bgcolorpicker" >')
       .val("#ff0000")
-      .css("border-style", "solid")
-      .css("margin", "5px")
-      .change(function () {
-        var bg = $("#bgcolorpicker").val().substring(1);
+      .on("input", function (e) {
+        var bg = this.value.substring(1);
         var fg = fgDef;
-
-        (async () => {
-          await GM.setValue(userStoreColor, bg);
-        })();
 
         bettercc.setColors(bg, fg, 0);
       })
-      .appendTo("#optionsdiv");
+      .change(function () {
+        var bg = this.value.substring(1);
+        (async () => {
+          await GM.setValue(userStoreColor, bg);
+        })();
+      })
+      .wrap('<div id="betteroptions"></div>')
+      .appendTo("#betteroptions");
 
     $('<input type="button" id="resetbutton" />')
-      .css("border-style", "solid")
       .val("R")
       .click(function () {
         (async () => {
@@ -219,7 +219,7 @@ if (/cpop.html/.test(window.location.href)) {
         //bettercc.setColors(bgDef, fgDef, 0);
         $("#bgcolorpicker").prop("disabled", this.checked);
       })
-      .appendTo("#optionsdiv");
+      .appendTo("#betteroptions");
 
     async function getTheme() {
       let theme = await GM.getValue(userStoreTheme, 0);
@@ -246,11 +246,24 @@ if (/cpop.html/.test(window.location.href)) {
             '<style id="darkmode">' + dark_mode_css + "</style>"
           );
         }
-        $(iframeWindow)
-          .find("head")
-          .append('<style id="darkmode">' + dark_mode_iframe_css + "</style>");
+
+        if (!$(iframeWindow).find("head").find("#darkmode").length) {
+          $(iframeWindow)
+            .find("head")
+            .append(
+              '<style id="darkmode">' + dark_mode_iframe_css + "</style>"
+            );
+        }
         setColors("0a1822", "c8dae0", theme);
       } else {
+        var iframe_css = GM_getResourceText("iframe_css");
+
+        if (!$(iframeWindow).find("head").find("#iframe_css").length) {
+          $(iframeWindow)
+            .find("head")
+            .append('<style id="iframe_css">' + iframe_css + "</style>");
+        }
+
         $("head #darkmode").remove();
         $(iframeWindow).find("head #darkmode").remove();
         $("#darkmodecheck").prop("checked", false);
@@ -264,38 +277,38 @@ if (/cpop.html/.test(window.location.href)) {
     }
 
     function setColors(bg, fg, theme) {
-      var tiny = tinycolor(bg);
-      var ana = tiny.analogous();
-      var mono = tiny.monochromatic();
-      var triad = tiny.triad();
+      var chatBg = tinycolor(bg);
+      var ana = chatBg.analogous();
+      var mono = chatBg.monochromatic();
+      var triad = chatBg.triad();
 
       fg = tinycolor
-        .mostReadable(bg, ana.concat(mono), {
+        .mostReadable(chatBg, ana.concat(mono), {
           includeFallbackColors: true,
         })
         .toHexString();
 
       if (noChatBackgrounds) {
-        iframeWindow.body.style.backgroundColor = bg;
+        iframeWindow.body.style.backgroundColor = chatBg;
         iframeWindow.body.style.color = fg;
       }
 
       $("#bgcolorpicker").val("#" + bg);
 
       if (theme == 0) {
-        var ulistcolor = tiny.clone().darken(5);
-        var inputcolor = tiny.clone().lighten(15).desaturate(5).toHexString();
+        var ulistcolor = chatBg.clone().darken(5);
+        var inputcolor = chatBg.clone().lighten(15).desaturate(5).toHexString();
         //footercolor = mono[5];
         //footercolor = tiny.spin(45);
 
         var footercolor = null;
 
-        if (tiny.isLight()) {
+        if (chatBg.isLight()) {
           cclog("isLight => darken");
-          footercolor = tiny.clone().brighten(0).darken(20);
+          footercolor = chatBg.clone().brighten(0).darken(20);
         } else {
           cclog("isDark => lighten");
-          footercolor = tiny.clone().brighten().lighten(5);
+          footercolor = chatBg.clone().brighten().lighten(5);
         }
 
         if (footercolor.getBrightness() < 190) {
@@ -338,61 +351,43 @@ if (/cpop.html/.test(window.location.href)) {
 
         var ulisttextcolor = tinycolor
           .mostReadable(ulistcolor, ana.concat(mono).concat(triad), {
-            includeFallbackColors: true,
+            includeFallbackColors: false,
           })
           .toHexString();
 
-        var buttoncolor = footercolor;
-        var buttoncolortextcolor = tinycolor
+        var buttoncolor = inputcolor;
+        var buttontextcolor = tinycolor
           .mostReadable(buttoncolor, ana.concat(mono).concat(triad), {
             includeFallbackColors: true,
           })
           .toHexString();
 
-        $("#bgcolorpicker, #resetbutton")
-          .css("background", buttoncolor)
-          .css("color", buttoncolortextcolor)
-          .css("border-color", inputcolor);
+        $(":root").css("--chatBackground", bg);
+        $(":root").css("--chatText", fg);
 
-        $("#custom_input_text").css("color", inputtextcolor);
-        $("td.chat_i2").css("color", optionstextcolor);
+        $(":root").css("--buttonColor", buttoncolor);
+        $(":root").css("--buttonText", buttontextcolor);
+        $(":root").css("--inputBackground", inputcolor);
 
-        $(".userlist").css({ background: ulistcolor.toHexString() });
+        //$(".userlist").css({ background: ulistcolor.toHexString() });
         //$(".userlist, .u_reg .chan_text").css({ background: ulistcolor.toHexString() });
         //$("#u_stats .value.no").css({ color: ulistcolor.toHexString() });
         //$(".u_reg .chan_text").css({ background: ulistcolor.toHexString() });
-        $("#custom_input_text").css("background", inputcolor);
-        $(".ww_chat_footer").css("background", footercolor.toHexString());
 
-        let ulistcolorstr =
-          '<style id="ulisttext-color">.ulinner a{color:' +
-          ulisttextcolor +
-          "} .u_reg .ulinner{color:" +
-          ulisttextcolor +
-          "}</style>";
+        $(":root").css("--ulistColor", ulistcolor);
+        $(":root").css("--ulistText", ulisttextcolor);
 
-        if ($("#ulisttext-color").length) {
-          $("#ulisttext-color").replaceWith(ulistcolorstr);
-        } else {
-          $("head").append(ulistcolorstr);
-        }
-
-        if (tinycolor.isReadable(bg, ulisttextcolor, {})) {
+        if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
           $("#ul").addClass("light").removeClass("dark");
         } else {
           $("#ul").addClass("dark").removeClass("light");
         }
 
-        let placeholdecolorstr =
-          '<style id="placeholder-color">#custom_input_text::placeholder{color:' +
-          placeholdercolor +
-          "}</style>";
+        $(":root").css("--optionstextColor", optionstextcolor);
 
-        if ($("#placeholder-color").length) {
-          $("#placeholder-color").replaceWith(placeholdecolorstr);
-        } else {
-          $("head").append(placeholdecolorstr);
-        }
+        $(":root").css("--footerBackground", footercolor);
+        $(":root").css("--inputBackground", inputcolor);
+        $(":root").css("--placeholderColor", placeholdercolor);
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");
@@ -407,7 +402,6 @@ if (/cpop.html/.test(window.location.href)) {
 
   if (superwhisper && !gast) {
     let userStoreWhisper = "whisper_" + userStore;
-
     (async function () {
       try {
         var whisperUser = await GM.getValue(userStoreWhisper);
