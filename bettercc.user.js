@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC DEV
-// @version  0.33
+// @version  0.34
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -11,15 +11,14 @@
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
+// @require  https://kit.fontawesome.com/6953e7c70d.js
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=v0.33
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/iframe.css?r=v0.33
-// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/dark-blue-gray.css?r=v0.33
-// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=v0.33
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=0.34
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/iframe.css?r=0.34
+// @resource  icons_css             https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/icons.css?r=0.34
 //
-//// @resource  main_css      http://127.0.0.1:8080/css/main.css?r=v0.33
-//// @resource  dark_mode_css http://127.0.0.1:8080/css/dark-blue-gray.css?r=v0.33
-//// @resource  dark_mode_iframe_css http://127.0.0.1:8080/css/darkmode_chatframe.css?r=v0.33
+// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darker.css?r=0.34
+// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=0.34
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -61,6 +60,9 @@ const noChatBackgrounds = 1;
 if (/cpop.html/.test(window.location.href)) {
   var main_css = GM_getResourceText("main_css");
   GM_wrench.addCss(main_css);
+
+  var icons_css = GM_getResourceText("icons_css");
+  GM_wrench.addCss(icons_css);
 
   let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
   let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
@@ -224,6 +226,40 @@ if (/cpop.html/.test(window.location.href)) {
   }
 
   if (darkMode) {
+    GM_wrench.waitForKeyElements(
+      "a.uonl",
+      (element) => {
+        //    $(element).css({position: "relative", top: "0px", left: "10px", padding: "0px"});
+        $('<i class="fas fa-id-card fa-2x fa-fw"> </i>').appendTo(element);
+      },
+      false,
+      100
+    );
+
+    GM_wrench.waitForKeyElements(
+      "a.ufri",
+      (element) => {
+        //$(element).css({position: "relative", top: "0px", left: "40px", padding: "0px"});
+        $('<i class="fas fa-user-plus fa-2x fa-fw"> </i>')
+          .css("color", "var(--buttonColor)")
+          .appendTo(element);
+      },
+      false,
+      100
+    );
+
+    GM_wrench.waitForKeyElements(
+      "a.unc",
+      (element) => {
+        //$(element).css({position: "relative", top: "0px", left: "70px", padding: "0px"});
+        $('<i class="fas fa-envelope fa-2x fa-fw"></i>')
+          .css("color", "var(--buttonColor)")
+          .appendTo(element);
+      },
+      false,
+      100
+    );
+
     let userStoreTheme = "theme_" + userStore;
     let userStoreColor = "color_" + userStore;
 
@@ -233,13 +269,13 @@ if (/cpop.html/.test(window.location.href)) {
 
     $('form[name="OF"]').wrap('<div id="options"></div>');
 
-    // $(
-    //   '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked>Licht aus</label>'
-    // ).appendTo("#options");
-    // $("#darkmodecheck").change(function () {
-    //   GM.setValue(userStoreTheme, Number(this.checked));
-    //   $("#bgcolorpicker").prop("disabled", this.checked);
-    // });
+    $(
+      '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked></label>'
+    ).appendTo("#options");
+    $("#darkmodecheck").change(function () {
+      GM.setValue(userStoreTheme, Number(this.checked));
+      $("#bgcolorpicker").prop("disabled", this.checked);
+    });
 
     $('<div id="betteroptions"></div>').appendTo("#options");
 
@@ -255,6 +291,7 @@ if (/cpop.html/.test(window.location.href)) {
         var bg = this.value.substring(1);
         (async () => {
           await GM.setValue(userStoreColor, bg);
+          await GM.setValue(userStoreTheme, 0);
         })();
       })
       .wrap('<div id="betteroptions"></div>')
@@ -298,18 +335,31 @@ if (/cpop.html/.test(window.location.href)) {
             '<style id="darkmode">' + dark_mode_css + "</style>"
           );
         }
-        $(iframeWindow)
-          .find("head")
-          .append('<style id="darkmode">' + dark_mode_iframe_css + "</style>");
+
+        if (!$("#icons").length) {
+          $("head").append('<style id="icons">' + icons_css + "</style>");
+        }
+
+        if (!$(iframeWindow).find("head").find("#darkmode").length) {
+          $(iframeWindow)
+            .find("head")
+            .append(
+              '<style id="darkmode">' + dark_mode_iframe_css + "</style>"
+            );
+        }
         setColors("0a1822", "c8dae0", theme);
       } else {
+        var iframe_css = GM_getResourceText("iframe_css");
+
+        if (!$(iframeWindow).find("head").find("#iframe_css").length) {
+          $(iframeWindow)
+            .find("head")
+            .append('<style id="iframe_css">' + iframe_css + "</style>");
+        }
+
         $("head #darkmode").remove();
         $(iframeWindow).find("head #darkmode").remove();
         $("#darkmodecheck").prop("checked", false);
-        var iframe_css = GM_getResourceText("iframe_css");
-        $(iframeWindow)
-          .find("head")
-          .append('<style id="iframe_css">' + iframe_css + "</style>");
         (async () => {
           let bg = await GM.getValue(userStoreColor, bgDef);
           await GM.setValue(userStoreColor, bg);
