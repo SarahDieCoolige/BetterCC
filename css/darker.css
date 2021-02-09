@@ -133,26 +133,10 @@ img {
   color: rgb(169, 218, 252);
   text-decoration-color: initial;
 }
-#u_stats .uonl {
-  background-image: url("https://images.chatcity.de/grafiken/chat/chat_freunde-online.gif");
-  background-color: initial;
-}
-#u_stats .ufri {
-  background-image: url("https://images.chatcity.de/grafiken/chat/chat_freundesanfragen.gif");
-  background-color: initial;
-}
-#u_stats .unc {
-  background-image: url("https://images.chatcity.de/grafiken/chat/chat_nachrichten.gif");
-  background-color: initial;
-}
 #u_stats .value {
   color: rgb(169, 218, 252);
-  background-image: url("https://images.chatcity.de/grafiken/chat/chat_number-small.gif");
-  background-color: initial;
 }
 #u_stats .value.big {
-  background-image: url("https://images.chatcity.de/grafiken/chat/chat_number-big.gif");
-  background-color: initial;
 }
 #u_stats .value.no {
   background-image: initial;
