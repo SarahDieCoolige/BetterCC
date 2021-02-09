@@ -1,5 +1,5 @@
 ::root {
-  --chatBackground: a7c1dc;
+  --chatBackground: #a7c1dc;
   --chatText: #060707;
   --buttonColor: #5e8ebf;
   --buttonText: #060707;
@@ -39,8 +39,13 @@ a.superwhisper {
   color: green;
 }
 
-.userlist {
+.userlist,
+.u_reg .chan_text {
   background: var(--ulistColor);
+}
+
+#u_stats .value.no {
+  color: var(--ulistColor);
 }
 
 .ulinner {
@@ -196,4 +201,24 @@ textarea {
 form[name="OF"] {
   display: flex !important;
   align-items: center !important;
+}
+
+#u_stats div {
+  display: inline-flex;
+}
+
+a.uonl,
+a.ufri,
+a.unc {
+  position: relative;
+  top: 0px;
+  left: 10px;
+  padding: 0px;
+}
+
+i.fa,
+i.fas,
+i.far,
+i.fad {
+  color: var(--buttonColor) !important;
 }
