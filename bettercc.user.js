@@ -269,14 +269,6 @@ if (/cpop.html/.test(window.location.href)) {
 
     $('form[name="OF"]').wrap('<div id="options"></div>');
 
-    $(
-      '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked></label>'
-    ).appendTo("#options");
-    $("#darkmodecheck").change(function () {
-      GM.setValue(userStoreTheme, Number(this.checked));
-      $("#bgcolorpicker").prop("disabled", this.checked);
-    });
-
     $('<div id="betteroptions"></div>').appendTo("#options");
 
     $('<input type="color" id="bgcolorpicker" >')
@@ -296,6 +288,15 @@ if (/cpop.html/.test(window.location.href)) {
       })
       .wrap('<div id="betteroptions"></div>')
       .appendTo("#betteroptions");
+
+    $(
+      '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked></label>'
+    ).appendTo("#betteroptions");
+
+    $("#darkmodecheck").change(function () {
+      GM.setValue(userStoreTheme, Number(this.checked));
+      $("#bgcolorpicker").prop("disabled", this.checked);
+    });
 
     $('<input type="button" id="resetbutton" />')
       .val("R")
