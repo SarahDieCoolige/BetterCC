@@ -443,7 +443,7 @@ if (/cpop.html/.test(window.location.href)) {
           $("#ul").addClass("dark").removeClass("light");
         }
 
-        $(":root").css("--optionstextColor", optionstextcolor);
+        $(":root").css("--optionsText", optionstextcolor);
 
         $(":root").css("--footerBackground", footercolor);
         $(":root").css("--inputBackground", inputcolor);
