@@ -415,6 +415,12 @@ if (/cpop.html/.test(window.location.href)) {
           })
           .toHexString();
 
+        var iconcolor = tinycolor
+          .mostReadable(ulistcolor, ana.concat(mono).concat(triad), {
+            includeFallbackColors: false,
+          })
+          .toHexString();
+
         $(":root").css("--chatBackground", bg);
         $(":root").css("--chatText", fg);
 
@@ -441,6 +447,7 @@ if (/cpop.html/.test(window.location.href)) {
         $(":root").css("--footerBackground", footercolor);
         $(":root").css("--inputBackground", inputcolor);
         $(":root").css("--placeholderColor", placeholdercolor);
+        $(":root").css("--iconColor", iconcolor);
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");
