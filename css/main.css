@@ -242,7 +242,7 @@ i.fa,
 i.fas,
 i.far,
 i.fad {
-  color: var(--buttonColor);
+  color: var(--iconColor);
 }
 
 .fa-stack[data-count]:after {
