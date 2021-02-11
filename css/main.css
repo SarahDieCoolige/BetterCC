@@ -4,12 +4,13 @@
   --buttonColor: #5e8ebf;
   --buttonText: #060707;
   --inputBackground: #ecf4fd;
+  --inputText: #ffffff;
   --ulistBackground: #95b4d5;
   --ulistText: #060707;
   --optionsText: #000000;
   --footerBackground: #5e8ebf;
   --placeholderText: #060707;
-  --badgeText: #ffffff;
+  --iconColor: #000000;
 }
 
 ::after {
@@ -25,6 +26,7 @@ select,
 button {
   background: var(--footerBackground);
   border-color: var(--footerBackground);
+  color: var(--optionsText);
 }
 
 button {
@@ -163,7 +165,7 @@ a.superwhisper {
 }
 
 td.chat_i2 {
-  color: var(--optionstextColor);
+  color: var(--optionsText);
 }
 
 .chat_i3 {
@@ -242,7 +244,7 @@ i.fa,
 i.fas,
 i.far,
 i.fad {
-  color: var(--buttonColor);
+  color: var(--iconColor);
 }
 
 .fa-stack[data-count]:after {
