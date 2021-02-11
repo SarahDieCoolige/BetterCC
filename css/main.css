@@ -4,6 +4,7 @@
   --buttonColor: #5e8ebf;
   --buttonText: #060707;
   --inputBackground: #ecf4fd;
+  --inputText: #ffffff;
   --ulistBackground: #95b4d5;
   --ulistText: #060707;
   --optionsText: #000000;
@@ -25,6 +26,7 @@ select,
 button {
   background: var(--footerBackground);
   border-color: var(--footerBackground);
+  color: var(--optionsText);
 }
 
 button {

@@ -427,6 +427,7 @@ if (/cpop.html/.test(window.location.href)) {
         $(":root").css("--buttonColor", buttoncolor);
         $(":root").css("--buttonText", buttontextcolor);
         $(":root").css("--inputBackground", inputcolor);
+        $(":root").css("--inputText", inputtextcolor);
 
         //$(".userlist").css({ background: ulistcolor.toHexString() });
         //$(".userlist, .u_reg .chan_text").css({ background: ulistcolor.toHexString() });
