@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC DEV
-// @version  0.35
+// @version  0.36
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -14,11 +14,11 @@
 //
 // @resource  iconfont_css          https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=0.35
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/iframe.css?r=0.35
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=0.36
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/iframe.css?r=0.36
 //
-// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darker.css?r=0.35
-// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=0.35
+// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darker.css?r=0.36
+// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=0.36
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
