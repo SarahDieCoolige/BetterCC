@@ -249,8 +249,8 @@ i.fad {
 
 .fa-stack[data-count]:after {
   position: absolute;
-  right: 15%;
-  top: 10%;
+  right: 5%;
+  top: 5%;
   content: attr(data-count);
   font-size: 46%;
   padding: 0.2em;
