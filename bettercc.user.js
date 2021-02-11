@@ -11,11 +11,11 @@
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
-// @require  https://kit.fontawesome.com/6953e7c70d.js
+//
+// @resource  iconfont_css          https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css
 //
 // @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=0.35
 // @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/iframe.css?r=0.35
-// @resource  icons_css             https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/icons.css?r=0.35
 //
 // @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darker.css?r=0.35
 // @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=0.35
@@ -58,11 +58,11 @@ const noChatBackgrounds = 1;
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
+  var iconfont_css = GM_getResourceText("iconfont_css");
+  GM_wrench.addCss(iconfont_css);
+
   var main_css = GM_getResourceText("main_css");
   GM_wrench.addCss(main_css);
-
-  var icons_css = GM_getResourceText("icons_css");
-  GM_wrench.addCss(icons_css);
 
   let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
   let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
@@ -226,39 +226,53 @@ if (/cpop.html/.test(window.location.href)) {
   }
 
   if (darkMode) {
+    $("#u_stats").hide();
     GM_wrench.waitForKeyElements(
-      "a.uonl",
-      (element) => {
-        //    $(element).css({position: "relative", top: "0px", left: "10px", padding: "0px"});
-        $('<i class="fas fa-id-card fa-2x fa-fw"> </i>').appendTo(element);
+      "#u_stats a.unc .value",
+      function () {
+        $("#u_stats span.name").remove();
+        $("#u_stats")
+          .clone(true)
+          .attr("id", "u_stats_clone")
+          .show()
+          .insertAfter("#u_stats");
+        $("#u_stats_clone .value").remove();
+
+        $(
+          '<span id="uonl_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-id-card fa-stack-1x"></i></span>'
+        ).appendTo("#u_stats_clone a.uonl");
+
+        $(
+          '<span id="ufri_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-user-plus fa-stack-1x"></i></span>'
+        ).appendTo("#u_stats_clone a.ufri");
+
+        $(
+          '<span id="unc_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-envelope fa-stack-1x"></i></span>'
+        ).appendTo("#u_stats_clone a.unc");
+
+        updateStats();
       },
-      false,
+      true,
       100
     );
 
-    GM_wrench.waitForKeyElements(
-      "a.ufri",
-      (element) => {
-        //$(element).css({position: "relative", top: "0px", left: "40px", padding: "0px"});
-        $('<i class="fas fa-user-plus fa-2x fa-fw"> </i>')
-          .css("color", "var(--buttonColor)")
-          .appendTo(element);
-      },
-      false,
-      100
-    );
+    GM_wrench.waitForKeyElements("#u_stats div", updateStats, false, 20000);
 
-    GM_wrench.waitForKeyElements(
-      "a.unc",
-      (element) => {
-        //$(element).css({position: "relative", top: "0px", left: "70px", padding: "0px"});
-        $('<i class="fas fa-envelope fa-2x fa-fw"></i>')
-          .css("color", "var(--buttonColor)")
-          .appendTo(element);
-      },
-      false,
-      100
-    );
+    function updateStats() {
+      var uonl_value = $("#u_stats a.uonl .value").text();
+      var ufri_value = $("#u_stats a.ufri .value").text();
+      var unc_value = $("#u_stats a.unc .value").text();
+
+      $("#uonl_span")
+        .attr("data-count", uonl_value)
+        .toggleClass("no", uonl_value < 1);
+      $("#ufri_span")
+        .attr("data-count", ufri_value)
+        .toggleClass("no", ufri_value < 1);
+      $("#unc_span")
+        .attr("data-count", unc_value)
+        .toggleClass("no", unc_value < 1);
+    }
 
     let userStoreTheme = "theme_" + userStore;
     let userStoreColor = "color_" + userStore;
@@ -615,8 +629,10 @@ if (/cpop.html/.test(window.location.href)) {
       var url = "//images.chatcity.de/script/aw.js?r=";
       var src = url + time;
 
-      $('script[src^="' + url).remove();
-      $("<script>")
+      if ($("#userlistjs").length) {
+        $("#userlistjs").remove();
+      }
+      $('<script id="userlistjs">')
         .attr("src", src)
         .attr("type", "text/javascript")
         .appendTo("head");
