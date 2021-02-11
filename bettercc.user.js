@@ -416,7 +416,7 @@ if (/cpop.html/.test(window.location.href)) {
           .toHexString();
 
         var iconcolor = tinycolor
-          .mostReadable(ulistcolor, ana.concat(mono).concat(triad), {
+          .mostReadable(ulistcolor, ["white", "black"], {
             includeFallbackColors: false,
           })
           .toHexString();
