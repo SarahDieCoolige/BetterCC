@@ -10,6 +10,8 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
+// @resource  iconfont_css          https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css
+//
 // @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.6.3
 // @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=0.6.3
 // @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.6.3
@@ -53,6 +55,9 @@ const noChatBackgrounds = 1;
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
+  var iconfont_css = GM_getResourceText("iconfont_css");
+  GM_wrench.addCss(iconfont_css);
+
   var main_css = GM_getResourceText("main_css");
   GM_wrench.addCss(main_css);
 
@@ -172,6 +177,54 @@ if (/cpop.html/.test(window.location.href)) {
   }
 
   if (darkMode) {
+    $("#u_stats").hide();
+    GM_wrench.waitForKeyElements(
+      "#u_stats a.unc .value",
+      function () {
+        $("#u_stats span.name").remove();
+        $("#u_stats")
+          .clone(true)
+          .attr("id", "u_stats_clone")
+          .show()
+          .insertAfter("#u_stats");
+        $("#u_stats_clone .value").remove();
+
+        $(
+          '<span id="uonl_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-id-card fa-stack-1x"></i></span>'
+        ).appendTo("#u_stats_clone a.uonl");
+
+        $(
+          '<span id="ufri_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-user-plus fa-stack-1x"></i></span>'
+        ).appendTo("#u_stats_clone a.ufri");
+
+        $(
+          '<span id="unc_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-envelope fa-stack-1x"></i></span>'
+        ).appendTo("#u_stats_clone a.unc");
+
+        updateStats();
+      },
+      true,
+      100
+    );
+
+    GM_wrench.waitForKeyElements("#u_stats div", updateStats, false, 20000);
+
+    function updateStats() {
+      var uonl_value = $("#u_stats a.uonl .value").text();
+      var ufri_value = $("#u_stats a.ufri .value").text();
+      var unc_value = $("#u_stats a.unc .value").text();
+
+      $("#uonl_span")
+        .attr("data-count", uonl_value)
+        .toggleClass("no", uonl_value < 1);
+      $("#ufri_span")
+        .attr("data-count", ufri_value)
+        .toggleClass("no", ufri_value < 1);
+      $("#unc_span")
+        .attr("data-count", unc_value)
+        .toggleClass("no", unc_value < 1);
+    }
+
     let userStoreTheme = "theme_" + userStore;
     let userStoreColor = "color_" + userStore;
 

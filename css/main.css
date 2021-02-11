@@ -9,6 +9,12 @@
   --optionsText: #000000;
   --footerBackground: #5e8ebf;
   --placeholderText: #060707;
+  --badgeText: #ffffff;
+}
+
+::after {
+  --badgeText: #ffffff;
+  --badgeColor: 255, 0, 55;
 }
 
 html,
@@ -39,9 +45,28 @@ a.superwhisper {
   color: green;
 }
 
-.userlist {
+.userlist,
+.u_reg .chan_text {
   background: var(--ulistColor);
 }
+
+#u_stats_clone a {
+  color: var(--buttonText);
+  text-decoration: none;
+  display: inline-flex;
+}
+
+/*
+#u_stats_clone .value.no {
+  color: transparent;
+  background: transparent;}
+
+
+#u_stats_clone .value {
+  color: var(--badgeText);
+  background:rgba(255,0,0,.85);
+}
+*/
 
 .ulinner {
   overflow: auto !important;
@@ -189,11 +214,57 @@ textarea {
 }
 
 #betteroptions {
-  display: flex;
+  display: inline-flex;
   flex-wrap: nowrap;
+  align-items: center;
 }
 
 form[name="OF"] {
   display: flex !important;
   align-items: center !important;
+}
+
+#u_stats div,
+#u_stats_clone div {
+  display: inline-flex;
+}
+
+a.uonl,
+a.ufri,
+a.unc {
+  position: relative;
+  top: 0px;
+  left: 10px;
+  padding: 0px;
+}
+
+i.fa,
+i.fas,
+i.far,
+i.fad {
+  color: var(--buttonColor);
+}
+
+.fa-stack[data-count]:after {
+  position: absolute;
+  right: 15%;
+  top: 10%;
+  content: attr(data-count);
+  font-size: 46%;
+  padding: 0.2em;
+  border-radius: 999px;
+  line-height: 1.5em;
+  text-align: center;
+  min-width: 1.5em;
+  font-weight: bolder;
+}
+
+.fa-stack.value:after {
+  color: var(--badgeText);
+  background: rgba(var(--badgeColor), 0.85);
+}
+
+.fa-stack.value.no:after {
+  color: transparent;
+  background: transparent;
 }
