@@ -351,10 +351,6 @@ if (/cpop.html/.test(window.location.href)) {
           );
         }
 
-        if (!$("#icons").length) {
-          $("head").append('<style id="icons">' + icons_css + "</style>");
-        }
-
         if (!$(iframeWindow).find("head").find("#darkmode").length) {
           $(iframeWindow)
             .find("head")
@@ -470,12 +466,19 @@ if (/cpop.html/.test(window.location.href)) {
           })
           .toHexString();
 
+        var iconcolor = tinycolor
+          .mostReadable(ulistcolor, ["white", "black"], {
+            includeFallbackColors: false,
+          })
+          .toHexString();
+
         $(":root").css("--chatBackground", bg);
         $(":root").css("--chatText", fg);
 
         $(":root").css("--buttonColor", buttoncolor);
         $(":root").css("--buttonText", buttontextcolor);
         $(":root").css("--inputBackground", inputcolor);
+        $(":root").css("--inputText", inputtextcolor);
 
         //$(".userlist").css({ background: ulistcolor.toHexString() });
         //$(".userlist, .u_reg .chan_text").css({ background: ulistcolor.toHexString() });
@@ -491,11 +494,12 @@ if (/cpop.html/.test(window.location.href)) {
           $("#ul").addClass("dark").removeClass("light");
         }
 
-        $(":root").css("--optionstextColor", optionstextcolor);
+        $(":root").css("--optionsText", optionstextcolor);
 
         $(":root").css("--footerBackground", footercolor);
         $(":root").css("--inputBackground", inputcolor);
         $(":root").css("--placeholderColor", placeholdercolor);
+        $(":root").css("--iconColor", iconcolor);
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");
