@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC Beta
-// @version  0.6.4
+// @version  0.6.8
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -10,12 +10,10 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  iconfont_css          https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css
-//
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.6.4
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=0.6.4
-// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.6.4
-// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.6.4
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.6.8
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=0.6.8
+// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.6.8
+// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.6.8
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -55,8 +53,11 @@ const noChatBackgrounds = 1;
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
-  var iconfont_css = GM_getResourceText("iconfont_css");
-  GM_wrench.addCss(iconfont_css);
+  $(
+    '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/solid.css" crossorigin="anonymous">' +
+      '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/regular.css" crossorigin="anonymous">' +
+      '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/fontawesome.css" crossorigin="anonymous">'
+  ).appendTo("head");
 
   var main_css = GM_getResourceText("main_css");
   GM_wrench.addCss(main_css);
@@ -427,6 +428,7 @@ if (/cpop.html/.test(window.location.href)) {
         $(":root").css("--buttonColor", buttoncolor);
         $(":root").css("--buttonText", buttontextcolor);
         $(":root").css("--inputBackground", inputcolor);
+        $(":root").css("--inputText", inputtextcolor);
 
         //$(".userlist").css({ background: ulistcolor.toHexString() });
         //$(".userlist, .u_reg .chan_text").css({ background: ulistcolor.toHexString() });
@@ -442,12 +444,12 @@ if (/cpop.html/.test(window.location.href)) {
           $("#ul").addClass("dark").removeClass("light");
         }
 
-        $(":root").css("--optionstextColor", optionstextcolor);
+        $(":root").css("--optionsText", optionstextcolor);
 
         $(":root").css("--footerBackground", footercolor);
         $(":root").css("--inputBackground", inputcolor);
         $(":root").css("--placeholderColor", placeholdercolor);
-        $(":root").css("--iconColor", iconcolor);
+        $(":root").css("--iconColor", ulisttextcolor);
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");

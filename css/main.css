@@ -4,6 +4,7 @@
   --buttonColor: #5e8ebf;
   --buttonText: #060707;
   --inputBackground: #ecf4fd;
+  --inputText: #ffffff;
   --ulistBackground: #95b4d5;
   --ulistText: #060707;
   --optionsText: #000000;
@@ -25,6 +26,11 @@ select,
 button {
   background: var(--footerBackground);
   border-color: var(--footerBackground);
+  color: var(--optionsText);
+}
+
+.c_tab {
+  border-color: initial;
 }
 
 button {
@@ -45,6 +51,10 @@ a.superwhisper {
   color: green;
 }
 
+.uinfo {
+  background: var(--footerBackground);
+  color: var(--buttonColor);
+}
 .userlist,
 .u_reg .chan_text {
   background: var(--ulistColor);
@@ -163,7 +173,7 @@ a.superwhisper {
 }
 
 td.chat_i2 {
-  color: var(--optionstextColor);
+  color: var(--optionsText);
 }
 
 .chat_i3 {
@@ -173,7 +183,9 @@ td.chat_i2 {
 .chat_i4 {
   width: 1%;
 }
-.table {
+
+table {
+  border-color: var(--footerBackground);
   border-radius: 10px;
 }
 
@@ -243,12 +255,13 @@ i.fas,
 i.far,
 i.fad {
   color: var(--iconColor);
+  filter: brightness(1.3);
 }
 
 .fa-stack[data-count]:after {
   position: absolute;
-  right: 15%;
-  top: 10%;
+  right: 5%;
+  top: 5%;
   content: attr(data-count);
   font-size: 46%;
   padding: 0.2em;
