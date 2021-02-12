@@ -175,8 +175,15 @@ td.chat_i2 {
 .chat_i4 {
   width: 1%;
 }
-.table {
-  border-radius: 10px;
+
+table {
+  border-color: var(--footerBackground);
+}
+
+.c_tab {
+  border-color: initial;
+  border-collapse: separate;
+  border-spacing: 1px;
 }
 
 html {
