@@ -178,6 +178,9 @@ if (/cpop.html/.test(window.location.href)) {
   }
 
   if (darkMode) {
+    //remove table border
+    $("#r_off1 table").attr("border", "0");
+
     $("#u_stats").hide();
     GM_wrench.waitForKeyElements(
       "#u_stats a.unc .value",
