@@ -1,16 +1,16 @@
 ::root {
-  --chatBackground: #a7c1dc;
-  --chatText: #060707;
-  --buttonColor: #5e8ebf;
-  --buttonText: #060707;
-  --inputBackground: #ecf4fd;
-  --inputText: #ffffff;
-  --ulistBackground: #95b4d5;
-  --ulistText: #060707;
+  --chatBackground: #c8dae4;
+  --chatText: #0e0f0f;
+  --buttonColor: #ffffff;
+  --buttonText: #0e0f0f;
+  --inputBackground: #ffffff;
+  --inputText: #000000;
+  --ulistColor: #b7cedc;
+  --ulistText: #0e0f0f;
   --optionsText: #000000;
-  --footerBackground: #5e8ebf;
-  --placeholderText: #060707;
-  --iconColor: #000000;
+  --footerBackground: #84acc2;
+  --placeholderColor: #0e0f0f;
+  --iconColor: #0e0f0f;
 }
 
 ::after {
@@ -47,6 +47,10 @@ a.superwhisper {
   color: green;
 }
 
+.uinfo {
+  background: var(--footerBackground);
+  color: var(--buttonColor);
+}
 .userlist,
 .u_reg .chan_text {
   background: var(--ulistColor);
@@ -182,8 +186,11 @@ table {
 
 .c_tab {
   border-color: initial;
-  border-collapse: separate;
-  border-spacing: 1px;
+  border-collapse: collapse;
+}
+
+.ww_chat_divide {
+  background-color: var(--footerBackground);
 }
 
 html {
@@ -252,6 +259,7 @@ i.fas,
 i.far,
 i.fad {
   color: var(--iconColor);
+  filter: brightness(1.3);
 }
 
 .fa-stack[data-count]:after {
