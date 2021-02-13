@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC Beta
-// @version  0.7.1
+// @version  0.7.2
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -10,10 +10,10 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.7.1
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=0.7.1
-// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.7.1
-// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.7.1
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.7.2
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=0.7.2
+// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/dark-blue-gray.css?r=0.7.2
+// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/darkmode_chatframe.css?r=0.7.2
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
