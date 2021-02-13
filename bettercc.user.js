@@ -222,11 +222,12 @@ if (/cpop.html/.test(window.location.href)) {
   $(".b7").attr("onclick", "bye()");
 
   // add gast class to userlist
-  if (gast) {
-    $("#ul").addClass("gast");
-  }
+  if (gast) $("#ul").addClass("gast");
 
-  if (darkMode) {
+  function doColorStuff() {
+    //remove table border
+    $("#r_off1 table").attr("border", "0");
+
     $("#u_stats").hide();
     GM_wrench.waitForKeyElements(
       "#u_stats a.unc .value",
@@ -278,7 +279,6 @@ if (/cpop.html/.test(window.location.href)) {
     let userStoreTheme = "theme_" + userStore;
     let userStoreColor = "color_" + userStore;
 
-    //const bgDef = "c8dae0";
     const bgDef = "6AAED8";
     const fgDef = "000000";
 
@@ -403,16 +403,11 @@ if (/cpop.html/.test(window.location.href)) {
       if (theme == 0) {
         var ulistcolor = chatBg.clone().darken(5);
         var inputcolor = chatBg.clone().lighten(15).desaturate(5).toHexString();
-        //footercolor = mono[5];
-        //footercolor = tiny.spin(45);
-
         var footercolor = null;
 
         if (chatBg.isLight()) {
-          cclog("isLight => darken");
           footercolor = chatBg.clone().brighten(0).darken(20);
         } else {
-          cclog("isDark => lighten");
           footercolor = chatBg.clone().brighten().lighten(5);
         }
 
@@ -432,10 +427,6 @@ if (/cpop.html/.test(window.location.href)) {
             .toHexString();
         }
 
-        //    footercolor = mono[2];
-        //    if (footercolor.getBrightness() < 30 )  footercolor = mono[2];
-
-        //cclog("brightness:" + footercolor.getBrightness());
         var inputtextcolor = tinycolor
           .mostReadable(inputcolor, ["white", "black"], {
             includeFallbackColors: true,
@@ -475,7 +466,6 @@ if (/cpop.html/.test(window.location.href)) {
 
         $(":root").css("--chatBackground", bg);
         $(":root").css("--chatText", fg);
-
         $(":root").css("--buttonColor", buttoncolor);
         $(":root").css("--buttonText", buttontextcolor);
         $(":root").css("--inputBackground", inputcolor);
@@ -488,12 +478,17 @@ if (/cpop.html/.test(window.location.href)) {
 
         $(":root").css("--ulistColor", ulistcolor);
         $(":root").css("--ulistText", ulisttextcolor);
+        $(":root").css("--optionsText", optionstextcolor);
+        $(":root").css("--footerBackground", footercolor);
+        $(":root").css("--placeholderColor", placeholdercolor);
+        $(":root").css("--iconColor", ulisttextcolor);
 
         if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
           $("#ul").addClass("light").removeClass("dark");
         } else {
           $("#ul").addClass("dark").removeClass("light");
         }
+<<<<<<< HEAD
 
         $(":root").css("--optionsText", optionstextcolor);
 
@@ -501,6 +496,8 @@ if (/cpop.html/.test(window.location.href)) {
         $(":root").css("--inputBackground", inputcolor);
         $(":root").css("--placeholderColor", placeholdercolor);
         $(":root").css("--iconColor", iconcolor);
+=======
+>>>>>>> main
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");
@@ -513,7 +510,147 @@ if (/cpop.html/.test(window.location.href)) {
     let themeListener = GM_addValueChangeListener(userStoreTheme, getTheme);
   }
 
-  if (superwhisper && !gast) {
+  /**
+   *
+   * Add Css to document head
+   *
+   */
+  function addCustomCss() {
+    $(
+      '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/solid.css" crossorigin="anonymous">' +
+        '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/regular.css" crossorigin="anonymous">' +
+        '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/fontawesome.css" crossorigin="anonymous">'
+    ).appendTo("head");
+
+    var main_css = GM_getResourceText("main_css");
+    GM_wrench.addCss(main_css);
+  }
+
+  /**
+   *
+   * Force no Chat Backgrounds
+   *
+   */
+  function forceNoChatBackgrounds() {
+    var src = $("#chatframe").attr("src");
+    src = src.replace("SBG=0", "SBG=1");
+    $("#chatframe").attr("src", src);
+  }
+
+  /**
+   *
+   * Remove unnecessary stuff
+   *
+   */
+  function cleanup() {
+    //$("#u_stats a.unc").hide();
+    $("#adv720").remove();
+    $("#right_ad").hide();
+    $("#popup-chat > table > tbody > tr:nth-child(1)").hide();
+    $("#ul").addClass("headless");
+    //$(".ww_chat_divide").hide();
+    $(".chat_i1").remove();
+
+    // remove timeout from exit button
+    $(".b7").attr("onclick", "bye()");
+  }
+
+  /**
+   *
+   * Reaplce input with new and bigger textarea
+   *
+   * param replace
+   *         true  - textarea
+   *         false - keep default input
+   */
+  function betterInput(replace) {
+    if (replace) {
+      $('form[name="hold"]')
+        .children('input[type="text"]')
+        .replaceWith(
+          '<textarea placeholder="Du chattest mit allen..." id="custom_input_text" maxlength="1024" name="OUT1" type="text" oninput="" onpaste=""  rows="3" wrap="soft" ></textarea>'
+        );
+
+      // shift+enter = send
+      $("#custom_input_text").keypress(function (e) {
+        if (e.which == 13 && !e.shiftKey) {
+          $('form[name="hold"]').submit();
+          e.preventDefault();
+        }
+      });
+    } else {
+      $('form[name="hold"]')
+        .children('input[type="text"]')
+        .attr("id", "custom_input_text")
+        .attr("placeholder", "Du chattest mit allen...");
+    }
+  }
+
+  function replaceOnSubmit() {
+    /**
+     *
+     *  Supershwisper function
+     *  Extend original onSubmit function
+     *
+     */
+
+    // replace long submit function in input form
+    let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit"));
+
+    bettercc.onSubmit = function (whispernick) {
+      let openMsgCmdRegex = /^\/open\s|^\/o\s/;
+      let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
+      let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
+      let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
+
+      let mymsg = document.hold.OUT1.value.trim();
+
+      // IS "/open"
+      if (mymsg.toLowerCase() === "/open") {
+        bettercc.superwhisper("");
+        mymsg = "";
+        document.hold.OUT1.value = mymsg;
+        return false;
+      }
+
+      //starts with "/open " or "/o "
+      else if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(openMsgReplaceRegex, "");
+      }
+
+      //starts with "/superwhisper " or "/sw "
+      else if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
+        bettercc.superwhisper(mymsg, false);
+        mymsg = "";
+        document.hold.OUT1.value = mymsg;
+        return false;
+      }
+
+      // if whispernick arg
+      else if (whispernick !== undefined) {
+        //starts with "/"
+        if (!mymsg.startsWith("/")) {
+          mymsg = "/w " + whispernick + " " + mymsg;
+        }
+      }
+
+      document.hold.OUT1.value = mymsg;
+
+      onSubmitOrig();
+    };
+
+    //replace onSubmit function of textarea/input field
+    $('form[name="hold"]').attr("onsubmit", "bettercc.onSubmit();");
+    $('form[name="hold"]').on("submit", function (e) {
+      e.preventDefault();
+    });
+
+    // add superwhisper to userlist popup
+    $("#fuu :nth-child(4)").after(
+      '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>'
+    );
+
     let userStoreWhisper = "whisper_" + userStore;
     (async function () {
       try {
