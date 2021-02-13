@@ -186,8 +186,11 @@ table {
 
 .c_tab {
   border-color: initial;
-  border-collapse: separate;
-  border-spacing: 1px;
+  border-collapse: collapse;
+}
+
+.ww_chat_divide {
+  background-color: var(--footerBackground);
 }
 
 html {
