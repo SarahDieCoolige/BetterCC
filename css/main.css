@@ -56,6 +56,7 @@ a.superwhisper {
 }
 
 .u_reg .chan_text {
+  background: initial;
   backdrop-filter: brightness(0.85);
 }
 
@@ -193,7 +194,8 @@ table {
 }
 
 .ww_chat_divide {
-  background-color: var(--footerBackground);
+  background-color: inherit;
+  backdrop-filter: brightness(0.5);
 }
 
 html {
