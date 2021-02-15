@@ -42,187 +42,23 @@ cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 var bettercc = (unsafeWindow.bettercc = {});
 
 const superban = 1;
-const superwhisper = 1;
 const replaceInputField = 1;
-const hideColorButtons = 0;
-const hideAutoScroll = 0;
-const hideCommandButtons = 0;
-const hideExitButton = 0;
-const hideHeader = 1;
-const hideAds = 1;
-const hideOtherStuff = 1;
-const darkMode = 1;
 const noChatBackgrounds = 1;
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
-  $(
-    '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/solid.css" crossorigin="anonymous">' +
-      '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/regular.css" crossorigin="anonymous">' +
-      '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/fontawesome.css" crossorigin="anonymous">'
-  ).appendTo("head");
-
-  var main_css = GM_getResourceText("main_css");
-  GM_wrench.addCss(main_css);
-
   let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
   let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
-  if (noChatBackgrounds) {
-    var src = $("#chatframe").attr("src");
-    src = src.replace("SBG=0", "SBG=1");
-    $("#chatframe").attr("src", src);
-  }
-
-  $("#u_stats a.unc").hide();
-
-  if (hideOtherStuff) {
-    $(".ww_chat_divide").hide();
-    $(".chat_i1").hide();
-  }
-
-  if (hideAds) {
-    $("#adv720").hide();
-    $("#right_ad").hide();
-  }
-
-  if (hideHeader) {
-    $("#popup-chat > table > tbody > tr:nth-child(1)").hide();
-    $("#ul").addClass("headless");
-  }
-
-  if (hideAutoScroll) {
-    $(".chat_i2").hide();
-  }
-
-  if (hideCommandButtons) {
-    $("td.chat_i3.chat_ibg").hide();
-  }
-
-  if (hideColorButtons) {
-    $(".ww_chat_footer_table tr:nth-child(2) td").hide();
-  }
-
-  //hide exit button
-  if (hideExitButton) {
-    $(".chat_i4.chat_ibg").hide();
-  }
-
-  // replace input field with textarea
-  if (replaceInputField) {
-    $('form[name="hold"]')
-      .children('input[type="text"]')
-      .replaceWith(
-        '<textarea placeholder="Du chattest mit allen..." id="custom_input_text" maxlength="1024" name="OUT1" type="text" oninput="" onpaste=""  rows="3" wrap="soft" ></textarea>'
-      );
-
-    // shift+enter = send
-    $("#custom_input_text").keypress(function (e) {
-      if (e.which == 13 && !e.shiftKey) {
-        $('form[name="hold"]').submit();
-        e.preventDefault();
-      }
-    });
-  } else {
-    $('form[name="hold"]')
-      .children('input[type="text"]')
-      .attr("id", "custom_input_text")
-      .attr("placeholder", "Du chattest mit allen...");
-  }
-
-  //append superban
-  if (superban) {
-    $("#fuu").append(
-      '<a href="javascript://" class="button superban" id="superban" onclick="bettercc.superban(last_id);">» Superban</a>'
-    );
-    $("<script>")
-      .attr(
-        "src",
-        "//images.chatcity.de/script/aw.js?r=" +
-          Math.round(new Date().getTime() / 1000)
-      )
-      .attr("type", "text/javascript")
-      .appendTo("head");
-  }
-
-  // replace long submit function in input form
-  let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit"));
-
-  let openMsgCmdRegex = /^\/open\s|^\/o\s/;
-  let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
-  let superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
-  let superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
-  let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
-  let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
-
-  bettercc.onSubmit = function (whispernick) {
-    let mymsg = document.hold.OUT1.value.trim();
-
-    if (superban) {
-      //starts with "/superban " or "/sb "
-      if (superbanMsgCmdRegex.test(mymsg.toLowerCase())) {
-        mymsg = mymsg.replace(superbanMsgReplaceRegex, "").split(" ")[0];
-        bettercc.superban(mymsg);
-        cclog("Superban:" + mymsg);
-        mymsg = "";
-        document.hold.OUT1.value = mymsg;
-        return false;
-      }
-    }
-
-    if (superwhisper) {
-      // IS "/open"
-      if (mymsg.toLowerCase() === "/open") {
-        bettercc.superwhisper("");
-        mymsg = "";
-        document.hold.OUT1.value = mymsg;
-        return false;
-      }
-
-      //starts with "/open " or "/o "
-      else if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
-        mymsg = mymsg.replace(openMsgReplaceRegex, "");
-      }
-
-      //starts with "/superwhisper " or "/sw "
-      else if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
-        mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
-        bettercc.superwhisper(mymsg, false);
-        mymsg = "";
-        document.hold.OUT1.value = mymsg;
-        return false;
-      }
-
-      // if whispernick arg
-      else if (whispernick !== undefined) {
-        //starts with "/"
-        if (!mymsg.startsWith("/")) {
-          mymsg = "/w " + whispernick + " " + mymsg;
-        }
-      }
-    }
-
-    document.hold.OUT1.value = mymsg;
-
-    onSubmitOrig();
-  };
-
-  $('form[name="hold"]').attr("onsubmit", "bettercc.onSubmit();");
-  $('form[name="hold"]').on("submit", function (e) {
-    e.preventDefault();
-  });
-
-  if (superwhisper && !gast) {
-    $("#fuu :nth-child(4)").after(
-      '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>'
-    );
-  }
-
-  // remove timeout from exit button
-  $(".b7").attr("onclick", "bye()");
-
+  if (noChatBackgrounds) forceNoChatBackgrounds();
+  addCustomCss();
+  cleanup();
+  betterInput(replaceInputField);
+  doColorStuff();
+  if (!gast) replaceOnSubmit();
   // add gast class to userlist
   if (gast) $("#ul").addClass("gast");
+  if (superban) enableSuperban();
 
   function doColorStuff() {
     //remove table border
@@ -298,7 +134,6 @@ if (/cpop.html/.test(window.location.href)) {
         var bg = this.value.substring(1);
         (async () => {
           await GM.setValue(userStoreColor, bg);
-          await GM.setValue(userStoreTheme, 0);
         })();
       })
       .wrap('<div id="betteroptions"></div>')
@@ -383,121 +218,132 @@ if (/cpop.html/.test(window.location.href)) {
 
     function setColors(bg, fg, theme) {
       var chatBg = tinycolor(bg);
-      var ana = chatBg.analogous();
-      var mono = chatBg.monochromatic();
-      var triad = chatBg.triad();
+      var anaChatBg = chatBg.analogous();
+      var monoChatBg = chatBg.monochromatic();
+      var triadChatBg = chatBg.triad();
 
-      fg = tinycolor
-        .mostReadable(chatBg, ana.concat(mono), {
-          includeFallbackColors: true,
-        })
-        .toHexString();
+      fg = tinycolor.mostReadable(chatBg, anaChatBg.concat(monoChatBg), {
+        includeFallbackColors: false,
+      });
 
       if (noChatBackgrounds) {
-        iframeWindow.body.style.backgroundColor = chatBg;
-        iframeWindow.body.style.color = fg;
+        iframeWindow.body.style.backgroundColor = chatBg.toHexString();
+        iframeWindow.body.style.color = fg.toHexString();
       }
 
       $("#bgcolorpicker").val("#" + bg);
 
       if (theme == 0) {
-        var ulistcolor = chatBg.clone().darken(5);
-        var inputcolor = chatBg.clone().lighten(15).desaturate(5).toHexString();
-        var footercolor = null;
+        let ulistcolor,
+          footercolor,
+          inputcolor,
+          inputtextcolor,
+          optionstextcolor,
+          placeholdercolor,
+          ulisttextcolor,
+          buttoncolor,
+          buttontextcolor,
+          iconcolor;
 
-        if (chatBg.isLight()) {
-          footercolor = chatBg.clone().brighten(0).darken(20);
+        cclog(chatBg.toHslString());
+        //if (
+        //  chatBg.toHsl().l > 0.83 ||
+        //  (chatBg.toHsl().s >= 0.99 &&
+        //    chatBg.toHsl().l >= 0.5 &&
+        //    chatBg.toHsl().l <= 0.6)
+        //) {
+        if (
+          chatBg.toHsl().l > 0.8 ||
+          (chatBg.toHsl().s >= 0.97 && chatBg.toHsl().l >= 0.45)
+        ) {
+          footercolor = chatBg.clone().darken(15).brighten(5);
         } else {
-          footercolor = chatBg.clone().brighten().lighten(5);
+          footercolor = chatBg.clone().lighten(5).brighten(5);
         }
+        ulistcolor = footercolor.clone();
 
-        if (footercolor.getBrightness() < 190) {
+        if (footercolor.toHsl().l < 0.3) {
           inputcolor = footercolor
             .clone()
-            .brighten(20)
-            .lighten(20)
-            .desaturate(0)
-            .toHexString();
+            .darken(10)
+            //.lighten(20)
+            .desaturate(0);
         } else {
           inputcolor = footercolor
             .clone()
             .brighten(30)
-            .darken(10)
-            .desaturate(0)
-            .toHexString();
+            //.lighten(30)
+            .desaturate(0);
         }
 
-        var inputtextcolor = tinycolor
-          .mostReadable(inputcolor, ["white", "black"], {
-            includeFallbackColors: true,
-          })
-          .toHexString();
-
-        var optionstextcolor = tinycolor
-          .mostReadable(footercolor, ["white", "black"], {
-            includeFallbackColors: true,
-          })
-          .toHexString();
-
-        var placeholdercolor = tinycolor
-          .mostReadable(inputcolor, ana.concat(mono), {
+        inputtextcolor = tinycolor.mostReadable(
+          inputcolor,
+          inputcolor.monochromatic(),
+          {
             includeFallbackColors: false,
-          })
-          .toHexString();
+          }
+        );
 
-        var ulisttextcolor = tinycolor
-          .mostReadable(ulistcolor, ana.concat(mono).concat(triad), {
+        optionstextcolor = tinycolor.mostReadable(
+          footercolor,
+          monoChatBg.concat(anaChatBg),
+          {
             includeFallbackColors: false,
-          })
-          .toHexString();
+          }
+        );
 
-        var buttoncolor = inputcolor;
-        var buttontextcolor = tinycolor
-          .mostReadable(buttoncolor, ana.concat(mono).concat(triad), {
-            includeFallbackColors: true,
-          })
-          .toHexString();
-
-        var iconcolor = tinycolor
-          .mostReadable(ulistcolor, ["white", "black"], {
+        placeholdercolor = tinycolor.mostReadable(
+          inputcolor,
+          inputcolor.monochromatic(),
+          {
             includeFallbackColors: false,
-          })
-          .toHexString();
+          }
+        );
+
+        let shades = [];
+
+        for (var i = 10; i <= 50; i += 10) {
+          shades.push(ulistcolor.clone().darken(i));
+          shades.push(ulistcolor.clone().darken(-i));
+        }
+
+        ulisttextcolor = tinycolor.mostReadable(
+          ulistcolor,
+          monoChatBg.concat(shades),
+          {
+            includeFallbackColors: false,
+          }
+        );
+
+        buttoncolor = inputcolor;
+        buttontextcolor = tinycolor.mostReadable(buttoncolor, monoChatBg, {
+          includeFallbackColors: false,
+        });
+
+        iconcolor = tinycolor.mostReadable(ulistcolor, monoChatBg, {
+          includeFallbackColors: false,
+        });
 
         $(":root").css("--chatBackground", bg);
         $(":root").css("--chatText", fg);
-        $(":root").css("--buttonColor", buttoncolor);
-        $(":root").css("--buttonText", buttontextcolor);
-        $(":root").css("--inputBackground", inputcolor);
-        $(":root").css("--inputText", inputtextcolor);
+        $(":root").css("--buttonColor", buttoncolor.toHexString());
+        $(":root").css("--buttonText", buttontextcolor.toHexString());
+        $(":root").css("--inputBackground", inputcolor.toHexString());
+        $(":root").css("--inputText", inputtextcolor.toHexString());
+        $(":root").css("--ulistColor", ulistcolor.toHexString());
+        $(":root").css("--ulistText", ulisttextcolor.toHexString());
+        $(":root").css("--optionsText", optionstextcolor.toHexString());
+        $(":root").css("--footerBackground", footercolor.toHexString());
+        $(":root").css("--placeholderColor", placeholdercolor.toHexString());
+        $(":root").css("--iconColor", iconcolor.toHexString());
 
-        //$(".userlist").css({ background: ulistcolor.toHexString() });
-        //$(".userlist, .u_reg .chan_text").css({ background: ulistcolor.toHexString() });
-        //$("#u_stats .value.no").css({ color: ulistcolor.toHexString() });
-        //$(".u_reg .chan_text").css({ background: ulistcolor.toHexString() });
+        // if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
+        //   $("#ul").addClass("light").removeClass("dark");
+        // } else {
+        //   $("#ul").addClass("dark").removeClass("light");
+        // }
 
-        $(":root").css("--ulistColor", ulistcolor);
-        $(":root").css("--ulistText", ulisttextcolor);
-        $(":root").css("--optionsText", optionstextcolor);
-        $(":root").css("--footerBackground", footercolor);
-        $(":root").css("--placeholderColor", placeholdercolor);
-        $(":root").css("--iconColor", ulisttextcolor);
-
-        if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
-          $("#ul").addClass("light").removeClass("dark");
-        } else {
-          $("#ul").addClass("dark").removeClass("light");
-        }
-<<<<<<< HEAD
-
-        $(":root").css("--optionsText", optionstextcolor);
-
-        $(":root").css("--footerBackground", footercolor);
-        $(":root").css("--inputBackground", inputcolor);
-        $(":root").css("--placeholderColor", placeholdercolor);
-        $(":root").css("--iconColor", iconcolor);
-=======
->>>>>>> main
+        //$("#ul").addClass("dark").removeClass("light");
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");
@@ -600,10 +446,24 @@ if (/cpop.html/.test(window.location.href)) {
     bettercc.onSubmit = function (whispernick) {
       let openMsgCmdRegex = /^\/open\s|^\/o\s/;
       let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
+      let superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
+      let superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
       let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
       let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
 
       let mymsg = document.hold.OUT1.value.trim();
+
+      if (superban) {
+        //starts with "/superban " or "/sb "
+        if (superbanMsgCmdRegex.test(mymsg.toLowerCase())) {
+          mymsg = mymsg.replace(superbanMsgReplaceRegex, "").split(" ")[0];
+          bettercc.superban(mymsg);
+          cclog("Superban:" + mymsg);
+          mymsg = "";
+          document.hold.OUT1.value = mymsg;
+          return false;
+        }
+      }
 
       // IS "/open"
       if (mymsg.toLowerCase() === "/open") {
@@ -694,7 +554,22 @@ if (/cpop.html/.test(window.location.href)) {
     };
   }
 
-  if (superban) {
+  function enableSuperban() {
+    //add superban option to userpopup
+    $("#fuu").append(
+      '<a href="javascript://" class="button superban" id="superban" onclick="bettercc.superban(last_id);">» Superban</a>'
+    );
+
+    //get online users
+    $("<script>")
+      .attr(
+        "src",
+        "//images.chatcity.de/script/aw.js?r=" +
+          Math.round(new Date().getTime() / 1000)
+      )
+      .attr("type", "text/javascript")
+      .appendTo("head");
+
     var alreadyBanned = [];
 
     let userStoreBan = "ban_" + userStore;
