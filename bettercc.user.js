@@ -338,13 +338,11 @@ if (/cpop.html/.test(window.location.href)) {
         $(":root").css("--placeholderColor", placeholdercolor.toHexString());
         $(":root").css("--iconColor", iconcolor.toHexString());
 
-        // if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
-        //   $("#ul").addClass("light").removeClass("dark");
-        // } else {
-        //   $("#ul").addClass("dark").removeClass("light");
-        // }
-
-        //$("#ul").addClass("dark").removeClass("light");
+        if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
+          $("#ul").addClass("light").removeClass("dark");
+        } else {
+          $("#ul").addClass("dark").removeClass("light");
+        }
       } else {
         $(".userlist").css("background", "inherit");
         $("#custom_input_text").removeAttr("style");
