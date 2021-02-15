@@ -195,7 +195,7 @@ table {
 
 .ww_chat_divide {
   background-color: inherit;
-  backdrop-filter: brightness(0.5);
+  backdrop-filter: brightness(1.2);
 }
 
 html {
