@@ -218,6 +218,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     function setColors(bg, fg, theme) {
       var chatBg = tinycolor(bg);
+      var chatFg = tinycolor(fg);
       var anaChatBg = chatBg.analogous();
       var monoChatBg = chatBg.monochromatic();
       var triadChatBg = chatBg.triad();
@@ -262,7 +263,7 @@ if (/cpop.html/.test(window.location.href)) {
         }
         ulistcolor = footercolor.clone();
 
-        if (footercolor.toHsl().l < 0.3) {
+        if (footercolor.toHsl().l < 0.2) {
           inputcolor = footercolor
             .clone()
             .darken(10)
@@ -324,8 +325,8 @@ if (/cpop.html/.test(window.location.href)) {
           includeFallbackColors: false,
         });
 
-        $(":root").css("--chatBackground", bg);
-        $(":root").css("--chatText", fg);
+        $(":root").css("--chatBackground", chatBg.toHexString());
+        $(":root").css("--chatText", chatFg.toHexString());
         $(":root").css("--buttonColor", buttoncolor.toHexString());
         $(":root").css("--buttonText", buttontextcolor.toHexString());
         $(":root").css("--inputBackground", inputcolor.toHexString());

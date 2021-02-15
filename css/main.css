@@ -48,12 +48,15 @@ a.superwhisper {
 }
 
 .uinfo {
-  background: var(--footerBackground);
-  color: var(--buttonColor);
+  background: var(--chatBackground);
+  color: var(--ulistText);
 }
-.userlist,
-.u_reg .chan_text {
+.userlist {
   background: var(--ulistColor);
+}
+
+.u_reg .chan_text {
+  backdrop-filter: brightness(0.85);
 }
 
 #u_stats_clone a {
