@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name     BetterCC DEV
-// @version  0.44
+// @name     BetterCC Beta
+// @version  0.7.2
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
@@ -12,11 +12,8 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/main.css?r=0.44
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/iframe.css?r=0.44
-//
-// @resource  dark_mode_css         https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darker.css?r=0.44
-// @resource  dark_mode_iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/dev/css/darkmode_chatframe.css?r=0.44
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=0.7.2
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=0.7.2
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -25,6 +22,11 @@
 // @grant    GM_getResourceText
 // @grant    GM_log
 //
+// @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
+// @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
+//
+// @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
+// @homepageURL https://github.com/SarahDieCoolige/BetterCC
 // @run-at   document-idle
 // ==/UserScript==
 
@@ -94,7 +96,7 @@ if (/cpop.html/.test(window.location.href)) {
       100
     );
 
-    GM_wrench.waitForKeyElements("#u_stats div", updateStats, false, 20000);
+    GM_wrench.waitForKeyElements("#u_stats div", updateStats, false, 1000);
 
     function updateStats() {
       var uonl_value = $("#u_stats a.uonl .value").text();
@@ -112,7 +114,6 @@ if (/cpop.html/.test(window.location.href)) {
         .toggleClass("no", unc_value < 1);
     }
 
-    let userStoreTheme = "theme_" + userStore;
     let userStoreColor = "color_" + userStore;
 
     const bgDef = "6AAED8";
@@ -139,84 +140,45 @@ if (/cpop.html/.test(window.location.href)) {
       .wrap('<div id="betteroptions"></div>')
       .appendTo("#betteroptions");
 
-    $(
-      '<label id="darkmodechecklabel"><input type="checkbox" id="darkmodecheck" name="darkmodecheck" unchecked></label>'
-    ).appendTo("#betteroptions");
-
-    $("#darkmodecheck").change(function () {
-      GM.setValue(userStoreTheme, Number(this.checked));
-      $("#bgcolorpicker").prop("disabled", this.checked);
-    });
-
     $('<input type="button" id="resetbutton" />')
       .val("R")
       .click(function () {
         (async () => {
           await GM.setValue(userStoreColor, bgDef);
-          await GM.setValue(userStoreTheme, 0);
         })();
-        setTheme(0);
+        setTheme();
         //bettercc.setColors(bgDef, fgDef, 0);
         $("#bgcolorpicker").prop("disabled", this.checked);
       })
       .appendTo("#betteroptions");
 
-    async function getTheme() {
-      let theme = await GM.getValue(userStoreTheme, 0);
-      await GM.setValue(userStoreTheme, theme);
-      setTheme(theme);
-    }
-
-    setTimeout(getTheme, 1000);
+    setTimeout(setTheme, 1000);
     var iframe = null;
     var iContentWindow = null;
     var iframeWindow = null;
 
-    function setTheme(theme) {
+    function setTheme() {
       iframe = document.getElementById("chatframe");
       iContentWindow = iframe.contentWindow;
       iframeWindow = iContentWindow.document;
 
-      if (theme) {
-        var dark_mode_css = GM_getResourceText("dark_mode_css");
-        var dark_mode_iframe_css = GM_getResourceText("dark_mode_iframe_css");
+      var iframe_css = GM_getResourceText("iframe_css");
 
-        if (!$("#darkmode").length) {
-          $("head").append(
-            '<style id="darkmode">' + dark_mode_css + "</style>"
-          );
-        }
-
-        if (!$(iframeWindow).find("head").find("#darkmode").length) {
-          $(iframeWindow)
-            .find("head")
-            .append(
-              '<style id="darkmode">' + dark_mode_iframe_css + "</style>"
-            );
-        }
-        setColors("0a1822", "c8dae0", theme);
-      } else {
-        var iframe_css = GM_getResourceText("iframe_css");
-
-        if (!$(iframeWindow).find("head").find("#iframe_css").length) {
-          $(iframeWindow)
-            .find("head")
-            .append('<style id="iframe_css">' + iframe_css + "</style>");
-        }
-
-        $("head #darkmode").remove();
-        $(iframeWindow).find("head #darkmode").remove();
-        $("#darkmodecheck").prop("checked", false);
-        (async () => {
-          let bg = await GM.getValue(userStoreColor, bgDef);
-          await GM.setValue(userStoreColor, bg);
-
-          setColors(bg, fgDef, theme);
-        })();
+      if (!$(iframeWindow).find("head").find("#iframe_css").length) {
+        $(iframeWindow)
+          .find("head")
+          .append('<style id="iframe_css">' + iframe_css + "</style>");
       }
+
+      (async () => {
+        let bg = await GM.getValue(userStoreColor, bgDef);
+        await GM.setValue(userStoreColor, bg);
+
+        setColors(bg, fgDef);
+      })();
     }
 
-    function setColors(bg, fg, theme) {
+    function setColors(bg, fg) {
       var chatBg = tinycolor(bg);
       var chatFg = tinycolor(fg);
       var anaChatBg = chatBg.analogous();
@@ -234,125 +196,109 @@ if (/cpop.html/.test(window.location.href)) {
 
       $("#bgcolorpicker").val("#" + bg);
 
-      if (theme == 0) {
-        let ulistcolor,
-          footercolor,
-          inputcolor,
-          inputtextcolor,
-          optionstextcolor,
-          placeholdercolor,
-          ulisttextcolor,
-          buttoncolor,
-          buttontextcolor,
-          iconcolor;
+      let ulistcolor,
+        footercolor,
+        inputcolor,
+        inputtextcolor,
+        optionstextcolor,
+        placeholdercolor,
+        ulisttextcolor,
+        buttoncolor,
+        buttontextcolor,
+        iconcolor;
 
-        cclog(chatBg.toHslString());
-        //if (
-        //  chatBg.toHsl().l > 0.83 ||
-        //  (chatBg.toHsl().s >= 0.99 &&
-        //    chatBg.toHsl().l >= 0.5 &&
-        //    chatBg.toHsl().l <= 0.6)
-        //) {
-        if (
-          chatBg.toHsl().l > 0.8 ||
-          (chatBg.toHsl().s >= 0.97 && chatBg.toHsl().l >= 0.45)
-        ) {
-          footercolor = chatBg.clone().darken(15).brighten(5);
-        } else {
-          footercolor = chatBg.clone().lighten(5).brighten(5);
-        }
-        ulistcolor = footercolor.clone();
-
-        if (footercolor.toHsl().l < 0.2) {
-          inputcolor = footercolor
-            .clone()
-            .darken(10)
-            //.lighten(20)
-            .desaturate(0);
-        } else {
-          inputcolor = footercolor
-            .clone()
-            .brighten(30)
-            //.lighten(30)
-            .desaturate(0);
-        }
-
-        inputtextcolor = tinycolor.mostReadable(
-          inputcolor,
-          inputcolor.monochromatic(),
-          {
-            includeFallbackColors: false,
-          }
-        );
-
-        optionstextcolor = tinycolor.mostReadable(
-          footercolor,
-          monoChatBg.concat(anaChatBg),
-          {
-            includeFallbackColors: false,
-          }
-        );
-
-        placeholdercolor = tinycolor.mostReadable(
-          inputcolor,
-          inputcolor.monochromatic(),
-          {
-            includeFallbackColors: false,
-          }
-        );
-
-        let shades = [];
-
-        for (var i = 10; i <= 50; i += 10) {
-          shades.push(ulistcolor.clone().darken(i));
-          shades.push(ulistcolor.clone().darken(-i));
-        }
-
-        ulisttextcolor = tinycolor.mostReadable(
-          ulistcolor,
-          monoChatBg.concat(shades),
-          {
-            includeFallbackColors: false,
-          }
-        );
-
-        buttoncolor = inputcolor;
-        buttontextcolor = tinycolor.mostReadable(buttoncolor, monoChatBg, {
-          includeFallbackColors: false,
-        });
-
-        iconcolor = tinycolor.mostReadable(ulistcolor, monoChatBg, {
-          includeFallbackColors: false,
-        });
-
-        $(":root").css("--chatBackground", chatBg.toHexString());
-        $(":root").css("--chatText", chatFg.toHexString());
-        $(":root").css("--buttonColor", buttoncolor.toHexString());
-        $(":root").css("--buttonText", buttontextcolor.toHexString());
-        $(":root").css("--inputBackground", inputcolor.toHexString());
-        $(":root").css("--inputText", inputtextcolor.toHexString());
-        $(":root").css("--ulistColor", ulistcolor.toHexString());
-        $(":root").css("--ulistText", ulisttextcolor.toHexString());
-        $(":root").css("--optionsText", optionstextcolor.toHexString());
-        $(":root").css("--footerBackground", footercolor.toHexString());
-        $(":root").css("--placeholderColor", placeholdercolor.toHexString());
-        $(":root").css("--iconColor", iconcolor.toHexString());
-
-        if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
-          $("#ul").addClass("light").removeClass("dark");
-        } else {
-          $("#ul").addClass("dark").removeClass("light");
-        }
+      if (
+        chatBg.toHsl().l > 0.8 ||
+        (chatBg.toHsl().s >= 0.97 && chatBg.toHsl().l >= 0.45)
+      ) {
+        footercolor = chatBg.clone().darken(15).brighten(5);
       } else {
-        $(".userlist").css("background", "inherit");
-        $("#custom_input_text").removeAttr("style");
-        $("#custom_input_text").removeClass("light").removeClass("dark");
-        $("#ul").removeClass("dark").removeClass("light");
+        footercolor = chatBg.clone().lighten(5).brighten(5);
+      }
+      ulistcolor = footercolor.clone();
+
+      if (footercolor.toHsl().l < 0.2) {
+        inputcolor = footercolor
+          .clone()
+          .darken(10)
+          //.lighten(20)
+          .desaturate(0);
+      } else {
+        inputcolor = footercolor
+          .clone()
+          .brighten(30)
+          //.lighten(30)
+          .desaturate(0);
+      }
+
+      inputtextcolor = tinycolor.mostReadable(
+        inputcolor,
+        inputcolor.monochromatic(),
+        {
+          includeFallbackColors: false,
+        }
+      );
+
+      optionstextcolor = tinycolor.mostReadable(
+        footercolor,
+        monoChatBg.concat(anaChatBg),
+        {
+          includeFallbackColors: false,
+        }
+      );
+
+      placeholdercolor = tinycolor.mostReadable(
+        inputcolor,
+        inputcolor.monochromatic(),
+        {
+          includeFallbackColors: false,
+        }
+      );
+
+      let shades = [];
+
+      for (var i = 10; i <= 50; i += 10) {
+        shades.push(ulistcolor.clone().darken(i));
+        shades.push(ulistcolor.clone().darken(-i));
+      }
+
+      ulisttextcolor = tinycolor.mostReadable(
+        ulistcolor,
+        monoChatBg.concat(shades),
+        {
+          includeFallbackColors: false,
+        }
+      );
+
+      buttoncolor = inputcolor;
+      buttontextcolor = tinycolor.mostReadable(buttoncolor, monoChatBg, {
+        includeFallbackColors: false,
+      });
+
+      iconcolor = tinycolor.mostReadable(ulistcolor, monoChatBg, {
+        includeFallbackColors: false,
+      });
+
+      $(":root").css("--chatBackground", chatBg.toHexString());
+      $(":root").css("--chatText", chatFg.toHexString());
+      $(":root").css("--buttonColor", buttoncolor.toHexString());
+      $(":root").css("--buttonText", buttontextcolor.toHexString());
+      $(":root").css("--inputBackground", inputcolor.toHexString());
+      $(":root").css("--inputText", inputtextcolor.toHexString());
+      $(":root").css("--ulistColor", ulistcolor.toHexString());
+      $(":root").css("--ulistText", ulisttextcolor.toHexString());
+      $(":root").css("--optionsText", optionstextcolor.toHexString());
+      $(":root").css("--footerBackground", footercolor.toHexString());
+      $(":root").css("--placeholderColor", placeholdercolor.toHexString());
+      $(":root").css("--iconColor", iconcolor.toHexString());
+
+      if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
+        $("#ul").addClass("light").removeClass("dark");
+      } else {
+        $("#ul").addClass("dark").removeClass("light");
       }
     }
     bettercc.setColors = setColors;
-
-    let themeListener = GM_addValueChangeListener(userStoreTheme, getTheme);
   }
 
   /**
@@ -727,63 +673,3 @@ if (/cpop.html/.test(window.location.href)) {
     }
   }
 } //MAIN CHAT
-
-//iframe
-if (/chatout/.test(window.location.href)) {
-}
-
-//MAILS
-if (/nc\/index.html$/.test(window.location.href)) {
-  /** AUTODELETE MAILS **/
-  //https://images.chatcity.de/script/nc.js
-  //del_msg(id, 2);
-  // lastget in ajax request is last clicked ID ("139xxxxxxx")
-  //new ajax(PAJAX+'nc_delm.html', {postBody: 'MID='+lastget, onComplete:function(){window.location.reload();}});
-  /** Message HTML **/
-  /*
-  <div id="139xxxxxxx" class="clickl unread">
-      <div class="ncrow c1" id="st39xxxxxxx">Gelesen</div>
-      <div class="ncrow c2">22.01.2021&nbsp;um&nbsp;12:27&nbsp;Uhr</div>
-      <div class="ncrow c3">von USERNAME</div>
-    <div class="ncrow c4">ID-Card Nachricht</div>
-  </div>
-  */
-  //var test = $('#msgform  div  div:[class="clickl"]').attr("id");
-  /*
-  var test1 = $("#msgform")
-    .children("div")
-    .children('div[class="clickl unread"]')
-    .attr("id");
-  var test2 = $("#msgform")
-    .children("div")
-    .children('div[class="clickl"]')
-    .attr("id");
-  var test3 = $("#msgform")
-    .children("div")
-    .children('div[class="clickl"]')
-    .children('div[class="ncrow c3"]')
-    .text();
-  var test4 = $("#msgform div.div.ncrow c3").text();
-  var test5 = $("#msgform div.clickl[id]").attr("id");
-*/
-  // create iframe and hide
-  // https://stackoverflow.com/questions/41111556/tampermonkey-message-between-scripts-on-different-subdomains
-  // cross window communication
-  //const iframe = document.body.appendChild(document.createElement('iframe'));
-  //iframe.style.display = 'none';
-  //iframe.src = 'https://www.chatcity.de/de/nc/index.html';element.class
-  // DELETE EVERY NEW MESSAGE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  VORSICHT!!!!!!!!!!!!!!!!
-  //$('#msgform div.unread').each(function(i,el){
-  //var t = $(el).attr("id");
-  //var newm = "";
-  //var mymsg = t.substr(1);
-  //alert('ids: ' +  t + " " + mymsg);
-  //div = '<div id="' + t + '"></div>';
-  //$("#ww_idcard").prepend(div);
-  //delete message without reading (sender will see unread message)
-  //new ajax(PAJAX+'nc_delm.html', {postBody: 'MID='+mymsg, onComplete:function(){window.location.reload();}});
-  // read messages
-  //var aja = new ajax(PAJAX+'nc_getm.html', {postBody: 'MID='+mymsg, onComplete:function(){nodeToString(nboxobj);}, update: t});
-  //var aja = new ajax(PAJAX+'nc_getm.html', {postBody: 'MID='+mymsg}, update:'test' );
-  //});
-} //MAILS
