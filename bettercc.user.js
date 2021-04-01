@@ -481,7 +481,9 @@ if (/cpop.html/.test(window.location.href)) {
         whispernick === undefined
       ) {
         submitStr = "bettercc.onSubmit();";
-        placeholderStr = "Du chattest mit allen...";
+        placeholderStr =
+          "Du chattest mit allen..." +
+          '...\tTipps: "/supewhisper uwe59", "/superban uwe59 :)"';
         input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
       } else {
