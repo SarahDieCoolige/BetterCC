@@ -483,7 +483,10 @@ if (/cpop.html/.test(window.location.href)) {
         submitStr = "bettercc.onSubmit();";
         placeholderStr =
           "Du chattest mit allen..." +
-          '...\tTipps: "/supewhisper uwe59", "/superban uwe59 :)"';
+          "...\t\tTipps:\t" +
+          'Superwhisper: "/sw Sariam"' +
+          "\n\t\t\t\t\t\t" +
+          'Superban: "/sb Bernd57w"';
         input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
       } else {
@@ -491,7 +494,7 @@ if (/cpop.html/.test(window.location.href)) {
         placeholderStr =
           "Du flüsterst mit " +
           whispernick +
-          '...\tTipps: "/open", "/open Hi All :)"';
+          '...\tTipps:\t"/open", "/open Hi All :)"';
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
       }
