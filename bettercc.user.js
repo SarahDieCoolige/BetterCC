@@ -215,7 +215,7 @@ if (/cpop.html/.test(window.location.href)) {
       } else {
         footercolor = chatBg.clone().lighten(5).brighten(5);
       }
-      ulistcolor = footercolor.clone();
+      ulistcolor = footercolor.clone().lighten(5);
 
       if (footercolor.toHsl().l < 0.2) {
         inputcolor = footercolor
