@@ -541,7 +541,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     // start banning
     var refreshUsersInterval = setInterval(refreshUserList, 4000);
-    //clearInterval(interval);
+    //clearInterval(refreshUsersInterval);
 
     bettercc.superban = async function (nickToBan) {
       nickToBan = nickToBan.toLowerCase();
@@ -612,7 +612,7 @@ if (/cpop.html/.test(window.location.href)) {
       var usersToBeBanned = getUsersToBeBanned(users, superbans);
       if (usersToBeBanned.length) {
         cclog("Users to be banned:\n\t" + usersToBeBanned);
-        clearInterval(interval);
+        clearInterval(refreshUsersInterval);
         await banUsers(usersToBeBanned);
         // stop execution and restart in banUsers();
         refreshUsersInterval = setInterval(refreshUserList, 4000);
