@@ -39,11 +39,11 @@ button {
   background: var(--footerBackground);
 }
 
-a.superban {
+#superban {
   color: red;
 }
 
-a.superwhisper {
+#superwhisper {
   color: green;
 }
 
