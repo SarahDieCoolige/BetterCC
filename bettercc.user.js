@@ -540,7 +540,7 @@ if (/cpop.html/.test(window.location.href)) {
     }
 
     // start banning
-    var interval = setInterval(refreshUserList, 4000);
+    var refreshUsersInterval = setInterval(refreshUserList, 4000);
     //clearInterval(interval);
 
     bettercc.superban = async function (nickToBan) {
@@ -615,7 +615,7 @@ if (/cpop.html/.test(window.location.href)) {
         clearInterval(interval);
         await banUsers(usersToBeBanned);
         // stop execution and restart in banUsers();
-        interval = setInterval(refreshUserList, 4000);
+        refreshUsersInterval = setInterval(refreshUserList, 4000);
       }
       unsafeWindow.superbans = superbans;
     }
