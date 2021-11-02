@@ -11,6 +11,8 @@
   --footerBackground: #84acc2;
   --placeholderColor: #0e0f0f;
   --iconColor: #0e0f0f;
+  --superwhispercolor: green;
+  --superbancolor: red;
 }
 
 ::after {
