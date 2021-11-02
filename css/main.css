@@ -123,8 +123,8 @@ a.superwhisper {
 
 .ulist-popup .headline {
   background: var(--footerBackground);
+  color: var(--ulistText);
   font-weight: bold;
-  color: #385d77;
   font-size: 13px;
   line-height: 18px;
   margin-bottom: 5px;
