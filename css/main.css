@@ -102,6 +102,34 @@ a.superwhisper {
   top: 50px;
 }
 
+.ulist-popup {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  display: block;
+  z-index: 1000;
+  border: 2px solid var(--ulistColor);
+  padding-bottom: 5px;
+  background: var(--chatBackground);
+}
+
+.ulist-popup a {
+  color: var(--ulistText);
+  text-decoration: none;
+  display: block;
+  padding: 0px 5px 0px 5px;
+  line-height: 16px;
+}
+
+.ulist-popup .headline {
+  background: var(--footerBackground);
+  font-weight: bold;
+  color: #385d77;
+  font-size: 13px;
+  line-height: 18px;
+  margin-bottom: 5px;
+}
+
 /* replace Backgound images with simple color */
 .ww_chat_header {
   background: var(--chatBackground);
