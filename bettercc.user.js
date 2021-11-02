@@ -621,13 +621,32 @@ if (/cpop.html/.test(window.location.href)) {
     }
 
     function getUsers() {
-      var users = [];
-
+      var users_gloabal = [];
+      // get global chat users from cha[].
       for (var i = 2; i < unsafeWindow.cha.length; i += 3) {
-        users = users.concat(
+        users_gloabal = users_gloabal.concat(
           unsafeWindow.cha[i].toLowerCase().split(" ").filter(Boolean)
         );
       }
+      //cclog("users_gloabal: " + users_gloabal);
+
+      var users_channel = [];
+      // get local channel users from cha_my[].
+      for (var j = 0; j < unsafeWindow.cha_my.length; j += 2) {
+        users_channel = users_channel.concat(
+          unsafeWindow.cha_my[j].toLowerCase().split(" ").filter(Boolean)
+        );
+      }
+      //cclog("users_channel: " + users_channel);
+
+      var users_tmp = users_gloabal.concat(users_channel);
+
+      // get unique users from both arrays
+      var users = users_tmp.filter(
+        (item, pos) => users_tmp.indexOf(item) === pos
+      );
+
+      //cclog("users: " + users);
       return users;
     }
 
@@ -648,6 +667,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     const sleepNow = (delay) =>
       new Promise((resolve) => setTimeout(resolve, delay));
+
     async function banUsers(users) {
       for (const user of users) {
         await banUser(user);
