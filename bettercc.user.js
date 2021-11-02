@@ -205,7 +205,9 @@ if (/cpop.html/.test(window.location.href)) {
         ulisttextcolor,
         buttoncolor,
         buttontextcolor,
-        iconcolor;
+        iconcolor,
+        superwhispercolor,
+        superbancolor;
 
       if (
         chatBg.toHsl().l > 0.8 ||
@@ -279,6 +281,9 @@ if (/cpop.html/.test(window.location.href)) {
         includeFallbackColors: false,
       });
 
+      superwhispercolor = triadChatBg[2];
+      superbancolor = triadChatBg[3];
+
       $(":root").css("--chatBackground", chatBg.toHexString());
       $(":root").css("--chatText", chatFg.toHexString());
       $(":root").css("--buttonColor", buttoncolor.toHexString());
@@ -291,6 +296,8 @@ if (/cpop.html/.test(window.location.href)) {
       $(":root").css("--footerBackground", footercolor.toHexString());
       $(":root").css("--placeholderColor", placeholdercolor.toHexString());
       $(":root").css("--iconColor", iconcolor.toHexString());
+      $(":root").css("--superwhispercolor", superwhispercolor.toHexString());
+      $(":root").css("--superbancolor", superbancolor.toHexString());
 
       if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
         $("#ul").addClass("light").removeClass("dark");
