@@ -281,23 +281,23 @@ if (/cpop.html/.test(window.location.href)) {
         includeFallbackColors: false,
       });
 
-      superwhispercolor = triadChatBg[2];
-      superbancolor = triadChatBg[3];
+      superwhispercolor = triadChatBg[1];
+      superbancolor = triadChatBg[2];
 
-      $(":root").css("--chatBackground", chatBg.toHexString());
-      $(":root").css("--chatText", chatFg.toHexString());
-      $(":root").css("--buttonColor", buttoncolor.toHexString());
-      $(":root").css("--buttonText", buttontextcolor.toHexString());
-      $(":root").css("--inputBackground", inputcolor.toHexString());
-      $(":root").css("--inputText", inputtextcolor.toHexString());
-      $(":root").css("--ulistColor", ulistcolor.toHexString());
-      $(":root").css("--ulistText", ulisttextcolor.toHexString());
-      $(":root").css("--optionsText", optionstextcolor.toHexString());
-      $(":root").css("--footerBackground", footercolor.toHexString());
-      $(":root").css("--placeholderColor", placeholdercolor.toHexString());
-      $(":root").css("--iconColor", iconcolor.toHexString());
-      $(":root").css("--superwhispercolor", superwhispercolor.toHexString());
-      $(":root").css("--superbancolor", superbancolor.toHexString());
+      $(":root").css("--chatBackground", chatBg.toHslString());
+      $(":root").css("--chatText", chatFg.toHslString());
+      $(":root").css("--buttonColor", buttoncolor.toHslString());
+      $(":root").css("--buttonText", buttontextcolor.toHslString());
+      $(":root").css("--inputBackground", inputcolor.toHslString());
+      $(":root").css("--inputText", inputtextcolor.toHslString());
+      $(":root").css("--ulistColor", ulistcolor.toHslString());
+      $(":root").css("--ulistText", ulisttextcolor.toHslString());
+      $(":root").css("--optionsText", optionstextcolor.toHslString());
+      $(":root").css("--footerBackground", footercolor.toHslString());
+      $(":root").css("--placeholderColor", placeholdercolor.toHslString());
+      $(":root").css("--iconColor", iconcolor.toHslString());
+      $(":root").css("--superwhispercolor", superwhispercolor.toHslString());
+      $(":root").css("--superbancolor", superbancolor.toHslString());
 
       if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
         $("#ul").addClass("light").removeClass("dark");
