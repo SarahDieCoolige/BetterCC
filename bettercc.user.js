@@ -501,7 +501,10 @@ if (/cpop.html/.test(window.location.href)) {
         placeholderStr =
           "Du flüsterst mit " +
           whispernick +
-          '...\tTipps:\t"/open", "/open Hi All :)"';
+          "...\t\tTipps:\t" +
+          'Superwhisper ausmachen: "/open"' +
+          "\n\t\t\t\t\t\t" +
+          'Ins Open schreiben : "/o Hi All :)"';
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
       }
