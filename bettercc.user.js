@@ -491,9 +491,9 @@ if (/cpop.html/.test(window.location.href)) {
         placeholderStr =
           "Du chattest mit allen..." +
           "...\t\tTipps:\t" +
-          'Superwhisper: "/sw Sariam"' +
+          "Superwhisper: /sw Sariam" +
           "\n\t\t\t\t\t\t" +
-          'Superban: "/sb Bernd57w"';
+          "Superban: /sb Bernd57w";
         input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
       } else {
@@ -502,9 +502,9 @@ if (/cpop.html/.test(window.location.href)) {
           "Du flüsterst mit " +
           whispernick +
           "...\t\tTipps:\t" +
-          'Superwhisper ausmachen: "/open"' +
+          "Superwhisper aus: /open" +
           "\n\t\t\t\t\t\t" +
-          'Ins Open schreiben : "/o Hi All :)"';
+          "Ins Open schreiben : /o Hi All :)";
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
       }
