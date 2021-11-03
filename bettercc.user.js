@@ -504,7 +504,7 @@ if (/cpop.html/.test(window.location.href)) {
           "...\t\tTipps:\t" +
           "Superwhisper aus: /open" +
           "\n\t\t\t\t\t\t" +
-          "Ins Open schreiben : /o Hi All :)";
+          "Im Open schreiben : /o Hi All :)";
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
       }
