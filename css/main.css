@@ -207,7 +207,7 @@ td.chat_i2 {
 }
 
 .chat_i3 {
-  width: 20%;
+  width: 20% !important;
 }
 
 .chat_i4 {
