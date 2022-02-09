@@ -57,7 +57,8 @@ if (/cpop.html/.test(window.location.href)) {
   cleanup();
   betterInput(replaceInputField);
   doColorStuff();
-  if (!gast) replaceOnSubmit();
+  //if (!gast) replaceOnSubmit();
+  replaceOnSubmit();
   // add gast class to userlist
   if (gast) $("#ul").addClass("gast");
   if (superban) enableSuperban();
@@ -160,13 +161,13 @@ if (/cpop.html/.test(window.location.href)) {
       .attr("title", "Chat hängt. Bitte neuladen!!!")
       .addClass("betterccbtn")
       .click(function () {
-        reloadChat();
+        bettercc.reloadChat();
       })
       .appendTo("#betteroptions");
 
     setTimeout(setTheme, 1000);
 
-    function reloadChat() {
+    bettercc.reloadChat = function reloadChat() {
       var iframe = document.getElementById("chatframe");
       var iframeContentWindow = iframe.contentWindow;
       var iframeDoc = iframeContentWindow.document;
@@ -505,18 +506,26 @@ if (/cpop.html/.test(window.location.href)) {
         return false;
       }
 
-      //starts with "/open " or "/o "
-      else if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
-        mymsg = mymsg.replace(openMsgReplaceRegex, "");
+      // IS "/reload"
+      if (mymsg.toLowerCase() === "/reload") {
+        bettercc.reloadChat();
+        mymsg = "";
+        document.hold.OUT1.value = mymsg;
+        return false;
       }
 
       //starts with "/superwhisper " or "/sw "
-      else if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
+      if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
         mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
         bettercc.superwhisper(mymsg, false);
         mymsg = "";
         document.hold.OUT1.value = mymsg;
         return false;
+      }
+
+      //starts with "/open " or "/o "
+      if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(openMsgReplaceRegex, "");
       }
 
       // if whispernick arg
