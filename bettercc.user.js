@@ -232,7 +232,7 @@ if (/cpop.html/.test(window.location.href)) {
       }
 
       checkIframeLoaded();
-    }
+    };
 
     var iframe = null;
     var iContentWindow = null;
@@ -579,10 +579,12 @@ if (/cpop.html/.test(window.location.href)) {
         submitStr = "bettercc.onSubmit();";
         placeholderStr =
           "Du chattest mit allen..." +
-          "...\t\tTipps:\t" +
+          "\n\n" +
           "Superwhisper: /sw Sariam" +
-          "\n\t\t\t\t\t\t" +
-          "Superban: /sb Bernd57w";
+          "  |  " +
+          "Superban: /sb Wendigo" +
+          "  |  " +
+          "Geflogen?: /reload";
         input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
       } else {
@@ -590,10 +592,15 @@ if (/cpop.html/.test(window.location.href)) {
         placeholderStr =
           "Du flüsterst mit " +
           whispernick +
-          "...\t\tTipps:\t" +
+          "..." +
+          "\n\n" +
           "Superwhisper aus: /open" +
-          "\n\t\t\t\t\t\t\t" +
-          "Im Open schreiben : /o Hi All :)";
+          "  |  " +
+          "Im Open schreiben: /o Hi All :)" +
+          "  |  " +
+          "Superban: /sb Wendigo" +
+          "  |  " +
+          "Geflogen?: /reload";
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
       }
