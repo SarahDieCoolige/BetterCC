@@ -143,6 +143,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     $('<input type="button" id="resetbutton" />')
       .val("R")
+      .attr("title", "Ich seh nichts mehr.. whaaa")
       .addClass("betterccbtn")
       .click(function () {
         (async () => {
@@ -156,6 +157,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     $('<input type="button" id="reloadbutton" />')
       .val("mimimi...")
+      .attr("title", "Chat hängt. Bitte neuladen!!!")
       .addClass("betterccbtn")
       .click(function () {
         reloadChat();
