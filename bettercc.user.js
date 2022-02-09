@@ -222,7 +222,7 @@ if (/cpop.html/.test(window.location.href)) {
                   "afterbegin",
                   chatlog
                 );
-              cclog(chatlog);
+              //cclog(chatlog);
               await GM.setValue(userStoreChatlog, "");
             }
           } catch {
@@ -777,12 +777,12 @@ if (/cpop.html/.test(window.location.href)) {
     async function banUsers(users) {
       for (const user of users) {
         await banUser(user);
-        cclog("Waiting to be banned:\n\t" + users);
+        //cclog("Waiting to be banned:\n\t" + users);
 
         users = users.filter((val) => val !== user); //remove user from array
         await sleepNow(1150);
       }
-      cclog("All assholes banned for now:\n\t" + alreadyBanned);
+      //cclog("All assholes banned for now:\n\t" + alreadyBanned);
     }
 
     async function banUser(user) {
@@ -799,7 +799,7 @@ if (/cpop.html/.test(window.location.href)) {
         { method: "get" }
       );
       alreadyBanned.push(user);
-      cclog("Got rid of " + user);
+      cclog("Banned " + user);
       unsafeWindow.alreadyBanned = alreadyBanned;
     }
   }
