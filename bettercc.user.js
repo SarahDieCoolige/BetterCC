@@ -125,6 +125,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     $('<input type="color" id="bgcolorpicker" >')
       .val("#ff0000")
+      .addClass("betterccbtn")
       .on("input", function (e) {
         var bg = this.value.substring(1);
         var fg = fgDef;
@@ -142,6 +143,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     $('<input type="button" id="resetbutton" />')
       .val("R")
+      .addClass("betterccbtn")
       .click(function () {
         (async () => {
           await GM.setValue(userStoreColor, bgDef);
@@ -152,7 +154,83 @@ if (/cpop.html/.test(window.location.href)) {
       })
       .appendTo("#betteroptions");
 
+    $('<input type="button" id="reloadbutton" />')
+      .val("mimimi...")
+      .addClass("betterccbtn")
+      .click(function () {
+        reloadChat();
+      })
+      .appendTo("#betteroptions");
+
     setTimeout(setTheme, 1000);
+
+    function reloadChat() {
+      var iframe = document.getElementById("chatframe");
+      var iframeContentWindow = iframe.contentWindow;
+      var iframeDoc = iframeContentWindow.document;
+
+      var chatlog = iframeDoc.body.innerHTML;
+
+      //chatlog = chatlog.match(/^<font color.*(\r?\n|$)|^<i>.*(\r?\n|$)/gm);
+      chatlog = chatlog.replace(
+        /^.*<script.*|^Willkommen.*$|^ChatCommunity.*$|^<font size="-2">.*$|^<br>.*$|^<b>.*$/gm,
+        ""
+      );
+      chatlog +=
+        '<br><br> <i><font color="red"><b>BetterCC:</b></font> Chat wieder ganz?</i><br><br>';
+
+      let userStoreChatlog = "chatlog_" + userStore;
+      (async function () {
+        await GM.setValue(userStoreChatlog, chatlog);
+      })();
+
+      iframeContentWindow.location.reload();
+
+      async function checkIframeLoaded() {
+        // Get a handle to the iframe element
+        //iframe = document.getElementById("chatframe");
+        //iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        const iframeReloadTimeout = 0;
+
+        await new Promise((r) => setTimeout(r, 2000));
+
+        if (iframeDoc.readyState === "complete") {
+          cclog("chatframe reload complete");
+          insertChatlog();
+          window.clearTimeout;
+          if (iframeReloadTimeout) window.clearTimeout(iframeReloadTimeout);
+          setTheme();
+          return;
+          // The document is still loading.
+        }
+
+        // If we are here, it is not loaded. Set things up so we check   the status again in 100 milliseconds
+        iframeReloadTimeout = window.setTimeout(checkIframeLoaded, 10);
+      }
+
+      function insertChatlog() {
+        (async function () {
+          try {
+            var chatlog = await GM.getValue(userStoreChatlog);
+            if (!!chatlog) {
+              document
+                .getElementById("chatframe")
+                .contentWindow.frames.document.body.insertAdjacentHTML(
+                  "afterbegin",
+                  chatlog
+                );
+              cclog(chatlog);
+              await GM.setValue(userStoreChatlog, "");
+            }
+          } catch {
+            chatlog = "";
+          }
+        })();
+      }
+
+      checkIframeLoaded();
+    }
+
     var iframe = null;
     var iContentWindow = null;
     var iframeWindow = null;
