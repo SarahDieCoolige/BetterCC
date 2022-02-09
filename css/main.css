@@ -244,9 +244,7 @@ textarea {
   border-style: solid;
   outline: none;
 }
-
-#resetbutton,
-#bgcolorpicker {
+.betterccbtn {
   background: var(--buttonColor);
   color: var(--buttonText);
   border-color: var(--inputBackground);
