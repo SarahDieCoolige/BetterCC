@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name     BetterCC
 // @version  1.06
+// @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
