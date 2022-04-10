@@ -53,9 +53,12 @@ function printInChat(position, content) {
     );
 }
 
-function cclogChat(message) {
-  message =
-    '<i><font color="red"><b>BetterCC: </b></font>' + message + "</i><br>";
+function cclogChat(message, showName = true) {
+  message = "<i>" + message + "</i><br>";
+  let prefix = '<i><font color="red"><b>BetterCC: </b></font><i>';
+  if (showName) {
+    message = prefix + message;
+  }
   printInChat("beforeend", message);
 }
 // window functions
