@@ -61,6 +61,37 @@ function cclogChat(message, showName = true) {
   }
   printInChat("beforeend", message);
 }
+function printHelp() {
+  // cclogChat("");
+  // cclogChat("/sw Sariam" + "Dauerflüster mit Sariam", false);
+  // cclogChat("/o Hi All :)" + "So flüsterst du dann ins Open", false);
+  // cclogChat(
+  //   "/open" +
+  //     "So beendest du das dauerflüstern und schreibst wieder ganz normal im Open",
+  //   false
+  // );
+  // cclogChat("/superban Wendigo" + "So bannst du einen Arsch für immer", false);
+  // cclogChat("/superban" + "So kannst du alle deine  Ärsche auflisten", false);
+
+  let help =
+    '<pre><span class="inner-pre" style="font-size: 1.1em">' +
+    "/sw Sariam\t\t" +
+    "Dauerflüster mit Sariam\n" +
+    "/o Hi All :)\t\t" +
+    "So schreibst du dann im Open\n" +
+    "/open\t\t\t" +
+    "So beendest du das Dauerflüstern und schreibst wieder ganz normal im Open\n" +
+    "/sb Wendigo\t\t" +
+    "So bannst du einen Arsch für immer (noch mal zum entbannen)\n" +
+    "/superban\t\t" +
+    "So kannst du alle deine  Ärsche auflisten\n" +
+    "/bettercc\t\t" +
+    "So zeigst du diese Hilfe hier an\n" +
+    "/config\t\t" +
+    "Einstellungen öffnen (gibts noch gar nicht^^)\n" +
+    "</span></pre>";
+  printInChat("beforeend", help);
+}
 // window functions
 var bettercc = (unsafeWindow.bettercc = {});
 
@@ -502,6 +533,17 @@ if (/cpop.html/.test(window.location.href)) {
       let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
 
       let mymsg = document.hold.OUT1.value.trim();
+
+      //starts with "/bettercc " or "/bcc "
+      if (
+        mymsg.toLowerCase() === "/bettercc" ||
+        mymsg.toLowerCase() === "/bcc"
+      ) {
+        printHelp();
+        mymsg = "";
+        document.hold.OUT1.value = mymsg;
+        return false;
+      }
 
       if (superban) {
         //starts with "/superban " or "/sb "
