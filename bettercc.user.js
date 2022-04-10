@@ -493,7 +493,7 @@ if (/cpop.html/.test(window.location.href)) {
     // replace long submit function in input form
     let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit"));
 
-    bettercc.onSubmit = function (whispernick) {
+    bettercc.onSubmit = async function (whispernick) {
       let openMsgCmdRegex = /^\/open\s|^\/o\s/;
       let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
       let superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
@@ -505,6 +505,17 @@ if (/cpop.html/.test(window.location.href)) {
 
       if (superban) {
         //starts with "/superban " or "/sb "
+        if (mymsg.toLowerCase() === "/superban") {
+          var sb = await bettercc.getSuperbans();
+          cclogChat("Banliste");
+
+          let message = sb.join(", ").toString();
+          cclogChat(message, false);
+
+          mymsg = "";
+          document.hold.OUT1.value = mymsg;
+          return false;
+        }
         if (superbanMsgCmdRegex.test(mymsg.toLowerCase())) {
           mymsg = mymsg.replace(superbanMsgReplaceRegex, "").split(" ")[0];
           bettercc.superban(mymsg);
@@ -649,7 +660,7 @@ if (/cpop.html/.test(window.location.href)) {
     // listen for manual changes in gm value
     let listenerId = GM_addValueChangeListener(userStoreBan, getSuperbans);
 
-    async function getSuperbans() {
+    bettercc.getSuperbans = async function () {
       var superbans = [];
       try {
         superbans = Array.from(await GM.getValue(userStoreBan))
@@ -668,7 +679,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     bettercc.superban = async function (nickToBan) {
       nickToBan = nickToBan.toLowerCase();
-      let superbans = await getSuperbans();
+      let superbans = await bettercc.getSuperbans();
       var confirmStr = "";
       if (!superbans.includes(nickToBan)) {
         // user to superban array
@@ -727,7 +738,7 @@ if (/cpop.html/.test(window.location.href)) {
         .attr("type", "text/javascript")
         .appendTo("head");
 
-      var superbans = await getSuperbans();
+      var superbans = await bettercc.getSuperbans();
 
       //cclog("Superbans: " + superbans);
       var users = getUsers();
