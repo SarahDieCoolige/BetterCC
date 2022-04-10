@@ -50,6 +50,8 @@ const noChatBackgrounds = 1;
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
+  window.onunload = null;
+  window.onbeforeunload = null;
   let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
   let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
