@@ -41,6 +41,23 @@ function cclog(str, tag = "BetterCC") {
 
 cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
+function printInChat(position, content) {
+  //let current = document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML;
+  //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
+
+  document
+    .getElementById("chatframe")
+    .contentWindow.frames.document.body.lastChild.insertAdjacentHTML(
+      position,
+      content
+    );
+}
+
+function cclogChat(message) {
+  message =
+    '<i><font color="red"><b>BetterCC: </b></font>' + message + "</i><br>";
+  printInChat("beforeend", message);
+}
 // window functions
 var bettercc = (unsafeWindow.bettercc = {});
 
