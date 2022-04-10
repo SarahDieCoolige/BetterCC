@@ -658,7 +658,10 @@ if (/cpop.html/.test(window.location.href)) {
 
     let userStoreBan = "ban_" + userStore;
     // listen for manual changes in gm value
-    let listenerId = GM_addValueChangeListener(userStoreBan, getSuperbans);
+    let listenerId = GM_addValueChangeListener(
+      userStoreBan,
+      bettercc.getSuperbans
+    );
 
     bettercc.getSuperbans = async function () {
       var superbans = [];
@@ -671,7 +674,7 @@ if (/cpop.html/.test(window.location.href)) {
       }
       await GM.setValue(userStoreBan, superbans);
       return superbans;
-    }
+    };
 
     // start banning
     var refreshUsersInterval = setInterval(refreshUserList, 4000);
@@ -828,6 +831,7 @@ if (/cpop.html/.test(window.location.href)) {
       );
       alreadyBanned.push(user);
       cclog("Banned " + user);
+      //cclogChat("Bans: " + alreadyBanned.toString());
       unsafeWindow.alreadyBanned = alreadyBanned;
     }
   }
