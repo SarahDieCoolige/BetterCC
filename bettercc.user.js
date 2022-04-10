@@ -62,7 +62,7 @@ function cclogChat(message, showName = true) {
   printInChat("beforeend", message);
 }
 function printHelp() {
-  // cclogChat("");
+  cclogChat("Hilfe");
   // cclogChat("/sw Sariam" + "Dauerflüster mit Sariam", false);
   // cclogChat("/o Hi All :)" + "So flüsterst du dann ins Open", false);
   // cclogChat(
@@ -76,19 +76,21 @@ function printHelp() {
   let help =
     '<pre><span class="inner-pre" style="font-size: 1.1em">' +
     "/sw Sariam\t\t" +
-    "Dauerflüster mit Sariam\n" +
+    "Superwhisper mit Sariam\n" +
     "/o Hi All :)\t\t" +
-    "So schreibst du dann im Open\n" +
+    "Im Open schreiben\n" +
     "/open\t\t\t" +
-    "So beendest du das Dauerflüstern und schreibst wieder ganz normal im Open\n" +
+    "Superwhisper aus\n" +
     "/sb Wendigo\t\t" +
-    "So bannst du einen Arsch für immer (noch mal zum entbannen)\n" +
+    "Einen Arsch für immer ignorieren (noch mal zum entbannen)\n" +
     "/superban\t\t" +
-    "So kannst du alle deine  Ärsche auflisten\n" +
-    "/bettercc\t\t" +
+    "Arschliste anzeigen\n" +
+    "/reload\t\t" +
+    "Chat neu laden (mimimi)\n" +
+    "/settings\t\t" +
+    "Einstellungen öffnen (irgendwann mal vielleicht^^)\n" +
+    "/bcc\t\t\t" +
     "So zeigst du diese Hilfe hier an\n" +
-    "/config\t\t" +
-    "Einstellungen öffnen (gibts noch gar nicht^^)\n" +
     "</span></pre>";
   printInChat("beforeend", help);
 }
@@ -652,7 +654,9 @@ if (/cpop.html/.test(window.location.href)) {
           "\n\n" +
           "Superwhisper: /sw Sariam" +
           "  |  " +
-          "Superban: /sb Wendigo";
+          "Superban: /sb Wendigo" +
+          "  |  " +
+          "Hilfe: /bcc";
 
         input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
@@ -668,7 +672,8 @@ if (/cpop.html/.test(window.location.href)) {
           "Im Open schreiben: /o Hi All :)" +
           "  |  " +
           "Superban: /sb Wendigo" +
-          "  |  ";
+          "  |  " +
+          "Hilfe: /bcc";
 
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
