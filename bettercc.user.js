@@ -814,6 +814,7 @@ if (/cpop.html/.test(window.location.href)) {
         await sleepNow(1150);
       }
       //cclog("All assholes banned for now:\n\t" + alreadyBanned);
+      //cclogChat("Tschüss " + alreadyBanned.toString());
     }
 
     async function banUser(user) {
