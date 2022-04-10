@@ -649,9 +649,9 @@ if (/cpop.html/.test(window.location.href)) {
     async function getSuperbans() {
       var superbans = [];
       try {
-        superbans = Array.from(await GM.getValue(userStoreBan)).map((v) =>
-          v.toLowerCase()
-        );
+        superbans = Array.from(await GM.getValue(userStoreBan))
+          .map((v) => v.toLowerCase())
+          .sort();
       } catch {
         superbans = [];
       }
@@ -705,7 +705,7 @@ if (/cpop.html/.test(window.location.href)) {
       }
 
       //store superbans
-      GM.setValue(userStoreBan, superbans);
+      GM.setValue(userStoreBan, superbans.sort());
 
       //hide popup after click
       $(".ulist-popup").hide();
