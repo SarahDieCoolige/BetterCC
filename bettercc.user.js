@@ -1,5 +1,7 @@
 // ==UserScript==
 // @name     BetterCC
+// @description  BetterCC is better
+// @author       Sarah
 // @version  1.07
 // @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
