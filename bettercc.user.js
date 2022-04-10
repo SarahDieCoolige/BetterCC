@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name     BetterCC
-// @version  1.06
+// @version  1.07
 // @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
@@ -13,8 +13,8 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.1/dist/GM_wrench.min.js
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.06
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.06
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.07
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.07
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -105,6 +105,7 @@ const noChatBackgrounds = 1;
 if (/cpop.html/.test(window.location.href)) {
   window.onunload = null;
   window.onbeforeunload = null;
+
   let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
   let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
