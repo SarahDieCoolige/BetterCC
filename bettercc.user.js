@@ -549,12 +549,13 @@ if (/cpop.html/.test(window.location.href)) {
 
       if (superban) {
         //IS "/superban " or "/sb "
-        if (mymsg.toLowerCase() === "/superban") {
-          var sb = await bettercc.getSuperbans();
+        if (
+          mymsg.toLowerCase() === "/superban" ||
+          mymsg.toLowerCase() === "/sb"
+        ) {
+          let banlist = (await bettercc.getSuperbans()).join(", ").toString();
           cclogChat("Banliste");
-
-          let message = sb.join(", ").toString();
-          cclogChat(message, false);
+          cclogChat(banlist, false);
 
           mymsg = "";
           document.hold.OUT1.value = mymsg;
