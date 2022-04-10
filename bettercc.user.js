@@ -192,15 +192,13 @@ if (/cpop.html/.test(window.location.href)) {
       var iframeContentWindow = iframe.contentWindow;
       var iframeDoc = iframeContentWindow.document;
 
-      var chatlog = iframeDoc.body.innerHTML;
+      var chatlog = iframeDoc.body.lastChild.innerHTML;
 
       //chatlog = chatlog.match(/^<font color.*(\r?\n|$)|^<i>.*(\r?\n|$)/gm);
-      chatlog = chatlog.replace(
-        /^.*<script.*|^Willkommen.*$|^ChatCommunity.*$|^<font size="-2">.*$|^<br>.*$|^<b>.*$/gm,
-        ""
-      );
-      chatlog +=
-        '<br><br> <i><font color="red"><b>BetterCC:</b></font> Chat wieder ganz?</i><br><br>';
+      //chatlog = chatlog.replace(
+      //  /^.*<script.*|^Willkommen.*$|^ChatCommunity.*$|^<font size="-2">.*$|^<br>.*$|^<b>.*$/gm,
+      //  ""
+      //);
 
       let userStoreChatlog = "chatlog_" + userStore;
       (async function () {
@@ -220,7 +218,7 @@ if (/cpop.html/.test(window.location.href)) {
         if (iframeDoc.readyState === "complete") {
           cclog("chatframe reload complete");
           insertChatlog();
-          window.clearTimeout;
+          //window.clearTimeout;
           if (iframeReloadTimeout) window.clearTimeout(iframeReloadTimeout);
           setTheme();
           return;
@@ -228,20 +226,16 @@ if (/cpop.html/.test(window.location.href)) {
         }
 
         // If we are here, it is not loaded. Set things up so we check   the status again in 100 milliseconds
-        iframeReloadTimeout = window.setTimeout(checkIframeLoaded, 10);
+        iframeReloadTimeout = window.setTimeout(checkIframeLoaded, 100);
       }
 
       function insertChatlog() {
         (async function () {
           try {
-            var chatlog = await GM.getValue(userStoreChatlog);
+            var message = await GM.getValue(userStoreChatlog);
             if (!!chatlog) {
-              document
-                .getElementById("chatframe")
-                .contentWindow.frames.document.body.insertAdjacentHTML(
-                  "afterbegin",
-                  chatlog
-                );
+              printInChat("beforeend", chatlog);
+              cclogChat("Chat wieder ganz?");
               //cclog(chatlog);
               await GM.setValue(userStoreChatlog, "");
             }
