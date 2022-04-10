@@ -41,7 +41,7 @@ function cclog(str, tag = "BetterCC") {
 
 cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
-function printInChat(position, content) {
+function printInChat(position = "beforeend", content) {
   //let current = document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML;
   //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
 
@@ -546,7 +546,7 @@ if (/cpop.html/.test(window.location.href)) {
       }
 
       if (superban) {
-        //starts with "/superban " or "/sb "
+        //IS "/superban " or "/sb "
         if (mymsg.toLowerCase() === "/superban") {
           var sb = await bettercc.getSuperbans();
           cclogChat("Banliste");
@@ -652,9 +652,8 @@ if (/cpop.html/.test(window.location.href)) {
           "\n\n" +
           "Superwhisper: /sw Sariam" +
           "  |  " +
-          "Superban: /sb Wendigo" +
-          "  |  " +
-          "Geflogen?: /reload";
+          "Superban: /sb Wendigo";
+
         input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
       } else {
@@ -669,8 +668,8 @@ if (/cpop.html/.test(window.location.href)) {
           "Im Open schreiben: /o Hi All :)" +
           "  |  " +
           "Superban: /sb Wendigo" +
-          "  |  " +
-          "Geflogen?: /reload";
+          "  |  ";
+
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
       }
@@ -729,7 +728,9 @@ if (/cpop.html/.test(window.location.href)) {
       if (!superbans.includes(nickToBan)) {
         // user to superban array
         confirmStr =
-          "Möchtest du " + nickToBan + " wirklich dauerhaft ignorieren?";
+          "Möchtest du " +
+          nickToBan.toUpperCase() +
+          " wirklich dauerhaft ignorieren?";
         if (window.confirm(confirmStr)) {
           // add to banned array
           superbans.push(nickToBan);
@@ -738,7 +739,7 @@ if (/cpop.html/.test(window.location.href)) {
       } else {
         confirmStr =
           "Möchtest du " +
-          nickToBan +
+          nickToBan.toUpperCase() +
           " wirklich aus deiner Ignoreliste entfernen?";
         if (window.confirm(confirmStr)) {
           // remove name from banned array
@@ -765,6 +766,7 @@ if (/cpop.html/.test(window.location.href)) {
 
       //store superbans
       GM.setValue(userStoreBan, superbans.sort());
+      cclogChat("Schreib <b>/superban</b> um deine <b>Bannliste</b> zu sehen");
 
       //hide popup after click
       $(".ulist-popup").hide();
