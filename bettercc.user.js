@@ -46,16 +46,18 @@ function cclog(str, tag = "BetterCC") {
 
 cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
-function printInChat(position = "beforeend", content) {
+function printInChat(content) {
   //let current = document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML;
   //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
 
-  document
-    .getElementById("chatframe")
-    .contentWindow.frames.document.body.lastChild.insertAdjacentHTML(
-      position,
-      content
-    );
+  $("#chatframe").contents().find("body").children().last().append(content);
+
+  //document
+  //  .getElementById("chatframe")
+  //  .contentWindow.frames.document.body.lastChild.insertAdjacentHTML(
+  //    position,
+  //    content
+  //  );
 }
 
 function cclogChat(message, showName = true) {
@@ -64,7 +66,7 @@ function cclogChat(message, showName = true) {
   if (showName) {
     message = prefix + message;
   }
-  printInChat("beforeend", message);
+  printInChat(message);
 }
 function printHelp() {
   cclogChat("Hilfe");
@@ -276,7 +278,7 @@ if (/cpop.html/.test(window.location.href)) {
           try {
             var message = await GM.getValue(userStoreChatlog);
             if (!!chatlog) {
-              printInChat("beforeend", chatlog);
+              printInChat(chatlog);
               cclogChat("Chat wieder ganz?");
               //cclog(chatlog);
               await GM.setValue(userStoreChatlog, "");
