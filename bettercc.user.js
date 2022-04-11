@@ -313,7 +313,7 @@ if (/cpop.html/.test(window.location.href)) {
             var message = await GM.getValue(userStoreChatlog);
             if (!!chatlog) {
               printInChat("beforebegin", chatlog);
-              cclogChat("Chat wieder ganz?");
+              //cclogChat("Chat wieder ganz?");
               //cclog(chatlog);
               await GM.setValue(userStoreChatlog, "");
             }
