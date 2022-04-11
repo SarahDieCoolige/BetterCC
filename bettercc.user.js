@@ -8,10 +8,6 @@
 // @match  https://www.chatcity.de/de/cpop.html?&RURL=*
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  DONTMATCH-https://www.chatcity.de/cc_chat/chatout?CCSS=//images.chatcity.de
-// @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
-// @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
-// @include  https://www.chatcity.de/de/nc/index.html
-//// @include  https://www.chatcity.de/cc_chat/chatout?CCSS=//images.chatcity.de/*
 //
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
