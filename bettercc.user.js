@@ -42,7 +42,7 @@ function cclog(str, tag = "BetterCC") {
 
 cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
-function printInChat(content) {
+function printInChat(position = "beforeend", content) {
   //$("#chatframe").contents().find("body").children().last().append(content);
 
   document
@@ -62,7 +62,7 @@ function cclogChat(message, showName = true) {
   if (showName) {
     message = prefix + message;
   }
-  printInChat(message);
+  printInChat("beforeend", message);
 }
 
 let helpStrings = [
@@ -110,7 +110,7 @@ let helptxt =
 
 function printHelp() {
   cclogChat("Hilfe");
-  printInChat(helptxt);
+  printInChat("beforeend", helptxt);
 }
 
 // window functions
@@ -257,7 +257,17 @@ if (/cpop.html/.test(window.location.href)) {
       var iframeContentWindow = iframe.contentWindow;
       var iframeDoc = iframeContentWindow.document;
 
-      var chatlog = iframeDoc.body.lastChild.innerHTML;
+      let children =
+        document.getElementById("chatframe").contentWindow.document.body
+          .children;
+
+      var chatlog = "";
+      for (let i = 0; i < children.length; i++) {
+        if (children[i].outerHTML.startsWith('<font size="-1"><br>')) {
+          //cclog("child " + i + " contains messages");
+          chatlog += children[i].outerHTML;
+        }
+      }
 
       //chatlog = chatlog.match(/^<font color.*(\r?\n|$)|^<i>.*(\r?\n|$)/gm);
       //chatlog = chatlog.replace(
@@ -299,7 +309,7 @@ if (/cpop.html/.test(window.location.href)) {
           try {
             var message = await GM.getValue(userStoreChatlog);
             if (!!chatlog) {
-              printInChat(chatlog);
+              printInChat("beforebegin", chatlog);
               cclogChat("Chat wieder ganz?");
               //cclog(chatlog);
               await GM.setValue(userStoreChatlog, "");
