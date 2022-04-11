@@ -43,14 +43,14 @@ function cclog(str, tag = "BetterCC") {
 cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
 function printInChat(content) {
-  $("#chatframe").contents().find("body").children().last().append(content);
+  //$("#chatframe").contents().find("body").children().last().append(content);
 
-  //document
-  //  .getElementById("chatframe")
-  //  .contentWindow.frames.document.body.lastChild.insertAdjacentHTML(
-  //    position,
-  //    content
-  //  );
+  document
+    .getElementById("chatframe")
+    .contentWindow.frames.document.body.lastChild.insertAdjacentHTML(
+      "beforeend",
+      content
+    );
 
   //let current = document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML;
   //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
