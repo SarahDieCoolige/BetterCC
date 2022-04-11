@@ -57,13 +57,16 @@ function printInChat(position = "beforeend", content) {
 }
 
 function cclogChat(message, name = "BetterCC") {
-  //message = "<i>" + message + "</i><br>";
-  message += "<br>";
+  message =
+    '<pre id="bccmessage" class="bccmessage" style="white-space: pre-wrap; font-size: 1.2em; width: 70%;">' +
+    message +
+    "</pre><br>";
+
   if (name.trim() !== "") {
     name += ": ";
+    name = '<font color="red"><b>' + name + "</b></font>";
+    message = name + message;
   }
-  let prefix = '<font color="red"><b>' + name + "</b></font>";
-  message = prefix + message;
   printInChat("beforeend", message);
 }
 
@@ -91,7 +94,6 @@ for (let i = 0; i < helpStrings.length; i++) {
 }
 
 let helptxt =
-  '<pre><span class="inner-pre" style="font-size: 1.1em">' +
   "/sw Sariam\t\t" +
   "Superwhisper mit Sariam\n" +
   "/o Hi All :)\t\t" +
@@ -102,13 +104,12 @@ let helptxt =
   "Einen Arsch für immer ignorieren (noch mal zum entbannen)\n" +
   "/superban\t\t" +
   "Arschliste anzeigen\n" +
-  "/reload\t\t" +
+  "/reload\t\t\t" +
   "Chat neu laden (mimimi)\n" +
   "/settings\t\t" +
   "Einstellungen öffnen (irgendwann mal vielleicht^^)\n" +
   "/help\t\t\t" +
-  "So zeigst du diese Hilfe hier an\n" +
-  "</span></pre>";
+  "So zeigst du diese Hilfe hier an\n";
 
 function printHelp() {
   cclogChat(helptxt, "Hilfe");
