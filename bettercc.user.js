@@ -424,20 +424,21 @@ if (/cpop.html/.test(window.location.href)) {
       superwhispercolor = triadChatBg[1];
       superbancolor = triadChatBg[2];
 
-      $(":root").css("--chatBackground", chatBg.toHslString());
-      $(":root").css("--chatText", chatFg.toHslString());
-      $(":root").css("--buttonColor", buttoncolor.toHslString());
-      $(":root").css("--buttonText", buttontextcolor.toHslString());
-      $(":root").css("--inputBackground", inputcolor.toHslString());
-      $(":root").css("--inputText", inputtextcolor.toHslString());
-      $(":root").css("--ulistColor", ulistcolor.toHslString());
-      $(":root").css("--ulistText", ulisttextcolor.toHslString());
-      $(":root").css("--optionsText", optionstextcolor.toHslString());
-      $(":root").css("--footerBackground", footercolor.toHslString());
-      $(":root").css("--placeholderColor", placeholdercolor.toHslString());
-      $(":root").css("--iconColor", iconcolor.toHslString());
-      $(":root").css("--superwhispercolor", superwhispercolor.toHslString());
-      $(":root").css("--superbancolor", superbancolor.toHslString());
+      let $root = $(":root");
+      $root.css("--chatBackground", chatBg.toHslString());
+      $root.css("--chatText", chatFg.toHslString());
+      $root.css("--buttonColor", buttoncolor.toHslString());
+      $root.css("--buttonText", buttontextcolor.toHslString());
+      $root.css("--inputBackground", inputcolor.toHslString());
+      $root.css("--inputText", inputtextcolor.toHslString());
+      $root.css("--ulistColor", ulistcolor.toHslString());
+      $root.css("--ulistText", ulisttextcolor.toHslString());
+      $root.css("--optionsText", optionstextcolor.toHslString());
+      $root.css("--footerBackground", footercolor.toHslString());
+      $root.css("--placeholderColor", placeholdercolor.toHslString());
+      $root.css("--iconColor", iconcolor.toHslString());
+      $root.css("--superwhispercolor", superwhispercolor.toHslString());
+      $root.css("--superbancolor", superbancolor.toHslString());
 
       if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
         $("#ul").addClass("light").removeClass("dark");
