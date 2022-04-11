@@ -47,9 +47,6 @@ function cclog(str, tag = "BetterCC") {
 cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
 function printInChat(content) {
-  //let current = document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML;
-  //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
-
   $("#chatframe").contents().find("body").children().last().append(content);
 
   //document
@@ -58,6 +55,9 @@ function printInChat(content) {
   //    position,
   //    content
   //  );
+
+  //let current = document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML;
+  //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
 }
 
 function cclogChat(message, showName = true) {
@@ -68,39 +68,35 @@ function cclogChat(message, showName = true) {
   }
   printInChat(message);
 }
+
+let helpStrings = [
+  ["sw Sariam", "Superwhisper mit Sariam"],
+  ["o Hi All :)", "Im Open schreiben"],
+  ["open", "Superwhisper aus"],
+  ["sb Wendigo", "Einen Arsch für immer ignorieren (noch mal zum entbannen)"],
+  ["/superban", "Arschliste anzeigen"],
+  ["/reload", "Chat neu laden (mimimi)"],
+  ["/settings", "Einstellungen öffnen (irgendwann mal vielleicht^^)"],
+  ["/bcc", "So zeigst du diese Hilfe hier an"],
+];
+
+let $help = $("<table/>");
+$help.addClass("helpTable");
+for (let i = 0; i < helpStrings.length; i++) {
+  $help.append(
+    "<tr><td>" +
+      helpStrings[i][0] +
+      "</td><td>" +
+      helpStrings[i][1] +
+      "</td></tr>"
+  );
+}
+
 function printHelp() {
   cclogChat("Hilfe");
-  // cclogChat("/sw Sariam" + "Dauerflüster mit Sariam", false);
-  // cclogChat("/o Hi All :)" + "So flüsterst du dann ins Open", false);
-  // cclogChat(
-  //   "/open" +
-  //     "So beendest du das dauerflüstern und schreibst wieder ganz normal im Open",
-  //   false
-  // );
-  // cclogChat("/superban Wendigo" + "So bannst du einen Arsch für immer", false);
-  // cclogChat("/superban" + "So kannst du alle deine  Ärsche auflisten", false);
-
-  let help =
-    '<pre><span class="inner-pre" style="font-size: 1.1em">' +
-    "/sw Sariam\t\t" +
-    "Superwhisper mit Sariam\n" +
-    "/o Hi All :)\t\t" +
-    "Im Open schreiben\n" +
-    "/open\t\t\t" +
-    "Superwhisper aus\n" +
-    "/sb Wendigo\t\t" +
-    "Einen Arsch für immer ignorieren (noch mal zum entbannen)\n" +
-    "/superban\t\t" +
-    "Arschliste anzeigen\n" +
-    "/reload\t\t" +
-    "Chat neu laden (mimimi)\n" +
-    "/settings\t\t" +
-    "Einstellungen öffnen (irgendwann mal vielleicht^^)\n" +
-    "/bcc\t\t\t" +
-    "So zeigst du diese Hilfe hier an\n" +
-    "</span></pre>";
-  printInChat("beforeend", help);
+  printInChat($help);
 }
+
 // window functions
 var bettercc = (unsafeWindow.bettercc = {});
 
@@ -226,6 +222,15 @@ if (/cpop.html/.test(window.location.href)) {
       .addClass("betterccbtn")
       .click(function () {
         bettercc.reloadChat();
+      })
+      .appendTo("#betteroptions");
+
+    $('<input type="button" id="helpbutton" />')
+      .val("H")
+      .attr("title", "BetterCC Hilfi")
+      .addClass("betterccbtn")
+      .click(function () {
+        printHelp();
       })
       .appendTo("#betteroptions");
 
