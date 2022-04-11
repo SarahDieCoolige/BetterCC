@@ -73,7 +73,7 @@ let helpStrings = [
   ["/superban", "Arschliste anzeigen"],
   ["/reload", "Chat neu laden (mimimi)"],
   ["/settings", "Einstellungen öffnen (irgendwann mal vielleicht^^)"],
-  ["/bcc", "So zeigst du diese Hilfe hier an"],
+  ["/help", "So zeigst du diese Hilfe hier an"],
 ];
 
 let $help = $("<table/>");
@@ -104,7 +104,7 @@ let helptxt =
   "Chat neu laden (mimimi)\n" +
   "/settings\t\t" +
   "Einstellungen öffnen (irgendwann mal vielleicht^^)\n" +
-  "/bcc\t\t\t" +
+  "/help\t\t\t" +
   "So zeigst du diese Hilfe hier an\n" +
   "</span></pre>";
 
@@ -566,10 +566,10 @@ if (/cpop.html/.test(window.location.href)) {
 
       let mymsg = document.hold.OUT1.value.trim();
 
-      //starts with "/bettercc " or "/bcc "
+      //starts with "/bettercc " or "/help "
       if (
         mymsg.toLowerCase() === "/bettercc" ||
-        mymsg.toLowerCase() === "/bcc"
+        mymsg.toLowerCase() === "/help"
       ) {
         printHelp();
         mymsg = "";
@@ -687,7 +687,7 @@ if (/cpop.html/.test(window.location.href)) {
           "  |  " +
           "Superban: /sb Wendigo" +
           "  |  " +
-          "Hilfe: /bcc";
+          "Hilfe: /help";
 
         input.removeClass("superwhisper");
         await GM.setValue(userStoreWhisper, "");
@@ -704,7 +704,7 @@ if (/cpop.html/.test(window.location.href)) {
           "  |  " +
           "Superban: /sb Wendigo" +
           "  |  " +
-          "Hilfe: /bcc";
+          "Hilfe: /help";
 
         input.addClass("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
