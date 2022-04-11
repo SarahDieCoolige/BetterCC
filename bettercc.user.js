@@ -66,10 +66,10 @@ function cclogChat(message, showName = true) {
 }
 
 let helpStrings = [
-  ["sw Sariam", "Superwhisper mit Sariam"],
-  ["o Hi All :)", "Im Open schreiben"],
-  ["open", "Superwhisper aus"],
-  ["sb Wendigo", "Einen Arsch für immer ignorieren (noch mal zum entbannen)"],
+  ["/sw Sariam", "Superwhisper mit Sariam"],
+  ["/o Hi All :)", "Im Open schreiben"],
+  ["/open", "Superwhisper aus"],
+  ["/sb Wendigo", "Einen Arsch für immer ignorieren (noch mal zum entbannen)"],
   ["/superban", "Arschliste anzeigen"],
   ["/reload", "Chat neu laden (mimimi)"],
   ["/settings", "Einstellungen öffnen (irgendwann mal vielleicht^^)"],
@@ -222,8 +222,8 @@ if (/cpop.html/.test(window.location.href)) {
       .appendTo("#betteroptions");
 
     $('<input type="button" id="helpbutton" />')
-      .val("H")
-      .attr("title", "BetterCC Hilfi")
+      .val("?")
+      .attr("title", "BetterCC Hilfe")
       .addClass("betterccbtn")
       .click(function () {
         printHelp();
