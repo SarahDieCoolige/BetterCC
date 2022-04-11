@@ -198,19 +198,19 @@ if (/cpop.html/.test(window.location.href)) {
       .wrap('<div id="betteroptions"></div>')
       .appendTo("#betteroptions");
 
-    $('<input type="button" id="resetbutton" />')
-      .val("R")
-      .attr("title", "Ich seh nichts mehr.. whaaa")
-      .addClass("betterccbtn")
-      .click(function () {
-        (async () => {
-          await GM.setValue(userStoreColor, bgDef);
-        })();
-        setTheme();
-        //bettercc.setColors(bgDef, fgDef, 0);
-        $("#bgcolorpicker").prop("disabled", this.checked);
-      })
-      .appendTo("#betteroptions");
+    // $('<input type="button" id="resetbutton" />')
+    //   .val("R")
+    //   .attr("title", "Ich seh nichts mehr.. whaaa")
+    //   .addClass("betterccbtn")
+    //   .click(function () {
+    //     (async () => {
+    //       await GM.setValue(userStoreColor, bgDef);
+    //     })();
+    //     setTheme();
+    //     //bettercc.setColors(bgDef, fgDef, 0);
+    //     $("#bgcolorpicker").prop("disabled", this.checked);
+    //   })
+    //   .appendTo("#betteroptions");
 
     $('<input type="button" id="reloadbutton" />')
       .val("mimimi...")
