@@ -45,3 +45,8 @@ table.helpTable tbody td {
   font-size: 0.7em;
   color: inherit;
 }
+
+table.helpTable tr td:first-child {
+  min-width: 7em;
+  max-width: 7em;
+}
