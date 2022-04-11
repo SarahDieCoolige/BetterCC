@@ -34,3 +34,14 @@
 font[color] {
   filter: brightness(130%) !important;
 }
+
+table.helpTable {
+  width: 40%;
+}
+table.helpTable td,
+table.helpTable th {
+}
+table.helpTable tbody td {
+  font-size: 12px;
+  color: var(--chatText);
+}
