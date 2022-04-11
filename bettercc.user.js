@@ -88,9 +88,29 @@ for (let i = 0; i < helpStrings.length; i++) {
   );
 }
 
+let helptxt =
+  '<pre><span class="inner-pre" style="font-size: 1.1em">' +
+  "/sw Sariam\t\t" +
+  "Superwhisper mit Sariam\n" +
+  "/o Hi All :)\t\t" +
+  "Im Open schreiben\n" +
+  "/open\t\t\t" +
+  "Superwhisper aus\n" +
+  "/sb Wendigo\t\t" +
+  "Einen Arsch für immer ignorieren (noch mal zum entbannen)\n" +
+  "/superban\t\t" +
+  "Arschliste anzeigen\n" +
+  "/reload\t\t" +
+  "Chat neu laden (mimimi)\n" +
+  "/settings\t\t" +
+  "Einstellungen öffnen (irgendwann mal vielleicht^^)\n" +
+  "/bcc\t\t\t" +
+  "So zeigst du diese Hilfe hier an\n" +
+  "</span></pre>";
+
 function printHelp() {
   cclogChat("Hilfe");
-  printInChat($help);
+  printInChat(helptxt);
 }
 
 // window functions
