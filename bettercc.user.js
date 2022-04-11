@@ -5,6 +5,9 @@
 // @version  1.08
 // @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
+// @match  https://www.chatcity.de/de/cpop.html?&RURL=*
+// @match  https://www.chatcity.de/de/nc/index.html
+// @match  DONTMATCH-https://www.chatcity.de/cc_chat/chatout?CCSS=//images.chatcity.de
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/
 // @include  https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/*
 // @include  https://www.chatcity.de/de/nc/index.html
