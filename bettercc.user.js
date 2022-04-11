@@ -56,12 +56,14 @@ function printInChat(position = "beforeend", content) {
   //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
 }
 
-function cclogChat(message, showName = true) {
-  message = "<i>" + message + "</i><br>";
-  let prefix = '<i><font color="red"><b>BetterCC: </b></font><i>';
-  if (showName) {
-    message = prefix + message;
+function cclogChat(message, name = "BetterCC") {
+  //message = "<i>" + message + "</i><br>";
+  message += "<br>";
+  if (name.trim() !== "") {
+    name += ": ";
   }
+  let prefix = '<font color="red"><b>' + name + "</b></font>";
+  message = prefix + message;
   printInChat("beforeend", message);
 }
 
@@ -109,8 +111,8 @@ let helptxt =
   "</span></pre>";
 
 function printHelp() {
-  cclogChat("Hilfe");
-  printInChat("beforeend", helptxt);
+  cclogChat(helptxt, "Hilfe");
+  //  printInChat("beforeend", helptxt);
 }
 
 // window functions
@@ -594,8 +596,7 @@ if (/cpop.html/.test(window.location.href)) {
           mymsg.toLowerCase() === "/sb"
         ) {
           let banlist = (await bettercc.getSuperbans()).join(", ").toString();
-          cclogChat("Banliste");
-          cclogChat(banlist, false);
+          cclogChat(banlist, "Banliste");
 
           mymsg = "";
           document.hold.OUT1.value = mymsg;
