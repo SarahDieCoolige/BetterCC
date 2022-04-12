@@ -726,7 +726,7 @@ if (/cpop.html/.test(window.location.href)) {
           "Du flüsterst mit " +
           whispernick +
           "..." +
-          "\n" +
+          "\n\n" +
           "Superwhisper aus: /open" +
           "  |  " +
           "/o Hi All :)" +
