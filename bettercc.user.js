@@ -516,13 +516,18 @@ if (/cpop.html/.test(window.location.href)) {
    */
   function cleanup() {
     // remove all but last ulist regualary since cc is just appending these instead of replacing
-    setInterval(function () {
-      $("head")
-        .find(
-          "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']:not(:last)"
-        )
-        .remove();
-    }, 60000);
+    GM_wrench.waitForKeyElements(
+      "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']",
+      function (jNode) {
+        $("head")
+          .find(
+            "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']:not(:last)"
+          )
+          .remove();
+      },
+      false,
+      30000
+    );
     $("#popup-chat").removeAttr("ondragstart").removeAttr("ondrop");
     $("head")
       .find("script[src='https://ssl.google-analytics.com/ga.js']")
