@@ -147,7 +147,7 @@ button {
   background: var(--inputBackground);
   width: 95%;
   resize: none;
-  font-size: 1.2em;
+  font-size: 1.1em;
   padding: 2px;
   margin: 2px;
 }
@@ -155,6 +155,8 @@ button {
 ::placeholder {
   color: var(--placeholderColor);
   opacity: 0.4 !important;
+  line-height: normal;
+  font-size: 1em;
 }
 
 #custom_input_text::placeholder {
