@@ -48,7 +48,7 @@ function printInChat(position = "beforeend", content) {
   document
     .getElementById("chatframe")
     .contentWindow.frames.document.body.lastChild.insertAdjacentHTML(
-      "beforeend",
+      position,
       content
     );
 
@@ -122,6 +122,16 @@ var bettercc = (unsafeWindow.bettercc = {});
 const superban = 1;
 const replaceInputField = 1;
 const noChatBackgrounds = 1;
+
+function getChatframe() {
+  return document.getElementById("chatframe");
+}
+
+function getChatframeDocument() {
+  return (
+    getChatframe().contentDocument || getChatframe().contentWindow.document
+  );
+}
 
 //MAIN CHAT
 if (/cpop.html/.test(window.location.href)) {
@@ -221,20 +231,6 @@ if (/cpop.html/.test(window.location.href)) {
       .wrap('<div id="betteroptions"></div>')
       .appendTo("#betteroptions");
 
-    // $('<input type="button" id="resetbutton" />')
-    //   .val("R")
-    //   .attr("title", "Ich seh nichts mehr.. whaaa")
-    //   .addClass("betterccbtn")
-    //   .click(function () {
-    //     (async () => {
-    //       await GM.setValue(userStoreColor, bgDef);
-    //     })();
-    //     setTheme();
-    //     //bettercc.setColors(bgDef, fgDef, 0);
-    //     $("#bgcolorpicker").prop("disabled", this.checked);
-    //   })
-    //   .appendTo("#betteroptions");
-
     $('<input type="button" id="reloadbutton" />')
       .val("mimimi...")
       .attr("title", "Chat hängt. Bitte neuladen!!!")
@@ -256,89 +252,51 @@ if (/cpop.html/.test(window.location.href)) {
     setTimeout(setTheme, 1000);
 
     bettercc.reloadChat = function reloadChat() {
-      var iframe = document.getElementById("chatframe");
-      var iframeContentWindow = iframe.contentWindow;
-      var iframeDoc = iframeContentWindow.document;
+      let chatframeDoc = getChatframeDocument();
+      let children = chatframeDoc.body.children;
 
-      let children =
-        document.getElementById("chatframe").contentWindow.document.body
-          .children;
-
-      var chatlog = "";
-      for (let i = 0; i < children.length; i++) {
+      let chatlog = "";
+      // start with 13 since everything prior we don't need
+      for (let i = 13; i < children.length; i++) {
         if (children[i].outerHTML.startsWith('<font size="-1"><br>')) {
-          //cclog("child " + i + " contains messages");
           chatlog += children[i].outerHTML;
         }
       }
-
-      //chatlog = chatlog.match(/^<font color.*(\r?\n|$)|^<i>.*(\r?\n|$)/gm);
-      //chatlog = chatlog.replace(
-      //  /^.*<script.*|^Willkommen.*$|^ChatCommunity.*$|^<font size="-2">.*$|^<br>.*$|^<b>.*$/gm,
-      //  ""
-      //);
 
       let userStoreChatlog = "chatlog_" + userStore;
       (async function () {
         await GM.setValue(userStoreChatlog, chatlog);
       })();
 
-      iframeContentWindow.location.reload();
+      getChatframe().contentWindow.location.reload();
 
-      async function checkIframeLoaded() {
-        // Get a handle to the iframe element
-        //iframe = document.getElementById("chatframe");
-        //iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        const iframeReloadTimeout = 0;
-
-        await new Promise((r) => setTimeout(r, 2000));
-
-        if (iframeDoc.readyState === "complete") {
-          cclog("chatframe reload complete");
-          insertChatlog();
-          //window.clearTimeout;
-          if (iframeReloadTimeout) window.clearTimeout(iframeReloadTimeout);
-          setTheme();
-          return;
-          // The document is still loading.
-        }
-
-        // If we are here, it is not loaded. Set things up so we check   the status again in 100 milliseconds
-        iframeReloadTimeout = window.setTimeout(checkIframeLoaded, 100);
-      }
+      setTimeout(setTheme, 2000);
+      setTimeout(insertChatlog, 2000);
 
       function insertChatlog() {
         (async function () {
-          try {
-            var message = await GM.getValue(userStoreChatlog);
-            if (!!chatlog) {
-              printInChat("beforebegin", chatlog);
-              //cclogChat("Chat wieder ganz?");
-              //cclog(chatlog);
-              await GM.setValue(userStoreChatlog, "");
-            }
-          } catch {
-            chatlog = "";
+          var message = await GM.getValue(userStoreChatlog);
+          if (!!chatlog) {
+            cclog("Chatlog: " + message);
+
+            printInChat("beforebegin", chatlog);
+            //cclogChat("Chat wieder ganz?");
+            //cclog(chatlog);
+            //await GM.setValue(userStoreChatlog, "");
+          } else {
+            cclog("Kein Chatlog");
           }
         })();
       }
-
-      checkIframeLoaded();
     };
 
-    var iframe = null;
-    var iContentWindow = null;
-    var iframeWindow = null;
-
     function setTheme() {
-      iframe = document.getElementById("chatframe");
-      iContentWindow = iframe.contentWindow;
-      iframeWindow = iContentWindow.document;
+      let chatframedoc = getChatframeDocument();
 
       var iframe_css = GM_getResourceText("iframe_css");
 
-      if (!$(iframeWindow).find("head").find("#iframe_css").length) {
-        $(iframeWindow)
+      if (!$(chatframedoc).find("head").find("#iframe_css").length) {
+        $(chatframedoc)
           .find("head")
           .append('<style id="iframe_css">' + iframe_css + "</style>");
       }
@@ -363,8 +321,9 @@ if (/cpop.html/.test(window.location.href)) {
       });
 
       if (noChatBackgrounds) {
-        iframeWindow.body.style.backgroundColor = chatBg.toHexString();
-        iframeWindow.body.style.color = fg.toHexString();
+        let chatframedoc = getChatframeDocument();
+        chatframedoc.body.style.backgroundColor = chatBg.toHexString();
+        chatframedoc.body.style.color = fg.toHexString();
       }
 
       $("#bgcolorpicker").val("#" + bg);
