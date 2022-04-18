@@ -94,23 +94,18 @@ for (let i = 0; i < helpStrings.length; i++) {
   );
 }
 
-let helptxt =
-  "/sw Sariam\t\t" +
-  "Superwhisper mit Sariam\n" +
-  "/o Hi All :)\t\t" +
-  "Im Open schreiben\n" +
-  "/open\t\t\t" +
-  "Superwhisper aus\n" +
-  "/sb Wendigo\t\t" +
-  "Einen Arsch für immer ignorieren (noch mal zum entbannen)\n" +
-  "/superban\t\t" +
-  "Arschliste anzeigen\n" +
-  "/reload\t\t\t" +
-  "Chat neu laden (mimimi)\n" +
-  "/settings\t\t" +
-  "Einstellungen öffnen (irgendwann mal vielleicht^^)\n" +
-  "/help\t\t\t" +
-  "So zeigst du diese Hilfe hier an\n";
+let helptxt = [
+  "/sw Sariam" + "\t" + "Superwhisper mit Sariam",
+  "/o Hi All :)" + "\t" + "Im Open schreiben",
+  "/open" + " \t\t" + "Superwhisper aus",
+  "/sb Wendigo" +
+    "\t" +
+    "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
+  "/superban" + "\t" + "Arschliste anzeigen",
+  "/reload" + "\t\t" + "Chat neu laden (mimimi)",
+  "/settings" + "\t" + "Einstellungen öffnen (irgendwann mal vielleicht^^)",
+  "/help" + "\t\t" + "So zeigst du diese Hilfe hier an",
+].join("\n");
 
 function printHelp() {
   cclogChat(helptxt, "Hilfe");
@@ -157,38 +152,86 @@ if (/cpop.html/.test(window.location.href)) {
     //remove table border
     $("#r_off1 table").attr("border", "0");
 
+    //    $("#u_stats").hide();
+    //    GM_wrench.waitForKeyElements(
+    //      "#u_stats a.unc .value",
+    //      function () {
+    //        $("#u_stats span.name").remove();
+    //        $("#u_stats .value").remove();
+    //
+    //        $(
+    //          '<span id="uonl_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-id-card fa-stack-1x"></i></span>'
+    //        ).appendTo("#u_stats a.uonl");
+    //
+    //        $(
+    //          '<span id="ufri_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-user-plus fa-stack-1x"></i></span>'
+    //        ).appendTo("#u_stats a.ufri");
+    //
+    //        $(
+    //          '<span id="unc_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-envelope fa-stack-1x"></i></span>'
+    //        ).appendTo("#u_stats a.unc");
+    //
+    //        $("#u_stats").replaceWith(
+    //          $("#u_stats").clone(false).attr("id", "u_stats_clone").show()
+    //        );
+    //       updateStats();
+    //      },
+    //      true,
+    //      100
+    //    );
+    //    //update stats every 10 seconds (mail, freunde, anfragen)
+    //    let updateStatsInterval = setInterval(updateStats, 10000);
+
     $("#u_stats").hide();
     GM_wrench.waitForKeyElements(
       "#u_stats a.unc .value",
       function () {
         $("#u_stats span.name").remove();
-        $("#u_stats .value").remove();
+        $("#u_stats")
+          .clone(true)
+          .attr("id", "u_stats_clone")
+          .show()
+          .insertAfter("#u_stats");
+        $("#u_stats_clone .value").remove();
 
         $(
           '<span id="uonl_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-id-card fa-stack-1x"></i></span>'
-        ).appendTo("#u_stats a.uonl");
+        ).appendTo("#u_stats_clone a.uonl");
 
         $(
           '<span id="ufri_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-user-plus fa-stack-1x"></i></span>'
-        ).appendTo("#u_stats a.ufri");
+        ).appendTo("#u_stats_clone a.ufri");
 
         $(
           '<span id="unc_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-envelope fa-stack-1x"></i></span>'
-        ).appendTo("#u_stats a.unc");
+        ).appendTo("#u_stats_clone a.unc");
 
-        $("#u_stats").replaceWith(
-          $("#u_stats").clone(false).attr("id", "u_stats_clone").show()
-        );
         updateStats();
       },
       true,
       100
     );
-    //update stats every 10 seconds (mail, freunde, anfragen)
-    let updateStatsInterval = setInterval(updateStats, 10000);
+
+    GM_wrench.waitForKeyElements("#u_stats div", updateStats, false, 1000);
+
+    function updateStats() {
+      var uonl_value = $("#u_stats a.uonl .value").text();
+      var ufri_value = $("#u_stats a.ufri .value").text();
+      var unc_value = $("#u_stats a.unc .value").text();
+
+      $("#uonl_span")
+        .attr("data-count", uonl_value)
+        .toggleClass("no", uonl_value < 1);
+      $("#ufri_span")
+        .attr("data-count", ufri_value)
+        .toggleClass("no", ufri_value < 1);
+      $("#unc_span")
+        .attr("data-count", unc_value)
+        .toggleClass("no", unc_value < 1);
+    }
 
     //get new mails and friends online
-    function updateStats() {
+    function updateStats_NEW() {
       GM_xmlhttpRequest({
         method: "POST",
         url: "https://www.chatcity.de/de/ajax/chat_info_friends_nc.html",
@@ -201,6 +244,7 @@ if (/cpop.html/.test(window.location.href)) {
           Origin: "https://www.chatcity.de",
           DNT: "1",
         },
+        timeout: 2000,
         onload: function (response) {
           var mailCount = $(response.responseText).find(".unc .value").text();
           var friendsOnline = $(response.responseText)
@@ -209,7 +253,14 @@ if (/cpop.html/.test(window.location.href)) {
           var frendRequests = $(response.responseText)
             .find(".ufri .value")
             .text();
-          //cclog("Mails: " + mailCount + ", Freunde: " + friendsOnline + ", Anfragen: " + frendRequests);
+          cclog(
+            "Mails: " +
+              mailCount +
+              ", Freunde: " +
+              friendsOnline +
+              ", Anfragen: " +
+              frendRequests
+          );
 
           $("#unc_span")
             .attr("data-count", mailCount)
@@ -220,6 +271,17 @@ if (/cpop.html/.test(window.location.href)) {
           $("#ufri_span")
             .attr("data-count", frendRequests)
             .toggleClass("no", frendRequests < 1);
+          cclog(
+            [
+              "xmlhttpRequest Error:",
+              response.status,
+              response.statusText,
+              response.readyState,
+              response.responseHeaders,
+              response.responseText,
+              response.finalUrl,
+            ].join("\n")
+          );
         },
         onError: function (response) {
           cclog(
@@ -919,7 +981,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     async function banUsers(users) {
       for (const user of users) {
-        await banUser(user);
+        //await banUser(user);
         //cclog("Waiting to be banned:\n\t" + users);
 
         users = users.filter((val) => val !== user); //remove user from array
