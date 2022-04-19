@@ -152,36 +152,6 @@ if (/cpop.html/.test(window.location.href)) {
     //remove table border
     $("#r_off1 table").attr("border", "0");
 
-    //    $("#u_stats").hide();
-    //    GM_wrench.waitForKeyElements(
-    //      "#u_stats a.unc .value",
-    //      function () {
-    //        $("#u_stats span.name").remove();
-    //        $("#u_stats .value").remove();
-    //
-    //        $(
-    //          '<span id="uonl_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-id-card fa-stack-1x"></i></span>'
-    //        ).appendTo("#u_stats a.uonl");
-    //
-    //        $(
-    //          '<span id="ufri_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-user-plus fa-stack-1x"></i></span>'
-    //        ).appendTo("#u_stats a.ufri");
-    //
-    //        $(
-    //          '<span id="unc_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-envelope fa-stack-1x"></i></span>'
-    //        ).appendTo("#u_stats a.unc");
-    //
-    //        $("#u_stats").replaceWith(
-    //          $("#u_stats").clone(false).attr("id", "u_stats_clone").show()
-    //        );
-    //       updateStats();
-    //      },
-    //      true,
-    //      100
-    //    );
-    //    //update stats every 10 seconds (mail, freunde, anfragen)
-    //    let updateStatsInterval = setInterval(updateStats, 10000);
-
     $("#u_stats").hide();
     GM_wrench.waitForKeyElements(
       "#u_stats a.unc .value",
@@ -192,6 +162,7 @@ if (/cpop.html/.test(window.location.href)) {
           .attr("id", "u_stats_clone")
           .show()
           .insertAfter("#u_stats");
+
         $("#u_stats_clone .value").remove();
 
         $(
@@ -207,109 +178,39 @@ if (/cpop.html/.test(window.location.href)) {
         ).appendTo("#u_stats_clone a.unc");
 
         updateStats();
+        setInterval(updateStats, 10000);
       },
       true,
       100
     );
 
-    GM_wrench.waitForKeyElements("#u_stats div", updateStats, false, 1000);
-
     function updateStats() {
-      var uonl_value = $("#u_stats a.uonl .value").text();
-      var ufri_value = $("#u_stats a.ufri .value").text();
-      var unc_value = $("#u_stats a.unc .value").text();
+      var test = new ajax(unsafeWindow.PAJAX + "chat_info_friends_nc.html", {
+        update: "u_stats",
+      });
+
+      var friendsOnline = $("#u_stats a.uonl .value").text();
+      var frendRequests = $("#u_stats a.ufri .value").text();
+      var mailCount = $("#u_stats a.unc .value").text();
+
+      // cclog(
+      //   "Mails: " +
+      //     mailCount +
+      //     ", Freunde: " +
+      //     friendsOnline +
+      //     ", Anfragen: " +
+      //     frendRequests
+      // );
 
       $("#uonl_span")
-        .attr("data-count", uonl_value)
-        .toggleClass("no", uonl_value < 1);
+        .attr("data-count", friendsOnline)
+        .toggleClass("no", friendsOnline < 1);
       $("#ufri_span")
-        .attr("data-count", ufri_value)
-        .toggleClass("no", ufri_value < 1);
+        .attr("data-count", frendRequests)
+        .toggleClass("no", frendRequests < 1);
       $("#unc_span")
-        .attr("data-count", unc_value)
-        .toggleClass("no", unc_value < 1);
-    }
-
-    //get new mails and friends online
-    function updateStats_NEW() {
-      GM_xmlhttpRequest({
-        method: "POST",
-        url: "https://www.chatcity.de/de/ajax/chat_info_friends_nc.html",
-        headers: {
-          Host: "www.chatcity.de",
-          Referer:
-            "https://www.chatcity.de/de/cpop.html?&RURL=//www.chatcity.de/",
-          "Content-type": "application/x-www-form-urlencoded",
-          "Content-Length": "0",
-          Origin: "https://www.chatcity.de",
-          DNT: "1",
-        },
-        timeout: 2000,
-        onload: function (response) {
-          var mailCount = $(response.responseText).find(".unc .value").text();
-          var friendsOnline = $(response.responseText)
-            .find(".uonl .value")
-            .text();
-          var frendRequests = $(response.responseText)
-            .find(".ufri .value")
-            .text();
-          cclog(
-            "Mails: " +
-              mailCount +
-              ", Freunde: " +
-              friendsOnline +
-              ", Anfragen: " +
-              frendRequests
-          );
-
-          $("#unc_span")
-            .attr("data-count", mailCount)
-            .toggleClass("no", mailCount < 1);
-          $("#uonl_span")
-            .attr("data-count", friendsOnline)
-            .toggleClass("no", friendsOnline < 1);
-          $("#ufri_span")
-            .attr("data-count", frendRequests)
-            .toggleClass("no", frendRequests < 1);
-          cclog(
-            [
-              "xmlhttpRequest Error:",
-              response.status,
-              response.statusText,
-              response.readyState,
-              response.responseHeaders,
-              response.responseText,
-              response.finalUrl,
-            ].join("\n")
-          );
-        },
-        onError: function (response) {
-          cclog(
-            [
-              "xmlhttpRequest Error:",
-              response.status,
-              response.statusText,
-              response.readyState,
-              response.responseHeaders,
-              response.responseText,
-              response.finalUrl,
-            ].join("\n")
-          );
-        },
-        onTimeout: function (response) {
-          cclog(
-            [
-              "xmlhttpRequest Timeout:",
-              response.status,
-              response.statusText,
-              response.readyState,
-              response.responseHeaders,
-              response.responseText,
-              response.finalUrl,
-            ].join("\n")
-          );
-        },
-      });
+        .attr("data-count", mailCount)
+        .toggleClass("no", mailCount < 1);
     }
 
     let userStoreColor = "color_" + userStore;
