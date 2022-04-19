@@ -2,7 +2,7 @@
 // @name     BetterCC
 // @description  BetterCC is better
 // @author       Sarah
-// @version  1.18
+// @version  1.19
 // @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?&RURL=*
@@ -14,8 +14,8 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.3/dist/GM_wrench.min.js
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.18
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.18
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.19
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.19
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -882,7 +882,7 @@ if (/cpop.html/.test(window.location.href)) {
 
     async function banUsers(users) {
       for (const user of users) {
-        //await banUser(user);
+        await banUser(user);
         //cclog("Waiting to be banned:\n\t" + users);
 
         users = users.filter((val) => val !== user); //remove user from array
