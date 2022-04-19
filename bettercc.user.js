@@ -244,7 +244,7 @@ if (/cpop.html/.test(window.location.href)) {
       .val("mimimi...")
       .attr("title", "Chat hängt. Bitte neuladen!!!")
       .addClass("betterccbtn")
-      .click(function () {
+      .on("click", function () {
         bettercc.reloadChat();
       })
       .appendTo("#betteroptions");
@@ -253,7 +253,7 @@ if (/cpop.html/.test(window.location.href)) {
       .val("?")
       .attr("title", "BetterCC Hilfe")
       .addClass("betterccbtn")
-      .click(function () {
+      .on("click", function () {
         printHelp();
       })
       .appendTo("#betteroptions");
