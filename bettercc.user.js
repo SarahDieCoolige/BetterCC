@@ -45,13 +45,15 @@
   }
 
   function ccnotify(message, title = "") {
-    GM_notification({
-      title: "BetterCC " + title, text: message,
-      onclick: () => {
-        cclog("Notification clicked.");
-        window.focus();
-      }
-    });
+    if (enableNotifications) {
+      GM_notification({
+        title: "BetterCC " + title, text: message,
+        onclick: () => {
+          cclog("Notification clicked.");
+          window.focus();
+        }
+      });
+    }
   }
 
   cclog("Version: " + GM_info.script.version + " - " + window.location.href);
@@ -148,6 +150,7 @@
   const superban = 1;
   const replaceInputField = 1;
   const noChatBackgrounds = 1;
+  const enableNotifications = 0;
 
   function getChatframe() {
     return document.getElementById("chatframe");
