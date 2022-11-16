@@ -1,3 +1,4 @@
 workspace.code-workspace 
 TinyColor/
 test.js
+jsconfig.json
