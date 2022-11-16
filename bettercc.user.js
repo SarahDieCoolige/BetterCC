@@ -30,7 +30,7 @@
 //
 // @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL https://github.com/SarahDieCoolige/BetterCC
-// @run-at   document-end
+// @run-at   document-idle
 // ==/UserScript==
 
 /* globals jQuery, $, GM_wrench, ajax, tinycolor*/
