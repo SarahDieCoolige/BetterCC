@@ -589,9 +589,24 @@
        */
 
       // replace long submit function in input form
-      let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit"));
+      let onSubmitOrigStr = $('form[name="hold').attr("onsubmit");
 
-      cclog(onSubmitOrig.toString());
+      // let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit").replace(
+      //   'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){',
+      //   'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){'
+      // ));
+
+      // reset away timer with "/w ", "/me " and open chat
+      // auto /away after 30mins
+      // see original onSubmit()
+      onSubmitOrigStr = onSubmitOrigStr.replace(
+        'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){',
+        'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){'
+      );
+
+      let onSubmitOrig = new Function(onSubmitOrigStr);
+      //cclog(onSubmitOrig.toString());
+
 
       bettercc.onSubmit = async function (whispernick) {
         let openMsgCmdRegex = /^\/open\s|^\/o\s/;
