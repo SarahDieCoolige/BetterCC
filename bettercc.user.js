@@ -2,20 +2,20 @@
 // @name     BetterCC
 // @description  BetterCC is better
 // @author       Sarah
-// @version  1.21
+// @version  1.22
 // @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?&RURL=*
 // @match  https://www.chatcity.de/de/nc/index.html
-// @match  DONTMATCH-https://www.chatcity.de/cc_chat/chatout?CCSS=//images.chatcity.de
+// @match  https://DONTMATCH-www.chatcity.de/cc_chat/chatout?CCSS=//images.chatcity.de
 //
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.3/dist/GM_wrench.min.js
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.21
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.21
+// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.22
+// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.22
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
