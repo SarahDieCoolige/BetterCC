@@ -1,4 +1,5 @@
-workspace.code-workspace 
-TinyColor/
-test.js
-jsconfig.json
+*
+!bettercc.user.js
+!README.md
+!BetterCC.png
+!css/
