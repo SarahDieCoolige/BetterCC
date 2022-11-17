@@ -14,15 +14,14 @@ Das wird meine Erweiterung fur ChatCity
 
 - [x] Eine bessere Dauerflüster Funktion. Nie wieder ausversehen im Open landen^^
   - Bleibt, wenn man sich selbst neu einloggt, oder die Seite neu lädt
-  - Bleibt, wenn sich der/die angeflüsterte neu einloggt, oder die Seite neu lädt
-- [ ] Eine Dauerignorier Funktion
+  - Bleibt, wenn sich der/die Angeflüsterte neu einloggt, oder die Seite neu lädt
+- [x] Eine Dauerignorier Funktion
   - Eine Liste mit Namen, die automatisch ignoriert werden
-  - Bleibt auch wenn man sich neu einloggt
+  - Bleibt, wenn man sich neu einloggt
   - Evtl eine von der Community geführte Blockliste, die man abonnieren kann(??)<br>
     Weiß nicht, ob das eine gute Idee ist, aber ich schreibs einfach mal auf die Liste
 - [x] Ein größeres Eingabefeld. Ich finde das Ding ist viel zu winzig
 - [x] Chat Farbe ändern
-- [x] Dunkel Modus
 
 ### Vorschläge und Anregungen
 
