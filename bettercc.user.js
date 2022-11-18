@@ -636,7 +636,7 @@
 
       // replace awaytimer function in onSubmit with bettercc.setAwayTimer()
       if (settingsAwayTimer) {
-        onSubmitOrigStr = onSubmitOrigStr.replace('tim=1800000;if(0>0)tim/=6;if(!window.tmr)tmr=tim;clearTimeout(tmr);tmr=setTimeout(function(){com_set("/away");},tim);};', 'bettercc.setAwayTimer();};');
+        onSubmitOrigStr = onSubmitOrigStr.replace(/(tim=[0-9]+;if\([0-9][<>][0-9]\)tim\/=[0-9]+;if\(!window\.tmr\)tmr=tim;clearTimeout\(tmr\);tmr=setTimeout\(function\(\){com_set\("\/away"\);},tim\);};)/, 'bettercc.setAwayTimer();};');
       }
       let onSubmitOrig = new Function(onSubmitOrigStr);
       //cclog(onSubmitOrig.toString());
