@@ -627,25 +627,17 @@
       // replace long submit function in input form
       let onSubmitOrigStr = $('form[name="hold').attr("onsubmit");
 
-      // let onSubmitOrig = new Function($('form[name="hold').attr("onsubmit").replace(
-      //   'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){',
-      //   'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){'
-      // ));
-
       // reset away timer with "/w ", "/me " and open chat
       // auto /away after 30mins
       // see original onSubmit()
       onSubmitOrigStr = onSubmitOrigStr
-        .replace('if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){', 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){');
-      //.replace('tim=1800000;', 'tim=1800000;');
+        .replace('if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){', 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){')
+        .replace('tim=1800000;', 'tim=1800000;');
 
+      // replace awaytimer function in onSubmit with bettercc.setAwayTimer()
       if (settingsAwayTimer) {
         onSubmitOrigStr = onSubmitOrigStr.replace('tim=1800000;if(0>0)tim/=6;if(!window.tmr)tmr=tim;clearTimeout(tmr);tmr=setTimeout(function(){com_set("/away");},tim);};', 'bettercc.setAwayTimer();};');
       }
-      //'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){tim=1800000;if(0>0)tim/=6;if(!window.tmr)tmr=tim;clearTimeout(tmr);tmr=setTimeout(function(){com_set("/away");},tim);};'
-
-      //bettercc.setAwayTimer();
-
       let onSubmitOrig = new Function(onSubmitOrigStr);
       //cclog(onSubmitOrig.toString());
 
