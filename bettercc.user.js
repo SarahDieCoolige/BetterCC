@@ -45,7 +45,7 @@
   }
 
   function ccnotify(message, title = "") {
-    if (enableNotifications) {
+    if (settingsEnableNotifications) {
       GM_notification({
         title: "BetterCC " + title, text: message,
         onclick: () => {
