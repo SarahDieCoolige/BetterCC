@@ -186,6 +186,7 @@
 
     function enableAwayTimer() {
       let awayTimerRunning = false;
+      let awayTimerTimeout = null;
 
       function setAwayTimer() {
         let awayTimerMin = 30;
@@ -208,14 +209,11 @@
       };
 
 
-      //      setAwayTimer();
+      setAwayTimer();
 
-      let awayTimerTimeout;
-      if (!awayTimerRunning)
-        awayTimerTimeout = setTimeout(function () {
-          { setAwayTimer(); }
-        }, 10000);
-
+      if (!awayTimerRunning) {
+        awayTimerTimeout = setTimeout(setAwayTimer(), 10000);
+      }
       bettercc.setAwayTimer = setAwayTimer;
     }
 
