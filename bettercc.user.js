@@ -151,6 +151,7 @@
   const settingReplaceInputField = 1;
   const settingNoChatBackgrounds = 1;
   const settingsEnableNotifications = 0;
+  const settingsAwayTimer = 1;
 
   function getChatframe() {
     return document.getElementById("chatframe");
@@ -180,8 +181,43 @@
     // add gast class to userlist
     if (gast) $("#ul").addClass("gast");
     if (settingSuperban) enableSuperban();
+    if (settingsAwayTimer) enableAwayTimer();
     //GM_notification ( {title: 'BetteCC', text: 'BetterCC loaded!'} );
 
+    function enableAwayTimer() {
+      let awayTimerRunning = false;
+
+      function setAwayTimer() {
+        let awayTimerMin = 30;
+
+        // 30 minutes
+        unsafeWindow.tim = awayTimerMin * 60 * 1000;
+        //unsafeWindow.tim = 10000;
+        if (unsafeWindow.tmr) clearTimeout(unsafeWindow.tmr);
+
+        unsafeWindow.tmr = unsafeWindow.setTimeout(function () {
+          unsafeWindow.com_set('/away');
+          awayTimerRunning = false;
+        }, unsafeWindow.tim);
+
+
+        awayTimerRunning = true;
+
+        cclog("Away timer reset to " + awayTimerMin + "mins");
+        cclog("awayTimerActive: " + awayTimerRunning);
+      };
+
+
+      //      setAwayTimer();
+
+      let awayTimerTimeout;
+      if (!awayTimerRunning)
+        awayTimerTimeout = setTimeout(function () {
+          { setAwayTimer(); }
+        }, 10000);
+
+      bettercc.setAwayTimer = setAwayTimer;
+    }
 
     function doColorStuff() {
       //remove table border
@@ -599,10 +635,16 @@
       // reset away timer with "/w ", "/me " and open chat
       // auto /away after 30mins
       // see original onSubmit()
-      onSubmitOrigStr = onSubmitOrigStr.replace(
-        'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){',
-        'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){'
-      );
+      onSubmitOrigStr = onSubmitOrigStr
+        .replace('if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){', 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){');
+      //.replace('tim=1800000;', 'tim=1800000;');
+
+      if (settingsAwayTimer) {
+        onSubmitOrigStr = onSubmitOrigStr.replace('tim=1800000;if(0>0)tim/=6;if(!window.tmr)tmr=tim;clearTimeout(tmr);tmr=setTimeout(function(){com_set("/away");},tim);};', 'bettercc.setAwayTimer();};');
+      }
+      //'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){tim=1800000;if(0>0)tim/=6;if(!window.tmr)tmr=tim;clearTimeout(tmr);tmr=setTimeout(function(){com_set("/away");},tim);};'
+
+      //bettercc.setAwayTimer();
 
       let onSubmitOrig = new Function(onSubmitOrigStr);
       //cclog(onSubmitOrig.toString());
