@@ -45,7 +45,7 @@
   }
 
   function ccnotify(message, title = "") {
-    if (settingsEnableNotifications) {
+    if (settingEnableNotifications) {
       GM_notification({
         title: "BetterCC " + title, text: message,
         onclick: () => {
@@ -150,8 +150,8 @@
   const settingSuperban = 1;
   const settingReplaceInputField = 1;
   const settingNoChatBackgrounds = 1;
-  const settingsEnableNotifications = 0;
-  const settingsAwayTimer = 1;
+  const settingEnableNotifications = 0;
+  const settingAwayTimer = 1;
 
   function getChatframe() {
     return document.getElementById("chatframe");
@@ -181,7 +181,7 @@
     // add gast class to userlist
     if (gast) $("#ul").addClass("gast");
     if (settingSuperban) enableSuperban();
-    if (settingsAwayTimer) enableAwayTimer();
+    if (settingAwayTimer) enableAwayTimer();
     //GM_notification ( {title: 'BetteCC', text: 'BetterCC loaded!'} );
 
     function enableAwayTimer() {
@@ -633,7 +633,7 @@
         .replace('tim=1800000;', 'tim=1800000;');
 
       // replace awaytimer function in onSubmit with bettercc.setAwayTimer()
-      if (settingsAwayTimer) {
+      if (settingAwayTimer) {
         onSubmitOrigStr = onSubmitOrigStr.replace(/(tim=[0-9]+;if\([0-9][<>][0-9]\)tim\/=[0-9]+;if\(!window\.tmr\)tmr=tim;clearTimeout\(tmr\);tmr=setTimeout\(function\(\){com_set\("\/away"\);},tim\);};)/, 'bettercc.setAwayTimer();};');
       }
       let onSubmitOrig = new Function(onSubmitOrigStr);
