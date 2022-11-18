@@ -147,10 +147,10 @@
   // window functions
   var bettercc = (unsafeWindow.bettercc = {});
 
-  const superban = 1;
-  const replaceInputField = 1;
-  const noChatBackgrounds = 1;
-  const enableNotifications = 0;
+  const settingSuperban = 1;
+  const settingReplaceInputField = 1;
+  const settingNoChatBackgrounds = 1;
+  const settingsEnableNotifications = 0;
 
   function getChatframe() {
     return document.getElementById("chatframe");
@@ -170,16 +170,16 @@
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
-    if (noChatBackgrounds) forceNoChatBackgrounds();
+    if (settingNoChatBackgrounds) forceNoChatBackgrounds();
     addCustomCss();
     cleanup();
-    betterInput(replaceInputField);
+    betterInput(settingReplaceInputField);
     doColorStuff();
     //if (!gast) replaceOnSubmit();
     replaceOnSubmit();
     // add gast class to userlist
     if (gast) $("#ul").addClass("gast");
-    if (superban) enableSuperban();
+    if (settingSuperban) enableSuperban();
     //GM_notification ( {title: 'BetteCC', text: 'BetterCC loaded!'} );
 
 
@@ -366,7 +366,7 @@
           includeFallbackColors: false,
         });
 
-        if (noChatBackgrounds) {
+        if (settingNoChatBackgrounds) {
           let chatframedoc = getChatframeDocument();
           chatframedoc.body.style.backgroundColor = chatBg.toHexString();
           chatframedoc.body.style.color = fg.toHexString();
@@ -629,7 +629,7 @@
           return false;
         }
 
-        if (superban) {
+        if (settingSuperban) {
           //IS "/superban " or "/sb "
           if (
             mymsg.toLowerCase() === "/superban" ||
