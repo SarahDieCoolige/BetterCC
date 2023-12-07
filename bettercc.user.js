@@ -540,6 +540,8 @@
       //$("#u_stats a.unc").hide();
       $("#adv720").remove();
       $("#right_ad").hide();
+      $('#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]').closest("tr").remove();
+
       $("#popup-chat > table > tbody > tr:nth-child(1)").hide();
       $("#ul").addClass("headless");
       //$(".ww_chat_divide").hide();
