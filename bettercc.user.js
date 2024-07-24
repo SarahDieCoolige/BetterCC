@@ -278,6 +278,7 @@
       $('<input type="button" id="reloadbutton" />')
         .val("mimimi...")
         .attr("title", "Chat hängt. Bitte neuladen!!!")
+        .attr("disabled", "disabled") // TODO: disabled until chatframe fix
         .addClass("betterccbtn")
         .on("click", function () {
           bettercc.reloadChat();
