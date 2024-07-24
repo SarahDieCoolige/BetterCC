@@ -138,7 +138,7 @@
   ].join("\n");
 
   function printHelp() {
-    cclogChat(helptxt, "Hilfe");
+    //cclogChat(helptxt, "Hilfe");
     //  printInChat("beforeend", helptxt);
     ccnotify(helptxtNotify, "Hilfe");
 
@@ -147,10 +147,10 @@
   // window functions
   var bettercc = (unsafeWindow.bettercc = {});
 
-  const superban = 1;
+  const superban = 0;
   const replaceInputField = 1;
   const noChatBackgrounds = 1;
-  const enableNotifications = 0;
+  const enableNotifications = 1;
 
   function getChatframe() {
     return document.getElementById("chatframe");
@@ -337,15 +337,15 @@
       };
 
       function setTheme() {
-        let chatframedoc = getChatframeDocument();
+        //let chatframedoc = getChatframeDocument();
 
         var iframe_css = GM_getResourceText("iframe_css");
 
-        if (!$(chatframedoc).find("head").find("#iframe_css").length) {
-          $(chatframedoc)
-            .find("head")
-            .append('<style id="iframe_css">' + iframe_css + "</style>");
-        }
+        //if (!$(chatframedoc).find("head").find("#iframe_css").length) {
+        //  $(chatframedoc)
+        //    .find("head")
+        //    .append('<style id="iframe_css">' + iframe_css + "</style>");
+        // }
 
         (async () => {
           let bg = await GM.getValue(userStoreColor, bgDef);
@@ -366,11 +366,11 @@
           includeFallbackColors: false,
         });
 
-        if (noChatBackgrounds) {
-          let chatframedoc = getChatframeDocument();
-          chatframedoc.body.style.backgroundColor = chatBg.toHexString();
-          chatframedoc.body.style.color = fg.toHexString();
-        }
+        //if (noChatBackgrounds) {
+        //  let chatframedoc = getChatframeDocument();
+        //  chatframedoc.body.style.backgroundColor = chatBg.toHexString();
+        //  chatframedoc.body.style.color = fg.toHexString();
+        //}
 
         $("#bgcolorpicker").val("#" + bg);
 
@@ -638,8 +638,10 @@
             mymsg.toLowerCase() === "/sb"
           ) {
             let banlist = (await bettercc.getSuperbans()).join(", ").toString();
-            let banlistNotify = (await bettercc.getSuperbans()).join("\n").toString();
-            cclogChat(banlist, "Superban", false);
+            let banlistNotify = (await bettercc.getSuperbans())
+              .join("\n")
+              .toString();
+            //cclogChat(banlist, "Superban", false);
             ccnotify(banlistNotify, "Superban");
 
             mymsg = "";
@@ -857,8 +859,12 @@
 
         //store superbans
         GM.setValue(userStoreBan, superbans.sort());
-        cclogChat("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Superban", false);
-
+        //cclogChat("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Superban", false);
+        ccnotify(
+          "Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen",
+          "Superban",
+          false
+        );
         //hide popup after click
         $(".ulist-popup").hide();
       };
