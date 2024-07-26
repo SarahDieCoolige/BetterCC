@@ -45,11 +45,15 @@
         GM_log(tag + " - " + str);
     }
 
-    function ccnotify(message, title = "") {
+    function ccnotify(message, title = "", tag = "", timeout = 3000) {
         if (enableNotifications) {
             GM_notification({
                 title: "BetterCC " + title, text: message,
+                tag: tag,
+                timeout: timeout,
+                silent: true,
                 onclick: () => {
+                    event.preventDefault();
                     cclog("Notification clicked.");
                     window.focus();
                 }

@@ -47,11 +47,15 @@
     GM_log(tag + " - " + str);
   }
 
-  function ccnotify(message, title = "") {
+  function ccnotify(message, title = "", tag = "", timeout = 3000) {
     if (enableNotifications) {
       GM_notification({
         title: "BetterCC " + title, text: message,
+        tag: tag,
+        timeout: timeout,
+        silent: true,
         onclick: () => {
+          event.preventDefault();
           cclog("Notification clicked.");
           window.focus();
         }
@@ -143,7 +147,7 @@
   function printHelp() {
     //cclogChat(helptxt, "Hilfe");
     //  printInChat("beforeend", helptxt);
-    ccnotify(helptxtNotify, "Hilfe");
+    ccnotify(helptxtNotify, "Hilfe", "help");
 
   }
 
@@ -616,7 +620,7 @@
             let banlist = (await bettercc.getSuperbans()).join(", ").toString();
             let banlistNotify = (await bettercc.getSuperbans()).join("\n").toString();
             //cclogChat(banlist, "Superban", false);
-            ccnotify(banlistNotify, "Superban");
+            ccnotify(banlistNotify, "Better Ignore", "banlist", 30000);
 
             mymsg = "";
             document.hold.OUT1.value = mymsg;
@@ -747,7 +751,7 @@
     function enableSuperban() {
       //add superban option to userpopup
       $("#fuu").append(
-        '<a href="javascript://" class="button superban" id="superban" onclick="bettercc.superban(last_id);">» Superban</a>'
+        '<a href="javascript://" class="button superban" id="superban" onclick="bettercc.superban(last_id);">» Better Ignore</a>'
       );
 
       //get online users
@@ -799,7 +803,7 @@
           if (window.confirm(confirmStr)) {
             // add to banned array
             superbans.push(nickToBan);
-            ccnotify(nickToBan + " wird ab jetzt geblockt!", "Superban");
+            ccnotify(nickToBan + " wird ab jetzt geblockt!", "Better Ignore", "banned");
           }
           //$('#cu_n').parent(':contains(""'nickToBan')').sibling('.button.superban').text("» Banned");
         } else {
@@ -812,7 +816,7 @@
             superbans = superbans.filter(function (item) {
               return String(item) !== nickToBan;
             });
-            ccnotify(nickToBan + " wird nicht mehr geblockt!", "Superban");
+            ccnotify(nickToBan + " wird nicht mehr geblockt!", "Better Ignore", "unbanned");
 
             // unban in chat
             new ajax(
@@ -833,8 +837,8 @@
 
         //store superbans
         GM.setValue(userStoreBan, superbans.sort());
-        //cclogChat("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Superban", false);
-        ccnotify("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Superban", false);
+        //cclogChat("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Better Ignore", false);
+        ccnotify("Schreib <b>/superban</b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Better Ignore", "help");
         //hide popup after click
         $(".ulist-popup").hide();
       };
@@ -945,7 +949,7 @@
         );
         alreadyBanned.push(user);
         cclog("Banned " + user);
-        ccnotify(user + " kann dir nicht mehr schreiben", "Superban");
+        ccnotify(user + " kann dir nicht mehr schreiben", "Better Ignore", "banned");
         //cclogChat("Bans: " + alreadyBanned.toString());
         unsafeWindow.alreadyBanned = alreadyBanned;
       }
