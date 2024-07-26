@@ -330,16 +330,37 @@
       }
 
       function setColors(bg, fg) {
-        var chatBg = tinycolor(bg);
-        var chatFg = tinycolor(fg);
+        let chatBg = tinycolor(bg);
+        let chatFg = tinycolor(bg);
 
-        var anaChatBg = chatBg.analogous();
-        var monoChatBg = chatBg.monochromatic();
-        var triadChatBg = chatBg.triad();
+        chatFg = tinycolor(bg);
 
-        chatFg = tinycolor.mostReadable(chatBg, anaChatBg.concat(monoChatBg), {
+        if (chatBg.isLight()) {
+          chatFg = chatFg.darken(40);
+          //chatFg = chatFg.brighten(30);
+          //chatFg.desaturate(5);
+        }
+        else {
+          chatFg = chatFg.lighten(20);
+          chatFg = chatFg.brighten(40);
+          //chatFg.desaturate(5);
+        }
+
+        let anaChatBg = chatBg.analogous();
+        let monoChatBg = chatBg.monochromatic();
+        let triadChatBg = chatBg.triad();
+        //chatFg = tinycolor.mostReadable(chatBg, anaChatBg.concat(monoChatBg), {
+        //  includeFallbackColors: false,
+        //});
+
+        let anaChatFg = chatFg.analogous();
+        let monoChatFg = chatFg.monochromatic();
+        let triadChatFg = chatFg.triad();
+        chatFg = tinycolor.mostReadable(chatBg, anaChatFg.concat(monoChatFg), {
           includeFallbackColors: false,
         });
+
+
 
         $("#bgcolorpicker").val("#" + bg);
 
