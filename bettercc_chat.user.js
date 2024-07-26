@@ -25,6 +25,7 @@
 // @grant  GM_addElement
 //
 // @sandbox  JavaScript
+// @run-at document-start
 //
 // @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc_chat.user.js
 // @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc_chat.user.js

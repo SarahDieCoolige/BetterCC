@@ -27,6 +27,7 @@
 // @grant  GM_addElement
 //
 // @sandbox  JavaScript
+// @run-at document-idle
 //
 // @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
 // @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
