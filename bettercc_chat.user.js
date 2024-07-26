@@ -143,7 +143,6 @@
         //cclogChat(helptxt, "Hilfe");
         //  printInChat("beforeend", helptxt);
         ccnotify(helptxtNotify, "Hilfe");
-
     }
 
     // window functions
@@ -157,23 +156,30 @@
     if (/cc_chat\/chatout/.test(window.location.pathname)) {
 
         cclog(window.location.pathname);
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        activeNick = urlParams.get("NICKNAME").toLowerCase();
+        let userStoreChatlog = "chatlog_" + activeNick;
+        let userStoreRestore = "restore_" + activeNick;
 
         var iframe_css = GM_getResourceText("iframe_css");
         GM_wrench.addCss(iframe_css);
+
+        GM_wrench.waitForKeyElements("body", restoreChat, true, 100);
 
         window.addEventListener('message', (event) => {
             GM_log("Bettercc IFRAME" + " - " + "Message Received from " + event.origin + " " + event.data);
             if (event.origin === 'https://www.chatcity.de') {
                 const message = event.data;
                 switch (message.type) {
-                    case 'setNick':
-                        activeNick = message.nick;
-                        cclog(activeNick);
                     case 'setColors':
                         setColors(message.bgColor, message.fgColor);
                         break;
                     case 'mimimi':
-                        mimimi();
+                        reloadChat();
+                        break;
+                    case 'restoreChat':
+                        restoreChat();
                         break;
                     case 'setSuperwhisper':
                         // TODO
@@ -198,7 +204,7 @@
         }
 
         // TODO
-        bettercc.reloadChat = function reloadChat() {
+        function reloadChat() {
             let children = document.body.children;
 
             let chatlog = "";
@@ -211,56 +217,31 @@
                 }
             }
 
-            let userStoreChatlog = "chatlog_" + userStore;
+
             (async function () {
                 await GM.setValue(userStoreChatlog, chatlog);
+                await GM.setValue(userStoreRestore, true);
             })();
 
             document.location.reload();
+        }
 
-            setTimeout(setTheme, 2000);
-            setTimeout(insertChatlog, 2000);
-
-            function insertChatlog() {
-                (async function () {
-                    var message = await GM.getValue(userStoreChatlog);
+        function restoreChat() {
+            (async function () {
+                let chatlog = await GM.getValue(userStoreChatlog);
+                let restore = await GM.getValue(userStoreRestore);
+                cclog("Restore Chatlog: " + restore);
+                if (restore) {
+                    //cclog("Chatlog: " + chatlog);
                     if (!!chatlog) {
-                        //cclog("Chatlog: " + message);
-
                         printInChat("beforebegin", chatlog);
-                        //cclogChat("Chat wieder ganz?");
-                        //cclog(chatlog);
-                        //await GM.setValue(userStoreChatlog, "");
                     } else {
                         cclog("Kein Chatlog");
                     }
-                })();
-            }
-        };
-
-        // let listenerId1 = GM_addValueChangeListener("abc", function (key, oldValue, newValue, remote) {
-        //     // Print a message to the console when the value of the "savedTab" key changes
-        //     cclog("IFRAME -  The value of the '" + key + "' key has changed from '" + oldValue + "' to '" + newValue + "'");
-        // });
-
-        // // Add a listener for changes to the "savedTab" key
-        // var listenerId2 = GM_addValueChangeListener("color__janedoe_", function (key, oldValue, newValue, remote) {
-        //     // Print a message to the console when the value of the "savedTab" key changes
-        //     cclog("IFRAME -  The value of the '" + key + "' key has changed from '" + oldValue + "' to '" + newValue + "'");
-        //     document.body.style.backgroundColor = "#" + newValue;
-        // });
-
-        // cclog(listenerId1 + listenerId2);
-
-        // (async function () {
-        //     await GM.setValue("abc", "123");
-        //     let color = await GM.getValue("color__janedoe_", "defcolor");
-        //     let abc = await GM.getValue("abc", "deftest");
-        //     cclog(color + " " + abc);
-        // })();
-
-
-
+                    await GM.setValue(userStoreRestore, false);
+                }
+            })();
+        }
     }
 
 })();
