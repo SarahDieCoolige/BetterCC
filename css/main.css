@@ -1,4 +1,4 @@
-::root {
+:root {
   --chatBackground: #c8dae4;
   --chatText: #0e0f0f;
   --buttonColor: #ffffff;
@@ -53,6 +53,7 @@ button {
   background: var(--chatBackground);
   color: var(--ulistText);
 }
+
 .userlist {
   background: var(--ulistColor);
 }
@@ -83,8 +84,10 @@ button {
 .ulinner {
   overflow: auto !important;
   overflow-x: hidden !important;
-  -ms-overflow-style: none; /* IE 11 */
-  scrollbar-width: none; /* Firefox 64 */
+  -ms-overflow-style: none;
+  /* IE 11 */
+  scrollbar-width: none;
+  /* Firefox 64 */
   padding: 5px 25px 0px 10px !important;
 }
 
@@ -246,6 +249,7 @@ textarea {
   border-style: solid;
   outline: none;
 }
+
 .betterccbtn {
   background: var(--buttonColor);
   color: var(--buttonText);
