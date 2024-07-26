@@ -183,11 +183,6 @@
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
-    postMessageToIframe({
-      type: 'activeNick',
-      nick: userStore
-    });
-
     if (noChatBackgrounds) forceNoChatBackgrounds();
     addCustomCss();
     cleanup();
@@ -318,7 +313,8 @@
           type: 'mimimi'
         });
         setTimeout(setTheme, 1000);
-      };
+      }
+
 
       function setTheme() {
         (async () => {
