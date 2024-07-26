@@ -150,7 +150,7 @@
   // window functions
   var bettercc = (unsafeWindow.bettercc = {});
 
-  const superban = 0;
+  const superban = 1;
   const replaceInputField = 1;
   const noChatBackgrounds = 1;
   const enableNotifications = 1;
@@ -880,12 +880,14 @@
 
         var users_channel = [];
         // get local channel users from cha_my[].
-        for (var j = 0; j < unsafeWindow.cha_my.length; j += 2) {
-          users_channel = users_channel.concat(
-            unsafeWindow.cha_my[j].toLowerCase().split(" ").filter(Boolean)
-          );
+        if (unsafeWindow.cha_my) {
+          for (var j = 0; j < unsafeWindow.cha_my.length; j += 2) {
+            users_channel = users_channel.concat(
+              unsafeWindow.cha_my[j].toLowerCase().split(" ").filter(Boolean)
+            );
+          }
+          //cclog("users_channel: " + users_channel);
         }
-        //cclog("users_channel: " + users_channel);
 
         var users_tmp = users_gloabal.concat(users_channel);
 
