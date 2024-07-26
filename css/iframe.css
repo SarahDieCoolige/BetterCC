@@ -11,10 +11,6 @@
   --placeholderText: #060707;
 }
 
-body {
-  background-color: var(--chatBackground);
-}
-
 font[color] {
   filter: brightness(130%) !important;
 }
