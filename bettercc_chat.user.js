@@ -1,37 +1,36 @@
 // ==UserScript==
-// @name     BetterCC_Chat
+// @name  BetterCC Chat
 // @description  BetterCC is better
-// @author       Sarah
-// @version  1.24
-// @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
-
-// @match https://chat.chatcity.de/cc_chat/chatout?*
-// @sandbox JavaScript
-
+// @author  Sarah
+// @version  1.25
+// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
+//
+// @match  https://chat.chatcity.de/cc_chat/chatout?*
 //
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.24
-
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.25
 //
-// @grant    GM_addStyle
-// @grant    GM.setValue
-// @grant    GM.getValue
-// @grant    GM_addValueChangeListener
-// @grant    GM_getResourceText
-// @grant    GM_xmlhttpRequest
-// @grant    GM_log
-// @grant    GM_notification
-// @grant    GM_addElement
+// @grant  GM_addStyle
+// @grant  GM.setValue
+// @grant  GM.getValue
+// @grant  GM_addValueChangeListener
+// @grant  GM_getResourceText
+// @grant  GM_xmlhttpRequest
+// @grant  GM_log
+// @grant  GM_notification
+// @grant  GM_addElement
 //
-// @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc_chat.user.js
-// @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc_chat.user.js
+// @sandbox  JavaScript
 //
-// @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
-// @homepageURL https://github.com/SarahDieCoolige/BetterCC
+// @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc_chat.user.js
+// @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc_chat.user.js
+//
+// @supportURL  https://github.com/SarahDieCoolige/BetterCC/issues
+// @homepageURL  https://github.com/SarahDieCoolige/BetterCC
 
 // ==/UserScript==
 
