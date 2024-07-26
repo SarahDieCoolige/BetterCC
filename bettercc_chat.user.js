@@ -4,23 +4,17 @@
 // @author       Sarah
 // @version  1.24
 // @icon https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
-//
 
 // @match https://chat.chatcity.de/cc_chat/chatout?*
 // @sandbox JavaScript
-
-
-
 
 //
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
-// @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.3/dist/GM_wrench.min.js
+// @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
-// @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.24
 // @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.24
-// @resource  iframe_script            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/iframe_script.js?r=1.24
 
 //
 // @grant    GM_addStyle
@@ -66,8 +60,7 @@
     cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
     function printInChat(position = "beforeend", content) {
-        //$("#chatframe").contents().find("body").children().last().append(content);
-
+        //$("body").children().last().append(content);
         document.body.lastChild.insertAdjacentHTML(
             position,
             content
@@ -152,30 +145,37 @@
     // window functions
     var bettercc = (unsafeWindow.bettercc = {});
 
+    const superban = 0;
+    const enableNotifications = 1;
+
+    let activeNick = "";
+
     if (/cc_chat\/chatout/.test(window.location.pathname)) {
 
-
-        cclog("IFRAME " + window.location.pathname);
+        cclog(window.location.pathname);
 
         var iframe_css = GM_getResourceText("iframe_css");
         GM_wrench.addCss(iframe_css);
-        // GM_addStyle(iframe_css);
 
         window.addEventListener('message', (event) => {
             GM_log("Bettercc IFRAME" + " - " + "Message Received from " + event.origin + " " + event.data);
             if (event.origin === 'https://www.chatcity.de') {
                 const message = event.data;
                 switch (message.type) {
-                    case 'changeBackgroundColor':
-                        //document.body.style.backgroundColor = message.color;
-                        GM_log("Bettercc IFRAME" + " - " + "type: " + message.type + "color: " + message.color);
-                        setColor(message.color);
+                    case 'setNick':
+                        activeNick = message.nick;
+                        cclog(activeNick);
+                    case 'setColors':
+                        setColors(message.bgColor, message.fgColor);
+                        break;
+                    case 'mimimi':
+                        mimimi();
                         break;
                     case 'setSuperwhisper':
-                        // ... (logic to update the superwhisper status in the iframe, you'll need to implement this based on how the iframe's chat works)
+                        // TODO
                         break;
                     case 'printInChat':
-                        // ... (logic to display messages within the chat log, you'll need to implement this based on how the iframe's chat works)
+                        // TODO
                         break;
                     // ... (add more cases for other messages)
                 }
@@ -183,11 +183,56 @@
         }, false,
         );
 
-
-        function setColor(color) {
-            let $root = $(":root");
-            $root.css("--chatBackground", color);
+        function setColors(bg, fg) {
+            document.body.style.backgroundColor = bg;
+            document.body.style.color = fg;
         }
+
+        function mimimi() {
+            //bettercc.reloadChat();
+            document.location.reload();
+        }
+
+        // TODO
+        bettercc.reloadChat = function reloadChat() {
+            let children = document.body.children;
+
+            let chatlog = "";
+            // start with 13 since everything prior we don't need
+            //for (let i = 13; i < children.length; i++) {
+
+            for (let i = 10; i < children.length; i++) {
+                if (children[i].outerHTML.startsWith('<font size="-1"><br>')) {
+                    chatlog += children[i].outerHTML;
+                }
+            }
+
+            let userStoreChatlog = "chatlog_" + userStore;
+            (async function () {
+                await GM.setValue(userStoreChatlog, chatlog);
+            })();
+
+            document.location.reload();
+
+            setTimeout(setTheme, 2000);
+            setTimeout(insertChatlog, 2000);
+
+            function insertChatlog() {
+                (async function () {
+                    var message = await GM.getValue(userStoreChatlog);
+                    if (!!chatlog) {
+                        //cclog("Chatlog: " + message);
+
+                        printInChat("beforebegin", chatlog);
+                        //cclogChat("Chat wieder ganz?");
+                        //cclog(chatlog);
+                        //await GM.setValue(userStoreChatlog, "");
+                    } else {
+                        cclog("Kein Chatlog");
+                    }
+                })();
+            }
+        };
 
         // let listenerId1 = GM_addValueChangeListener("abc", function (key, oldValue, newValue, remote) {
         //     // Print a message to the console when the value of the "savedTab" key changes
@@ -209,7 +254,6 @@
         //     let abc = await GM.getValue("abc", "deftest");
         //     cclog(color + " " + abc);
         // })();
-
 
 
 

@@ -7,15 +7,17 @@
 //
 // @match  https://www.chatcity.de/de/cpop.html?&RURL=*
 // @match  https://www.chatcity.de/de/nc/index.html
-// @match  https://DONTMATCH-www.chatcity.de/cc_chat/chatout?CCSS=//images.chatcity.de
+// @match  https://images.chatcity.de/*
+// @sandbox JavaScript
 //
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
-// @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.3/dist/GM_wrench.min.js
+// @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
 // @resource  main_css              https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.24
-// @resource  iframe_css            https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.24
+
+
 //
 // @grant    GM_addStyle
 // @grant    GM.setValue
@@ -25,13 +27,14 @@
 // @grant    GM_xmlhttpRequest
 // @grant    GM_log
 // @grant    GM_notification
+// @grant    GM_addElement
 //
 // @downloadURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
 // @updateURL https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
 //
 // @supportURL https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL https://github.com/SarahDieCoolige/BetterCC
-// @run-at   document-idle
+
 // ==/UserScript==
 
 /* globals jQuery, $, GM_wrench, ajax, tinycolor*/
@@ -153,22 +156,33 @@
   const enableNotifications = 1;
 
   function getChatframe() {
-    return document.getElementById("chatframe");
+    return document.getElementById("chatframe").contentWindow;
   }
 
-  function getChatframeDocument() {
-    return (
-      getChatframe().contentDocument || getChatframe().contentWindow.document
-    );
+  function postMessageToIframe(message) {
+    const chatWindow = getChatframe();
+    const targetOrigin = 'https://chat.chatcity.de';
+    chatWindow.postMessage(message, targetOrigin);
   }
 
   //MAIN CHAT
   if (/cpop.html/.test(window.location.href)) {
+
+    (async function () {
+      await GM.setValue("abc", "");
+    })();
+
+
     window.onunload = null;
     window.onbeforeunload = null;
 
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
+
+    postMessageToIframe({
+      type: 'activeNick',
+      nick: userStore
+    });
 
     if (noChatBackgrounds) forceNoChatBackgrounds();
     addCustomCss();
@@ -278,7 +292,6 @@
       $('<input type="button" id="reloadbutton" />')
         .val("mimimi...")
         .attr("title", "Chat hängt. Bitte neuladen!!!")
-        .attr("disabled", "disabled") // TODO: disabled until chatframe fix
         .addClass("betterccbtn")
         .on("click", function () {
           bettercc.reloadChat();
@@ -297,57 +310,13 @@
       setTimeout(setTheme, 1000);
 
       bettercc.reloadChat = function reloadChat() {
-        let chatframeDoc = getChatframeDocument();
-        let children = chatframeDoc.body.children;
-
-        let chatlog = "";
-        // start with 13 since everything prior we don't need
-        //for (let i = 13; i < children.length; i++) {
-
-        for (let i = 10; i < children.length; i++) {
-          if (children[i].outerHTML.startsWith('<font size="-1"><br>')) {
-            chatlog += children[i].outerHTML;
-          }
-        }
-
-        let userStoreChatlog = "chatlog_" + userStore;
-        (async function () {
-          await GM.setValue(userStoreChatlog, chatlog);
-        })();
-
-        getChatframe().contentWindow.location.reload();
-
-        setTimeout(setTheme, 2000);
-        setTimeout(insertChatlog, 2000);
-
-        function insertChatlog() {
-          (async function () {
-            var message = await GM.getValue(userStoreChatlog);
-            if (!!chatlog) {
-              //cclog("Chatlog: " + message);
-
-              printInChat("beforebegin", chatlog);
-              //cclogChat("Chat wieder ganz?");
-              //cclog(chatlog);
-              //await GM.setValue(userStoreChatlog, "");
-            } else {
-              cclog("Kein Chatlog");
-            }
-          })();
-        }
+        postMessageToIframe({
+          type: 'mimimi'
+        });
+        setTimeout(setTheme, 1000);
       };
 
       function setTheme() {
-        //let chatframedoc = getChatframeDocument();
-
-        var iframe_css = GM_getResourceText("iframe_css");
-
-        //if (!$(chatframedoc).find("head").find("#iframe_css").length) {
-        //  $(chatframedoc)
-        //    .find("head")
-        //    .append('<style id="iframe_css">' + iframe_css + "</style>");
-        // }
-
         (async () => {
           let bg = await GM.getValue(userStoreColor, bgDef);
           await GM.setValue(userStoreColor, bg);
@@ -359,19 +328,14 @@
       function setColors(bg, fg) {
         var chatBg = tinycolor(bg);
         var chatFg = tinycolor(fg);
+
         var anaChatBg = chatBg.analogous();
         var monoChatBg = chatBg.monochromatic();
         var triadChatBg = chatBg.triad();
 
-        fg = tinycolor.mostReadable(chatBg, anaChatBg.concat(monoChatBg), {
+        chatFg = tinycolor.mostReadable(chatBg, anaChatBg.concat(monoChatBg), {
           includeFallbackColors: false,
         });
-
-        //if (noChatBackgrounds) {
-        //  let chatframedoc = getChatframeDocument();
-        //  chatframedoc.body.style.backgroundColor = chatBg.toHexString();
-        //  chatframedoc.body.style.color = fg.toHexString();
-        //}
 
         $("#bgcolorpicker").val("#" + bg);
 
@@ -479,11 +443,22 @@
         $root.css("--superwhispercolor", superwhispercolor.toHslString());
         $root.css("--superbancolor", superbancolor.toHslString());
 
+        postMessageToIframe({
+          type: 'setColors',
+          bgColor: chatBg.toHslString(),
+          fgColor: chatFg.toHslString()
+        });
+
         if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
           $("#ul").addClass("light").removeClass("dark");
         } else {
           $("#ul").addClass("dark").removeClass("light");
         }
+
+        (async function () {
+          await GM.setValue("abc", chatBg.toHslString());
+        })();
+
       }
       bettercc.setColors = setColors;
     }
@@ -639,9 +614,7 @@
             mymsg.toLowerCase() === "/sb"
           ) {
             let banlist = (await bettercc.getSuperbans()).join(", ").toString();
-            let banlistNotify = (await bettercc.getSuperbans())
-              .join("\n")
-              .toString();
+            let banlistNotify = (await bettercc.getSuperbans()).join("\n").toString();
             //cclogChat(banlist, "Superban", false);
             ccnotify(banlistNotify, "Superban");
 
@@ -861,11 +834,7 @@
         //store superbans
         GM.setValue(userStoreBan, superbans.sort());
         //cclogChat("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Superban", false);
-        ccnotify(
-          "Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen",
-          "Superban",
-          false
-        );
+        ccnotify("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Superban", false);
         //hide popup after click
         $(".ulist-popup").hide();
       };
