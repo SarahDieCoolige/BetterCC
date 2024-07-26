@@ -1,4 +1,4 @@
-::root {
+:root {
   --chatBackground: a7c1dc;
   --chatText: #060707;
   --buttonColor: #5e8ebf;
@@ -11,36 +11,47 @@
   --placeholderText: #060707;
 }
 
+body {
+  background-color: var(--chatBackground);
+}
+
+font[color] {
+  filter: brightness(130%) !important;
+}
+
 ::-webkit-scrollbar {
   background-color: #171b1c;
   color: #cfc6b7;
   width: 10px;
 }
+
 ::-webkit-scrollbar-thumb {
   background-color: #484f53;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background-color: #60696e;
 }
+
 ::-webkit-scrollbar-thumb:active {
   background-color: #4c5458;
 }
+
 ::-webkit-scrollbar-corner {
   background-color: #0d0f11;
 }
+
 * {
   scrollbar-color: #171b1c #484f53;
-}
-font[color] {
-  filter: brightness(130%) !important;
 }
 
 table.helpTable {
   width: 40%;
 }
+
 table.helpTable td,
-table.helpTable th {
-}
+table.helpTable th {}
+
 table.helpTable tbody td {
   font-size: 0.7em;
   color: inherit;
