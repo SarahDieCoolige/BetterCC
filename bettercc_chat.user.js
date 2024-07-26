@@ -90,7 +90,7 @@
         printInChat("beforeend", message);
     }
 
-    let helpStrings = [
+    const helpStrings = [
         ["/sw Sariam", "Superwhisper mit Sariam"],
         ["/o Hi All :)", "Im Open schreiben"],
         ["/open", "Superwhisper aus"],
@@ -113,7 +113,7 @@
         );
     }
 
-    let helptxt = [
+    const helptxt = [
         "/sw Sariam" + "\t" + "Superwhisper mit Sariam",
         "/o Hi All :)" + "\t" + "Im Open schreiben",
         "/open" + " \t\t" + "Superwhisper aus",
@@ -126,7 +126,7 @@
         "/help" + "\t\t" + "So zeigst du diese Hilfe hier an",
     ].join("\n");
 
-    let helptxtNotify = [
+    const helptxtNotify = [
         "/sw sariam" + " - " + "sw an",
         "/o hi all :)" + " - " + "ins open",
         "/open" + " - " + "sw aus",
@@ -146,23 +146,24 @@
     }
 
     // window functions
-    var bettercc = (unsafeWindow.bettercc = {});
+    let bettercc = (unsafeWindow.bettercc = {});
 
     const superban = 0;
     const enableNotifications = 1;
 
-    let activeNick = "";
 
     if (/cc_chat\/chatout/.test(window.location.pathname)) {
 
         cclog(window.location.pathname);
+
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
-        activeNick = urlParams.get("NICKNAME").toLowerCase();
-        let userStoreChatlog = "chatlog_" + activeNick;
-        let userStoreRestore = "restore_" + activeNick;
+        const activeNick = urlParams.get("NICKNAME").toLowerCase();
 
-        var iframe_css = GM_getResourceText("iframe_css");
+        const userStoreChatlog = "chatlog_" + activeNick;
+        const userStoreRestore = "restore_" + activeNick;
+
+        const iframe_css = GM_getResourceText("iframe_css");
         GM_wrench.addCss(iframe_css);
 
         GM_wrench.waitForKeyElements("body", restoreChat, true, 100);
