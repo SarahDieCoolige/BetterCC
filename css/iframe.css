@@ -1,15 +1,7 @@
 :root {
   --chatBackground: a7c1dc;
   --chatText: #060707;
-  --hightlightText: #800000;
-  --buttonColor: #5e8ebf;
-  --buttonText: #060707;
-  --inputBackground: #ecf4fd;
-  --ulistBackground: #95b4d5;
-  --ulistText: #060707;
-  --optionsText: #000000;
-  --footerBackground: #5e8ebf;
-  --placeholderText: #060707;
+  --highlightText: #800000;
 }
 
 * {
@@ -20,9 +12,9 @@ font[color] {
   filter: brightness(130%) !important;
 }
 
-font[size="-1"] > font[color="#800000"] {
+/* font[size="-1"] > font[color="#800000"] {
   color: var(--hightlightText) !important;
-}
+} */
 
 
 ::-webkit-scrollbar {
