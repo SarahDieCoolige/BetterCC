@@ -546,6 +546,11 @@
 
       // remove timeout from exit button
       $(".b7").attr("onclick", "bye()");
+
+      // disable resize_fix function. throws error
+      clearTimeout(unsafeWindow.size_timeout);
+      clearInterval(unsafeWindow.size_interval);
+
     }
 
     /**
