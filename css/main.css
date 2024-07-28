@@ -99,6 +99,11 @@ button {
   color: var(--ulistText);
 }
 
+#ul > a.sep {
+  font-style:italic;
+  opacity: 0.5;
+}
+
 .ulinner.headless {
   top: 100px;
 }
