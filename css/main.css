@@ -99,9 +99,12 @@ button {
   color: var(--ulistText);
 }
 
+#ul > a.away {
+  opacity: 0.5;
+}
+
 #ul > a.sep {
   font-style:italic;
-  opacity: 0.5;
 }
 
 .ulinner.headless {
