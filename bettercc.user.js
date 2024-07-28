@@ -157,7 +157,7 @@
   const replaceInputFieldEnable = 1;
   const noChatBackgroundsEnable = 1;
   const NotificationsEnable = 1;
-  const highlightSepUsersEnable = 0;
+  const highlightUsersEnable = 0;
 
   function getChatframe() {
     return document.getElementById("chatframe").contentWindow;
@@ -184,7 +184,7 @@
     if (noChatBackgroundsEnable) forceNoChatBackgrounds();
     addCustomCss();
     cleanup();
-    if (highlightSepUsersEnable) highlightSepUsers();
+    if (highlightUsersEnable) highlightUsers();
     betterInput(replaceInputFieldEnable);
     doColorStuff();
     //if (!gast) replaceOnSubmit();
@@ -549,8 +549,8 @@
       clearInterval(unsafeWindow.size_interval);
     }
 
-    function highlightSepUsers() {
-      function updateSepUsers() {
+    function highlightUsers() {
+      function updateUsersStyle() {
         if (unsafeWindow.cha_my) {
           const updateUserClass = (username, className, add) => {
             $("#ul a")
@@ -566,15 +566,14 @@
 
             if (username) {
               const isSepUser = value.includes("S");
+              const isAwayUser = value.includes("A");
               updateUserClass(username, "sep", isSepUser);
-              console.log(
-                `Found ${isSepUser ? "Sepuser" : "Nonsepuser"}: ${username}`
-              );
+              updateUserClass(username, "away", isAwayUser);
             }
           }
         }
       }
-      GM_wrench.waitForKeyElements("#ul > a", updateSepUsers, false, 100);
+      GM_wrench.waitForKeyElements("#ul > a", updateUsersStyle, false, 100);
       //setInterval(updateSepUsers, 1000);
     }
 
