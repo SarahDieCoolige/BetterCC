@@ -20,6 +20,10 @@
   --badgeColor: 255, 0, 55;
 }
 
+* {
+  transition: all 0.5s ease-in-out;
+}
+
 html,
 body,
 input,

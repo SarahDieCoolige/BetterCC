@@ -11,6 +11,10 @@
   --placeholderText: #060707;
 }
 
+* {
+  transition: all 0.5s ease-in-out;
+}
+
 font[color] {
   filter: brightness(130%) !important;
 }
