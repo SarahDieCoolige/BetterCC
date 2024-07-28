@@ -40,7 +40,6 @@
 /* globals jQuery, $, GM_wrench, ajax, tinycolor*/
 
 (function () {
-
   "use strict";
 
   function cclog(str, tag = "BetterCC") {
@@ -48,9 +47,10 @@
   }
 
   function ccnotify(message, title = "", tag = "", timeout = 3000) {
-    if (enableNotifications) {
+    if (NotificationsEnable) {
       GM_notification({
-        title: "BetterCC " + title, text: message,
+        title: "BetterCC " + title,
+        text: message,
         tag: tag,
         timeout: timeout,
         silent: true,
@@ -58,7 +58,7 @@
           event.preventDefault();
           cclog("Notification clicked.");
           window.focus();
-        }
+        },
       });
     }
   }
@@ -88,8 +88,7 @@
     if (name.trim() !== "") {
       name += ": ";
       name = '<font color="red"><b>' + name + "</b></font>";
-      if (newLineAfterName)
-        name += "<br>"
+      if (newLineAfterName) name += "<br>";
       message = name + message;
     }
     printInChat("beforeend", message);
@@ -99,7 +98,10 @@
     ["/sw Sariam", "Superwhisper mit Sariam"],
     ["/o Hi All :)", "Im Open schreiben"],
     ["/open", "Superwhisper aus"],
-    ["/sb Wendigo", "Einen Arsch für immer ignorieren (noch mal zum entbannen)"],
+    [
+      "/sb Wendigo",
+      "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
+    ],
     ["/superban", "Arschliste anzeigen"],
     ["/reload", "Chat neu laden (mimimi)"],
     ["/settings", "Einstellungen öffnen (irgendwann mal vielleicht^^)"],
@@ -111,10 +113,10 @@
   for (let i = 0; i < helpStrings.length; i++) {
     $help.append(
       "<tr><td>" +
-      helpStrings[i][0] +
-      "</td><td>" +
-      helpStrings[i][1] +
-      "</td></tr>"
+        helpStrings[i][0] +
+        "</td><td>" +
+        helpStrings[i][1] +
+        "</td></tr>"
     );
   }
 
@@ -123,8 +125,8 @@
     "/o Hi All :)" + "\t" + "Im Open schreiben",
     "/open" + " \t\t" + "Superwhisper aus",
     "/sb Wendigo" +
-    "\t" +
-    "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
+      "\t" +
+      "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
     "/superban" + "\t" + "Arschliste anzeigen",
     "/reload" + "\t\t" + "Chat neu laden (mimimi)",
     "/settings" + "\t" + "Einstellungen öffnen (irgendwann mal vielleicht^^)",
@@ -135,9 +137,7 @@
     "/sw sariam" + " - " + "sw an",
     "/o hi all :)" + " - " + "ins open",
     "/open" + " - " + "sw aus",
-    "/sb wendigo" +
-    " - " +
-    "superignore an/aus",
+    "/sb wendigo" + " - " + "superignore an/aus",
     "/superban" + " - " + "banliste",
     "/reload" + " - " + "chat neu laden",
     "/settings" + " - " + "einstellungen",
@@ -148,16 +148,16 @@
     //cclogChat(helptxt, "Hilfe");
     //  printInChat("beforeend", helptxt);
     ccnotify(helptxtNotify, "Hilfe", "help");
-
   }
 
   // window functions
   var bettercc = (unsafeWindow.bettercc = {});
 
-  const superban = 1;
-  const replaceInputField = 1;
-  const noChatBackgrounds = 1;
-  const enableNotifications = 1;
+  const superbanEnable = 1;
+  const replaceInputFieldEnable = 1;
+  const noChatBackgroundsEnable = 1;
+  const NotificationsEnable = 1;
+  const highlightSepUsersEnable = 0;
 
   function getChatframe() {
     return document.getElementById("chatframe").contentWindow;
@@ -165,17 +165,15 @@
 
   function postMessageToIframe(message) {
     const chatWindow = getChatframe();
-    const targetOrigin = 'https://chat.chatcity.de';
+    const targetOrigin = "https://chat.chatcity.de";
     chatWindow.postMessage(message, targetOrigin);
   }
 
   //MAIN CHAT
   if (/cpop.html/.test(window.location.href)) {
-
     (async function () {
       await GM.setValue("abc", "");
     })();
-
 
     window.onunload = null;
     window.onbeforeunload = null;
@@ -183,18 +181,18 @@
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
-    if (noChatBackgrounds) forceNoChatBackgrounds();
+    if (noChatBackgroundsEnable) forceNoChatBackgrounds();
     addCustomCss();
     cleanup();
-    betterInput(replaceInputField);
+    if (highlightSepUsersEnable) highlightSepUsers();
+    betterInput(replaceInputFieldEnable);
     doColorStuff();
     //if (!gast) replaceOnSubmit();
     replaceOnSubmit();
     // add gast class to userlist
     if (gast) $("#ul").addClass("gast");
-    if (superban) enableSuperban();
+    if (superbanEnable) enableSuperban();
     //GM_notification ( {title: 'BetteCC', text: 'BetterCC loaded!'} );
-
 
     function doColorStuff() {
       //remove table border
@@ -310,11 +308,10 @@
 
       bettercc.reloadChat = function reloadChat() {
         postMessageToIframe({
-          type: 'mimimi'
+          type: "mimimi",
         });
         setTimeout(setTheme, 1000);
-      }
-
+      };
 
       function setTheme() {
         (async () => {
@@ -335,8 +332,7 @@
           chatFg = chatFg.darken(40);
           //chatFg = chatFg.brighten(30);
           //chatFg.desaturate(5);
-        }
-        else {
+        } else {
           chatFg = chatFg.lighten(20);
           chatFg = chatFg.brighten(40);
           //chatFg.desaturate(5);
@@ -355,8 +351,6 @@
         chatFg = tinycolor.mostReadable(chatBg, anaChatFg.concat(monoChatFg), {
           includeFallbackColors: false,
         });
-
-
 
         $("#bgcolorpicker").val("#" + bg);
 
@@ -465,9 +459,9 @@
         $root.css("--superbancolor", superbancolor.toHslString());
 
         postMessageToIframe({
-          type: 'setColors',
+          type: "setColors",
           bgColor: chatBg.toHslString(),
-          fgColor: chatFg.toHslString()
+          fgColor: chatFg.toHslString(),
         });
 
         if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
@@ -479,7 +473,6 @@
         (async function () {
           await GM.setValue("abc", chatBg.toHslString());
         })();
-
       }
       bettercc.setColors = setColors;
     }
@@ -492,8 +485,8 @@
     function addCustomCss() {
       $(
         '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/solid.css" crossorigin="anonymous">' +
-        '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/regular.css" crossorigin="anonymous">' +
-        '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/fontawesome.css" crossorigin="anonymous">'
+          '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/regular.css" crossorigin="anonymous">' +
+          '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/fontawesome.css" crossorigin="anonymous">'
       ).appendTo("head");
 
       var main_css = GM_getResourceText("main_css");
@@ -537,7 +530,11 @@
       //$("#u_stats a.unc").hide();
       $("#adv720").remove();
       $("#right_ad").hide();
-      $('#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]').closest("tr").remove();
+      $(
+        '#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]'
+      )
+        .closest("tr")
+        .remove();
 
       $("#popup-chat > table > tbody > tr:nth-child(1)").hide();
       $("#ul").addClass("headless");
@@ -550,7 +547,35 @@
       // disable resize_fix function. throws error
       clearTimeout(unsafeWindow.size_timeout);
       clearInterval(unsafeWindow.size_interval);
+    }
 
+    function highlightSepUsers() {
+      function updateSepUsers() {
+        if (unsafeWindow.cha_my) {
+          const updateUserClass = (username, className, add) => {
+            $("#ul a")
+              .filter(function () {
+                return $(this).text().trim().replace(/^»\s*/, "") === username;
+              })
+              .toggleClass(className, add);
+          };
+
+          for (let i = 0; i < unsafeWindow.cha_my.length - 1; i += 2) {
+            let username = unsafeWindow.cha_my[i];
+            let value = unsafeWindow.cha_my[i + 1];
+
+            if (username) {
+              const isSepUser = value.includes("S");
+              updateUserClass(username, "sep", isSepUser);
+              console.log(
+                `Found ${isSepUser ? "Sepuser" : "Nonsepuser"}: ${username}`
+              );
+            }
+          }
+        }
+      }
+      GM_wrench.waitForKeyElements("#ul > a", updateSepUsers, false, 100);
+      //setInterval(updateSepUsers, 1000);
     }
 
     /**
@@ -611,7 +636,6 @@
       let onSubmitOrig = new Function(onSubmitOrigStr);
       //cclog(onSubmitOrig.toString());
 
-
       bettercc.onSubmit = async function (whispernick) {
         let openMsgCmdRegex = /^\/open\s|^\/o\s/;
         let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
@@ -633,14 +657,16 @@
           return false;
         }
 
-        if (superban) {
+        if (superbanEnable) {
           //IS "/superban " or "/sb "
           if (
             mymsg.toLowerCase() === "/superban" ||
             mymsg.toLowerCase() === "/sb"
           ) {
             let banlist = (await bettercc.getSuperbans()).join(", ").toString();
-            let banlistNotify = (await bettercc.getSuperbans()).join("\n").toString();
+            let banlistNotify = (await bettercc.getSuperbans())
+              .join("\n")
+              .toString();
             //cclogChat(banlist, "Superban", false);
             ccnotify(banlistNotify, "Better Ignore", "banlist", 30000);
 
@@ -781,7 +807,7 @@
         .attr(
           "src",
           "//images.chatcity.de/script/aw.js?r=" +
-          Math.round(new Date().getTime() / 1000)
+            Math.round(new Date().getTime() / 1000)
         )
         .attr("type", "text/javascript")
         .appendTo("head");
@@ -825,7 +851,11 @@
           if (window.confirm(confirmStr)) {
             // add to banned array
             superbans.push(nickToBan);
-            ccnotify(nickToBan + " wird ab jetzt geblockt!", "Better Ignore", "banned");
+            ccnotify(
+              nickToBan + " wird ab jetzt geblockt!",
+              "Better Ignore",
+              "banned"
+            );
           }
           //$('#cu_n').parent(':contains(""'nickToBan')').sibling('.button.superban').text("» Banned");
         } else {
@@ -838,19 +868,23 @@
             superbans = superbans.filter(function (item) {
               return String(item) !== nickToBan;
             });
-            ccnotify(nickToBan + " wird nicht mehr geblockt!", "Better Ignore", "unbanned");
+            ccnotify(
+              nickToBan + " wird nicht mehr geblockt!",
+              "Better Ignore",
+              "unbanned"
+            );
 
             // unban in chat
             new ajax(
               unsafeWindow.PCHAT +
-              "/chatin?SID=" +
-              unsafeWindow.chat_sid +
-              "&ID=" +
-              unsafeWindow.chat_id +
-              "&OUT=" +
-              encodeURIComponent("/ignore " + nickToBan) +
-              "&x=" +
-              Math.random(),
+                "/chatin?SID=" +
+                unsafeWindow.chat_sid +
+                "&ID=" +
+                unsafeWindow.chat_id +
+                "&OUT=" +
+                encodeURIComponent("/ignore " + nickToBan) +
+                "&x=" +
+                Math.random(),
               { method: "get" }
             );
             //$('#fuu > a.hasText(nickToBan).button.superban').text("» Superban");
@@ -860,7 +894,11 @@
         //store superbans
         GM.setValue(userStoreBan, superbans.sort());
         //cclogChat("Schreib <b>/superban/b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Better Ignore", false);
-        ccnotify("Schreib <b>/superban</b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen", "Better Ignore", "help");
+        ccnotify(
+          "Schreib <b>/superban</b> oder <b>/sb</b> um deine <b>Bannliste</b> zu sehen",
+          "Better Ignore",
+          "help"
+        );
         //hide popup after click
         $(".ulist-popup").hide();
       };
@@ -959,23 +997,26 @@
       async function banUser(user) {
         new ajax(
           unsafeWindow.PCHAT +
-          "/chatin?SID=" +
-          unsafeWindow.chat_sid +
-          "&ID=" +
-          unsafeWindow.chat_id +
-          "&OUT=" +
-          encodeURIComponent("/ignore " + user) +
-          "&x=" +
-          Math.random(),
+            "/chatin?SID=" +
+            unsafeWindow.chat_sid +
+            "&ID=" +
+            unsafeWindow.chat_id +
+            "&OUT=" +
+            encodeURIComponent("/ignore " + user) +
+            "&x=" +
+            Math.random(),
           { method: "get" }
         );
         alreadyBanned.push(user);
         cclog("Banned " + user);
-        ccnotify(user + " kann dir nicht mehr schreiben", "Better Ignore", "banned");
+        ccnotify(
+          user + " kann dir nicht mehr schreiben",
+          "Better Ignore",
+          "banned"
+        );
         //cclogChat("Bans: " + alreadyBanned.toString());
         unsafeWindow.alreadyBanned = alreadyBanned;
       }
     }
   } //MAIN CHAT
-
 })();
