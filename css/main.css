@@ -275,6 +275,8 @@ textarea {
   border-color: var(--inputBackground);
   height: 25px;
   margin: 5px;
+  min-width: 25px;
+  text-overflow: ellipsis;
 }
 
 #darkmodechecklabel {
