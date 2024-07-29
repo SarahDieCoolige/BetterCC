@@ -45,7 +45,7 @@ button {
   background: var(--footerBackground);
 }
 
-.chat_ibg .a {
+.chat_ibg a {
   transition: none !important
 }
 
