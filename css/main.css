@@ -109,12 +109,12 @@ button {
   color: var(--ulistText);
 }
 
-#ul > a.away {
+.u_away {
   transition: all 1s ease;
   opacity: 0.5;
 }
 
-#ul > a.sep {
+.u_sep {
   font-style:italic;
 }
 

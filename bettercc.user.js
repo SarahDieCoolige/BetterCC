@@ -157,7 +157,7 @@
   const replaceInputFieldEnable = 1;
   const noChatBackgroundsEnable = 1;
   const NotificationsEnable = 1;
-  const highlightUsersEnable = 0;
+  const highlightUserStateEnable = 0;
 
   function getChatframe() {
     return document.getElementById("chatframe").contentWindow;
@@ -184,7 +184,7 @@
     if (noChatBackgroundsEnable) forceNoChatBackgrounds();
     addCustomCss();
     cleanup();
-    if (highlightUsersEnable) highlightUsers();
+    if (highlightUserStateEnable) highlightUserState();
     betterInput(replaceInputFieldEnable);
     doColorStuff();
     //if (!gast) replaceOnSubmit();
@@ -549,32 +549,59 @@
       clearInterval(unsafeWindow.size_interval);
     }
 
-    function highlightUsers() {
-      function updateUsersStyle() {
-        if (unsafeWindow.cha_my) {
-          const updateUserClass = (username, className, add) => {
-            $("#ul a")
-              .filter(function () {
-                return $(this).text().trim().replace(/^»\s*/, "") === username;
-              })
-              .toggleClass(className, add);
-          };
-
-          for (let i = 0; i < unsafeWindow.cha_my.length - 1; i += 2) {
-            let username = unsafeWindow.cha_my[i];
-            let value = unsafeWindow.cha_my[i + 1];
-
-            if (username) {
-              const isSepUser = value.includes("S");
-              const isAwayUser = value.includes("A");
-              updateUserClass(username, "sep", isSepUser);
-              updateUserClass(username, "away", isAwayUser);
-            }
-          }
+    function highlightUserState() {
+      // Function to wait until the original set_uinfo1 function is loaded
+      function waitForSetUinfo1Function() {
+        if (typeof set_uinfo1 === "function") {
+          redefineSetUinfo1Function();
+        } else {
+          setTimeout(waitForSetUinfo1Function, 100); // Check again after 100ms
         }
       }
-      GM_wrench.waitForKeyElements("#ul > a", updateUsersStyle, false, 100);
-      //setInterval(updateSepUsers, 1000);
+
+      // Function to redefine the set_uinfo1 function
+      function redefineSetUinfo1Function() {
+        // Redefine the set_uinfo1 function
+        set_uinfo1 = function () {
+          var g;
+          var gu;
+          var num = 0;
+          unsafeWindow.chat_channel = unsafeWindow.cha_channel;
+          var uli = "";
+          for (g = 0; g < unsafeWindow.cha_my.length; g += 2) {
+            if (unsafeWindow.cha_my[g] != "") {
+              let username = unsafeWindow.cha_my[g];
+              let value = unsafeWindow.cha_my[g + 1];
+              let css_class = 'class=" ';
+
+              if (username) {
+                const isSepUser = value.includes("S");
+                const isAwayUser = value.includes("A");
+
+                if (isSepUser) css_class += "u_sep ";
+                if (isAwayUser) css_class += "u_away ";
+              }
+              css_class += '" ';
+
+              if (unsafeWindow.cha_my[g] != unsafeWindow.chat_nick) {
+                uli += `<a href="javascript://" onclick="open_utn('fuu',this,-25,-50,'${
+                  unsafeWindow.cha_my[g]
+                }',event,'${unsafeWindow.cha_my[g + 1]}');" id="${
+                  cha_my[g]
+                }" ${css_class} target="leer">» ${unsafeWindow.cha_my[g]}</a><br>`;
+              } else {
+                uli += `<span ${css_class}>» ${unsafeWindow.cha_my[g]}</span><br>`;
+              }
+              num++;
+            }
+          }
+          setInnerHTML("ul", uli);
+          setInnerHTML("uinfo", num);
+        };
+
+        // cclog("set_uinfo1 function redefined successfully.");
+      }
+      waitForSetUinfo1Function();
     }
 
     /**
