@@ -45,6 +45,10 @@ button {
   background: var(--footerBackground);
 }
 
+.chat_ibg .a {
+  transition: none !important
+}
+
 #superban {
   color: red;
 }
