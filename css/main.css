@@ -314,6 +314,10 @@ a.unc {
   padding: 0px;
 }
 
+.user_status_indicator {
+  font-size: 0.75em;
+}
+
 i.fa,
 i.fas,
 i.far,

@@ -563,38 +563,46 @@
       function redefineSetUinfo1Function() {
         // Redefine the set_uinfo1 function
         set_uinfo1 = function () {
-          var g;
-          var gu;
-          var num = 0;
           unsafeWindow.chat_channel = unsafeWindow.cha_channel;
-          var uli = "";
-          for (g = 0; g < unsafeWindow.cha_my.length; g += 2) {
-            if (unsafeWindow.cha_my[g] != "") {
-              let username = unsafeWindow.cha_my[g];
-              let value = unsafeWindow.cha_my[g + 1];
-              let css_class = 'class=" ';
+          let uli = "";
+          let num = 0;
 
-              if (username) {
-                const isSepUser = value.includes("S");
-                const isAwayUser = value.includes("A");
+          for (let g = 0; g < unsafeWindow.cha_my.length; g += 2) {
+            const username = unsafeWindow.cha_my[g];
+            const value = unsafeWindow.cha_my[g + 1];
 
-                if (isSepUser) css_class += "u_sep ";
-                if (isAwayUser) css_class += "u_away ";
+            if (username) {
+              let classes = [];
+              let indicators = [];
+
+              if (value.includes("S")) {
+                classes.push("u_sep");
+                indicators.push("S");
               }
-              css_class += '" ';
-
-              if (unsafeWindow.cha_my[g] != unsafeWindow.chat_nick) {
-                uli += `<a href="javascript://" onclick="open_utn('fuu',this,-25,-50,'${
-                  unsafeWindow.cha_my[g]
-                }',event,'${unsafeWindow.cha_my[g + 1]}');" id="${
-                  cha_my[g]
-                }" ${css_class} target="leer">» ${unsafeWindow.cha_my[g]}</a><br>`;
-              } else {
-                uli += `<span ${css_class}>» ${unsafeWindow.cha_my[g]}</span><br>`;
+              if (value.includes("A")) {
+                classes.push("u_away");
+                indicators.push("A");
               }
+
+              classes =
+                classes.length > 0 ? `class="${classes.join(" ")}"` : "";
+              indicators =
+                indicators.length > 0
+                  ? `<span class="user_status_indicator">[${indicators.join(
+                      "]["
+                    )}]</span>`
+                  : "";
+
+              const displayElement =
+                username !== unsafeWindow.chat_nick
+                  ? `<a href="javascript://" onclick="open_utn('fuu',this,-25,-50,'${username}',event,'${value}');" id="${username}" ${classes} target="leer">» ${username} ${indicators}</a><br>`
+                  : `<span ${classes}>» ${username} ${indicators}</span><br>`;
+
+              uli += displayElement;
               num++;
             }
           }
+
           setInnerHTML("ul", uli);
           setInnerHTML("uinfo", num);
         };
