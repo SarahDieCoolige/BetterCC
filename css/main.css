@@ -93,6 +93,8 @@ button {
   scrollbar-width: none;
   /* Firefox 64 */
   padding: 5px 25px 0px 10px !important;
+  bottom: 90px;
+  height: auto !important;
 }
 
 .ulinner a {
