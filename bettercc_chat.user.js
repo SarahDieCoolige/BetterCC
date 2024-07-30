@@ -5,6 +5,7 @@
 // @version  1.34
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
+// @match  https://www.chatcity.de/cc_chat/chatout?*
 // @match  https://chat.chatcity.de/cc_chat/chatout?*
 //
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
@@ -40,115 +41,115 @@
 (function () {
   "use strict";
 
-  function cclog(str, tag = "BetterCC_CHAT") {
-    GM_log(tag + " - " + str);
-  }
-
-  function ccnotify(message, title = "", tag = "", timeout = 3000) {
-    if (enableNotifications) {
-      GM_notification({
-        title: "BetterCC " + title,
-        text: message,
-        tag: tag,
-        timeout: timeout,
-        silent: true,
-        onclick: () => {
-          event.preventDefault();
-          cclog("Notification clicked.");
-          window.focus();
-        },
-      });
-    }
-  }
-
-  cclog("Version: " + GM_info.script.version + " - " + window.location.href);
-
-  function printInChat(position = "beforeend", content) {
-    //$("body").children().last().append(content);
-    document.body.lastChild.insertAdjacentHTML(position, content);
-
-    //let current = document.body.lastChild.innerHTML;
-    //document.body.lastChild.innerHTML+=content;
-  }
-
-  function cclogChat(message, name = "BetterCC", newLineAfterName = true) {
-    message =
-      '<pre id="bccmessage" class="bccmessage" style="white-space: pre-wrap; font-size: 1.2em; width: 70%; display: inline">' +
-      message +
-      "</pre><br>";
-
-    if (name.trim() !== "") {
-      name += ": ";
-      name = '<font color="red"><b>' + name + "</b></font>";
-      if (newLineAfterName) name += "<br>";
-      message = name + message;
-    }
-    printInChat("beforeend", message);
-  }
-
-  const helpStrings = [
-    ["/sw Sariam", "Superwhisper mit Sariam"],
-    ["/o Hi All :)", "Im Open schreiben"],
-    ["/open", "Superwhisper aus"],
-    [
-      "/sb Wendigo",
-      "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
-    ],
-    ["/superban", "Arschliste anzeigen"],
-    ["/reload", "Chat neu laden (mimimi)"],
-    ["/settings", "Einstellungen öffnen (irgendwann mal vielleicht^^)"],
-    ["/help", "So zeigst du diese Hilfe hier an"],
-  ];
-
-  let $help = $("<table/>");
-  $help.addClass("helpTable");
-  for (let i = 0; i < helpStrings.length; i++) {
-    $help.append(
-      "<tr><td>" +
-        helpStrings[i][0] +
-        "</td><td>" +
-        helpStrings[i][1] +
-        "</td></tr>"
-    );
-  }
-
-  const helptxt = [
-    "/sw Sariam" + "\t" + "Superwhisper mit Sariam",
-    "/o Hi All :)" + "\t" + "Im Open schreiben",
-    "/open" + " \t\t" + "Superwhisper aus",
-    "/sb Wendigo" +
-      "\t" +
-      "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
-    "/superban" + "\t" + "Arschliste anzeigen",
-    "/reload" + "\t\t" + "Chat neu laden (mimimi)",
-    "/settings" + "\t" + "Einstellungen öffnen (irgendwann mal vielleicht^^)",
-    "/help" + "\t\t" + "So zeigst du diese Hilfe hier an",
-  ].join("\n");
-
-  const helptxtNotify = [
-    "/sw sariam" + " - " + "sw an",
-    "/o hi all :)" + " - " + "ins open",
-    "/open" + " - " + "sw aus",
-    "/sb wendigo" + " - " + "superignore an/aus",
-    "/superban" + " - " + "banliste",
-    "/reload" + " - " + "chat neu laden",
-    "/settings" + " - " + "einstellungen",
-    "/help" + " - " + "hilfe",
-  ].join("\n");
-
-  function printHelp() {
-    //cclogChat(helptxt, "Hilfe");
-    //  printInChat("beforeend", helptxt);
-    ccnotify(helptxtNotify, "Hilfe");
-  }
-
-  // window functions
-  let bettercc = (unsafeWindow.bettercc = {});
-
-  const superban = 0;
-  const enableNotifications = 1;
-
   if (/cc_chat\/chatout/.test(window.location.pathname)) {
+    function cclog(str, tag = "BetterCC_CHAT") {
+      GM_log(tag + " - " + str);
+    }
+
+    function ccnotify(message, title = "", tag = "", timeout = 3000) {
+      if (enableNotifications) {
+        GM_notification({
+          title: "BetterCC " + title,
+          text: message,
+          tag: tag,
+          timeout: timeout,
+          silent: true,
+          onclick: () => {
+            event.preventDefault();
+            cclog("Notification clicked.");
+            window.focus();
+          },
+        });
+      }
+    }
+
+    cclog("Version: " + GM_info.script.version + " - " + window.location.href);
+
+    function printInChat(position = "beforeend", content) {
+      //$("body").children().last().append(content);
+      document.body.lastChild.insertAdjacentHTML(position, content);
+
+      //let current = document.body.lastChild.innerHTML;
+      //document.body.lastChild.innerHTML+=content;
+    }
+
+    function cclogChat(message, name = "BetterCC", newLineAfterName = true) {
+      message =
+        '<pre id="bccmessage" class="bccmessage" style="white-space: pre-wrap; font-size: 1.2em; width: 70%; display: inline">' +
+        message +
+        "</pre><br>";
+
+      if (name.trim() !== "") {
+        name += ": ";
+        name = '<font color="red"><b>' + name + "</b></font>";
+        if (newLineAfterName) name += "<br>";
+        message = name + message;
+      }
+      printInChat("beforeend", message);
+    }
+
+    const helpStrings = [
+      ["/sw Sariam", "Superwhisper mit Sariam"],
+      ["/o Hi All :)", "Im Open schreiben"],
+      ["/open", "Superwhisper aus"],
+      [
+        "/sb Wendigo",
+        "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
+      ],
+      ["/superban", "Arschliste anzeigen"],
+      ["/reload", "Chat neu laden (mimimi)"],
+      ["/settings", "Einstellungen öffnen (irgendwann mal vielleicht^^)"],
+      ["/help", "So zeigst du diese Hilfe hier an"],
+    ];
+
+    let $help = $("<table/>");
+    $help.addClass("helpTable");
+    for (let i = 0; i < helpStrings.length; i++) {
+      $help.append(
+        "<tr><td>" +
+          helpStrings[i][0] +
+          "</td><td>" +
+          helpStrings[i][1] +
+          "</td></tr>"
+      );
+    }
+
+    const helptxt = [
+      "/sw Sariam" + "\t" + "Superwhisper mit Sariam",
+      "/o Hi All :)" + "\t" + "Im Open schreiben",
+      "/open" + " \t\t" + "Superwhisper aus",
+      "/sb Wendigo" +
+        "\t" +
+        "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
+      "/superban" + "\t" + "Arschliste anzeigen",
+      "/reload" + "\t\t" + "Chat neu laden (mimimi)",
+      "/settings" + "\t" + "Einstellungen öffnen (irgendwann mal vielleicht^^)",
+      "/help" + "\t\t" + "So zeigst du diese Hilfe hier an",
+    ].join("\n");
+
+    const helptxtNotify = [
+      "/sw sariam" + " - " + "sw an",
+      "/o hi all :)" + " - " + "ins open",
+      "/open" + " - " + "sw aus",
+      "/sb wendigo" + " - " + "superignore an/aus",
+      "/superban" + " - " + "banliste",
+      "/reload" + " - " + "chat neu laden",
+      "/settings" + " - " + "einstellungen",
+      "/help" + " - " + "hilfe",
+    ].join("\n");
+
+    function printHelp() {
+      //cclogChat(helptxt, "Hilfe");
+      //  printInChat("beforeend", helptxt);
+      ccnotify(helptxtNotify, "Hilfe");
+    }
+
+    // window functions
+    let bettercc = (unsafeWindow.bettercc = {});
+
+    const superban = 0;
+    const enableNotifications = 1;
+
     cclog(window.location.pathname);
 
     const queryString = window.location.search;
