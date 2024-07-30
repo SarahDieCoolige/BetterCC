@@ -165,7 +165,8 @@
 
   function postMessageToIframe(message) {
     const chatWindow = getChatframe();
-    const targetOrigin = "https://chat.chatcity.de";
+    //const targetOrigin = "https://chat.chatcity.de";
+    const targetOrigin = "https://www.chatcity.de";
     chatWindow.postMessage(message, targetOrigin);
   }
 
