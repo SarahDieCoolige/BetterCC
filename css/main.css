@@ -255,6 +255,7 @@ table {
 html {
   overflow: hidden;
   overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 ::-webkit-scrollbar {
