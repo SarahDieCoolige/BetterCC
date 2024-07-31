@@ -158,11 +158,22 @@
 
     const userStoreChatlog = "chatlog_" + activeNick;
     const userStoreRestore = "restore_" + activeNick;
+    const userStoreColorBg = "colorBg_" + activeNick;
+    const userStoreColorFg = "colorFg_" + activeNick;
 
     const iframe_css = GM_getResourceText("iframe_css");
     GM_wrench.addCss(iframe_css);
+    // GM_addStyle("* { transition: color 0.4s ease-out, background 0.4s ease-out, background-color 0.4s ease-out;}");
 
     GM_wrench.waitForKeyElements("body", restoreChat, true, 100);
+
+    function removeColorAttr(element) {
+      if (element.textContent.includes("backgroundColor")) {
+        cclog(element.textContent);
+        element.remove();
+      }
+    }
+    GM_wrench.waitForKeyElements("body > script", removeColorAttr, true, 100);
 
     window.addEventListener(
       "message",
@@ -201,34 +212,32 @@
     );
 
     function setColors(bg, fg, hl) {
-      //let chatBg = tinycolor(bg);
-      //let triadChatFg = chatBg.triad();
-      //let highlightTextColor = tinycolor(bg).complement();
-
-      //highlightTextColor = tinycolor.mostReadable(chatBg, triadChatFg, {
-      //    includeFallbackColors: false,
-      //  });
-
-      document.body.style.backgroundColor = bg;
-      document.body.style.color = fg;
-
       document.documentElement.style.setProperty("--chatBackground", bg);
       document.documentElement.style.setProperty("--chatText", fg);
-      document.documentElement.style.setProperty("--highlightText", hl);
+      document.body.style.backgroundColor = "var(--chatBackground)";
+      document.body.style.color = "var(--chatText)";
+      //document.documentElement.style.setProperty("--highlightText", hl);
+
+      (async function () {
+        await GM.setValue(userStoreColorBg, bg);
+        await GM.setValue(userStoreColorFg, fg);
+      })();
     }
 
     // TODO
     function reloadChat() {
       let children = document.body.children;
-
       let chatlog = "";
+
       // start with 13 since everything prior we don't need
       //for (let i = 13; i < children.length; i++) {
-
       for (let i = 6; i < children.length; i++) {
         if (
-          children[i].outerHTML.startsWith('<font size="-1">') &&
-          !children[i].outerHTML.startsWith('<font size="-1"><br>\n</font>')
+          (children[i].outerHTML.startsWith('<font size="-1">') &&
+            !children[i].outerHTML.startsWith(
+              '<font size="-1"><br>\n</font>'
+            )) ||
+          children[i].outerHTML.includes("BetterCC:")
         ) {
           chatlog += children[i].outerHTML;
         }
@@ -243,17 +252,33 @@
     }
 
     function restoreChat() {
+      document.body.removeAttribute("bgcolor");
+      document.body.removeAttribute("text");
+
       (async function () {
         let chatlog = await GM.getValue(userStoreChatlog);
         let restore = await GM.getValue(userStoreRestore);
-        cclog("Restore Chatlog: " + restore);
+        let colorBg = await GM.getValue(userStoreColorBg);
+        let colorFg = await GM.getValue(userStoreColorFg);
+
+        if (colorBg && colorFg) {
+          // document.body.setAttribute("bgcolor", colorBg);
+          // document.body.setAttribute("text", colorFg);
+          setColors(colorBg, colorFg, null);
+        }
         if (restore) {
+          cclog("Restore Chatlog: " + restore);
           //cclog("Chatlog: " + chatlog);
           if (!!chatlog) {
             printInChat("beforebegin", chatlog);
           } else {
             cclog("Kein Chatlog");
           }
+          printInChat(
+            "beforebegin",
+            "<span><br><i>BetterCC: mimimi..</i></span>"
+          );
+
           await GM.setValue(userStoreRestore, false);
         }
       })();
