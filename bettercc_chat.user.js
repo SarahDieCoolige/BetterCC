@@ -211,7 +211,7 @@
       false
     );
 
-    function autoscrolling() {
+    function addAutoscrollBanner() {
       // Create banner div
       const scrollbanner = document.createElement("div");
       scrollbanner.id = "autoscroll-banner";
@@ -322,10 +322,10 @@
           );
 
           await GM.setValue(userStoreRestore, false);
-
-          autoscrolling();
         }
       })();
+
+      addAutoscrollBanner();
     }
   }
 })();
