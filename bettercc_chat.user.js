@@ -67,7 +67,11 @@
 
     function printInChat(position = "beforeend", content) {
       //$("body").children().last().append(content);
-      document.body.lastChild.insertAdjacentHTML(position, content);
+      // previousSibling > lastChild is autoscrollbanner
+      document.body.lastChild.previousSibling.insertAdjacentHTML(
+        position,
+        content
+      );
 
       //let current = document.body.lastChild.innerHTML;
       //document.body.lastChild.innerHTML+=content;
