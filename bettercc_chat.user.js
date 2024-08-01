@@ -211,6 +211,48 @@
       false
     );
 
+    function autoscrolling() {
+      // Create banner div
+      const scrollbanner = document.createElement("div");
+      scrollbanner.id = "autoscroll-banner";
+      scrollbanner.textContent = "Zurück nach unten";
+      document.body.appendChild(scrollbanner);
+
+      // Add event listener to enable auto-scrolling on click
+      scrollbanner.addEventListener("click", function () {
+        unsafeWindow.scrolling = true;
+        //window.scrollTo(0, document.body.scrollHeight);
+        scrollbanner.style.display = "none";
+      });
+
+      // Handle scroll events to toggle auto-scrolling
+      let lastScrollTop = window.scrollY || document.documentElement.scrollTop;
+
+      window.addEventListener("scroll", function () {
+        const scrollPosition =
+          document.documentElement.scrollTop || document.body.scrollTop;
+        const maxScroll = document.body.scrollHeight - window.innerHeight;
+
+        // Determine the direction of the scroll
+        if (scrollPosition < lastScrollTop) {
+          // Check if the user is scrolling up
+          if (unsafeWindow.scrolling && scrollPosition < maxScroll - 5) {
+            unsafeWindow.scrolling = false;
+            scrollbanner.style.display = "block";
+          }
+        }
+
+        // Hide banner when the user scrolls to the bottom
+        if (scrollPosition >= maxScroll - 5) {
+          scrollbanner.style.display = "none";
+          unsafeWindow.scrolling = true;
+        }
+
+        // Update the last scroll position
+        lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+      });
+    }
+
     function setColors(bg, fg, hl) {
       document.documentElement.style.setProperty("--chatBackground", bg);
       document.documentElement.style.setProperty("--chatText", fg);
@@ -280,6 +322,8 @@
           );
 
           await GM.setValue(userStoreRestore, false);
+
+          autoscrolling();
         }
       })();
     }
