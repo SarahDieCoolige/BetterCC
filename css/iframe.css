@@ -63,3 +63,17 @@ table.helpTable tr td:first-child {
   min-width: 7em;
   max-width: 7em;
 }
+
+#autoscroll-banner {
+  display: none;
+  position: fixed;
+  bottom: 0px;
+  width: 100%;
+  background-color: var(--chatBackground);
+  color: var(--chatText);
+  text-align: center;
+  padding: 5px;
+  cursor: pointer;
+  z-index: 1001;
+  opacity: 0.9;
+}
