@@ -616,14 +616,15 @@
         .remove();
       //$("#u_stats a.unc").hide();
       $("#adv720").remove();
-      $("#right_ad").hide();
+      $("#right_ad").remove();
       $(
         '#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]'
       )
         .closest("tr")
         .remove();
 
-      $("#popup-chat > table > tbody > tr:nth-child(1)").hide();
+      $("#popup-chat > table > tbody > tr:nth-child(1)").remove();
+      $("#ulscrollhelper").remove();
       $("#ul").addClass("headless");
       //$(".ww_chat_divide").hide();
       $(".chat_i1").remove();
@@ -632,6 +633,9 @@
       $(".b7").attr("onclick", "bye()");
 
       // disable resize_fix function. throws error
+      unsafeWindow.resize_fix = function resize_fix() {
+        return true;
+      };
       clearTimeout(unsafeWindow.size_timeout);
       clearInterval(unsafeWindow.size_interval);
     }
