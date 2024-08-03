@@ -696,8 +696,14 @@
           let classes = [];
           let indicators = [];
 
-          if (value.includes("S")) classes.push("u_sep");
-          if (value.includes("A")) classes.push("u_away");
+          if (value.includes("S")) {
+            classes.push("u_sep");
+            indicators.push("S");
+          }
+          if (value.includes("A")) {
+            classes.push("u_away");
+            indicators.push("A");
+          }
 
           const classAttr =
             classes.length > 0 ? `class="${classes.join(" ")}"` : "";
