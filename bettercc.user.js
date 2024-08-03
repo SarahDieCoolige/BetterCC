@@ -742,15 +742,8 @@
                 isCurrentUser
               );
 
-              cclog(
-                username +
-                  " " +
-                  pinnedUsersNames.includes(username.toLowerCase())
-              );
               if (pinnedUsersNames.includes(username.toLowerCase())) {
                 pinnedUsers.push(userElement);
-                cclog(pinnedUsersNames);
-                cclog(pinnedUsers);
               } else {
                 regularUsers.push(userElement);
               }
