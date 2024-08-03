@@ -126,6 +126,12 @@ button {
   top: 50px;
 }
 
+.pinnedusergap {
+  height: 10px;            /* Height of the gap */
+  width: 100%;             /* Full width of the container */
+  background-color: transparent; /* Transparent background */
+}
+
 .ulist-popup {
   position: absolute;
   top: 0px;
