@@ -19,6 +19,8 @@
 // @grant  GM_addStyle
 // @grant  GM.setValue
 // @grant  GM.getValue
+// @grant  GM_setValue
+// @grant  GM_getValue
 // @grant  GM_addValueChangeListener
 // @grant  GM_getResourceText
 // @grant  GM_xmlhttpRequest
@@ -157,7 +159,7 @@
   const replaceInputFieldEnable = 1;
   const noChatBackgroundsEnable = 1;
   const NotificationsEnable = 1;
-  const highlightUserStateEnable = 0;
+  const betterUserListEnable = 0;
 
   function getChatframe() {
     return document.getElementById("chatframe").contentWindow;
@@ -271,7 +273,7 @@
     if (noChatBackgroundsEnable) forceNoChatBackgrounds();
     addCustomCss();
     cleanup();
-    if (highlightUserStateEnable) highlightUserState();
+    if (betterUserListEnable) betterUserList();
     betterInput(replaceInputFieldEnable);
     doColorStuff();
     //if (!gast) replaceOnSubmit();
@@ -640,8 +642,48 @@
       clearInterval(unsafeWindow.size_interval);
     }
 
-    function highlightUserState() {
-      // Function to wait until the original set_uinfo1 function is loaded
+    function betterUserList() {
+      // add superwhisper to userlist popup
+      $("#fuu").append(
+        '<a href="javascript://" class="button pinuser" id="pinUser" onclick="bettercc.addPinnedUser(last_id)">» Pin</a>'
+      );
+
+      let userStorePinnedUsers = "pinned_" + userStore;
+
+      // Function to add a user to the pinned users list
+      bettercc.addPinnedUser = async function (username) {
+        username = username.toLowerCase();
+
+        // Retrieve the current list of pinned users
+        let pinnedUsers = GM_getValue(userStorePinnedUsers, []);
+
+        // Check if the user is already in the list
+        if (!pinnedUsers.includes(username)) {
+          // Add the new user to the list
+          pinnedUsers.push(username);
+        } else {
+          // remove
+          pinnedUsers = pinnedUsers.filter(function (item) {
+            return String(item) !== username;
+          });
+        }
+
+        // Save the updated list back to the storage
+        GM_setValue(userStorePinnedUsers, pinnedUsers);
+        set_uinfo1();
+        $(".ulist-popup").hide();
+      };
+
+      // Function to get the list of pinned users
+      function getPinnedUsers() {
+        // Retrieve the list of pinned users from storage
+        //return GM_getValue(userStorePinnedUsers, []);
+
+        return Array.from(GM_getValue(userStorePinnedUsers, []))
+          .map((v) => v.toLowerCase())
+          .sort();
+      }
+
       function waitForSetUinfo1Function() {
         if (typeof set_uinfo1 === "function") {
           redefineSetUinfo1Function();
@@ -650,49 +692,73 @@
         }
       }
 
-      // Function to redefine the set_uinfo1 function
       function redefineSetUinfo1Function() {
-        // Redefine the set_uinfo1 function
+        function createUserDisplayElement(username, value, isCurrentUser) {
+          let classes = [];
+          let indicators = [];
+
+          if (value.includes("S")) classes.push("u_sep");
+          if (value.includes("A")) classes.push("u_away");
+
+          const classAttr =
+            classes.length > 0 ? `class="${classes.join(" ")}"` : "";
+          const indicatorHtml =
+            indicators.length > 0
+              ? `<span class="user_status_indicator">[${indicators.join(
+                  "]["
+                )}]</span>`
+              : "";
+
+          if (isCurrentUser) {
+            return `<span ${classAttr}>» ${username} ${indicatorHtml}</span><br>`;
+          } else {
+            return `<a href="javascript://" onclick="open_utn('fuu',this,-25,-50,'${username}',event,'${value}');" id="${username}" ${classAttr} target="leer">» ${username} ${indicatorHtml}</a><br>`;
+          }
+        }
+
         set_uinfo1 = function () {
           unsafeWindow.chat_channel = unsafeWindow.cha_channel;
-          let uli = "";
           let num = 0;
+
+          // Retrieve pinned usernames from storage
+          const pinnedUsersNames = getPinnedUsers();
+          let pinnedUsers = [];
+          let regularUsers = [];
 
           for (let g = 0; g < unsafeWindow.cha_my.length; g += 2) {
             const username = unsafeWindow.cha_my[g];
             const value = unsafeWindow.cha_my[g + 1];
 
             if (username) {
-              let classes = [];
-              let indicators = [];
+              const isCurrentUser = username === unsafeWindow.chat_nick;
+              const userElement = createUserDisplayElement(
+                username,
+                value,
+                isCurrentUser
+              );
 
-              if (value.includes("S")) {
-                classes.push("u_sep");
-                indicators.push("S");
+              cclog(
+                username +
+                  " " +
+                  pinnedUsersNames.includes(username.toLowerCase())
+              );
+              if (pinnedUsersNames.includes(username.toLowerCase())) {
+                pinnedUsers.push(userElement);
+                cclog(pinnedUsersNames);
+                cclog(pinnedUsers);
+              } else {
+                regularUsers.push(userElement);
               }
-              if (value.includes("A")) {
-                classes.push("u_away");
-                indicators.push("A");
-              }
 
-              classes =
-                classes.length > 0 ? `class="${classes.join(" ")}"` : "";
-              indicators =
-                indicators.length > 0
-                  ? `<span class="user_status_indicator">[${indicators.join(
-                      "]["
-                    )}]</span>`
-                  : "";
-
-              const displayElement =
-                username !== unsafeWindow.chat_nick
-                  ? `<a href="javascript://" onclick="open_utn('fuu',this,-25,-50,'${username}',event,'${value}');" id="${username}" ${classes} target="leer">» ${username} ${indicators}</a><br>`
-                  : `<span ${classes}>» ${username} ${indicators}</span><br>`;
-
-              uli += displayElement;
               num++;
             }
           }
+
+          let uli = pinnedUsers.join("");
+          if (pinnedUsers.length > 0 && regularUsers.length > 0) {
+            uli += '<div class="pinnedusergap"></div>';
+          }
+          uli += regularUsers.join("");
 
           setInnerHTML("ul", uli);
           setInnerHTML("uinfo", num);
@@ -700,6 +766,7 @@
 
         // cclog("set_uinfo1 function redefined successfully.");
       }
+
       waitForSetUinfo1Function();
     }
 
