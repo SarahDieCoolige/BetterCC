@@ -325,6 +325,12 @@ a.unc {
   font-size: 0.75em;
 }
 
+#ul > *:hover {
+  opacity: 1;
+  transform: 0.2s;
+  transition: all 0.2s ease;
+}
+
 i.fa,
 i.fas,
 i.far,
