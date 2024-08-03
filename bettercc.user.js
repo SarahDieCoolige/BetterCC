@@ -392,6 +392,15 @@
         })
         .appendTo("#betteroptions");
 
+      $('<input type="button" id="settingsbutton" />')
+        .val("S")
+        .attr("title", "BetterCC Settings")
+        .addClass("betterccbtn")
+        .on("click", function () {
+          showSettingsModal();
+        })
+        .appendTo("#betteroptions");
+
       setTimeout(setTheme, 1000);
 
       bettercc.reloadChat = function reloadChat() {
