@@ -21,6 +21,7 @@
 // @grant  GM.getValue
 // @grant  GM_setValue
 // @grant  GM_getValue
+// @grant  GM.listValues
 // @grant  GM_addValueChangeListener
 // @grant  GM_getResourceText
 // @grant  GM_xmlhttpRequest
@@ -180,86 +181,84 @@
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
-
     // Helper function to prefix keys with the user ID
     function getUserKey(key) {
-        return `${userStore}_${key}`;
+      return `${userStore}_${key}`;
     }
 
     // Create and display the settings modal
     function showSettingsModal() {
-        const modalOverlay = document.createElement('div');
-        modalOverlay.style.position = 'fixed';
-        modalOverlay.style.top = 0;
-        modalOverlay.style.left = 0;
-        modalOverlay.style.width = '100%';
-        modalOverlay.style.height = '100%';
-        modalOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modalOverlay.style.zIndex = '1000';
+      const modalOverlay = document.createElement("div");
+      modalOverlay.style.position = "fixed";
+      modalOverlay.style.top = 0;
+      modalOverlay.style.left = 0;
+      modalOverlay.style.width = "100%";
+      modalOverlay.style.height = "100%";
+      modalOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+      modalOverlay.style.zIndex = "1000";
 
-        const modal = document.createElement('div');
-        modal.style.position = 'fixed';
-        modal.style.top = '50%';
-        modal.style.left = '50%';
-        modal.style.transform = 'translate(-50%, -50%)';
-        modal.style.width = '400px';
-        modal.style.padding = '20px';
-        modal.style.color = 'var(--inputText)';
-        modal.style.backgroundColor = 'var(--inputBackground)';
-        modal.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.2)';
-        modal.style.zIndex = '1001';
+      const modal = document.createElement("div");
+      modal.style.position = "fixed";
+      modal.style.top = "50%";
+      modal.style.left = "50%";
+      modal.style.transform = "translate(-50%, -50%)";
+      modal.style.width = "400px";
+      modal.style.padding = "20px";
+      modal.style.color = "var(--inputText)";
+      modal.style.backgroundColor = "var(--inputBackground)";
+      modal.style.boxShadow = "0 0 10px rgba(0, 0, 0, 0.2)";
+      modal.style.zIndex = "1001";
 
-        const modalTitle = document.createElement('h2');
-        modalTitle.textContent = `Settings for ${userStore}`;
-        modal.appendChild(modalTitle);
+      const modalTitle = document.createElement("h2");
+      modalTitle.textContent = `Settings for ${userStore}`;
+      modal.appendChild(modalTitle);
 
-        const settingsContainer = document.createElement('div');
-        modal.appendChild(settingsContainer);
+      const settingsContainer = document.createElement("div");
+      modal.appendChild(settingsContainer);
 
-        const closeButton = document.createElement('button');
-        closeButton.textContent = 'Close';
-        closeButton.style.marginTop = '10px';
-        closeButton.addEventListener('click', () => {
-            document.body.removeChild(modalOverlay);
+      const closeButton = document.createElement("button");
+      closeButton.textContent = "Close";
+      closeButton.style.marginTop = "10px";
+      closeButton.addEventListener("click", () => {
+        document.body.removeChild(modalOverlay);
+      });
+      modal.appendChild(closeButton);
+
+      modalOverlay.appendChild(modal);
+      document.body.appendChild(modalOverlay);
+
+      GM.listValues().then((keys) => {
+        const userKeys = keys.filter((key) => key.endsWith("_" + userStore));
+        userKeys.forEach((key) => {
+          GM.getValue(key).then((value) => {
+            const settingRow = document.createElement("div");
+            settingRow.style.marginBottom = "10px";
+
+            const keyLabel = document.createElement("label");
+            keyLabel.textContent = key.replace(userStore + "_", ""); // Remove the user prefix for display
+            keyLabel.style.display = "block";
+            settingRow.appendChild(keyLabel);
+
+            const valueInput = document.createElement("input");
+            valueInput.type = "text";
+            valueInput.value = value;
+            valueInput.style.width = "100%";
+            settingRow.appendChild(valueInput);
+
+            // const saveButton = document.createElement("button");
+            // saveButton.textContent = "Save";
+            // saveButton.style.marginTop = "5px";
+            // saveButton.addEventListener("click", () => {
+            //   GM.setValue(key, valueInput.value).then(() => {
+            //     alert(`Saved value for ${keyLabel.textContent}`);
+            //   });
+            // });
+            // settingRow.appendChild(saveButton);
+
+            settingsContainer.appendChild(settingRow);
+          });
         });
-        modal.appendChild(closeButton);
-
-        modalOverlay.appendChild(modal);
-        document.body.appendChild(modalOverlay);
-
-        GM.listValues().then(keys => {
-            const userKeys = keys.filter(key => key.endsWith('_' + userStore));
-            userKeys.forEach(key => {
-              cclog("key: " + key);
-                GM.getValue(key).then(value => {
-                    const settingRow = document.createElement('div');
-                    settingRow.style.marginBottom = '10px';
-
-                    const keyLabel = document.createElement('label');
-                    keyLabel.textContent = key.replace(userStore + '_', ''); // Remove the user prefix for display
-                    keyLabel.style.display = 'block';
-                    settingRow.appendChild(keyLabel);
-
-                    const valueInput = document.createElement('input');
-                    valueInput.type = 'text';
-                    valueInput.value = value;
-                    valueInput.style.width = '100%';
-                    settingRow.appendChild(valueInput);
-
-                    const saveButton = document.createElement('button');
-                    saveButton.textContent = 'Save';
-                    saveButton.style.marginTop = '5px';
-                    saveButton.addEventListener('click', () => {
-                        GM.setValue(key, valueInput.value).then(() => {
-                            alert(`Saved value for ${keyLabel.textContent}`);
-                        });
-                    });
-                    settingRow.appendChild(saveButton);
-
-                    settingsContainer.appendChild(settingRow);
-                });
-            });
-        });
+      });
     }
 
     // showSettingsModal();
