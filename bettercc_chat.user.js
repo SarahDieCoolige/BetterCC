@@ -67,11 +67,7 @@
 
     function printInChat(position = "beforeend", content) {
       //$("body").children().last().append(content);
-      // previousSibling > lastChild is autoscrollbanner
-      document.body.lastChild.previousSibling.insertAdjacentHTML(
-        position,
-        content
-      );
+      document.body.lastChild.insertAdjacentHTML(position, content);
 
       //let current = document.body.lastChild.innerHTML;
       //document.body.lastChild.innerHTML+=content;
@@ -220,7 +216,7 @@
       const scrollbanner = document.createElement("div");
       scrollbanner.id = "autoscroll-banner";
       scrollbanner.textContent = "Zurück nach unten";
-      document.body.appendChild(scrollbanner);
+      document.body.prepend(scrollbanner);
 
       // Add event listener to enable auto-scrolling on click
       scrollbanner.addEventListener("click", function () {
@@ -298,6 +294,8 @@
     }
 
     function restoreChat() {
+      addAutoscrollBanner();
+
       document.body.removeAttribute("bgcolor");
       document.body.removeAttribute("text");
 
@@ -328,8 +326,6 @@
           await GM.setValue(userStoreRestore, false);
         }
       })();
-
-      addAutoscrollBanner();
     }
   }
 })();
