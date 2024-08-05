@@ -786,25 +786,59 @@
      *         false - keep default input
      */
     function betterInput(replace) {
-      if (replace) {
-        $('form[name="hold"]')
-          .children('input[type="text"]')
-          .replaceWith(
-            '<textarea placeholder="Du chattest mit allen..." id="custom_input_text" maxlength="1024" name="OUT1" type="text" oninput="" onpaste=""  rows="3" wrap="soft" ></textarea>'
-          );
+      try {
+        // Pre-checks
+        var $form = $('form[name="hold"]');
+        if ($form.length === 0) {
+          throw new Error('Form with name "hold" not found.');
+        }
 
-        // shift+enter = send
-        $("#custom_input_text").keypress(function (e) {
-          if (e.which == 13 && !e.shiftKey) {
-            $('form[name="hold"]').submit();
-            e.preventDefault();
-          }
-        });
-      } else {
-        $('form[name="hold"]')
-          .children('input[type="text"]')
-          .attr("id", "custom_input_text")
-          .attr("placeholder", "Du chattest mit allen...");
+        var $inputText = $form.children('input[type="text"]');
+        if ($inputText.length === 0) {
+          throw new Error('Input of type "text" not found in the form.');
+        }
+
+        // Apply changes atomically
+        if (replace) {
+          // Prepare the new textarea element
+          var newTextarea = $("<textarea>", {
+            id: "custom_input_text",
+            placeholder: "Du chattest mit allen...",
+            maxlength: 1024,
+            name: "OUT1",
+            rows: 3,
+            wrap: "soft",
+          });
+
+          // Temporarily store the original input in case we need to restore it
+          var originalInput = $inputText.clone();
+
+          // Replace input with textarea
+          $inputText.replaceWith(newTextarea);
+
+          // Attach event handler to the new textarea
+          $("#custom_input_text").keypress(function (e) {
+            if (e.which == 13 && !e.shiftKey) {
+              $form.submit();
+              e.preventDefault();
+            }
+          });
+        } else {
+          // Simply modify attributes, this is less risky
+          $inputText
+            .attr("id", "custom_input_text")
+            .attr("placeholder", "Du chattest mit allen...");
+        }
+      } catch (error) {
+        console.error("An error occurred in betterInput:", error.message);
+
+        // Optionally, implement any rollback logic here
+        // If replacement was attempted and failed, you could revert to the original input
+        if (replace && originalInput) {
+          $form.children("#custom_input_text").replaceWith(originalInput);
+        }
+
+        // Additional error handling logic (e.g., displaying a user-friendly message, logging to a server, etc.)
       }
     }
 
