@@ -115,6 +115,8 @@ button {
 }
 
 .u_sep {
+  transition: all 1s ease;
+  opacity: 0.5;
   font-style:italic;
 }
 
