@@ -236,14 +236,14 @@
         // Determine the direction of the scroll
         if (scrollPosition < lastScrollTop) {
           // Check if the user is scrolling up
-          if (unsafeWindow.scrolling && scrollPosition < maxScroll - 5) {
+          if (unsafeWindow.scrolling && scrollPosition < maxScroll - 1) {
             unsafeWindow.scrolling = false;
             scrollbanner.style.display = "block";
           }
         }
 
         // Hide banner when the user scrolls to the bottom
-        if (scrollPosition >= maxScroll - 5) {
+        if (scrollPosition >= maxScroll - 1) {
           scrollbanner.style.display = "none";
           unsafeWindow.scrolling = true;
         }
