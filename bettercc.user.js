@@ -566,10 +566,6 @@
         } else {
           $("#ul").addClass("dark").removeClass("light");
         }
-
-        (async function () {
-          await GM.setValue("abc", chatBg.toHslString());
-        })();
       }
       bettercc.setColors = setColors;
     }
