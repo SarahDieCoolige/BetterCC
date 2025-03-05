@@ -5,8 +5,8 @@
 // @version  1.40
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
-// @match  https://www.chatcity.de/de/cpop.html?&RURL=*
-// @match  https://ccc.chatcity.de/de/cpop.html?&RURL=*
+// @match  https://www.chatcity.de/de/cpop.html?*RURL=*
+// @match  https://ccc.chatcity.de/de/cpop.html?*RURL=*
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
