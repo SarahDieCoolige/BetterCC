@@ -7,6 +7,9 @@
 //
 // @match  https://www.chatcity.de/cc_chat/chatout?*
 // @match  https://chat.chatcity.de/cc_chat/chatout?*
+// @match  https://ccc.chatcity.de/cc_chat/cc_chat/chatout?*
+// @match  https://ccc.chatcity.de/cc_chat/chatout?*
+//
 //
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
@@ -186,7 +189,7 @@
             " " +
             event.data
         );
-        if (event.origin === "https://www.chatcity.de") {
+        if (event.origin === "https://ccc.chatcity.de") {
           const message = event.data;
           switch (message.type) {
             case "setColors":

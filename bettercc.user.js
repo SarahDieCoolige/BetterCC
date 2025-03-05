@@ -6,6 +6,7 @@
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?&RURL=*
+// @match  https://ccc.chatcity.de/de/cpop.html?&RURL=*
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
@@ -169,7 +170,8 @@
   function postMessageToIframe(message) {
     const chatWindow = getChatframe();
     //const targetOrigin = "https://chat.chatcity.de";
-    const targetOrigin = "https://www.chatcity.de";
+    //const targetOrigin = "https://www.chatcity.de";
+    const targetOrigin = "https://ccc.chatcity.de";
     chatWindow.postMessage(message, targetOrigin);
   }
 
@@ -605,11 +607,11 @@
     function cleanup() {
       // remove all but last ulist regualary since cc is just appending these instead of replacing
       GM_wrench.waitForKeyElements(
-        "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']",
+        "script[src^='https://ccc.chatcity.de/cc_chat/ulist?AKTION']",
         function (jNode) {
           $("head")
             .find(
-              "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']:not(:last)"
+              "script[src^='https://ccc.chatcity.de/cc_chat/ulist?AKTION']:not(:last)"
             )
             .remove();
         },
@@ -624,7 +626,7 @@
       $("#adv720").remove();
       $("#right_ad").remove();
       $(
-        '#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]'
+        '#r_off1 table iframe[src="https://ccc.chatcity.de/cc_chat/html?PAGE=300x250.html"]'
       )
         .closest("tr")
         .remove();
