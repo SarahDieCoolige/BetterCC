@@ -350,6 +350,7 @@
       }
 
       let userStoreColor = "color_" + userStore;
+      let userStoreColorScheme = "colorscheme_" + userStore;
 
       const bgDef = "6AAED8";
       const fgDef = "000000";
@@ -364,6 +365,11 @@
         .on("input", function (e) {
           var bg = this.value.substring(1);
           var fg = fgDef;
+
+          // Update storage immediately to prevent observer race condition
+          (async () => {
+            await GM.setValue(userStoreColor, bg);
+          })();
 
           bettercc.setColors(bg, fg, 0);
         })
@@ -417,8 +423,50 @@
           let bg = await GM.getValue(userStoreColor, bgDef);
           await GM.setValue(userStoreColor, bg);
 
-          setColors(bg, fgDef);
+          // Check if we have a stored color scheme for this bg color
+          let storedScheme = await GM.getValue(userStoreColorScheme, null);
+
+          if (storedScheme && storedScheme.bgColor === bg) {
+            // Use stored colors
+            applyStoredColors(storedScheme);
+          } else {
+            // Calculate new colors and store them
+            setColors(bg, fgDef);
+          }
         })();
+      }
+
+      function applyStoredColors(colorScheme) {
+        let $root = $(":root");
+        $root.css("--chatBackground", colorScheme.chatBg);
+        $root.css("--chatText", colorScheme.chatFg);
+        $root.css("--buttonColor", colorScheme.buttoncolor);
+        $root.css("--buttonText", colorScheme.buttontextcolor);
+        $root.css("--inputBackground", colorScheme.inputcolor);
+        $root.css("--inputText", colorScheme.inputtextcolor);
+        $root.css("--ulistColor", colorScheme.ulistcolor);
+        $root.css("--ulistText", colorScheme.ulisttextcolor);
+        $root.css("--optionsText", colorScheme.optionstextcolor);
+        $root.css("--footerBackground", colorScheme.footercolor);
+        $root.css("--placeholderColor", colorScheme.placeholdercolor);
+        $root.css("--iconColor", colorScheme.iconcolor);
+        $root.css("--superwhispercolor", colorScheme.superwhispercolor);
+        $root.css("--superbancolor", colorScheme.superbancolor);
+
+        postMessageToIframe({
+          type: "setColors",
+          bgColor: colorScheme.chatBg,
+          fgColor: colorScheme.chatFg,
+        });
+
+        // Update UI elements
+        $("#bgcolorpicker").val("#" + colorScheme.bgColor);
+
+        if (tinycolor.isReadable(colorScheme.ulistcolor, colorScheme.ulisttextcolor, {})) {
+          $("#ul").addClass("light").removeClass("dark");
+        } else {
+          $("#ul").addClass("dark").removeClass("light");
+        }
       }
 
       function setColors(bg, fg) {
@@ -541,34 +589,72 @@
         superwhispercolor = triadChatBg[1];
         superbancolor = triadChatBg[2];
 
-        let $root = $(":root");
-        $root.css("--chatBackground", chatBg.toHslString());
-        $root.css("--chatText", chatFg.toHslString());
-        $root.css("--buttonColor", buttoncolor.toHslString());
-        $root.css("--buttonText", buttontextcolor.toHslString());
-        $root.css("--inputBackground", inputcolor.toHslString());
-        $root.css("--inputText", inputtextcolor.toHslString());
-        $root.css("--ulistColor", ulistcolor.toHslString());
-        $root.css("--ulistText", ulisttextcolor.toHslString());
-        $root.css("--optionsText", optionstextcolor.toHslString());
-        $root.css("--footerBackground", footercolor.toHslString());
-        $root.css("--placeholderColor", placeholdercolor.toHslString());
-        $root.css("--iconColor", iconcolor.toHslString());
-        $root.css("--superwhispercolor", superwhispercolor.toHslString());
-        $root.css("--superbancolor", superbancolor.toHslString());
+        // Store the complete color scheme
+        let colorScheme = {
+          bgColor: bg,
+          chatBg: chatBg.toHslString(),
+          chatFg: chatFg.toHslString(),
+          buttoncolor: buttoncolor.toHslString(),
+          buttontextcolor: buttontextcolor.toHslString(),
+          inputcolor: inputcolor.toHslString(),
+          inputtextcolor: inputtextcolor.toHslString(),
+          ulistcolor: ulistcolor.toHslString(),
+          ulisttextcolor: ulisttextcolor.toHslString(),
+          optionstextcolor: optionstextcolor.toHslString(),
+          footercolor: footercolor.toHslString(),
+          placeholdercolor: placeholdercolor.toHslString(),
+          iconcolor: iconcolor.toHslString(),
+          superwhispercolor: superwhispercolor.toHslString(),
+          superbancolor: superbancolor.toHslString()
+        };
 
-        postMessageToIframe({
-          type: "setColors",
-          bgColor: chatBg.toHslString(),
-          fgColor: chatFg.toHslString(),
-        });
+        // Store the color scheme
+        (async () => {
+          await GM.setValue(userStoreColorScheme, colorScheme);
+        })();
 
-        if (tinycolor.isReadable(ulistcolor, ulisttextcolor, {})) {
-          $("#ul").addClass("light").removeClass("dark");
-        } else {
-          $("#ul").addClass("dark").removeClass("light");
-        }
+        // Apply the colors immediately
+        applyStoredColors(colorScheme);
       }
+
+      // Add MutationObserver to instantly re-apply custom variables if they are reset
+      if (!window.betterccColorObserver) {
+        const root = document.documentElement;
+        let isApplyingColors = false;
+        
+        window.betterccColorObserver = new MutationObserver(async (mutations) => {
+          // Prevent recursion when we're applying colors
+          if (isApplyingColors) return;
+          
+          for (const mutation of mutations) {
+            if (mutation.type === "attributes" && mutation.attributeName === "style") {
+              try {
+                isApplyingColors = true;
+                
+                let userStoreColor = "color_" + userStore;
+                let bg = await GM.getValue(userStoreColor, bgDef);
+                let storedScheme = await GM.getValue(userStoreColorScheme, null);
+
+                console.log("BetterCC: Color mutation detected");
+
+                if (storedScheme && storedScheme.bgColor === bg) {
+                  // Just reapply stored colors, no recalculation needed
+                  console.log("BetterCC: Reapplying stored colors for", bg);
+                  applyStoredColors(storedScheme);
+                } else {
+                  // Background color changed, need to recalculate
+                  setTheme();
+                }
+              } finally {
+                isApplyingColors = false;
+              }
+              break; // Only process first relevant mutation
+            }
+          }
+        });
+        window.betterccColorObserver.observe(root, { attributes: true, attributeFilter: ["style"] });
+      }
+
       bettercc.setColors = setColors;
     }
 
