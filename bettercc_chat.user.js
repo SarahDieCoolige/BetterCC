@@ -2,7 +2,7 @@
 // @name  BetterCC Chat
 // @description  BetterCC is better
 // @author  Sarah
-// @version  1.40
+// @version  1.41
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
 // @match  https://www.chatcity.de/cc_chat/chatout?*
@@ -16,7 +16,7 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.40
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=1.41
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
