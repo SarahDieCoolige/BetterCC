@@ -241,10 +241,21 @@
             keyLabel.style.display = "block";
             settingRow.appendChild(keyLabel);
 
-            const valueInput = document.createElement("input");
-            valueInput.type = "text";
-            valueInput.value = value;
+            const valueInput = document.createElement("textarea");
             valueInput.style.width = "100%";
+            valueInput.style.minHeight = "40px";
+            valueInput.style.fontFamily = "monospace";
+            valueInput.style.fontSize = "12px";
+            
+            // Format objects as pretty JSON, otherwise display as string
+            if (typeof value === 'object' && value !== null) {
+              valueInput.value = JSON.stringify(value, null, 2);
+              valueInput.style.height = "120px";
+            } else {
+              valueInput.value = value;
+              valueInput.style.height = "40px";
+            }
+            
             settingRow.appendChild(valueInput);
 
             // const saveButton = document.createElement("button");
