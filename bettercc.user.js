@@ -169,9 +169,12 @@
 
   function postMessageToIframe(message) {
     const chatWindow = getChatframe();
-    //const targetOrigin = "https://chat.chatcity.de";
-    const targetOrigin = "https://www.chatcity.de";
+    // const targetOrigin = "https://chat.chatcity.de";
+    // const targetOrigin = "https://www.chatcity.de";
     // const targetOrigin = "https://ccc.chatcity.de";
+    const src = document.getElementById("chatframe").getAttribute("src");
+    const targetOrigin = new URL(src, window.location.href).origin;
+
     chatWindow.postMessage(message, targetOrigin);
   }
 

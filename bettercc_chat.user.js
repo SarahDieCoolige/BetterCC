@@ -189,7 +189,8 @@
             " " +
             event.data
         );
-        if (event.origin === "https://ccc.chatcity.de" || event.origin === "https://www.chatcity.de") {
+        // if (event.origin === "https://ccc.chatcity.de" || event.origin === "https://www.chatcity.de") {
+        if (/^https:\/\/[a-z]+\.chatcity\.de$/.test(event.origin)) {
           const message = event.data;
           switch (message.type) {
             case "setColors":
