@@ -15,8 +15,8 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.42
-//
+//// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.42
+// @resource  main_css  http://localhost:8888/css/main.css
 // @grant  GM_addStyle
 // @grant  GM.setValue
 // @grant  GM.getValue
@@ -315,15 +315,10 @@
     doColorStuff();
     //if (!gast) replaceOnSubmit();
     replaceOnSubmit();
-    // add gast class to userlist
-    if (gast) $("#ul").addClass("gast");
     if (superbanEnable) enableSuperban();
     //GM_notification ( {title: 'BetteCC', text: 'BetterCC loaded!'} );
 
     function doColorStuff() {
-      //remove table border
-      $("#r_off1 table").attr("border", "0");
-
       $("#u_stats").hide();
       GM_wrench.waitForKeyElements(
         "#u_stats a.unc .value",
@@ -497,12 +492,6 @@
 
         // Update UI elements
         $("#bgcolorpicker").val("#" + colorScheme.bgColor);
-
-        if (tinycolor.isReadable(colorScheme.ulistcolor, colorScheme.ulisttextcolor, {})) {
-          $("#ul").addClass("light").removeClass("dark");
-        } else {
-          $("#ul").addClass("dark").removeClass("light");
-        }
       }
 
       function setColors(bg, fg) {
@@ -744,25 +733,14 @@
       $("head")
         .find("script[src='https://ssl.google-analytics.com/ga.js']")
         .remove();
-      //$("#u_stats a.unc").hide();
-      $("#adv720").remove();
-      $("#right_ad").remove();
-      $(
-        '#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]'
-      )
-        .closest("tr")
-        .remove();
 
-      $("#popup-chat > table > tbody > tr:nth-child(1)").remove();
-      $("#ulscrollhelper").remove();
-      $("#ul").addClass("headless");
-      //$(".ww_chat_divide").hide();
-      $(".chat_i1").remove();
+      // Header/ads/divider/send-button/ulscrollhelper are hidden via CSS
+      // (display: none in main.css) — no DOM removal needed
 
       // remove timeout from exit button
       $(".b7").attr("onclick", "bye()");
 
-      // disable resize_fix function. throws error
+      // disable resize_fix function — throws error
       unsafeWindow.resize_fix = function resize_fix() {
         return true;
       };

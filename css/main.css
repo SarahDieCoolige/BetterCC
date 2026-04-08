@@ -1,3 +1,8 @@
+/* ===================================================================
+   BetterCC - main.css
+   =================================================================== */
+
+/* -- Theme variables ------------------------------------------------ */
 :root {
   --chatBackground: #c8dae4;
   --chatText: #0e0f0f;
@@ -24,6 +29,80 @@
   transition: color 0.5s ease-out, background 0.5s ease-out, background-color 0.5s ease-out;
 }
 
+/* -- Kill upstream table layout ------------------------------------- */
+/* Make table/tbody/tr invisible to layout - only td cells remain */
+.c_tab,
+.c_tab > tbody,
+.c_tab > tbody > tr,
+#r_off1 > table,
+#r_off1 > table > tbody,
+#r_off1 > table > tbody > tr,
+.ww_chat_footer_table,
+.ww_chat_footer_table > tbody,
+.ww_chat_footer_table > tbody > tr {
+  display: contents;
+}
+
+/* -- Hide upstream junk (CSS-only, no JS .remove() needed) ---------- */
+.ww_chat_header { display: none; }        /* header row with logo */
+.ww_chat_divide { display: none; }        /* 2px divider td */
+.chat_i1 { display: none; }               /* old send button */
+#ulscrollhelper { display: none; }         /* old scroll sizing hack */
+#adv720, #right_ad { display: none; }     /* ad containers */
+#r_off1 > table iframe[src*="300x250"] { display: none; } /* ad iframe */
+
+/* -- Main page grid ------------------------------------------------- */
+#popup-chat {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Chat iframe */
+.ww_chat_column {
+  grid-row: 1;
+  grid-column: 1;
+  min-height: 0;
+}
+
+#chatframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Sidebar */
+.ww_chat_rightcolumn {
+  grid-row: 1;
+  grid-column: 2;
+  overflow: hidden;
+}
+
+#r_off1 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Footer - full width */
+.ww_chat_footer {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  gap: 8px;
+  background: var(--footerBackground);
+}
+
+/* -- Base element theming ------------------------------------------- */
+html {
+  overflow: hidden;
+  scroll-behavior: smooth;
+}
+
 html,
 body,
 input,
@@ -40,65 +119,47 @@ button {
   color: var(--buttonColor);
 }
 
-.chat_ibg {
-  padding: 5px 0px 0px 20px !important;
-  background: var(--footerBackground);
+input,
+textarea {
+  border-color: var(--inputBackground);
+  border-style: solid;
+  outline: none;
 }
 
-.chat_ibg a {
-  transition: none !important
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
 }
 
-#superban {
-  color: red;
-}
-
-#superwhisper {
-  color: green;
+/* -- Sidebar sections ----------------------------------------------- */
+.chan_text {
+  flex: 0 0 auto;
+  background: inherit;
+  backdrop-filter: brightness(0.85);
 }
 
 .uinfo {
+  flex: 0 0 auto;
   background: var(--chatBackground);
   color: var(--ulistText);
 }
 
 .userlist {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--ulistColor);
 }
 
-.u_reg .chan_text {
-  background: inherit;
-  backdrop-filter: brightness(0.85);
-}
-
-#u_stats_clone a {
-  color: var(--buttonText);
-  text-decoration: none;
-  display: inline-flex;
-}
-
-/*
-#u_stats_clone .value.no {
-  color: transparent;
-  background: transparent;}
-
-
-#u_stats_clone .value {
-  color: var(--badgeText);
-  background:rgba(255,0,0,.85);
-}
-*/
-
 .ulinner {
-  overflow: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: static !important;
+  top: auto !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
-  -ms-overflow-style: none;
-  /* IE 11 */
   scrollbar-width: none;
-  /* Firefox 64 */
   padding: 5px 25px 0px 10px !important;
-  bottom: 90px;
-  height: auto !important;
 }
 
 .ulinner a {
@@ -117,23 +178,16 @@ button {
 .u_sep {
   transition: all 1s ease;
   opacity: 0.5;
-  font-style:italic;
-}
-
-.ulinner.headless {
-  top: 100px;
-}
-
-.ulinner.headless.gast {
-  top: 50px;
+  font-style: italic;
 }
 
 .pinnedusergap {
-  height: 10px;            /* Height of the gap */
-  width: 100%;             /* Full width of the container */
-  background-color: transparent; /* Transparent background */
+  height: 10px;
+  width: 100%;
+  background-color: transparent;
 }
 
+/* -- User list popup ------------------------------------------------ */
 .ulist-popup {
   position: absolute;
   top: 0px;
@@ -162,26 +216,56 @@ button {
   margin-bottom: 5px;
 }
 
-/* replace Backgound images with simple color */
-.ww_chat_header {
-  background: var(--chatBackground);
+#superban {
+  color: var(--superbancolor);
 }
 
-/* replace Backgound images with simple color */
-.ww_chat_footer {
-  background: var(--footerBackground);
+#superwhisper {
+  color: var(--superwhispercolor);
+}
+
+/* -- Footer input area ---------------------------------------------- */
+.chat_i {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0;
 }
 
 .chat_i #custom_input_text {
   color: var(--inputText);
   background: var(--inputBackground);
-  width: 95%;
+  width: 100%;
   resize: none;
   font-size: 1.1em;
   padding: 2px;
-  margin: 2px;
+  margin: 0;
+  box-sizing: border-box;
 }
 
+.chat_i2 {
+  flex: 0 0 auto;
+  color: var(--optionsText);
+  padding-right: 10px;
+}
+
+.chat_i3 {
+  flex: 0 0 auto;
+}
+
+.chat_i4 {
+  flex: 0 0 auto;
+}
+
+.chat_ibg {
+  padding: 5px 0px 0px 20px !important;
+  background: var(--footerBackground);
+}
+
+.chat_ibg a {
+  transition: none !important;
+}
+
+/* -- Placeholder ---------------------------------------------------- */
 ::placeholder {
   color: var(--placeholderColor);
   opacity: 0.4 !important;
@@ -197,87 +281,7 @@ button {
   opacity: 0.5 !important;
 }
 
-#ul.dark {
-  filter: brightness(1.2);
-}
-
-#ul.light {
-  filter: brightness(1);
-}
-
-#custom_input_text.dark {
-  color: white;
-}
-
-#custom_input_text.light {
-  color: black;
-}
-
-.dark::placeholder {
-  color: white;
-}
-
-.light::placeholder {
-  color: black;
-}
-
-.chat_i {
-  padding-left: 10px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  padding-right: 10px;
-}
-
-.chat_i2 {
-  width: 1%;
-  padding-top: 0;
-  padding-right: 10px;
-}
-
-td.chat_i2 {
-  color: var(--optionsText);
-}
-
-.chat_i3 {
-  width: 20% !important;
-}
-
-.chat_i4 {
-  width: 1%;
-}
-
-table {
-  border-color: var(--footerBackground);
-}
-
-.c_tab {
-  border-color: initial;
-  border-collapse: collapse;
-}
-
-.ww_chat_divide {
-  background-color: inherit;
-  backdrop-filter: brightness(1.2);
-}
-
-html {
-  overflow: hidden;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
-}
-
-::-webkit-scrollbar {
-  width: 0px;
-  background: transparent;
-}
-
-input,
-textarea {
-  border-color: var(--inputBackground);
-  border-style: solid;
-  outline: none;
-}
-
+/* -- BetterCC controls ---------------------------------------------- */
 .betterccbtn {
   background: var(--buttonColor);
   color: var(--buttonText);
@@ -286,16 +290,6 @@ textarea {
   margin: 5px;
   min-width: 25px;
   text-overflow: ellipsis;
-}
-
-#darkmodechecklabel {
-  display: inline;
-  margin: 5px;
-}
-
-#optionsdiv {
-  display: flex;
-  flex-wrap: wrap;
 }
 
 #betteroptions {
@@ -309,8 +303,15 @@ form[name="OF"] {
   align-items: center !important;
 }
 
+/* -- Stats badges --------------------------------------------------- */
 #u_stats div,
 #u_stats_clone div {
+  display: inline-flex;
+}
+
+#u_stats_clone a {
+  color: var(--buttonText);
+  text-decoration: none;
   display: inline-flex;
 }
 
@@ -327,12 +328,13 @@ a.unc {
   font-size: 0.75em;
 }
 
+/* -- Userlist hover ------------------------------------------------- */
 #ul > *:hover {
   opacity: 1;
-  transform: 0.2s;
   transition: all 0.2s ease;
 }
 
+/* -- FontAwesome icons ---------------------------------------------- */
 i.fa,
 i.fas,
 i.far,
