@@ -48,8 +48,11 @@
 .ww_chat_divide { display: none; }        /* 2px divider td */
 .chat_i1 { display: none; }               /* old send button */
 #ulscrollhelper { display: none; }         /* old scroll sizing hack */
-#adv720, #right_ad { display: none; }     /* ad containers */
-#r_off1 > table iframe[src*="300x250"] { display: none; } /* ad iframe */
+#adv720 { display: none; }                /* top ad banner */
+#right_ad > td { display: none; }         /* sidebar ad (td, not tr - tr is display:contents) */
+
+/* Footer second row: color shortcut buttons - flattened by display:contents */
+.ww_chat_footer_table > tbody > tr:last-child > td { display: none; }
 
 /* -- Main page grid ------------------------------------------------- */
 #popup-chat {
@@ -154,12 +157,14 @@ textarea {
 .ulinner {
   width: 100% !important;
   height: 100% !important;
+  max-height: 100% !important;
   position: static !important;
   top: auto !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   scrollbar-width: none;
   padding: 5px 25px 0px 10px !important;
+  box-sizing: border-box;
 }
 
 .ulinner a {
