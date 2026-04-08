@@ -183,6 +183,28 @@
     window.onunload = null;
     window.onbeforeunload = null;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // TEMPORARY WORKAROUND — remove once upstream fixes the domain mismatch
+    //
+    // ChatCity moved the chatout iframe from www.chatcity.de to ccc.chatcity.de
+    // without updating their own code. The site's setbg() in chat.js tries to
+    // write parent.chat_channel directly, which now throws a cross-origin error.
+    //
+    // Fix: bettercc_chat.user.js overrides setbg() to send the channel name via
+    // postMessage instead. We listen for it here and replicate the original
+    // behaviour: set chat_channel and call get_info() to refresh the userlist.
+    // ─────────────────────────────────────────────────────────────────────────
+    // window.addEventListener("message", (event) => {
+    //   if (!/^https:\/\/[a-z]+\.chatcity\.de$/.test(event.origin)) return;
+    //   const message = event.data;
+    //   if (message && message.type === "setbg") {
+    //     unsafeWindow.chat_channel = message.channel;
+    //     clearTimeout(unsafeWindow.info_timer);
+    //     unsafeWindow.get_info();
+    //   }
+    // });
+    // ─────────────────────────────────────────────────────────────────────────
+
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
 
