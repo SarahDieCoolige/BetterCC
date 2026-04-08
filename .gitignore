@@ -1,4 +1,8 @@
-workspace.code-workspace 
-TinyColor/
-test.js
-jsconfig.json
+*
+!.gitignore
+!README.md
+!bettercc.user.js
+!bettercc_chat.user.js
+!css/
+!css/**
+!BetterCC.png
