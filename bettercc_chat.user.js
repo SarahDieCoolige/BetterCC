@@ -178,6 +178,39 @@
     }
     GM_wrench.waitForKeyElements("body > script", removeColorAttr, true, 100);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // TEMPORARY WORKAROUND — remove once upstream fixes the domain mismatch
+    //
+    // ChatCity moved the chatout iframe from www.chatcity.de to ccc.chatcity.de
+    // without updating their own code. The site's setbg() in chat.js tries to
+    // write parent.chat_channel directly, which now throws a cross-origin error.
+    //
+    // Fix: We use defineProperty to lock setbg() on the page's window before
+    // chat.js loads, so chat.js cannot overwrite it. Our shim sends the channel
+    // name to the parent via postMessage instead of direct property access.
+    //
+    // Side-effect: locking setbg() causes chat.js to throw and abort execution,
+    // so the functions defined after setbg in chat.js (setbgcol, moves, scrolling)
+    // never get created. We redefine them here to restore expected behaviour:
+    //   - setbgcol: no-op (BetterCC forces SBG=1, so backgrounds are disabled)
+    //   - scrolling + moves(): the chat's built-in auto-scroll mechanism
+    // ─────────────────────────────────────────────────────────────────────────
+    // Object.defineProperty(unsafeWindow, "setbg", {
+    //   value: function (name) {
+    //     window.parent.postMessage({ type: "setbg", channel: name }, "*");
+    //   },
+    //   writable: false,
+    //   configurable: false,
+    // });
+    // unsafeWindow.setbgcol = function (bgc, foc) {};
+    // unsafeWindow.scrolling = true;
+    // unsafeWindow.moves = function () {
+    //   if (unsafeWindow.scrolling) window.scroll(1, 500000);
+    //   window.setTimeout("moves()", 100);
+    // };
+    // unsafeWindow.moves();
+    // ─────────────────────────────────────────────────────────────────────────
+
     window.addEventListener(
       "message",
       (event) => {
