@@ -490,13 +490,21 @@ i.fad {
   font-weight: 900;
 }
 
+/* — Hilfe */
 .bcc-icon-btn.b1::before  { content: "\f059"; }
-.bcc-icon-btn.b2::before  { content: "\e551"; }
-.bcc-icon-btn.b3::before  { content: "\e552"; }
+/* person-walking-arrow-right — abmelden /away */
+.bcc-icon-btn.b2::before  { content: "\e552"; }
+/* person-walking-arrow-loop-left — anmelden /awayoff */
+.bcc-icon-btn.b3::before  { content: "\e551"; }
+/* fa-bell — Systemmeldungen an */
 .bcc-icon-btn.b5::before  { content: "\f0f3"; }
+/* fa-bell-slash — Systemmeldungen aus */
 .bcc-icon-btn.b6::before  { content: "\f1f6"; }
+/* fa-sign-out-alt — chat verlassen */
 .bcc-icon-btn.b7::before  { content: "\f2f5"; }
+/* fa-comments — Forum */
 .bcc-icon-btn.b15::before { content: "\f086"; }
+/* fa-id-card — Meine ID-Card */
 .bcc-icon-btn.b16::before { content: "\f2c2"; }
 
 /* ─── Connection status (hidden — reload button colored via JS) ─── */
