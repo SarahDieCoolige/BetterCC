@@ -40,15 +40,6 @@ button {
   color: var(--buttonColor);
 }
 
-.chat_ibg {
-  padding: 5px 0px 0px 20px !important;
-  background: var(--footerBackground);
-}
-
-.chat_ibg a {
-  transition: none !important
-}
-
 #superban {
   color: red;
 }
@@ -278,36 +269,15 @@ textarea {
   outline: none;
 }
 
-.betterccbtn {
-  background: var(--buttonColor);
-  color: var(--buttonText);
-  border-color: var(--inputBackground);
-  height: 25px;
-  margin: 5px;
-  min-width: 25px;
-  text-overflow: ellipsis;
-}
+/* v1.45: .betterccbtn replaced by .bcc-icon-btn and .bcc-color-swatch */
 
 #darkmodechecklabel {
   display: inline;
   margin: 5px;
 }
 
-#optionsdiv {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-#betteroptions {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  align-items: center;
-}
-
-form[name="OF"] {
-  display: flex !important;
-  align-items: center !important;
-}
+/* v1.45: #optionsdiv, #betteroptions, form[name="OF"] styles removed —
+   elements are empty/hidden after redesignFooter() restructure */
 
 #u_stats div,
 #u_stats_clone div {
@@ -364,3 +334,225 @@ i.fad {
   color: transparent;
   background: transparent;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v1.45: Footer bar — pill redesign
+   Table replaced with flexbox divs via redesignFooter() in JS.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── Main footer flex container ─── */
+.ww_chat_footer {
+  height: 95px !important;
+}
+
+.bcc-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 95px;
+  max-height: 95px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ─── Textarea area (flex: 1) ─── */
+.bcc-input-area {
+  flex: 1 1 200px;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bcc-input-area form[name="hold"] {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.bcc-input-area textarea,
+.bcc-input-area #custom_input_text {
+  width: 100% !important;
+  flex: 1;
+  resize: none !important;
+  box-sizing: border-box;
+  min-height: 0;
+  height: auto !important;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--inputBackground);
+  color: var(--inputText);
+  font-size: 1.3em;
+  outline: none;
+  font-family: inherit;
+}
+
+.bcc-input-area textarea:focus,
+.bcc-input-area #custom_input_text:focus {
+  outline: none;
+}
+
+.bcc-input-area textarea::placeholder,
+.bcc-input-area #custom_input_text::placeholder {
+  color: var(--placeholderColor);
+  opacity: 0.5;
+}
+
+.bcc-input-area #chatout_debug_tools {
+  font-size: 10px;
+}
+
+/* ─── Pill containers ─── */
+.bcc-pill {
+  display: inline-grid;
+  gap: 3px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.07);
+  align-items: center;
+  justify-items: center;
+  flex-shrink: 0;
+}
+
+.bcc-pill-2 { grid-template-columns: repeat(2, auto); }
+.bcc-pill-3 { grid-template-columns: repeat(3, auto); }
+.bcc-pill-4 { grid-template-columns: repeat(4, auto); }
+
+/* ─── Icon buttons ─── */
+.bcc-icon-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 6px;
+  color: var(--optionsText);
+  font-size: 16px;
+  float: none !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, opacity 0.15s ease;
+}
+
+.bcc-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.bcc-icon-btn:active {
+  transform: scale(0.88);
+  background: rgba(255, 255, 255, 0.28) !important;
+}
+
+.bcc-icon-btn.bcc-active {
+  color: var(--iconColor);
+  filter: brightness(1.3);
+}
+
+.bcc-icon-btn.bcc-danger {
+  flex-shrink: 0;
+  margin: 0 3px !important;
+  color: #e84848;
+}
+
+.bcc-icon-btn.bcc-danger:hover {
+  background: rgba(232, 72, 72, 0.18) !important;
+}
+
+/* ─── FontAwesome icons for upstream buttons ─── */
+.bcc-icon-btn.b1::before,
+.bcc-icon-btn.b2::before,
+.bcc-icon-btn.b3::before,
+.bcc-icon-btn.b5::before,
+.bcc-icon-btn.b6::before,
+.bcc-icon-btn.b7::before,
+.bcc-icon-btn.b15::before,
+.bcc-icon-btn.b16::before {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+}
+
+.bcc-icon-btn.b1::before  { content: "\f059"; }
+.bcc-icon-btn.b2::before  { content: "\f186"; }
+.bcc-icon-btn.b3::before  { content: "\f185"; }
+.bcc-icon-btn.b5::before  { content: "\f0f3"; }
+.bcc-icon-btn.b6::before  { content: "\f1f6"; }
+.bcc-icon-btn.b7::before  { content: "\f2f5"; }
+.bcc-icon-btn.b15::before { content: "\f086"; }
+.bcc-icon-btn.b16::before { content: "\f2c2"; }
+
+/* ─── Connection status (hidden — reload button colored via JS) ─── */
+#chatout_status {
+  display: none !important;
+}
+
+/* ─── Color picker (wrapper looks like color btn, input hidden) ─── */
+.bcc-color-picker-wrap {
+  position: relative;
+}
+
+.bcc-color-btn.bcc-color-picker-wrap::after {
+  background-color: var(--swatch-color, #ff0000);
+}
+
+.bcc-color-swatch-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+
+/* ─── Color circle buttons ─── */
+.bcc-color-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50%;
+  border: none;
+  margin: 0 !important;
+  float: none !important;
+  cursor: pointer;
+  font-size: 0 !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  position: relative;
+}
+
+.bcc-color-btn::after {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.bcc-color-btn:hover {
+  transform: scale(1.15);
+}
+
+.bcc-color-btn:active {
+  transform: scale(0.92);
+}
+
+.bcc-color-btn::before { content: none !important; }
+
+.bcc-color-btn.b8::after  { background-color: #AAAA00; }
+.bcc-color-btn.b10::after { background-color: #AA0000; }
+.bcc-color-btn.b11::after { background-color: #AA00AA; }
+.bcc-color-btn.b12::after { background-color: #00AAAA; }
+.bcc-color-btn.b13::after { background-color: #00AA00; }
+.bcc-color-btn.b14::after { background-color: #0000AA; }

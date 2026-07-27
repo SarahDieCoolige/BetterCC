@@ -2,8 +2,8 @@
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version  1.42
-// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
+// @version  1.43
+// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
 // @match  https://ccc.chatcity.de/de/cpop.html?*RURL=*
@@ -15,7 +15,8 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=1.42
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/main.css?r=1.53
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/iframe.css?r=1.53
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -33,8 +34,8 @@
 // @sandbox  JavaScript
 // @run-at document-idle
 //
-// @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
-// @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/bettercc.user.js
+// @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/bettercc.user.js
+// @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/bettercc.user.js
 //
 // @supportURL  https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL  https://github.com/SarahDieCoolige/BetterCC
@@ -70,17 +71,12 @@
   cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
   function printInChat(position = "beforeend", content) {
-    //$("#chatframe").contents().find("body").children().last().append(content);
-
-    document
-      .getElementById("chatframe")
-      .contentWindow.frames.document.body.lastChild.insertAdjacentHTML(
-        position,
-        content
-      );
-
-    //let current = document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML;
-    //document.getElementById("chatframe").contentWindow.frames.document.body.lastChild.innerHTML+=content;
+    const doc = getChatDoc();
+    if (!doc || !doc.body || !doc.body.lastChild) {
+      cclog("printInChat: iframe body not ready, dropping message");
+      return;
+    }
+    doc.body.lastChild.insertAdjacentHTML(position, content);
   }
 
   function cclogChat(message, name = "BetterCC", newLineAfterName = true) {
@@ -163,19 +159,29 @@
   const NotificationsEnable = 1;
   const betterUserListEnable = 0;
 
-  function getChatframe() {
-    return document.getElementById("chatframe").contentWindow;
+  // Safely get the chatframe's document (returns null if not ready)
+  function getChatDoc() {
+    const f = document.getElementById("chatframe");
+    if (!f) return null;
+    const doc = f.contentDocument;
+    if (!doc || !doc.body) return null;
+    return doc;
   }
 
-  function postMessageToIframe(message) {
-    const chatWindow = getChatframe();
-    // const targetOrigin = "https://chat.chatcity.de";
-    // const targetOrigin = "https://www.chatcity.de";
-    // const targetOrigin = "https://ccc.chatcity.de";
-    const src = document.getElementById("chatframe").getAttribute("src");
-    const targetOrigin = new URL(src, window.location.href).origin;
+  // Safely get the chatframe's window (returns null if not ready)
+  function getChatWin() {
+    const f = document.getElementById("chatframe");
+    return f ? f.contentWindow : null;
+  }
 
-    chatWindow.postMessage(message, targetOrigin);
+  function applyThemeToIframe(bgColor, fgColor) {
+    const doc = getChatDoc();
+    if (!doc) return;
+    const root = doc.documentElement;
+    root.style.setProperty("--chatBackground", bgColor);
+    root.style.setProperty("--chatText", fgColor);
+    doc.body.style.backgroundColor = "var(--chatBackground)";
+    doc.body.style.color = "var(--chatText)";
   }
 
   //MAIN CHAT
@@ -318,6 +324,136 @@
     // add gast class to userlist
     if (gast) $("#ul").addClass("gast");
     if (superbanEnable) enableSuperban();
+    redesignFooter();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // v1.43: WebSocket + same-origin iframe integration
+    //
+    // The chatframe is now same-origin (cpop_tJuf.html) and populated by a
+    // WebSocket (chatout_ws). We inject CSS/theme/autoscroll-banner into the
+    // iframe on the first WS message, and hook the WS lifecycle.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let chatframeReady = false;
+    let upstreamChatoutConnect = null;
+
+    // Ported from bettercc_chat.user.js — now takes doc/win params
+    function addAutoscrollBanner(iframeDoc, iframeWin) {
+      if (!iframeDoc || !iframeWin) return;
+
+      const scrollbanner = iframeDoc.createElement("div");
+      scrollbanner.id = "autoscroll-banner";
+      scrollbanner.textContent = "Zurück nach unten";
+      iframeDoc.body.appendChild(scrollbanner);
+
+      scrollbanner.addEventListener("click", function () {
+        iframeWin.scrolling = true;
+        scrollbanner.style.display = "none";
+      });
+
+      let lastScrollTop =
+        iframeWin.scrollY || iframeDoc.documentElement.scrollTop;
+
+      iframeWin.addEventListener("scroll", function () {
+        const scrollPosition =
+          iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
+        const maxScroll =
+          iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+
+        if (scrollPosition < lastScrollTop) {
+          if (iframeWin.scrolling && scrollPosition < maxScroll - 1) {
+            iframeWin.scrolling = false;
+            scrollbanner.style.display = "block";
+          }
+        }
+
+        if (scrollPosition >= maxScroll - 1) {
+          scrollbanner.style.display = "none";
+          iframeWin.scrolling = true;
+        }
+
+        lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+      });
+    }
+
+    // Runs ONCE after the first WebSocket message populates the iframe.
+    // Injects CSS, applies theme, adds autoscroll banner.
+    // On reconnects, chatframe_doc_opened prevents content wipe, so we
+    // don't need to re-inject.
+    function injectIntoChatframe() {
+      const doc = getChatDoc();
+      const win = getChatWin();
+      if (!doc || !win) {
+        cclog("injectIntoChatframe: iframe not ready, will retry on next message");
+        chatframeReady = false;
+        return;
+      }
+
+      // 1) Inject iframe.css (styles :root vars, scrollbars, autoscroll banner)
+      const iframeCss = GM_getResourceText("iframe_css");
+      if (iframeCss) {
+        const style = doc.createElement("style");
+        style.textContent = iframeCss;
+        if (doc.head) {
+          doc.head.appendChild(style);
+        } else {
+          // No <head> yet — create one
+          const head = doc.createElement("head");
+          head.appendChild(style);
+          doc.documentElement.insertBefore(head, doc.body);
+        }
+      }
+
+      // 2) Apply saved theme (setTheme reads from GM storage and calls
+      //    applyStoredColors → applyThemeToIframe)
+      if (typeof bettercc.setTheme === "function") {
+        bettercc.setTheme();
+      }
+
+      // 3) Add autoscroll banner + scroll listener
+      addAutoscrollBanner(doc, win);
+
+      cclog("injectIntoChatframe: injection complete");
+    }
+
+    // ─── WebSocket lifecycle hooks (additive, survive reconnects) ───
+
+    function betterccOnWsMessage(ev) {
+      if (!chatframeReady) {
+        injectIntoChatframe();
+      }
+    }
+
+    function betterccOnWsClose() {
+      // Upstream handles reconnect automatically.
+      // Reserved for future status UI / notifications.
+    }
+
+    function attachWsListeners() {
+      if (unsafeWindow.chatout_ws) {
+        unsafeWindow.chatout_ws.addEventListener(
+          "message",
+          betterccOnWsMessage
+        );
+        unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
+      }
+    }
+
+    // Wrap chatout_connect so every reconnect re-attaches our listeners.
+    // We use addEventListener (additive) so upstream's onmessage/onclose
+    // handlers still run normally.
+    if (typeof unsafeWindow.chatout_connect === "function") {
+      upstreamChatoutConnect = unsafeWindow.chatout_connect;
+      unsafeWindow.chatout_connect = function () {
+        upstreamChatoutConnect.apply(this, arguments);
+        attachWsListeners();
+      };
+      // chatout_connect() already ran before our script — attach to
+      // the existing instance now.
+      attachWsListeners();
+    } else {
+      cclog("WARNING: chatout_connect not found — WebSocket hook failed");
+    }
     //GM_notification ( {title: 'BetteCC', text: 'BetterCC loaded!'} );
 
     function doColorStuff() {
@@ -395,18 +531,18 @@
 
       $('<div id="betteroptions"></div>').appendTo("#options");
 
-      $('<input type="color" id="bgcolorpicker" >')
+      var $colorWrap = $('<label for="bgcolorpicker" class="bcc-color-btn bcc-color-picker-wrap"></label>');
+      $colorWrap.css("--swatch-color", "#ff0000");
+      $('<input type="color" id="bgcolorpicker">')
         .val("#ff0000")
-        .addClass("betterccbtn")
+        .addClass("bcc-color-swatch-hidden")
         .on("input", function (e) {
           var bg = this.value.substring(1);
           var fg = fgDef;
-
-          // Update storage immediately to prevent observer race condition
+          $colorWrap.css("--swatch-color", this.value);
           (async () => {
             await GM.setValue(userStoreColor, bg);
           })();
-
           bettercc.setColors(bg, fg, 0);
         })
         .change(function () {
@@ -415,31 +551,40 @@
             await GM.setValue(userStoreColor, bg);
           })();
         })
-        .wrap('<div id="betteroptions"></div>')
-        .appendTo("#betteroptions");
+        .appendTo($colorWrap);
+      $colorWrap.appendTo("#betteroptions");
 
-      $('<input type="button" id="reloadbutton" />')
-        .val("mimimi...")
-        .attr("title", "Chat hängt. Bitte neuladen!!!")
-        .addClass("betterccbtn")
+      $("<button>", {
+        id: "reloadbutton",
+        type: "button",
+        class: "bcc-icon-btn",
+        title: "Chat neu laden (mimimi)",
+        html: '<i class="fas fa-sync-alt"></i>',
+      })
         .on("click", function () {
           bettercc.reloadChat();
         })
         .appendTo("#betteroptions");
 
-      $('<input type="button" id="helpbutton" />')
-        .val("?")
-        .attr("title", "BetterCC Hilfe")
-        .addClass("betterccbtn")
+      $("<button>", {
+        id: "helpbutton",
+        type: "button",
+        class: "bcc-icon-btn",
+        title: "BetterCC Hilfe",
+        html: '<i class="fas fa-question-circle"></i>',
+      })
         .on("click", function () {
           printHelp();
         })
         .appendTo("#betteroptions");
 
-      $('<input type="button" id="settingsbutton" />')
-        .val("S")
-        .attr("title", "BetterCC Settings")
-        .addClass("betterccbtn")
+      $("<button>", {
+        id: "settingsbutton",
+        type: "button",
+        class: "bcc-icon-btn",
+        title: "BetterCC Settings",
+        html: '<i class="fas fa-cog"></i>',
+      })
         .on("click", function () {
           showSettingsModal();
         })
@@ -448,9 +593,14 @@
       setTimeout(setTheme, 1000);
 
       bettercc.reloadChat = function reloadChat() {
-        postMessageToIframe({
-          type: "mimimi",
-        });
+        if (unsafeWindow.chatout_auth_dead) {
+          cclog("reloadChat: auth_dead, doing full page reload");
+          location.reload();
+          return;
+        }
+        if (unsafeWindow.chatout_ws) {
+          unsafeWindow.chatout_ws.close();
+        }
         setTimeout(setTheme, 1000);
       };
 
@@ -489,14 +639,11 @@
         $root.css("--superwhispercolor", colorScheme.superwhispercolor);
         $root.css("--superbancolor", colorScheme.superbancolor);
 
-        postMessageToIframe({
-          type: "setColors",
-          bgColor: colorScheme.chatBg,
-          fgColor: colorScheme.chatFg,
-        });
+        applyThemeToIframe(colorScheme.chatBg, colorScheme.chatFg);
 
         // Update UI elements
         $("#bgcolorpicker").val("#" + colorScheme.bgColor);
+        $(".bcc-color-picker-wrap").css("--swatch-color", "#" + colorScheme.bgColor);
 
         if (tinycolor.isReadable(colorScheme.ulistcolor, colorScheme.ulisttextcolor, {})) {
           $("#ul").addClass("light").removeClass("dark");
@@ -692,6 +839,7 @@
       }
 
       bettercc.setColors = setColors;
+      bettercc.setTheme = setTheme;
     }
 
     /**
@@ -716,9 +864,94 @@
      *
      */
     function forceNoChatBackgrounds() {
-      var src = $("#chatframe").attr("src");
-      src = src.replace("SBG=0", "SBG=1");
-      $("#chatframe").attr("src", src);
+      // v1.43: No-op. Upstream's WebSocket-shim loads the iframe from
+      // cpop_tJuf.html (no query string), so setbgcol()'s getQueryVariable('SBG')
+      // gate is always false — chat backgrounds are auto-disabled by upstream.
+      // Kept as stub for compatibility with the call site at line 310.
+    }
+
+    /**
+     * Full footer redesign: replace the table-based footer with a flexbox
+     * div layout. All controls organized into rounded pill containers.
+     */
+    function redesignFooter() {
+      var $footerTable = $(".ww_chat_footer_table");
+      if (!$footerTable.length) return;
+
+      var $rows = $footerTable.find("> tbody > tr");
+      if ($rows.length < 2) return;
+
+      var $firstRow = $rows.eq(0);
+      var $secondRow = $rows.eq(1);
+
+      var $actionCell = $firstRow.find("td.chat_i3");
+      var $exitCell = $firstRow.find("td.chat_i4");
+      var $colorCell = $secondRow.find("td.chat_i4");
+      if (!$actionCell.length || !$colorCell.length) return;
+
+      // ─── Collect elements ───
+      var $holdForm = $("form[name='hold']");
+      var $autoscrollForm = $("form[name='OF']");
+      var $statusSpan = $("#chatout_status");
+      var $debugTools = $("#chatout_debug_tools");
+      var $betterccBtns = $("#betteroptions").children();
+      var $actions = $actionCell.find("a");
+      var $colors = $colorCell.find("a");
+      var $exit = $exitCell.find("a");
+      var $asCheckbox = $autoscrollForm.find('input[name="AS"]');
+
+      // Hide autoscroll form (keep functional for setmove())
+      $autoscrollForm.hide();
+
+      // ─── Build autoscroll toggle button ───
+      var $autoscrollBtn = $("<button>", {
+        id: "bcc-autoscroll",
+        type: "button",
+        class: "bcc-icon-btn" + ($asCheckbox.prop("checked") ? " bcc-active" : ""),
+        title: "Autoscroll ein/aus",
+        html: '<i class="fas fa-angle-double-down"></i>',
+      }).on("click", function () {
+        $asCheckbox[0].click();
+        $(this).toggleClass("bcc-active", $asCheckbox.prop("checked"));
+      });
+
+      // ─── Monkey-patch chatout_setstatus: color reload button ───
+      $statusSpan.hide();
+      if (typeof unsafeWindow.chatout_setstatus === "function") {
+        var origSetStatus = unsafeWindow.chatout_setstatus;
+        unsafeWindow.chatout_setstatus = function (text, color, bold) {
+          var el = document.getElementById("chatout_status");
+          if (el) el.title = text;
+          var reloadBtn = document.getElementById("reloadbutton");
+          if (reloadBtn) {
+            reloadBtn.style.color = color || "#888";
+            reloadBtn.title = "Chat neu laden — " + text;
+          }
+          origSetStatus.call(this, text, color, bold);
+        };
+      }
+
+      // ─── Build pill containers ───
+      var $betterccPill = $('<div class="bcc-pill bcc-pill-3"></div>');
+      $betterccPill.append($autoscrollBtn, $betterccBtns);
+
+      var $upstreamPill = $('<div class="bcc-pill bcc-pill-4"></div>');
+      $actions.addClass("bcc-icon-btn").appendTo($upstreamPill);
+
+      var $colorPill = $('<div class="bcc-pill bcc-pill-3"></div>');
+      $colors.addClass("bcc-color-btn").appendTo($colorPill);
+
+      $exit.addClass("bcc-icon-btn bcc-danger");
+
+      // ─── Build main footer ───
+      var $inputArea = $('<div class="bcc-input-area"></div>');
+      $inputArea.append($holdForm, $debugTools, $statusSpan);
+
+      var $footer = $('<div class="bcc-footer"></div>');
+      $footer.append($inputArea, $betterccPill, $upstreamPill, $colorPill, $exit);
+
+      // ─── Replace table ───
+      $footerTable.replaceWith($footer);
     }
 
     /**
@@ -1371,5 +1604,64 @@
         unsafeWindow.alreadyBanned = alreadyBanned;
       }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DORMANT — Chatlog save/restore
+    //
+    // This code was originally used by reloadChat() (mimimi) to preserve chat
+    // content across iframe reloads. In v1.43+, the WebSocket reconnect
+    // preserves content natively (the chatframe_doc_opened flag prevents the
+    // document wipe on reconnect), so explicit save/restore is no longer
+    // needed.
+    //
+    // TODO: Re-evaluate if we ever need explicit chatlog export (e.g., for
+    // debugging or saving a conversation before /exit). If so, this is the
+    // starting point — wire saveChatlog() into reloadChat() before close(),
+    // and restoreChatlog() into betterccOnWsMessage after first message.
+    // Storage keys: userStoreChatlog = "chatlog_" + userStore
+    //               userStoreRestore = "restore_" + userStore
+    // ═══════════════════════════════════════════════════════════════════════
+    /*
+    function saveChatlog() {
+      const doc = getChatDoc();
+      if (!doc) return;
+      let children = doc.body.children;
+      let chatlog = "";
+      for (let i = 6; i < children.length; i++) {
+        if (
+          (children[i].outerHTML.startsWith('<font size="-1">') &&
+            !children[i].outerHTML.startsWith('<font size="-1"><br>\n</font>')) ||
+          children[i].outerHTML.includes("BetterCC:")
+        ) {
+          chatlog += children[i].outerHTML;
+        }
+      }
+      (async function () {
+        await GM.setValue("chatlog_" + userStore, chatlog);
+        await GM.setValue("restore_" + userStore, true);
+      })();
+    }
+
+    function restoreChatlog() {
+      const doc = getChatDoc();
+      if (!doc) return;
+      (async function () {
+        let chatlog = await GM.getValue("chatlog_" + userStore);
+        let restore = await GM.getValue("restore_" + userStore);
+        if (restore) {
+          cclog("Restore Chatlog: " + restore);
+          if (!!chatlog) {
+            doc.body.lastChild.insertAdjacentHTML("beforebegin", chatlog);
+          }
+          doc.body.lastChild.insertAdjacentHTML(
+            "beforebegin",
+            "<span><br><i>BetterCC: mimimi..</i></span>"
+          );
+          await GM.setValue("restore_" + userStore, false);
+        }
+      })();
+    }
+    */
+
   } //MAIN CHAT
 })();
