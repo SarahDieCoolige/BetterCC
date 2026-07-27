@@ -486,13 +486,13 @@ i.fad {
 .bcc-icon-btn.b7::before,
 .bcc-icon-btn.b15::before,
 .bcc-icon-btn.b16::before {
-  font-family: "Font Awesome 5 Free";
+  font-family: "Font Awesome 6 Free";
   font-weight: 900;
 }
 
 .bcc-icon-btn.b1::before  { content: "\f059"; }
-.bcc-icon-btn.b2::before  { content: "\f186"; }
-.bcc-icon-btn.b3::before  { content: "\f185"; }
+.bcc-icon-btn.b2::before  { content: "\e551"; }
+.bcc-icon-btn.b3::before  { content: "\e552"; }
 .bcc-icon-btn.b5::before  { content: "\f0f3"; }
 .bcc-icon-btn.b6::before  { content: "\f1f6"; }
 .bcc-icon-btn.b7::before  { content: "\f2f5"; }
