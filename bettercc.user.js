@@ -2,7 +2,7 @@
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version  1.43
+// @version      1.45
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
@@ -15,8 +15,8 @@
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 // @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/main.css?r=1.53
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/iframe.css?r=1.53
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/main.css?r=1.55
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/iframe.css?r=1.55
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -894,11 +894,23 @@
       var $autoscrollForm = $("form[name='OF']");
       var $statusSpan = $("#chatout_status");
       var $debugTools = $("#chatout_debug_tools");
-      var $betterccBtns = $("#betteroptions").children();
-      var $actions = $actionCell.find("a");
-      var $colors = $colorCell.find("a");
-      var $exit = $exitCell.find("a");
       var $asCheckbox = $autoscrollForm.find('input[name="AS"]');
+
+      var $colorWrap   = $(".bcc-color-picker-wrap");
+      var $reloadBtn   = $("#reloadbutton");
+      var $helpBtn     = $("#helpbutton");
+      var $settingsBtn = $("#settingsbutton");
+
+      var $anmelden   = $actionCell.find("a.b3");
+      var $abmelden   = $actionCell.find("a.b2");
+      var $sysMsgsOn  = $actionCell.find("a.b5");
+      var $sysMsgsOff = $actionCell.find("a.b6");
+      var $forumLink  = $actionCell.find("a.b15");
+      var $idLink     = $actionCell.find("a.b16");
+      var $upHelpLink = $actionCell.find("a.b1");
+
+      var $colors = $colorCell.find("a");
+      var $exit   = $exitCell.find("a");
 
       // Hide autoscroll form (keep functional for setmove())
       $autoscrollForm.hide();
@@ -932,23 +944,36 @@
       }
 
       // ─── Build pill containers ───
-      var $betterccPill = $('<div class="bcc-pill bcc-pill-3"></div>');
-      $betterccPill.append($autoscrollBtn, $betterccBtns);
+      $anmelden.add($abmelden).add($sysMsgsOn).add($sysMsgsOff)
+        .add($forumLink).add($idLink).add($upHelpLink)
+        .addClass("bcc-icon-btn");
 
-      var $upstreamPill = $('<div class="bcc-pill bcc-pill-4"></div>');
-      $actions.addClass("bcc-icon-btn").appendTo($upstreamPill);
+      var $accountAlertsPill = $('<div class="bcc-pill bcc-pill-2"></div>');
+      $accountAlertsPill.append($anmelden, $sysMsgsOn, $abmelden, $sysMsgsOff);
+
+      var $chatActionsPill = $('<div class="bcc-pill bcc-pill-2 bcc-chat-actions"></div>');
+      $chatActionsPill.append($autoscrollBtn, $reloadBtn, $colorWrap);
+
+      var $betterccPill = $('<div class="bcc-pill"></div>');
+      $betterccPill.append($helpBtn, $settingsBtn);
 
       var $colorPill = $('<div class="bcc-pill bcc-pill-3"></div>');
       $colors.addClass("bcc-color-btn").appendTo($colorPill);
 
+      var $linksPill = $('<div class="bcc-pill bcc-pill-2 bcc-links"></div>');
+      $linksPill.append($idLink, $forumLink, $upHelpLink);
+
       $exit.addClass("bcc-icon-btn bcc-danger");
+
+      // ─── Clean up empty wrapper ───
+      $("#betteroptions").remove();
 
       // ─── Build main footer ───
       var $inputArea = $('<div class="bcc-input-area"></div>');
       $inputArea.append($holdForm, $debugTools, $statusSpan);
 
       var $footer = $('<div class="bcc-footer"></div>');
-      $footer.append($inputArea, $betterccPill, $upstreamPill, $colorPill, $exit);
+      $footer.append($inputArea, $accountAlertsPill, $chatActionsPill, $betterccPill, $colorPill, $linksPill, $exit);
 
       // ─── Replace table ───
       $footerTable.replaceWith($footer);

@@ -424,6 +424,16 @@ i.fad {
 .bcc-pill-3 { grid-template-columns: repeat(3, auto); }
 .bcc-pill-4 { grid-template-columns: repeat(4, auto); }
 
+.bcc-chat-actions .bcc-color-picker-wrap {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.bcc-links > :last-child {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
 /* ─── Icon buttons ─── */
 .bcc-icon-btn {
   display: inline-flex !important;
