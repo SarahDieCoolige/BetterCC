@@ -680,77 +680,102 @@
     }
   }
   function redesignFooter() {
-    var $footerTable = $(".ww_chat_footer_table");
-    if (!$footerTable.length) return;
-    var $rows = $footerTable.find("> tbody > tr");
-    if ($rows.length < 2) return;
-    var $firstRow = $rows.eq(0);
-    var $secondRow = $rows.eq(1);
-    var $actionCell = $firstRow.find("td.chat_i3");
-    var $exitCell = $firstRow.find("td.chat_i4");
-    var $colorCell = $secondRow.find("td.chat_i4");
-    if (!$actionCell.length || !$colorCell.length) return;
-    var $holdForm = $("form[name='hold']");
-    var $autoscrollForm = $("form[name='OF']");
-    var $statusSpan = $("#chatout_status");
-    var $debugTools = $("#chatout_debug_tools");
-    var $asCheckbox = $autoscrollForm.find('input[name="AS"]');
-    var $colorWrap = $(".bcc-color-picker-wrap");
-    var $reloadBtn = $("#reloadbutton");
-    var $helpBtn = $("#helpbutton");
-    var $settingsBtn = $("#settingsbutton");
-    var $anmelden = $actionCell.find("a.b3");
-    var $abmelden = $actionCell.find("a.b2");
-    var $sysMsgsOn = $actionCell.find("a.b5");
-    var $sysMsgsOff = $actionCell.find("a.b6");
-    var $forumLink = $actionCell.find("a.b15");
-    var $idLink = $actionCell.find("a.b16");
-    var $upHelpLink = $actionCell.find("a.b1");
-    var $colors = $colorCell.find("a");
-    var $exit = $exitCell.find("a");
-    $autoscrollForm.hide();
-    var $autoscrollBtn = $("<button>", {
-      id: "bcc-autoscroll",
-      type: "button",
-      class: "bcc-icon-btn" + ($asCheckbox.prop("checked") ? " bcc-active" : ""),
-      title: "Autoscroll ein/aus",
-      html: '<i class="fas fa-angle-double-down"></i>'
-    }).on("click", function() {
-      $asCheckbox[0].click();
-      $(this).toggleClass("bcc-active", $asCheckbox.prop("checked"));
+    var footerTable = document.querySelector(".ww_chat_footer_table");
+    if (!footerTable) return;
+    var rows = footerTable.querySelectorAll(":scope > tbody > tr");
+    if (rows.length < 2) return;
+    var firstRow = rows[0];
+    var secondRow = rows[1];
+    var actionCell = firstRow.querySelector("td.chat_i3");
+    var exitCell = firstRow.querySelector("td.chat_i4");
+    var colorCell = secondRow.querySelector("td.chat_i4");
+    if (!actionCell || !colorCell) return;
+    var holdForm = document.querySelector("form[name='hold']");
+    var autoscrollForm = document.querySelector("form[name='OF']");
+    var statusSpan = document.querySelector("#chatout_status");
+    var debugTools = document.querySelector("#chatout_debug_tools");
+    var asCheckbox = autoscrollForm?.querySelector('input[name="AS"]');
+    var colorWrap = document.querySelector(".bcc-color-picker-wrap");
+    var reloadBtn = document.querySelector("#reloadbutton");
+    var helpBtn = document.querySelector("#helpbutton");
+    var settingsBtn = document.querySelector("#settingsbutton");
+    var anmelden = actionCell.querySelector("a.b3");
+    var abmelden = actionCell.querySelector("a.b2");
+    var sysMsgsOn = actionCell.querySelector("a.b5");
+    var sysMsgsOff = actionCell.querySelector("a.b6");
+    var forumLink = actionCell.querySelector("a.b15");
+    var idLink = actionCell.querySelector("a.b16");
+    var upHelpLink = actionCell.querySelector("a.b1");
+    var colorLinks = colorCell.querySelectorAll("a");
+    var exitLink = exitCell?.querySelector("a");
+    if (autoscrollForm) autoscrollForm.style.display = "none";
+    var autoscrollBtn = document.createElement("button");
+    autoscrollBtn.id = "bcc-autoscroll";
+    autoscrollBtn.type = "button";
+    autoscrollBtn.className = "bcc-icon-btn" + (asCheckbox?.checked ? " bcc-active" : "");
+    autoscrollBtn.title = "Autoscroll ein/aus";
+    autoscrollBtn.innerHTML = '<i class="fas fa-angle-double-down"></i>';
+    autoscrollBtn.addEventListener("click", function() {
+      if (asCheckbox) asCheckbox.click();
+      autoscrollBtn.classList.toggle("bcc-active", asCheckbox?.checked || false);
     });
-    $statusSpan.hide();
+    if (statusSpan) statusSpan.style.display = "none";
     if (typeof unsafeWindow.chatout_setstatus === "function") {
       var origSetStatus = unsafeWindow.chatout_setstatus;
       unsafeWindow.chatout_setstatus = function(text, color, bold) {
         var el = document.getElementById("chatout_status");
         if (el) el.title = text;
-        var reloadBtn = document.getElementById("reloadbutton");
-        if (reloadBtn) {
-          reloadBtn.style.color = color || "#888";
-          reloadBtn.title = "Chat neu laden \u2014 " + text;
+        var reloadBtnEl = document.getElementById("reloadbutton");
+        if (reloadBtnEl) {
+          reloadBtnEl.style.color = color || "#888";
+          reloadBtnEl.title = "Chat neu laden \u2014 " + text;
         }
         origSetStatus.call(this, text, color, bold);
       };
     }
-    $anmelden.add($abmelden).add($sysMsgsOn).add($sysMsgsOff).add($forumLink).add($idLink).add($upHelpLink).addClass("bcc-icon-btn");
-    var $accountAlertsPill = $('<div class="bcc-pill bcc-pill-2"></div>');
-    $accountAlertsPill.append($anmelden, $sysMsgsOn, $abmelden, $sysMsgsOff);
-    var $chatActionsPill = $('<div class="bcc-pill bcc-pill-2 bcc-chat-actions"></div>');
-    $chatActionsPill.append($autoscrollBtn, $reloadBtn, $colorWrap);
-    var $betterccPill = $('<div class="bcc-pill"></div>');
-    $betterccPill.append($helpBtn, $settingsBtn);
-    var $colorPill = $('<div class="bcc-pill bcc-pill-3"></div>');
-    $colors.addClass("bcc-color-btn").appendTo($colorPill);
-    var $linksPill = $('<div class="bcc-pill bcc-pill-2 bcc-links"></div>');
-    $linksPill.append($idLink, $forumLink, $upHelpLink);
-    $exit.addClass("bcc-icon-btn bcc-danger");
-    $("#betteroptions").remove();
-    var $inputArea = $('<div class="bcc-input-area"></div>');
-    $inputArea.append($holdForm, $debugTools, $statusSpan);
-    var $footer = $('<div class="bcc-footer"></div>');
-    $footer.append($inputArea, $accountAlertsPill, $chatActionsPill, $betterccPill, $colorPill, $linksPill, $exit);
-    $footerTable.replaceWith($footer);
+    [anmelden, abmelden, sysMsgsOn, sysMsgsOff, forumLink, idLink, upHelpLink].forEach(function(el) {
+      if (el) el.classList.add("bcc-icon-btn");
+    });
+    var accountAlertsPill = document.createElement("div");
+    accountAlertsPill.className = "bcc-pill bcc-pill-2";
+    [anmelden, sysMsgsOn, abmelden, sysMsgsOff].forEach(function(el) {
+      if (el) accountAlertsPill.appendChild(el);
+    });
+    var chatActionsPill = document.createElement("div");
+    chatActionsPill.className = "bcc-pill bcc-pill-2 bcc-chat-actions";
+    [autoscrollBtn, reloadBtn, colorWrap].forEach(function(el) {
+      if (el) chatActionsPill.appendChild(el);
+    });
+    var betterccPill = document.createElement("div");
+    betterccPill.className = "bcc-pill";
+    [helpBtn, settingsBtn].forEach(function(el) {
+      if (el) betterccPill.appendChild(el);
+    });
+    var colorPill = document.createElement("div");
+    colorPill.className = "bcc-pill bcc-pill-3";
+    colorLinks.forEach(function(link) {
+      link.classList.add("bcc-color-btn");
+      colorPill.appendChild(link);
+    });
+    var linksPill = document.createElement("div");
+    linksPill.className = "bcc-pill bcc-pill-2 bcc-links";
+    [idLink, forumLink, upHelpLink].forEach(function(el) {
+      if (el) linksPill.appendChild(el);
+    });
+    if (exitLink) exitLink.classList.add("bcc-icon-btn", "bcc-danger");
+    var betterOpts = document.querySelector("#betteroptions");
+    if (betterOpts) betterOpts.remove();
+    var inputArea = document.createElement("div");
+    inputArea.className = "bcc-input-area";
+    [holdForm, debugTools, statusSpan].forEach(function(el) {
+      if (el) inputArea.appendChild(el);
+    });
+    var footer = document.createElement("div");
+    footer.className = "bcc-footer";
+    [inputArea, accountAlertsPill, chatActionsPill, betterccPill, colorPill, linksPill, exitLink].forEach(function(el) {
+      if (el) footer.appendChild(el);
+    });
+    footerTable.replaceWith(footer);
   }
 
   // src/commands.ts

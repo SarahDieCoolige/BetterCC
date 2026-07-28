@@ -68,5 +68,8 @@ describe("build output", () => {
 
     // jQuery removal tracking — replaceOnSubmit uses vanilla DOM
     expect(content).not.toContain('.attr("onsubmit"');       // jQuery attr set
+
+    // jQuery removal tracking — redesignFooter uses vanilla DOM
+    expect(content).not.toContain('$("<button>",');          // jQuery element constructor
   });
 });
