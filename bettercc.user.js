@@ -288,28 +288,35 @@
       })();
     }
     function applyStoredColors(colorScheme) {
-      let $root = $(":root");
-      $root.css("--chatBackground", colorScheme.chatBg);
-      $root.css("--chatText", colorScheme.chatFg);
-      $root.css("--buttonColor", colorScheme.buttoncolor);
-      $root.css("--buttonText", colorScheme.buttontextcolor);
-      $root.css("--inputBackground", colorScheme.inputcolor);
-      $root.css("--inputText", colorScheme.inputtextcolor);
-      $root.css("--ulistColor", colorScheme.ulistcolor);
-      $root.css("--ulistText", colorScheme.ulisttextcolor);
-      $root.css("--optionsText", colorScheme.optionstextcolor);
-      $root.css("--footerBackground", colorScheme.footercolor);
-      $root.css("--placeholderColor", colorScheme.placeholdercolor);
-      $root.css("--iconColor", colorScheme.iconcolor);
-      $root.css("--superwhispercolor", colorScheme.superwhispercolor);
-      $root.css("--superbancolor", colorScheme.superbancolor);
+      const root = document.documentElement;
+      root.style.setProperty("--chatBackground", colorScheme.chatBg);
+      root.style.setProperty("--chatText", colorScheme.chatFg);
+      root.style.setProperty("--buttonColor", colorScheme.buttoncolor);
+      root.style.setProperty("--buttonText", colorScheme.buttontextcolor);
+      root.style.setProperty("--inputBackground", colorScheme.inputcolor);
+      root.style.setProperty("--inputText", colorScheme.inputtextcolor);
+      root.style.setProperty("--ulistColor", colorScheme.ulistcolor);
+      root.style.setProperty("--ulistText", colorScheme.ulisttextcolor);
+      root.style.setProperty("--optionsText", colorScheme.optionstextcolor);
+      root.style.setProperty("--footerBackground", colorScheme.footercolor);
+      root.style.setProperty("--placeholderColor", colorScheme.placeholdercolor);
+      root.style.setProperty("--iconColor", colorScheme.iconcolor);
+      root.style.setProperty("--superwhispercolor", colorScheme.superwhispercolor);
+      root.style.setProperty("--superbancolor", colorScheme.superbancolor);
       applyThemeToIframe(colorScheme.chatBg, colorScheme.chatFg);
-      $("#bgcolorpicker").val("#" + colorScheme.bgColor);
-      $(".bcc-color-picker-wrap").css("--swatch-color", "#" + colorScheme.bgColor);
-      if (tinycolor.isReadable(colorScheme.ulistcolor, colorScheme.ulisttextcolor, {})) {
-        $("#ul").addClass("light").removeClass("dark");
-      } else {
-        $("#ul").addClass("dark").removeClass("light");
+      const bgPicker2 = document.getElementById("bgcolorpicker");
+      if (bgPicker2) bgPicker2.value = "#" + colorScheme.bgColor;
+      const colorWrap2 = document.querySelector(".bcc-color-picker-wrap");
+      if (colorWrap2) colorWrap2.style.setProperty("--swatch-color", "#" + colorScheme.bgColor);
+      const ul = document.getElementById("ul");
+      if (ul) {
+        if (tinycolor.isReadable(colorScheme.ulistcolor, colorScheme.ulisttextcolor, {})) {
+          ul.classList.add("light");
+          ul.classList.remove("dark");
+        } else {
+          ul.classList.add("dark");
+          ul.classList.remove("light");
+        }
       }
     }
     function setColors(bg, fg) {
@@ -331,7 +338,8 @@
       chatFg = tinycolor.mostReadable(chatBg, anaChatFg.concat(monoChatFg), {
         includeFallbackColors: false
       });
-      $("#bgcolorpicker").val("#" + bg);
+      const bgPicker2 = document.getElementById("bgcolorpicker");
+      if (bgPicker2) bgPicker2.value = "#" + bg;
       let ulistcolor, footercolor, inputcolor, inputtextcolor, optionstextcolor, placeholdercolor, ulisttextcolor, buttoncolor, buttontextcolor, iconcolor, superwhispercolor, superbancolor;
       if (chatBg.toHsl().l > 0.8 || chatBg.toHsl().s >= 0.97 && chatBg.toHsl().l >= 0.45) {
         footercolor = chatBg.clone().darken(15).brighten(5);

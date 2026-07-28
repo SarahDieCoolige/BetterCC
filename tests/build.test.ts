@@ -62,5 +62,8 @@ describe("build output", () => {
 
     // jQuery removal tracking — doColorStuff theme UI uses vanilla DOM
     expect(content).not.toContain("appendTo($colorWrap)");  // jQuery chaining
+
+    // jQuery removal tracking — applyStoredColors uses vanilla DOM
+    expect(content).not.toContain('$(":root")');             // jQuery :root selector
   });
 });
