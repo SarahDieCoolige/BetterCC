@@ -4,19 +4,16 @@ import { cclog, ccnotify } from "./utils";
 
 export function enableSuperban(userStore: string): void {
   // add superban option to userpopup
-  $("#fuu").append(
+  const fuu = document.querySelector("#fuu");
+  if (fuu) fuu.insertAdjacentHTML("beforeend",
     '<a href="javascript://" class="button superban" id="superban" onclick="bettercc.superban(last_id);">» Better Ignore</a>'
   );
 
   // get online users
-  $("<script>")
-    .attr(
-      "src",
-      "//images.chatcity.de/script/aw.js?r=" +
-        Math.round(new Date().getTime() / 1000)
-    )
-    .attr("type", "text/javascript")
-    .appendTo("head");
+  const awScript = document.createElement("script");
+  awScript.src = "//images.chatcity.de/script/aw.js?r=" + Math.round(new Date().getTime() / 1000);
+  awScript.type = "text/javascript";
+  document.head.appendChild(awScript);
 
   var alreadyBanned: string[] = [];
 
@@ -98,7 +95,8 @@ export function enableSuperban(userStore: string): void {
       "Better Ignore",
       "help"
     );
-    $(".ulist-popup").hide();
+    const popup2 = document.querySelector(".ulist-popup") as HTMLElement | null;
+    if (popup2) popup2.style.display = "none";
   };
 
   async function refreshUserList() {
@@ -106,13 +104,14 @@ export function enableSuperban(userStore: string): void {
     var url = "//images.chatcity.de/script/aw.js?r=";
     var src = url + time;
 
-    if ($("#userlistjs").length) {
-      $("#userlistjs").remove();
-    }
-    $('<script id="userlistjs">')
-      .attr("src", src)
-      .attr("type", "text/javascript")
-      .appendTo("head");
+    const existing = document.querySelector("#userlistjs");
+    if (existing) existing.remove();
+
+    const userlistScript = document.createElement("script");
+    userlistScript.id = "userlistjs";
+    userlistScript.src = src;
+    userlistScript.type = "text/javascript";
+    document.head.appendChild(userlistScript);
 
     var superbans = await (unsafeWindow.bettercc as any).getSuperbans();
 

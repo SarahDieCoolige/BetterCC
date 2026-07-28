@@ -554,7 +554,9 @@
     clearInterval(unsafeWindow.size_interval);
   }
   function betterUserList(userStore2) {
-    $("#fuu").append(
+    const fuu2 = document.querySelector("#fuu");
+    if (fuu2) fuu2.insertAdjacentHTML(
+      "beforeend",
       '<a href="javascript://" class="button pinuser" id="pinUser" onclick="bettercc.addPinnedUser(last_id)">\xBB Pin</a>'
     );
     let userStorePinnedUsers = "pinned_" + userStore2;
@@ -570,7 +572,8 @@
       }
       GM_setValue(userStorePinnedUsers, pinnedUsers);
       unsafeWindow.set_uinfo1();
-      $(".ulist-popup").hide();
+      const popup3 = document.querySelector(".ulist-popup");
+      if (popup3) popup3.style.display = "none";
     };
     function getPinnedUsers() {
       return Array.from(GM_getValue(userStorePinnedUsers, [])).map((v) => v.toLowerCase()).sort();
@@ -898,13 +901,15 @@
 
   // src/superban.ts
   function enableSuperban(userStore2) {
-    $("#fuu").append(
+    const fuu = document.querySelector("#fuu");
+    if (fuu) fuu.insertAdjacentHTML(
+      "beforeend",
       '<a href="javascript://" class="button superban" id="superban" onclick="bettercc.superban(last_id);">\xBB Better Ignore</a>'
     );
-    $("<script>").attr(
-      "src",
-      "//images.chatcity.de/script/aw.js?r=" + Math.round((/* @__PURE__ */ new Date()).getTime() / 1e3)
-    ).attr("type", "text/javascript").appendTo("head");
+    const awScript = document.createElement("script");
+    awScript.src = "//images.chatcity.de/script/aw.js?r=" + Math.round((/* @__PURE__ */ new Date()).getTime() / 1e3);
+    awScript.type = "text/javascript";
+    document.head.appendChild(awScript);
     var alreadyBanned = [];
     let userStoreBan = "ban_" + userStore2;
     let listenerId = GM_addValueChangeListener(
@@ -959,16 +964,20 @@
         "Better Ignore",
         "help"
       );
-      $(".ulist-popup").hide();
+      const popup2 = document.querySelector(".ulist-popup");
+      if (popup2) popup2.style.display = "none";
     };
     async function refreshUserList() {
       var time = Math.round((/* @__PURE__ */ new Date()).getTime() / 1e3);
       var url = "//images.chatcity.de/script/aw.js?r=";
       var src = url + time;
-      if ($("#userlistjs").length) {
-        $("#userlistjs").remove();
-      }
-      $('<script id="userlistjs">').attr("src", src).attr("type", "text/javascript").appendTo("head");
+      const existing = document.querySelector("#userlistjs");
+      if (existing) existing.remove();
+      const userlistScript = document.createElement("script");
+      userlistScript.id = "userlistjs";
+      userlistScript.src = src;
+      userlistScript.type = "text/javascript";
+      document.head.appendChild(userlistScript);
       var superbans = await unsafeWindow.bettercc.getSuperbans();
       var users = getUsers();
       var usersToBeBanned = getUsersToBeBanned(users, superbans);
@@ -1147,7 +1156,10 @@
         cclog
       );
       replaceOnSubmit(userStore2);
-      if (gast) $("#ul").addClass("gast");
+      if (gast) {
+        const ulEl = document.querySelector("#ul");
+        if (ulEl) ulEl.classList.add("gast");
+      }
       if (superbanEnable) enableSuperban(userStore2);
       redesignFooter();
       hookChatoutConnect();

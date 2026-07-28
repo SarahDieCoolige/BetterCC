@@ -135,7 +135,8 @@ export function cleanup(): void {
 
 export function betterUserList(userStore: string): void {
   // add superwhisper to userlist popup
-  $("#fuu").append(
+  const fuu2 = document.querySelector("#fuu");
+  if (fuu2) fuu2.insertAdjacentHTML("beforeend",
     '<a href="javascript://" class="button pinuser" id="pinUser" onclick="bettercc.addPinnedUser(last_id)">» Pin</a>'
   );
 
@@ -157,7 +158,8 @@ export function betterUserList(userStore: string): void {
 
     GM_setValue(userStorePinnedUsers, pinnedUsers);
     (unsafeWindow as any).set_uinfo1();
-    $(".ulist-popup").hide();
+    const popup3 = document.querySelector(".ulist-popup") as HTMLElement | null;
+    if (popup3) popup3.style.display = "none";
   };
 
   // Function to get the list of pinned users

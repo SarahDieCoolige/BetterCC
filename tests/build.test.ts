@@ -71,5 +71,9 @@ describe("build output", () => {
 
     // jQuery removal tracking — redesignFooter uses vanilla DOM
     expect(content).not.toContain('$("<button>",');          // jQuery element constructor
+
+    // jQuery removal tracking — superban + userlist use vanilla DOM
+    expect(content).not.toContain('$("<script>")');           // jQuery script injection
+    expect(content).not.toContain('$("#fuu")');               // jQuery user popup
   });
 });

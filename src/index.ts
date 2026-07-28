@@ -64,7 +64,10 @@ import {
     );
     replaceOnSubmit(userStore);
     // add gast class to userlist
-    if (gast) $("#ul").addClass("gast");
+    if (gast) {
+      const ulEl = document.querySelector("#ul");
+      if (ulEl) ulEl.classList.add("gast");
+    }
     if (superbanEnable) enableSuperban(userStore);
     redesignFooter();
 
