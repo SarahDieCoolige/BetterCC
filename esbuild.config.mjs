@@ -42,8 +42,24 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @supportURL  https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL  https://github.com/SarahDieCoolige/BetterCC
 
-// ==/UserScript==
+	// ==/UserScript==
 /* globals jQuery, $, GM_wrench, ajax, tinycolor */
+`;
+
+const DORMANT_CHATLOG = `
+  // ═══════════════════════════════════════════════════════════════════════
+  // DORMANT — Chatlog save/restore
+  //
+  // This code was originally used by reloadChat() (mimimi) to preserve chat
+  // content across iframe reloads. In v1.43+, the WebSocket reconnect
+  // preserves content natively (the chatframe_doc_opened flag prevents the
+  // document wipe on reconnect), so explicit save/restore is no longer
+  // needed.
+  //
+  // TODO: Re-evaluate if we ever need explicit chatlog export (e.g., for
+  // debugging or saving a conversation before /exit). If so, this is the
+  // starting point.
+  // ═══════════════════════════════════════════════════════════════════════
 `;
 
 await esbuild.build({
@@ -51,6 +67,7 @@ await esbuild.build({
   bundle: true,
   outfile: "bettercc.user.js",
   banner: { js: USERSCRIPT_HEADER },
+  footer: { js: DORMANT_CHATLOG },
   format: "iife",
   target: "es2020",
   platform: "browser",

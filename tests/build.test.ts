@@ -22,7 +22,28 @@ describe("build output", () => {
     // Must contain the IIFE wrapper
     expect(content).toContain('"use strict"');
 
-    // Must end with the closing IIFE
-    expect(content.trimEnd().endsWith("})();")).toBe(true);
+    // Must contain the closing IIFE
+    expect(content).toContain("})();");
+
+    // Must contain BetterCC public API methods (property assignments survive bundling)
+    expect(content).toContain("bettercc.reloadChat");
+    expect(content).toContain("bettercc.onSubmit");
+    expect(content).toContain("bettercc.superwhisper");
+    expect(content).toContain("bettercc.superban");
+    expect(content).toContain("bettercc.getSuperbans");
+    expect(content).toContain("bettercc.setColors");
+    expect(content).toContain("bettercc.setTheme");
+
+    // Must contain key feature string markers (string literals survive bundling)
+    expect(content).toContain("autoscroll-banner");         // autoscroll banner element
+    expect(content).toContain("Superwhisper");             // superwhisper feature
+    expect(content).toContain("Better Ignore");            // superban feature
+    expect(content).toContain("Du chattest mit allen");    // input placeholder
+    expect(content).toContain("color_");                   // GM storage key pattern
+    expect(content).toContain("chatout_connect");          // WebSocket hook
+
+    // Must contain the WebSocket hook
+    expect(content).toContain("injectIntoChatframe");      // function name in log strings
+    expect(content).toContain("chatout_auth_dead");        // upstream global usage
   });
 });
