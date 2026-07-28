@@ -65,5 +65,8 @@ describe("build output", () => {
 
     // jQuery removal tracking — applyStoredColors uses vanilla DOM
     expect(content).not.toContain('$(":root")');             // jQuery :root selector
+
+    // jQuery removal tracking — replaceOnSubmit uses vanilla DOM
+    expect(content).not.toContain('.attr("onsubmit"');       // jQuery attr set
   });
 });

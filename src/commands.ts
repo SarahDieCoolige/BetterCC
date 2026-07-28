@@ -1,12 +1,13 @@
 // ─── Chat commands: replaceOnSubmit, superwhisper ───
 
-import { cclog, ccnotify } from "./utils";
+import { cclog, ccnotify, printHelp, superbanEnable } from "./utils";
 
 export function replaceOnSubmit(userStore: string): void {
   let userStoreWhisper = "whisper_" + userStore;
 
   // replace long submit function in input form
-  let onSubmitOrigStr = $('form[name="hold').attr("onsubmit");
+  const holdForm = document.querySelector('form[name="hold"]') as HTMLFormElement | null;
+  let onSubmitOrigStr = holdForm?.getAttribute("onsubmit") || "";
 
   // reset away timer with "/w ", "/me " and open chat
   onSubmitOrigStr = onSubmitOrigStr.replace(
@@ -24,7 +25,8 @@ export function replaceOnSubmit(userStore: string): void {
     let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
     let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
 
-    let mymsg = document.hold.OUT1.value.trim();
+    let docHold = (document as any).hold;
+    let mymsg = docHold.OUT1.value.trim();
 
     if (
       mymsg.toLowerCase() === "/bettercc" ||
@@ -32,7 +34,7 @@ export function replaceOnSubmit(userStore: string): void {
     ) {
       printHelp();
       mymsg = "";
-      document.hold.OUT1.value = mymsg;
+      docHold.OUT1.value = mymsg;
       return false;
     }
 
@@ -48,7 +50,7 @@ export function replaceOnSubmit(userStore: string): void {
         ccnotify(banlistNotify, "Better Ignore", "banlist", 30000);
 
         mymsg = "";
-        document.hold.OUT1.value = mymsg;
+        docHold.OUT1.value = mymsg;
         return false;
       }
       if (superbanMsgCmdRegex.test(mymsg.toLowerCase())) {
@@ -56,7 +58,7 @@ export function replaceOnSubmit(userStore: string): void {
         (unsafeWindow.bettercc as any).superban(mymsg);
         cclog("Superban:" + mymsg);
         mymsg = "";
-        document.hold.OUT1.value = mymsg;
+        docHold.OUT1.value = mymsg;
         return false;
       }
     }
@@ -65,7 +67,7 @@ export function replaceOnSubmit(userStore: string): void {
     if (mymsg.toLowerCase() === "/open") {
       (unsafeWindow.bettercc as any).superwhisper("");
       mymsg = "";
-      document.hold.OUT1.value = mymsg;
+      docHold.OUT1.value = mymsg;
       return false;
     }
 
@@ -73,7 +75,7 @@ export function replaceOnSubmit(userStore: string): void {
     if (mymsg.toLowerCase() === "/reload") {
       (unsafeWindow.bettercc as any).reloadChat();
       mymsg = "";
-      document.hold.OUT1.value = mymsg;
+      docHold.OUT1.value = mymsg;
       return false;
     }
 
@@ -82,7 +84,7 @@ export function replaceOnSubmit(userStore: string): void {
       mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
       (unsafeWindow.bettercc as any).superwhisper(mymsg, false);
       mymsg = "";
-      document.hold.OUT1.value = mymsg;
+      docHold.OUT1.value = mymsg;
       return false;
     }
 
@@ -98,21 +100,26 @@ export function replaceOnSubmit(userStore: string): void {
       }
     }
 
-    document.hold.OUT1.value = mymsg;
+    docHold.OUT1.value = mymsg;
 
     onSubmitOrig();
   };
 
   // replace onSubmit function of textarea/input field
-  $('form[name="hold"]').attr("onsubmit", "bettercc.onSubmit();");
-  $('form[name="hold"]').on("submit", function (e: any) {
-    e.preventDefault();
-  });
+  if (holdForm) {
+    holdForm.setAttribute("onsubmit", "bettercc.onSubmit();");
+    holdForm.addEventListener("submit", function (e: Event) {
+      e.preventDefault();
+    });
+  }
 
   // add superwhisper to userlist popup
-  $("#fuu :nth-child(4)").after(
-    '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>'
-  );
+  const fuuFourth = document.querySelector("#fuu > :nth-child(4)");
+  if (fuuFourth) {
+    fuuFourth.insertAdjacentHTML("afterend",
+      '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">» Superwhisper</a>'
+    );
+  }
 
   (async function () {
     try {
@@ -125,10 +132,10 @@ export function replaceOnSubmit(userStore: string): void {
   })();
 
   (unsafeWindow.bettercc as any).superwhisper = async function (whispernick: string, toggle: boolean = true) {
-    let form = $('form[name="hold');
-    let input = $("#custom_input_text");
-    let submitStr = null;
-    let placeholderStr = null;
+    let form = document.querySelector('form[name="hold"]') as HTMLFormElement | null;
+    let input = document.getElementById("custom_input_text") as HTMLInputElement | null;
+    let submitStr: string | null = null;
+    let placeholderStr: string | null = null;
     let currentWhisperNick = await GM.getValue(userStoreWhisper);
 
     if (
@@ -147,7 +154,7 @@ export function replaceOnSubmit(userStore: string): void {
         "  |  " +
         "Hilfe: /help";
 
-      input.removeClass("superwhisper");
+      if (input) input.classList.remove("superwhisper");
       await GM.setValue(userStoreWhisper, "");
     } else {
       submitStr = 'bettercc.onSubmit("' + whispernick + '");';
@@ -162,14 +169,12 @@ export function replaceOnSubmit(userStore: string): void {
         "  |  " +
         "Hilfe: /help";
 
-      input.addClass("superwhisper");
+      if (input) input.classList.add("superwhisper");
       await GM.setValue(userStoreWhisper, whispernick);
     }
-    form.attr("onsubmit", submitStr);
-    input.attr("placeholder", placeholderStr);
-    $(".ulist-popup").hide();
+    if (form) form.setAttribute("onsubmit", submitStr!);
+    if (input) input.placeholder = placeholderStr!;
+    const popup = document.querySelector(".ulist-popup") as HTMLElement | null;
+    if (popup) popup.style.display = "none";
   };
 }
-
-// References from other modules
-import { printHelp, superbanEnable } from "./utils";

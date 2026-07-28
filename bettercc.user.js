@@ -756,7 +756,8 @@
   // src/commands.ts
   function replaceOnSubmit(userStore2) {
     let userStoreWhisper = "whisper_" + userStore2;
-    let onSubmitOrigStr = $('form[name="hold').attr("onsubmit");
+    const holdForm = document.querySelector('form[name="hold"]');
+    let onSubmitOrigStr = holdForm?.getAttribute("onsubmit") || "";
     onSubmitOrigStr = onSubmitOrigStr.replace(
       'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){',
       'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){'
@@ -769,11 +770,12 @@
       let superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
       let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
       let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
-      let mymsg = document.hold.OUT1.value.trim();
+      let docHold = document.hold;
+      let mymsg = docHold.OUT1.value.trim();
       if (mymsg.toLowerCase() === "/bettercc" || mymsg.toLowerCase() === "/help") {
         printHelp();
         mymsg = "";
-        document.hold.OUT1.value = mymsg;
+        docHold.OUT1.value = mymsg;
         return false;
       }
       if (superbanEnable) {
@@ -782,7 +784,7 @@
           let banlistNotify = (await unsafeWindow.bettercc.getSuperbans()).join("\n").toString();
           ccnotify(banlistNotify, "Better Ignore", "banlist", 3e4);
           mymsg = "";
-          document.hold.OUT1.value = mymsg;
+          docHold.OUT1.value = mymsg;
           return false;
         }
         if (superbanMsgCmdRegex.test(mymsg.toLowerCase())) {
@@ -790,27 +792,27 @@
           unsafeWindow.bettercc.superban(mymsg);
           cclog("Superban:" + mymsg);
           mymsg = "";
-          document.hold.OUT1.value = mymsg;
+          docHold.OUT1.value = mymsg;
           return false;
         }
       }
       if (mymsg.toLowerCase() === "/open") {
         unsafeWindow.bettercc.superwhisper("");
         mymsg = "";
-        document.hold.OUT1.value = mymsg;
+        docHold.OUT1.value = mymsg;
         return false;
       }
       if (mymsg.toLowerCase() === "/reload") {
         unsafeWindow.bettercc.reloadChat();
         mymsg = "";
-        document.hold.OUT1.value = mymsg;
+        docHold.OUT1.value = mymsg;
         return false;
       }
       if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
         mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
         unsafeWindow.bettercc.superwhisper(mymsg, false);
         mymsg = "";
-        document.hold.OUT1.value = mymsg;
+        docHold.OUT1.value = mymsg;
         return false;
       }
       if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
@@ -820,16 +822,22 @@
           mymsg = "/w " + whispernick + " " + mymsg;
         }
       }
-      document.hold.OUT1.value = mymsg;
+      docHold.OUT1.value = mymsg;
       onSubmitOrig();
     };
-    $('form[name="hold"]').attr("onsubmit", "bettercc.onSubmit();");
-    $('form[name="hold"]').on("submit", function(e) {
-      e.preventDefault();
-    });
-    $("#fuu :nth-child(4)").after(
-      '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">\xBB Superwhisper</a>'
-    );
+    if (holdForm) {
+      holdForm.setAttribute("onsubmit", "bettercc.onSubmit();");
+      holdForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+      });
+    }
+    const fuuFourth = document.querySelector("#fuu > :nth-child(4)");
+    if (fuuFourth) {
+      fuuFourth.insertAdjacentHTML(
+        "afterend",
+        '<a href="javascript://" class="button superwhisper" id="superwhisper" onclick="bettercc.superwhisper(last_id);">\xBB Superwhisper</a>'
+      );
+    }
     (async function() {
       try {
         var whisperUser = await GM.getValue(userStoreWhisper);
@@ -840,25 +848,26 @@
       unsafeWindow.bettercc.superwhisper(whisperUser, false);
     })();
     unsafeWindow.bettercc.superwhisper = async function(whispernick, toggle = true) {
-      let form = $('form[name="hold');
-      let input = $("#custom_input_text");
+      let form = document.querySelector('form[name="hold"]');
+      let input = document.getElementById("custom_input_text");
       let submitStr = null;
       let placeholderStr = null;
       let currentWhisperNick = await GM.getValue(userStoreWhisper);
       if (toggle && currentWhisperNick.toLowerCase() === whispernick.toLowerCase() || whispernick === "" || whispernick === void 0) {
         submitStr = "bettercc.onSubmit();";
         placeholderStr = "Du chattest mit allen...\n\nSuperwhisper: /sw Sariam  |  Ban: /sb Wendigo  |  Hilfe: /help";
-        input.removeClass("superwhisper");
+        if (input) input.classList.remove("superwhisper");
         await GM.setValue(userStoreWhisper, "");
       } else {
         submitStr = 'bettercc.onSubmit("' + whispernick + '");';
         placeholderStr = "Du fl\xFCsterst mit " + whispernick + "...\n\nSuperwhisper aus: /open  |  /o Hi All :)  |  Hilfe: /help";
-        input.addClass("superwhisper");
+        if (input) input.classList.add("superwhisper");
         await GM.setValue(userStoreWhisper, whispernick);
       }
-      form.attr("onsubmit", submitStr);
-      input.attr("placeholder", placeholderStr);
-      $(".ulist-popup").hide();
+      if (form) form.setAttribute("onsubmit", submitStr);
+      if (input) input.placeholder = placeholderStr;
+      const popup = document.querySelector(".ulist-popup");
+      if (popup) popup.style.display = "none";
     };
   }
 
