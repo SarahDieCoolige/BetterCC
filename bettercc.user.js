@@ -875,6 +875,26 @@
               e.stopPropagation();
               window.open(fullUrl, "_blank");
             });
+            thumb.addEventListener("mouseenter", function(e) {
+              const preview = document.getElementById("bcc-id-thumb-preview");
+              if (preview) {
+                preview.src = fullUrl;
+                preview.style.display = "block";
+                preview.style.left = e.clientX + 16 + "px";
+                preview.style.top = e.clientY - 75 + "px";
+              }
+            });
+            thumb.addEventListener("mousemove", function(e) {
+              const preview = document.getElementById("bcc-id-thumb-preview");
+              if (preview && preview.style.display === "block") {
+                preview.style.left = e.clientX + 16 + "px";
+                preview.style.top = e.clientY - 75 + "px";
+              }
+            });
+            thumb.addEventListener("mouseleave", function() {
+              const preview = document.getElementById("bcc-id-thumb-preview");
+              if (preview) preview.style.display = "none";
+            });
           }
           thumb.addEventListener("error", function() {
             thumb.style.display = "none";
@@ -946,6 +966,10 @@
     card.appendChild(searchArea);
     card.appendChild(results);
     overlay.appendChild(card);
+    const thumbPreview = document.createElement("img");
+    thumbPreview.id = "bcc-id-thumb-preview";
+    thumbPreview.className = "bcc-id-thumb-preview";
+    overlay.appendChild(thumbPreview);
     document.body.appendChild(overlay);
     if (!prename) searchInput.focus();
     function closePopup() {
