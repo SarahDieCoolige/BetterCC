@@ -103,5 +103,16 @@ describe("command regexes", () => {
       expect(idMsgCmdRegex.test("/ID janedoe".toLowerCase())).toBe(true);
       expect(idMsgCmdRegex.test("/Id JaneDoe".toLowerCase())).toBe(true);
     });
+
+    it("does not interfere with other commands", () => {
+      // /help, /sb, /sw, /open, /o should still match their own regexes
+      expect(superbanMsgCmdRegex.test("/sb test")).toBe(true);
+      expect(superwhisperMsgCmdRegex.test("/sw test")).toBe(true);
+      expect(openMsgCmdRegex.test("/o test")).toBe(true);
+      // And /id should NOT match these
+      expect(idMsgCmdRegex.test("/sb")).toBe(false);
+      expect(idMsgCmdRegex.test("/sw")).toBe(false);
+      expect(idMsgCmdRegex.test("/open")).toBe(false);
+    });
   });
 });
