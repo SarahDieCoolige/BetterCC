@@ -769,6 +769,229 @@
     });
     footerTable.replaceWith(footer);
   }
+  function showIdPopup(prename) {
+    const existing = document.querySelector(".bcc-id-overlay");
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.className = "bcc-id-overlay";
+    const card = document.createElement("div");
+    card.className = "bcc-id-card";
+    card.style.left = "50%";
+    card.style.top = "50%";
+    card.style.transform = "translate(-50%, -50%)";
+    const header = document.createElement("div");
+    header.className = "bcc-id-header";
+    const title = document.createElement("span");
+    title.className = "bcc-id-title";
+    title.textContent = "ID Suche";
+    header.appendChild(title);
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "bcc-id-close";
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    header.appendChild(closeBtn);
+    const searchArea = document.createElement("div");
+    searchArea.className = "bcc-id-search";
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.placeholder = "Username...";
+    searchInput.value = prename;
+    const searchBtn = document.createElement("button");
+    searchBtn.textContent = "Suchen";
+    searchArea.appendChild(searchInput);
+    searchArea.appendChild(searchBtn);
+    const results = document.createElement("div");
+    results.className = "bcc-id-results";
+    const loadingEl = document.createElement("div");
+    loadingEl.className = "bcc-id-loading";
+    loadingEl.textContent = "Wird geladen...";
+    let activeRequest = false;
+    function stripThumbnailSuffix(url) {
+      return url.replace(/_(\d+)\.jpg$/i, ".jpg");
+    }
+    function renderError(msg) {
+      results.innerHTML = "";
+      const err = document.createElement("div");
+      err.className = "bcc-id-error";
+      err.textContent = msg;
+      results.appendChild(err);
+    }
+    function renderResults(html) {
+      results.innerHTML = "";
+      if (!html || html.length < 30) {
+        renderError("Kein Ergebnis gefunden.");
+        return;
+      }
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      const valueDivs = tmp.querySelectorAll(".value");
+      const rows = [];
+      for (let i = 0; i < valueDivs.length; i++) {
+        const div = valueDivs[i];
+        const img = div.querySelector("img[src*='userfiles']");
+        const link = div.querySelector("a[href*='/id/']");
+        if (img && !link) {
+          const nextDiv = valueDivs[i + 1];
+          if (nextDiv) {
+            const nameLink = nextDiv.querySelector("a[href*='/id/']");
+            if (nameLink) {
+              const name = (nameLink.textContent || "").trim().replace(/^»\s*/, "");
+              rows.push({ name: name || "Unbekannt", href: nameLink.href, imgUrl: img.src });
+              i++;
+            }
+          }
+        } else if (link && !img) {
+          const name = (link.textContent || "").trim().replace(/^»\s*/, "");
+          if (name) rows.push({ name, href: link.href, imgUrl: null });
+        } else if (img && link) {
+          const name = (link.textContent || "").trim().replace(/^»\s*/, "");
+          rows.push({ name: name || "Unbekannt", href: link.href, imgUrl: img.src });
+        }
+      }
+      if (rows.length === 0) {
+        renderError("Kein Ergebnis gefunden.");
+        return;
+      }
+      rows.forEach(function(row) {
+        const rowEl = document.createElement("div");
+        rowEl.className = "bcc-id-row";
+        if (row.imgUrl) {
+          const thumb = document.createElement("img");
+          thumb.src = row.imgUrl;
+          thumb.className = "bcc-id-thumb";
+          const fullUrl = stripThumbnailSuffix(row.imgUrl);
+          if (fullUrl !== row.imgUrl && !/default/i.test(fullUrl)) {
+            thumb.classList.add("bcc-id-thumb-clickable");
+            thumb.title = "Bild in voller Gr\xF6\xDFe \xF6ffnen";
+            thumb.addEventListener("click", function(e) {
+              e.stopPropagation();
+              window.open(fullUrl, "_blank");
+            });
+          }
+          thumb.addEventListener("error", function() {
+            thumb.style.display = "none";
+          });
+          rowEl.appendChild(thumb);
+        }
+        const nameLink = document.createElement("a");
+        nameLink.textContent = row.name;
+        nameLink.href = row.href;
+        nameLink.target = "_blank";
+        nameLink.className = "bcc-id-name";
+        nameLink.title = "ID-Card \xF6ffnen";
+        rowEl.appendChild(nameLink);
+        results.appendChild(rowEl);
+      });
+    }
+    function doSearch(name) {
+      if (!name) return;
+      results.innerHTML = "";
+      results.appendChild(loadingEl);
+      activeRequest = true;
+      const pajax = unsafeWindow.PAJAX || "https://www.chatcity.de/de/";
+      const url = pajax + "obj_list.html";
+      const AjaxLib = unsafeWindow.ajax || window.ajax;
+      const params = [
+        "TYP=1",
+        "_EN_OBJ_ORDER_SORT_SHOW=",
+        "ORD=0",
+        "SORT=1",
+        "START=0",
+        "_LIST_WRAPPER_ID=bccid",
+        "EXT=allbychar",
+        "_KW_allbychar=" + encodeURIComponent(name),
+        "LOADDEF=3",
+        "LOADDEF_EXTRA_USER=",
+        "LOADDEF_EXTRA=",
+        "_LIST_LINK_ALL=",
+        "STYP=",
+        "LOADDEF_CUSTOM=allbychar",
+        "CACHE=3600",
+        "OPENW=1",
+        "ISCHAT=1"
+      ].join("&");
+      const failTimer = setTimeout(function() {
+        if (!activeRequest) return;
+        activeRequest = false;
+        renderError("Zeit\xFCberschreitung \u2014 ID-Card kann trotzdem ge\xF6ffnet werden.");
+      }, 8e3);
+      new AjaxLib(url, {
+        postBody: params,
+        onComplete: function(transport) {
+          clearTimeout(failTimer);
+          if (!activeRequest) return;
+          activeRequest = false;
+          try {
+            const html = transport.responseText || "";
+            if (html && html.length > 30) {
+              renderResults(html);
+            } else {
+              renderError("Kein Ergebnis gefunden.");
+            }
+          } catch (e) {
+            renderError("Fehler beim Verarbeiten der Antwort.");
+          }
+        }
+      });
+    }
+    card.appendChild(header);
+    card.appendChild(searchArea);
+    card.appendChild(results);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    if (!prename) searchInput.focus();
+    function closePopup() {
+      activeRequest = false;
+      overlay.remove();
+      document.removeEventListener("keydown", onKeyDown);
+    }
+    function onKeyDown(e) {
+      if (e.key === "Escape") closePopup();
+    }
+    closeBtn.addEventListener("click", closePopup);
+    overlay.addEventListener("click", function(e) {
+      if (e.target === overlay) closePopup();
+    });
+    document.addEventListener("keydown", onKeyDown);
+    card.addEventListener("click", function(e) {
+      e.stopPropagation();
+    });
+    let dragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let cardStartLeft = 0;
+    let cardStartTop = 0;
+    header.addEventListener("mousedown", function(e) {
+      if (e.target.closest(".bcc-id-close")) return;
+      dragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      cardStartLeft = card.offsetLeft;
+      cardStartTop = card.offsetTop;
+      card.style.transform = "";
+      e.preventDefault();
+    });
+    document.addEventListener("mousemove", function(e) {
+      if (!dragging) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      let left = cardStartLeft + dx;
+      let top = cardStartTop + dy;
+      left = Math.max(0, Math.min(left, window.innerWidth - card.offsetWidth));
+      top = Math.max(0, Math.min(top, window.innerHeight - card.offsetHeight));
+      card.style.left = left + "px";
+      card.style.top = top + "px";
+    });
+    document.addEventListener("mouseup", function() {
+      dragging = false;
+    });
+    searchInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") doSearch(searchInput.value.trim());
+    });
+    searchBtn.addEventListener("click", function() {
+      doSearch(searchInput.value.trim());
+    });
+    if (prename) doSearch(prename);
+  }
 
   // src/commands.ts
   function replaceOnSubmit(userStore2) {
@@ -812,6 +1035,15 @@
           docHold.OUT1.value = mymsg;
           return false;
         }
+      }
+      let idMsgCmdRegex = /^\/id\b/i;
+      let idMsgArgRegex = /^\/id\s+/i;
+      if (idMsgCmdRegex.test(mymsg.toLowerCase())) {
+        let name = mymsg.replace(idMsgArgRegex, "").replace(/^\/id$/i, "").trim();
+        unsafeWindow.bettercc.showIdPopup(name);
+        mymsg = "";
+        docHold.OUT1.value = mymsg;
+        return false;
       }
       if (mymsg.toLowerCase() === "/open") {
         unsafeWindow.bettercc.superwhisper("");
@@ -1124,6 +1356,7 @@
     "use strict";
     cclog("Version: " + GM_info.script.version + " - " + window.location.href);
     var bettercc = unsafeWindow.bettercc = {};
+    bettercc.showIdPopup = showIdPopup;
     if (/cpop.html/.test(window.location.href)) {
       window.onunload = null;
       window.onbeforeunload = null;

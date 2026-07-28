@@ -99,6 +99,13 @@ describe("command regexes", () => {
       expect("/id multi word name".replace(idMsgArgRegex, "")).toBe("multi word name");
     });
 
+    it("extracts empty string for /id alone (no name)", () => {
+      // Bug: /^\/id\s+/i doesn't match bare /id, replace leaves "/id" intact.
+      // Expected: /id alone should yield empty string, not "/id".
+      const result = "/id".replace(idMsgArgRegex, "").replace(/^\/id$/i, "");
+      expect(result).toBe("");
+    });
+
     it("case insensitive via toLowerCase", () => {
       expect(idMsgCmdRegex.test("/ID janedoe".toLowerCase())).toBe(true);
       expect(idMsgCmdRegex.test("/Id JaneDoe".toLowerCase())).toBe(true);
