@@ -67,7 +67,7 @@ export function replaceOnSubmit(userStore: string): void {
     let idMsgCmdRegex = /^\/id\b/i;
     let idMsgArgRegex = /^\/id\s+/i;
     if (idMsgCmdRegex.test(mymsg.toLowerCase())) {
-      let name = mymsg.replace(idMsgArgRegex, "").trim();
+      let name = mymsg.replace(idMsgArgRegex, "").replace(/^\/id$/i, "").trim();
       (unsafeWindow.bettercc as any).showIdPopup(name);
       mymsg = "";
       docHold.OUT1.value = mymsg;
