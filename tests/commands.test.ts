@@ -9,6 +9,8 @@ const superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
 const superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
 const superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
 const superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
+const idMsgCmdRegex = /^\/id\b/i;
+const idMsgArgRegex = /^\/id\s+/i;
 
 describe("command regexes", () => {
   describe("open message", () => {
@@ -66,12 +68,40 @@ describe("command regexes", () => {
       expect(superbanMsgCmdRegex.test("/SB Test".toLowerCase())).toBe(true);
       expect(superwhisperMsgCmdRegex.test("/SW Test".toLowerCase())).toBe(true);
       expect(openMsgCmdRegex.test("/O Test".toLowerCase())).toBe(true);
+      expect(idMsgCmdRegex.test("/ID Test".toLowerCase())).toBe(true);
     });
 
     it("exact commands without args don't match cmd regex", () => {
       // These should NOT match the "with args" regexes
       expect(superbanMsgCmdRegex.test("/superban")).toBe(false);
       expect(superwhisperMsgCmdRegex.test("/superwhisper")).toBe(false);
+    });
+  });
+
+  describe("/id command", () => {
+    it("matches /id alone (bare command)", () => {
+      expect(idMsgCmdRegex.test("/id")).toBe(true);
+      expect(idMsgCmdRegex.test("/ID")).toBe(true);
+    });
+
+    it("matches /id with name argument", () => {
+      expect(idMsgCmdRegex.test("/id janedoe")).toBe(true);
+      expect(idMsgCmdRegex.test("/id multi word name")).toBe(true);
+    });
+
+    it("does not match /idea or other commands", () => {
+      expect(idMsgCmdRegex.test("/idea")).toBe(false);
+      expect(idMsgCmdRegex.test("/idle")).toBe(false);
+    });
+
+    it("extracts name after /id prefix", () => {
+      expect("/id janedoe".replace(idMsgArgRegex, "")).toBe("janedoe");
+      expect("/id multi word name".replace(idMsgArgRegex, "")).toBe("multi word name");
+    });
+
+    it("case insensitive via toLowerCase", () => {
+      expect(idMsgCmdRegex.test("/ID janedoe".toLowerCase())).toBe(true);
+      expect(idMsgCmdRegex.test("/Id JaneDoe".toLowerCase())).toBe(true);
     });
   });
 });

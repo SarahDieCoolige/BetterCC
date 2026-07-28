@@ -63,6 +63,17 @@ export function replaceOnSubmit(userStore: string): void {
       }
     }
 
+    // /id command — mini-ID popup
+    let idMsgCmdRegex = /^\/id\b/i;
+    let idMsgArgRegex = /^\/id\s+/i;
+    if (idMsgCmdRegex.test(mymsg.toLowerCase())) {
+      let name = mymsg.replace(idMsgArgRegex, "").trim();
+      (unsafeWindow.bettercc as any).showIdPopup(name);
+      mymsg = "";
+      docHold.OUT1.value = mymsg;
+      return false;
+    }
+
     // IS "/open"
     if (mymsg.toLowerCase() === "/open") {
       (unsafeWindow.bettercc as any).superwhisper("");
