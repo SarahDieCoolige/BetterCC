@@ -291,7 +291,7 @@ export function betterInput(replace: boolean): void {
       inputText.placeholder = "Du chattest mit allen...";
     }
   } catch (error: any) {
-    console.error("An error occurred in betterInput:", error.message);
+    cclog("betterInput error: " + error.message);
 
     if (replace && originalInput && form) {
       const customInput = form.querySelector("#custom_input_text");

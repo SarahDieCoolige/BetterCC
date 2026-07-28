@@ -367,10 +367,10 @@ export function doColorStuff(
             let bg = await GM.getValue(userStoreColor, bgDef);
             let storedScheme = await GM.getValue(userStoreColorScheme, null);
 
-            console.log("BetterCC: Color mutation detected");
+            cclogFn("Color mutation detected");
 
             if (storedScheme && storedScheme.bgColor === bg) {
-              console.log("BetterCC: Reapplying stored colors for", bg);
+              cclogFn("Reapplying stored colors for " + bg);
               applyStoredColors(storedScheme);
             } else {
               setTheme();

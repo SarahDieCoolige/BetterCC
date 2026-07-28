@@ -67,16 +67,6 @@
       });
     }
   }
-  var helptxt = [
-    "/sw Sariam	Superwhisper mit Sariam",
-    "/o Hi All :)	Im Open schreiben",
-    "/open 		Superwhisper aus",
-    "/sb Wendigo	Einen Arsch f\xFCr immer ignorieren (noch mal zum entbannen)",
-    "/superban	Arschliste anzeigen",
-    "/reload		Chat neu laden (mimimi)",
-    "/settings	Einstellungen \xF6ffnen (irgendwann mal vielleicht^^)",
-    "/help		So zeigst du diese Hilfe hier an"
-  ].join("\n");
   var helptxtNotify = [
     "/sw sariam - sw an",
     "/o hi all :) - ins open",
@@ -418,9 +408,9 @@
               isApplyingColors = true;
               let bg = await GM.getValue(userStoreColor, bgDef);
               let storedScheme = await GM.getValue(userStoreColorScheme, null);
-              console.log("BetterCC: Color mutation detected");
+              cclogFn("Color mutation detected");
               if (storedScheme && storedScheme.bgColor === bg) {
-                console.log("BetterCC: Reapplying stored colors for", bg);
+                cclogFn("Reapplying stored colors for " + bg);
                 applyStoredColors(storedScheme);
               } else {
                 setTheme();
@@ -674,7 +664,7 @@
         inputText.placeholder = "Du chattest mit allen...";
       }
     } catch (error) {
-      console.error("An error occurred in betterInput:", error.message);
+      cclog("betterInput error: " + error.message);
       if (replace && originalInput && form) {
         const customInput = form.querySelector("#custom_input_text");
         if (customInput) customInput.replaceWith(originalInput);

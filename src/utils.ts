@@ -51,33 +51,6 @@ export function cclogChat(message: string, name: string = "BetterCC", newLineAft
   printInChat("beforeend", message);
 }
 
-export const helpStrings: string[][] = [
-  ["/sw Sariam", "Superwhisper mit Sariam"],
-  ["/o Hi All :)", "Im Open schreiben"],
-  ["/open", "Superwhisper aus"],
-  [
-    "/sb Wendigo",
-    "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
-  ],
-  ["/superban", "Arschliste anzeigen"],
-  ["/reload", "Chat neu laden (mimimi)"],
-  ["/settings", "Einstellungen öffnen (irgendwann mal vielleicht^^)"],
-  ["/help", "So zeigst du diese Hilfe hier an"],
-];
-
-export const helptxt: string = [
-  "/sw Sariam" + "\t" + "Superwhisper mit Sariam",
-  "/o Hi All :)" + "\t" + "Im Open schreiben",
-  "/open" + " \t\t" + "Superwhisper aus",
-  "/sb Wendigo" +
-    "\t" +
-    "Einen Arsch für immer ignorieren (noch mal zum entbannen)",
-  "/superban" + "\t" + "Arschliste anzeigen",
-  "/reload" + "\t\t" + "Chat neu laden (mimimi)",
-  "/settings" + "\t" + "Einstellungen öffnen (irgendwann mal vielleicht^^)",
-  "/help" + "\t\t" + "So zeigst du diese Hilfe hier an",
-].join("\n");
-
 export const helptxtNotify: string = [
   "/sw sariam" + " - " + "sw an",
   "/o hi all :)" + " - " + "ins open",
