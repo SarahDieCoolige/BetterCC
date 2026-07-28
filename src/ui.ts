@@ -461,93 +461,57 @@ function encodeIdUrl(name: string): string {
 
 export function showIdPopup(prename: string): void {
   // Remove any existing popup
-  const existing = document.querySelector("#bcc-id-overlay") as HTMLElement | null;
+  const existing = document.querySelector(".bcc-id-overlay") as HTMLElement | null;
   if (existing) existing.remove();
 
   // ─── Overlay ───
   const overlay = document.createElement("div");
-  overlay.id = "bcc-id-overlay";
-  overlay.style.cssText =
-    "position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1000;" +
-    "display:flex;align-items:center;justify-content:center;";
+  overlay.className = "bcc-id-overlay";
 
   // ─── Card ───
   const card = document.createElement("div");
-  card.style.cssText =
-    "background:var(--inputBackground);color:var(--inputText);" +
-    "width:350px;max-height:70vh;border-radius:8px;" +
-    "box-shadow:0 0 12px rgba(0,0,0,0.25);z-index:1001;" +
-    "display:flex;flex-direction:column;overflow:hidden;";
+  card.className = "bcc-id-card";
+  // Center initially (drag will override with pixel values in Task 3)
+  card.style.left = "50%";
+  card.style.top = "50%";
+  card.style.transform = "translate(-50%, -50%)";
 
   // ─── Header ───
   const header = document.createElement("div");
-  header.style.cssText =
-    "display:flex;justify-content:space-between;align-items:center;" +
-    "padding:12px 16px;border-bottom:1px solid var(--footerBackground);";
+  header.className = "bcc-id-header";
 
   const title = document.createElement("span");
+  title.className = "bcc-id-title";
   title.textContent = "ID Suche";
-  title.style.cssText = "font-weight:600;font-size:14px;";
   header.appendChild(title);
 
   const closeBtn = document.createElement("button");
+  closeBtn.className = "bcc-id-close";
   closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-  closeBtn.style.cssText =
-    "background:none;border:none;color:var(--iconColor);" +
-    "cursor:pointer;font-size:14px;padding:4px 8px;";
   header.appendChild(closeBtn);
 
   // ─── Search area ───
   const searchArea = document.createElement("div");
-  searchArea.style.cssText = "padding:12px 16px;display:flex;gap:8px;";
+  searchArea.className = "bcc-id-search";
 
   const searchInput = document.createElement("input");
   searchInput.type = "text";
   searchInput.placeholder = "Username...";
   searchInput.value = prename;
-  searchInput.style.cssText =
-    "flex:1;padding:6px 10px;border:1px solid var(--footerBackground);" +
-    "border-radius:4px;background:var(--inputBackground);color:var(--inputText);" +
-    "font-size:14px;outline:none;";
 
   const searchBtn = document.createElement("button");
   searchBtn.textContent = "Suchen";
-  searchBtn.style.cssText =
-    "background:var(--buttonColor);color:var(--buttonText);" +
-    "border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px;";
 
-  // ─── ID link area ───
-  const linkArea = document.createElement("div");
-  linkArea.style.cssText = "padding:0 16px 8px;";
-
-  function updateIdLink(name: string): void {
-    linkArea.innerHTML = "";
-    if (!name) return;
-    const encoded = encodeIdUrl(name);
-    const link = document.createElement("a");
-    link.textContent = name;
-    link.href = "//www.chatcity.de/de/id/" + encoded + ".html";
-    link.target = "_blank";
-    link.style.cssText =
-      "color:var(--buttonColor);text-decoration:none;font-size:13px;";
-    link.title = "ID-Card öffnen";
-    const arrow = document.createElement("span");
-    arrow.textContent = " →";
-    arrow.style.fontSize = "11px";
-    link.appendChild(arrow);
-    linkArea.appendChild(link);
-  }
-
-  updateIdLink(prename);
+  searchArea.appendChild(searchInput);
+  searchArea.appendChild(searchBtn);
 
   // ─── Results container ───
   const results = document.createElement("div");
-  results.style.cssText =
-    "padding:0 16px 12px;overflow-y:auto;flex:1;min-height:0;";
+  results.className = "bcc-id-results";
 
   const loadingEl = document.createElement("div");
+  loadingEl.className = "bcc-id-loading";
   loadingEl.textContent = "Wird geladen...";
-  loadingEl.style.cssText = "text-align:center;color:var(--placeholderColor);font-size:13px;";
 
   // ─── Fetch & render ───
   let activeRequest = false;
@@ -559,8 +523,8 @@ export function showIdPopup(prename: string): void {
   function renderError(msg: string): void {
     results.innerHTML = "";
     const err = document.createElement("div");
+    err.className = "bcc-id-error";
     err.textContent = msg;
-    err.style.cssText = "text-align:center;color:var(--superbancolor);font-size:13px;padding:16px 0;";
     results.appendChild(err);
   }
 
@@ -571,76 +535,73 @@ export function showIdPopup(prename: string): void {
       return;
     }
 
-    // Try structured extraction: find user entries with images and ID links
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = html;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
 
-    // Make all images clickable → full-size
-    wrapper.querySelectorAll("img").forEach(function (img: HTMLImageElement) {
-      if (/userfiles\//i.test(img.src)) {
-        img.style.cssText =
-          "width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;flex-shrink:0;";
-        img.title = "Bild in voller Größe öffnen";
-        const fullUrl = stripThumbnailSuffix(img.src);
-        img.addEventListener("click", function (e: Event) {
-          e.preventDefault();
-          e.stopPropagation();
-          window.open(fullUrl, "_blank");
-        });
-      }
-    });
+    const valueDivs = tmp.querySelectorAll(".value");
+    const rows: { name: string; href: string; imgUrl: string | null }[] = [];
 
-    // Make all ID links open in new tab
-    wrapper.querySelectorAll("a").forEach(function (a: HTMLAnchorElement) {
-      if (/\/id\//i.test(a.href)) {
-        a.target = "_blank";
-        a.style.cssText = "color:var(--buttonColor);text-decoration:none;";
-        a.title = "ID-Card öffnen";
-      }
-    });
+    for (let i = 0; i < valueDivs.length; i++) {
+      const div = valueDivs[i];
+      const img = div.querySelector("img[src*='userfiles']") as HTMLImageElement | null;
+      const link = div.querySelector("a[href*='/id/']") as HTMLAnchorElement | null;
 
-    // Clean up unwanted elements from the response
-    wrapper.querySelectorAll("br, hr, script, .pager, .pager_cl, .pager-botom").forEach(function (el) {
-      el.remove();
-    });
-
-    // If the response has structured .value divs, restructure into rows
-    const valueDivs = wrapper.querySelectorAll(".value");
-    if (valueDivs.length > 0) {
-      const grid = document.createElement("div");
-      grid.style.cssText =
-        "display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;";
-
-      valueDivs.forEach(function (div: Element) {
-        const img = div.querySelector("img[src*='userfiles']") as HTMLImageElement | null;
-        const link = div.querySelector("a[href*='/id/']") as HTMLAnchorElement | null;
-        if (img && link) {
-          const card = document.createElement("div");
-          card.style.cssText = "text-align:center;";
-          card.appendChild(img);
-          const nameEl = document.createElement("div");
-          const nameLink = document.createElement("a");
-          nameLink.href = link.href;
-          nameLink.target = "_blank";
-          nameLink.textContent = (link.textContent || "").trim().replace(/^»\s*/, "");
-          nameLink.style.cssText =
-            "color:var(--buttonColor);text-decoration:none;font-size:11px;word-break:break-all;";
-          nameLink.title = "ID-Card öffnen";
-          nameEl.appendChild(nameLink);
-          card.appendChild(nameEl);
-          grid.appendChild(card);
+      if (img && !link) {
+        const nextDiv = valueDivs[i + 1];
+        if (nextDiv) {
+          const nameLink = nextDiv.querySelector("a[href*='/id/']") as HTMLAnchorElement | null;
+          if (nameLink) {
+            const name = (nameLink.textContent || "").trim().replace(/^»\s*/, "");
+            rows.push({ name: name || "Unbekannt", href: nameLink.href, imgUrl: img.src });
+            i++;
+          }
         }
-      });
-
-      if (grid.children.length > 0) {
-        results.appendChild(grid);
-        return;
+      } else if (link && !img) {
+        const name = (link.textContent || "").trim().replace(/^»\s*/, "");
+        if (name) rows.push({ name, href: link.href, imgUrl: null });
+      } else if (img && link) {
+        const name = (link.textContent || "").trim().replace(/^»\s*/, "");
+        rows.push({ name: name || "Unbekannt", href: link.href, imgUrl: img.src });
       }
     }
 
-    // Fallback: render cleaned HTML as-is
-    wrapper.style.color = "var(--inputText)";
-    results.appendChild(wrapper);
+    if (rows.length === 0) {
+      renderError("Kein Ergebnis gefunden.");
+      return;
+    }
+
+    rows.forEach(function (row) {
+      const rowEl = document.createElement("div");
+      rowEl.className = "bcc-id-row";
+
+      if (row.imgUrl) {
+        const thumb = document.createElement("img");
+        thumb.src = row.imgUrl;
+        thumb.className = "bcc-id-thumb";
+        const fullUrl = stripThumbnailSuffix(row.imgUrl);
+        if (fullUrl !== row.imgUrl && !/default/i.test(fullUrl)) {
+          thumb.classList.add("bcc-id-thumb-clickable");
+          thumb.title = "Bild in voller Größe öffnen";
+          thumb.addEventListener("click", function (e: Event) {
+            e.stopPropagation();
+            window.open(fullUrl, "_blank");
+          });
+        }
+        thumb.addEventListener("error", function () {
+          thumb.style.display = "none";
+        });
+        rowEl.appendChild(thumb);
+      }
+
+      const nameLink = document.createElement("a");
+      nameLink.textContent = row.name;
+      nameLink.href = row.href;
+      nameLink.target = "_blank";
+      nameLink.className = "bcc-id-name";
+      nameLink.title = "ID-Card öffnen";
+      rowEl.appendChild(nameLink);
+      results.appendChild(rowEl);
+    });
   }
 
   function doSearch(name: string): void {
@@ -651,10 +612,8 @@ export function showIdPopup(prename: string): void {
 
     const pajax = (unsafeWindow as any).PAJAX || "https://www.chatcity.de/de/";
     const url = pajax + "obj_list.html";
-    const w = unsafeWindow as any;
-    const AjaxLib = w.ajax || (window as any).ajax;
+    const AjaxLib = (unsafeWindow as any).ajax || (window as any).ajax;
 
-    // Build request body matching searchuser() from main page
     const params = [
       "TYP=1",
       "_EN_OBJ_ORDER_SORT_SHOW=",
@@ -672,20 +631,9 @@ export function showIdPopup(prename: string): void {
       "LOADDEF_CUSTOM=allbychar",
       "CACHE=3600",
       "OPENW=1",
-      "ISCHAT=0",
+      "ISCHAT=1",
     ].join("&");
 
-    // Create hidden target div for the ajax library's update option
-    const wrapperId = "obj_list_wrapperbccid";
-    let wrapper = document.getElementById(wrapperId);
-    if (!wrapper) {
-      wrapper = document.createElement("div");
-      wrapper.id = wrapperId;
-      wrapper.style.display = "none";
-      document.body.appendChild(wrapper);
-    }
-
-    // Timeout fallback
     const failTimer = setTimeout(function () {
       if (!activeRequest) return;
       activeRequest = false;
@@ -694,13 +642,12 @@ export function showIdPopup(prename: string): void {
 
     new AjaxLib(url, {
       postBody: params,
-      update: wrapperId,
-      onComplete: function () {
+      onComplete: function (transport: any) {
         clearTimeout(failTimer);
         if (!activeRequest) return;
         activeRequest = false;
         try {
-          const html = wrapper ? wrapper.innerHTML : "";
+          const html = transport.responseText || "";
           if (html && html.length > 30) {
             renderResults(html);
           } else {
@@ -714,11 +661,8 @@ export function showIdPopup(prename: string): void {
   }
 
   // ─── Assemble ───
-  searchArea.appendChild(searchInput);
-  searchArea.appendChild(searchBtn);
   card.appendChild(header);
   card.appendChild(searchArea);
-  card.appendChild(linkArea);
   card.appendChild(results);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
@@ -743,24 +687,17 @@ export function showIdPopup(prename: string): void {
   });
   document.addEventListener("keydown", onKeyDown);
 
-  // Prevent card clicks from closing
   card.addEventListener("click", function (e: MouseEvent) {
     e.stopPropagation();
   });
 
   // ─── Search handlers ───
   searchInput.addEventListener("keydown", function (e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      const name = searchInput.value.trim();
-      updateIdLink(name);
-      doSearch(name);
-    }
+    if (e.key === "Enter") doSearch(searchInput.value.trim());
   });
 
   searchBtn.addEventListener("click", function () {
-    const name = searchInput.value.trim();
-    updateIdLink(name);
-    doSearch(name);
+    doSearch(searchInput.value.trim());
   });
 
   // Auto-search if name provided
