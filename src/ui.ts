@@ -560,7 +560,21 @@ export function showIdPopup(prename: string): void {
         const name = (link.textContent || "").trim().replace(/^»\s*/, "");
         if (name) rows.push({ name, href: link.href, imgUrl: null });
       } else if (img && link) {
+        // Image wrapped in a link — text is usually empty (just an <img> child).
+        // Peek at next div for actual name, then skip it.
         const name = (link.textContent || "").trim().replace(/^»\s*/, "");
+        if (!name) {
+          const nextDiv = valueDivs[i + 1];
+          if (nextDiv) {
+            const nameLink = nextDiv.querySelector("a[href*='/id/']") as HTMLAnchorElement | null;
+            if (nameLink) {
+              const realName = (nameLink.textContent || "").trim().replace(/^»\s*/, "");
+              rows.push({ name: realName || "Unbekannt", href: nameLink.href, imgUrl: img.src });
+              i++;
+              continue;
+            }
+          }
+        }
         rows.push({ name: name || "Unbekannt", href: link.href, imgUrl: img.src });
       }
     }

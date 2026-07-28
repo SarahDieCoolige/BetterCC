@@ -586,10 +586,11 @@ i.fad {
 
 .bcc-id-card {
   position: fixed;
-  width: 340px;
+  min-width: 300px;
+  max-width: 420px;
   max-height: 70vh;
-  background: var(--inputBackground);
-  color: var(--inputText);
+  background: var(--ulistColor);
+  color: var(--chatText);
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   z-index: 1001;

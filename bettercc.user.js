@@ -2,7 +2,7 @@
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version      2.0.1
+// @version      2.0.2
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
@@ -12,8 +12,8 @@
 //
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.1
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.1
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.2
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.2
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -844,6 +844,18 @@
           if (name) rows.push({ name, href: link.href, imgUrl: null });
         } else if (img && link) {
           const name = (link.textContent || "").trim().replace(/^»\s*/, "");
+          if (!name) {
+            const nextDiv = valueDivs[i + 1];
+            if (nextDiv) {
+              const nameLink = nextDiv.querySelector("a[href*='/id/']");
+              if (nameLink) {
+                const realName = (nameLink.textContent || "").trim().replace(/^»\s*/, "");
+                rows.push({ name: realName || "Unbekannt", href: nameLink.href, imgUrl: img.src });
+                i++;
+                continue;
+              }
+            }
+          }
           rows.push({ name: name || "Unbekannt", href: link.href, imgUrl: img.src });
         }
       }

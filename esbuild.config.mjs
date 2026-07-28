@@ -4,7 +4,7 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version      2.0.1
+// @version      2.0.2
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
@@ -14,8 +14,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 //
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.1
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.1
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.2
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.2
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
