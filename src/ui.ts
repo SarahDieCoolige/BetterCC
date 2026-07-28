@@ -691,6 +691,41 @@ export function showIdPopup(prename: string): void {
     e.stopPropagation();
   });
 
+  // ─── Drag-to-move ───
+  let dragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let cardStartLeft = 0;
+  let cardStartTop = 0;
+
+  header.addEventListener("mousedown", function (e: MouseEvent) {
+    if ((e.target as HTMLElement).closest(".bcc-id-close")) return; // don't drag on close button
+    dragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    cardStartLeft = card.offsetLeft;
+    cardStartTop = card.offsetTop;
+    card.style.transform = ""; // remove centering transform during drag
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", function (e: MouseEvent) {
+    if (!dragging) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    let left = cardStartLeft + dx;
+    let top = cardStartTop + dy;
+    // Keep within viewport
+    left = Math.max(0, Math.min(left, window.innerWidth - card.offsetWidth));
+    top = Math.max(0, Math.min(top, window.innerHeight - card.offsetHeight));
+    card.style.left = left + "px";
+    card.style.top = top + "px";
+  });
+
+  document.addEventListener("mouseup", function () {
+    dragging = false;
+  });
+
   // ─── Search handlers ───
   searchInput.addEventListener("keydown", function (e: KeyboardEvent) {
     if (e.key === "Enter") doSearch(searchInput.value.trim());
