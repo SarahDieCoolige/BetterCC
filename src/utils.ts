@@ -65,19 +65,6 @@ export const helpStrings: string[][] = [
   ["/help", "So zeigst du diese Hilfe hier an"],
 ];
 
-// Build jQuery help table (will be replaced with vanilla in Phase 3)
-export let $help: any = $("<table/>");
-$help.addClass("helpTable");
-for (let i = 0; i < helpStrings.length; i++) {
-  $help.append(
-    "<tr><td>" +
-      helpStrings[i][0] +
-      "</td><td>" +
-      helpStrings[i][1] +
-      "</td></tr>"
-  );
-}
-
 export const helptxt: string = [
   "/sw Sariam" + "\t" + "Superwhisper mit Sariam",
   "/o Hi All :)" + "\t" + "Im Open schreiben",

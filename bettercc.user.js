@@ -68,26 +68,6 @@
       });
     }
   }
-  var helpStrings = [
-    ["/sw Sariam", "Superwhisper mit Sariam"],
-    ["/o Hi All :)", "Im Open schreiben"],
-    ["/open", "Superwhisper aus"],
-    [
-      "/sb Wendigo",
-      "Einen Arsch f\xFCr immer ignorieren (noch mal zum entbannen)"
-    ],
-    ["/superban", "Arschliste anzeigen"],
-    ["/reload", "Chat neu laden (mimimi)"],
-    ["/settings", "Einstellungen \xF6ffnen (irgendwann mal vielleicht^^)"],
-    ["/help", "So zeigst du diese Hilfe hier an"]
-  ];
-  var $help = $("<table/>");
-  $help.addClass("helpTable");
-  for (let i = 0; i < helpStrings.length; i++) {
-    $help.append(
-      "<tr><td>" + helpStrings[i][0] + "</td><td>" + helpStrings[i][1] + "</td></tr>"
-    );
-  }
   var helptxt = [
     "/sw Sariam	Superwhisper mit Sariam",
     "/o Hi All :)	Im Open schreiben",

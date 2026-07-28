@@ -50,5 +50,8 @@ describe("build output", () => {
     expect(content).not.toContain("GM_wrench.waitForKeyElements");
     expect(content).not.toContain("GM_wrench.addCss");
     expect(content).not.toContain("GM_wrench");              // no @require, no globals comment
+
+    // jQuery removal tracking — dead $help table removed from utils
+    expect(content).not.toContain("helpTable");
   });
 });
