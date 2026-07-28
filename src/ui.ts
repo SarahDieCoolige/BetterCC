@@ -548,7 +548,133 @@ export function showIdPopup(prename: string): void {
   const loadingEl = document.createElement("div");
   loadingEl.textContent = "Wird geladen...";
   loadingEl.style.cssText = "text-align:center;color:var(--placeholderColor);font-size:13px;";
-  results.appendChild(loadingEl);
+
+  // ─── Fetch & render ───
+  let activeRequest = false;
+
+  function stripThumbnailSuffix(url: string): string {
+    return url.replace(/_(\d+)\.jpg$/i, ".jpg");
+  }
+
+  function renderError(msg: string): void {
+    results.innerHTML = "";
+    const err = document.createElement("div");
+    err.textContent = msg;
+    err.style.cssText = "text-align:center;color:var(--superbancolor);font-size:13px;padding:16px 0;";
+    results.appendChild(err);
+  }
+
+  function renderResults(html: string): void {
+    results.innerHTML = "";
+    if (!html || html.length < 20) {
+      renderError("Kein Ergebnis gefunden.");
+      return;
+    }
+    // Parse user entries from HTML: extract <a> tags with user links and <img> tags
+    const entries = html.split(/<br\s*\/?>/i).filter(function (part: string) {
+      return part.indexOf('href') !== -1 && part.length > 20;
+    });
+
+    if (entries.length === 0) {
+      // No structured entries found — render the raw HTML as fallback
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = html;
+      // Make links open in new tab
+      wrapper.querySelectorAll("a").forEach(function (a: HTMLAnchorElement) {
+        a.target = "_blank";
+        a.style.color = "var(--buttonColor)";
+      });
+      results.appendChild(wrapper);
+      return;
+    }
+
+    entries.forEach(function (entry: string) {
+      const row = document.createElement("div");
+      row.style.cssText =
+        "display:flex;align-items:center;gap:10px;padding:8px 0;" +
+        "border-bottom:1px solid var(--footerBackground);";
+
+      // Extract image
+      const imgMatch = entry.match(/src="([^"]*userfiles\/[^"]*\.jpg[^"]*)"/i);
+      if (imgMatch) {
+        const thumbUrl = imgMatch[1];
+        const fullUrl = stripThumbnailSuffix(thumbUrl);
+        const img = document.createElement("img");
+        img.src = thumbUrl;
+        img.style.cssText =
+          "width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;flex-shrink:0;";
+        img.title = "Bild in voller Größe öffnen";
+        img.addEventListener("click", function () {
+          window.open(fullUrl, "_blank");
+        });
+        row.appendChild(img);
+      }
+
+      // Extract name and link
+      const linkMatch = entry.match(/href="([^"]*\/id\/[^"]*\.html[^"]*)"/i);
+      const nameMatch = entry.match(/>([^<]+)<\/a>/i);
+      const displayName = nameMatch ? nameMatch[1].replace(/^»\s*/, "") : "Unbekannt";
+
+      const nameLink = document.createElement("a");
+      nameLink.textContent = displayName;
+      nameLink.href = linkMatch ? linkMatch[1].replace(/&amp;/g, "&") : "#";
+      nameLink.target = "_blank";
+      nameLink.style.cssText =
+        "color:var(--buttonColor);text-decoration:none;font-size:13px;flex:1;";
+      nameLink.title = "ID-Card öffnen";
+
+      const arrow = document.createElement("span");
+      arrow.textContent = " →";
+      arrow.style.cssText = "font-size:11px;color:var(--placeholderColor);";
+      nameLink.appendChild(arrow);
+
+      row.appendChild(nameLink);
+      results.appendChild(row);
+    });
+  }
+
+  function doSearch(name: string): void {
+    if (!name) return;
+    results.innerHTML = "";
+    results.appendChild(loadingEl);
+    activeRequest = true;
+
+    const pajax = (unsafeWindow as any).PAJAX || "https://www.chatcity.de/de/";
+    const url = pajax + "chat_id.html";
+    const body = "NAME=" + encodeURIComponent(name);
+
+    GM_xmlhttpRequest({
+      method: "POST",
+      url: url,
+      data: body,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      onload: function (resp: any) {
+        if (!activeRequest) return;
+        activeRequest = false;
+        try {
+          // The response is JavaScript that sets return_chat_id_obj
+          const w = unsafeWindow as any;
+          w.return_chat_id_obj = null;
+          eval(resp.responseText);
+          const obj = w.return_chat_id_obj;
+          if (obj && obj._MO_OBJ_STATUS === "OK" && obj._MO_OBJ_ETXT) {
+            renderResults(obj._MO_OBJ_ETXT);
+          } else if (obj && obj._MO_OBJ_ETXT) {
+            renderError(obj._MO_OBJ_ETXT);
+          } else {
+            renderError("Kein Ergebnis gefunden.");
+          }
+        } catch (e) {
+          renderError("Fehler beim Verarbeiten der Antwort.");
+        }
+      },
+      onerror: function () {
+        if (!activeRequest) return;
+        activeRequest = false;
+        renderError("Netzwerkfehler — ID-Card kann trotzdem geöffnet werden.");
+      },
+    });
+  }
 
   // ─── Assemble ───
   searchArea.appendChild(searchInput);
@@ -565,6 +691,7 @@ export function showIdPopup(prename: string): void {
 
   // ─── Close helpers ───
   function closePopup(): void {
+    activeRequest = false;
     overlay.remove();
     document.removeEventListener("keydown", onKeyDown);
   }
@@ -584,26 +711,21 @@ export function showIdPopup(prename: string): void {
     e.stopPropagation();
   });
 
-  // ─── Search on Enter ───
+  // ─── Search handlers ───
   searchInput.addEventListener("keydown", function (e: KeyboardEvent) {
     if (e.key === "Enter") {
       const name = searchInput.value.trim();
       updateIdLink(name);
-      if (name) {
-        results.innerHTML = "";
-        results.appendChild(loadingEl);
-        // fetchResults(name, results, loadingEl);  // Task 2
-      }
+      doSearch(name);
     }
   });
 
   searchBtn.addEventListener("click", function () {
     const name = searchInput.value.trim();
     updateIdLink(name);
-    if (name) {
-      results.innerHTML = "";
-      results.appendChild(loadingEl);
-      // fetchResults(name, results, loadingEl);  // Task 2
-    }
+    doSearch(name);
   });
+
+  // Auto-search if name provided
+  if (prename) doSearch(prename);
 }
