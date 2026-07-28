@@ -642,20 +642,17 @@ export function showIdPopup(prename: string): void {
     const pajax = (unsafeWindow as any).PAJAX || "https://www.chatcity.de/de/";
     const url = pajax + "chat_id.html";
     const body = "NAME=" + encodeURIComponent(name);
+    const w = unsafeWindow as any;
+    const AjaxLib = w.ajax || (window as any).ajax;
 
-    GM_xmlhttpRequest({
-      method: "POST",
-      url: url,
-      data: body,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      onload: function (resp: any) {
+    w.return_chat_id_obj = null;
+    new AjaxLib(url, {
+      postBody: body,
+      evalObj: "return_chat_id_obj",
+      onComplete: function () {
         if (!activeRequest) return;
         activeRequest = false;
         try {
-          // The response is JavaScript that sets return_chat_id_obj
-          const w = unsafeWindow as any;
-          w.return_chat_id_obj = null;
-          eval(resp.responseText);
           const obj = w.return_chat_id_obj;
           if (obj && obj._MO_OBJ_STATUS === "OK" && obj._MO_OBJ_ETXT) {
             renderResults(obj._MO_OBJ_ETXT);
@@ -668,7 +665,7 @@ export function showIdPopup(prename: string): void {
           renderError("Fehler beim Verarbeiten der Antwort.");
         }
       },
-      onerror: function () {
+      onError: function () {
         if (!activeRequest) return;
         activeRequest = false;
         renderError("Netzwerkfehler — ID-Card kann trotzdem geöffnet werden.");
