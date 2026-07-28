@@ -13,7 +13,6 @@
 // @require  https://code.jquery.com/jquery-3.5.1.min.js
 // @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
-// @require  https://cdn.jsdelivr.net/gh/CoeJoder/GM_wrench@v1.5/dist/GM_wrench.min.js
 //
 // @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/main.css?r=1.48
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/iframe.css?r=1.48
@@ -41,7 +40,7 @@
 // @homepageURL  https://github.com/SarahDieCoolige/BetterCC
 
 	// ==/UserScript==
-/* globals jQuery, $, GM_wrench, ajax, tinycolor */
+/* globals jQuery, $, ajax, tinycolor */
 
 (() => {
   // src/utils.ts

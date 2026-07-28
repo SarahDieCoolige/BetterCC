@@ -3,5 +3,4 @@
 declare var $: any;
 declare var jQuery: any;
 declare var tinycolor: any;
-declare var GM_wrench: any;
 declare var ajax: any;
