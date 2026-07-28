@@ -6,3 +6,16 @@
 !css/
 !css/**
 !BetterCC.png
+
+# Dev tooling
+!package.json
+!package-lock.json
+!tsconfig.json
+!esbuild.config.mjs
+!vitest.config.ts
+!src/
+!src/**
+!tests/
+!tests/**
+
+node_modules/
