@@ -566,71 +566,81 @@ export function showIdPopup(prename: string): void {
 
   function renderResults(html: string): void {
     results.innerHTML = "";
-    if (!html || html.length < 20) {
+    if (!html || html.length < 30) {
       renderError("Kein Ergebnis gefunden.");
       return;
     }
-    // Parse user entries from HTML: extract <a> tags with user links and <img> tags
-    const entries = html.split(/<br\s*\/?>/i).filter(function (part: string) {
-      return part.indexOf('href') !== -1 && part.length > 20;
-    });
 
-    if (entries.length === 0) {
-      // No structured entries found — render the raw HTML as fallback
-      const wrapper = document.createElement("div");
-      wrapper.innerHTML = html;
-      // Make links open in new tab
-      wrapper.querySelectorAll("a").forEach(function (a: HTMLAnchorElement) {
-        a.target = "_blank";
-        a.style.color = "var(--buttonColor)";
-      });
-      results.appendChild(wrapper);
-      return;
-    }
+    // Try structured extraction: find user entries with images and ID links
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
 
-    entries.forEach(function (entry: string) {
-      const row = document.createElement("div");
-      row.style.cssText =
-        "display:flex;align-items:center;gap:10px;padding:8px 0;" +
-        "border-bottom:1px solid var(--footerBackground);";
-
-      // Extract image
-      const imgMatch = entry.match(/src="([^"]*userfiles\/[^"]*\.jpg[^"]*)"/i);
-      if (imgMatch) {
-        const thumbUrl = imgMatch[1];
-        const fullUrl = stripThumbnailSuffix(thumbUrl);
-        const img = document.createElement("img");
-        img.src = thumbUrl;
+    // Make all images clickable → full-size
+    wrapper.querySelectorAll("img").forEach(function (img: HTMLImageElement) {
+      if (/userfiles\//i.test(img.src)) {
         img.style.cssText =
           "width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;flex-shrink:0;";
         img.title = "Bild in voller Größe öffnen";
-        img.addEventListener("click", function () {
+        const fullUrl = stripThumbnailSuffix(img.src);
+        img.addEventListener("click", function (e: Event) {
+          e.preventDefault();
+          e.stopPropagation();
           window.open(fullUrl, "_blank");
         });
-        row.appendChild(img);
       }
-
-      // Extract name and link
-      const linkMatch = entry.match(/href="([^"]*\/id\/[^"]*\.html[^"]*)"/i);
-      const nameMatch = entry.match(/>([^<]+)<\/a>/i);
-      const displayName = nameMatch ? nameMatch[1].replace(/^»\s*/, "") : "Unbekannt";
-
-      const nameLink = document.createElement("a");
-      nameLink.textContent = displayName;
-      nameLink.href = linkMatch ? linkMatch[1].replace(/&amp;/g, "&") : "#";
-      nameLink.target = "_blank";
-      nameLink.style.cssText =
-        "color:var(--buttonColor);text-decoration:none;font-size:13px;flex:1;";
-      nameLink.title = "ID-Card öffnen";
-
-      const arrow = document.createElement("span");
-      arrow.textContent = " →";
-      arrow.style.cssText = "font-size:11px;color:var(--placeholderColor);";
-      nameLink.appendChild(arrow);
-
-      row.appendChild(nameLink);
-      results.appendChild(row);
     });
+
+    // Make all ID links open in new tab
+    wrapper.querySelectorAll("a").forEach(function (a: HTMLAnchorElement) {
+      if (/\/id\//i.test(a.href)) {
+        a.target = "_blank";
+        a.style.cssText = "color:var(--buttonColor);text-decoration:none;";
+        a.title = "ID-Card öffnen";
+      }
+    });
+
+    // Clean up unwanted elements from the response
+    wrapper.querySelectorAll("br, hr, script, .pager, .pager_cl, .pager-botom").forEach(function (el) {
+      el.remove();
+    });
+
+    // If the response has structured .value divs, restructure into rows
+    const valueDivs = wrapper.querySelectorAll(".value");
+    if (valueDivs.length > 0) {
+      const grid = document.createElement("div");
+      grid.style.cssText =
+        "display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;";
+
+      valueDivs.forEach(function (div: Element) {
+        const img = div.querySelector("img[src*='userfiles']") as HTMLImageElement | null;
+        const link = div.querySelector("a[href*='/id/']") as HTMLAnchorElement | null;
+        if (img && link) {
+          const card = document.createElement("div");
+          card.style.cssText = "text-align:center;";
+          card.appendChild(img);
+          const nameEl = document.createElement("div");
+          const nameLink = document.createElement("a");
+          nameLink.href = link.href;
+          nameLink.target = "_blank";
+          nameLink.textContent = (link.textContent || "").trim().replace(/^»\s*/, "");
+          nameLink.style.cssText =
+            "color:var(--buttonColor);text-decoration:none;font-size:11px;word-break:break-all;";
+          nameLink.title = "ID-Card öffnen";
+          nameEl.appendChild(nameLink);
+          card.appendChild(nameEl);
+          grid.appendChild(card);
+        }
+      });
+
+      if (grid.children.length > 0) {
+        results.appendChild(grid);
+        return;
+      }
+    }
+
+    // Fallback: render cleaned HTML as-is
+    wrapper.style.color = "var(--inputText)";
+    results.appendChild(wrapper);
   }
 
   function doSearch(name: string): void {
@@ -640,15 +650,42 @@ export function showIdPopup(prename: string): void {
     activeRequest = true;
 
     const pajax = (unsafeWindow as any).PAJAX || "https://www.chatcity.de/de/";
-    const url = pajax + "chat_id.html";
-    const body = "NAME=" + encodeURIComponent(name);
+    const url = pajax + "obj_list.html";
     const w = unsafeWindow as any;
     const AjaxLib = w.ajax || (window as any).ajax;
 
-    w.return_chat_id_obj = null;
+    // Build request body matching searchuser() from main page
+    const params = [
+      "TYP=1",
+      "_EN_OBJ_ORDER_SORT_SHOW=",
+      "ORD=0",
+      "SORT=1",
+      "START=0",
+      "_LIST_WRAPPER_ID=bccid",
+      "EXT=allbychar",
+      "_KW_allbychar=" + encodeURIComponent(name),
+      "LOADDEF=3",
+      "LOADDEF_EXTRA_USER=",
+      "LOADDEF_EXTRA=",
+      "_LIST_LINK_ALL=",
+      "STYP=",
+      "LOADDEF_CUSTOM=allbychar",
+      "CACHE=3600",
+      "OPENW=1",
+      "ISCHAT=0",
+    ].join("&");
 
-    // Timeout fallback: upstream ajax library only calls onComplete for
-    // HTTP 200. Network errors, 404, 500 are silently ignored.
+    // Create hidden target div for the ajax library's update option
+    const wrapperId = "obj_list_wrapperbccid";
+    let wrapper = document.getElementById(wrapperId);
+    if (!wrapper) {
+      wrapper = document.createElement("div");
+      wrapper.id = wrapperId;
+      wrapper.style.display = "none";
+      document.body.appendChild(wrapper);
+    }
+
+    // Timeout fallback
     const failTimer = setTimeout(function () {
       if (!activeRequest) return;
       activeRequest = false;
@@ -656,18 +693,16 @@ export function showIdPopup(prename: string): void {
     }, 8000);
 
     new AjaxLib(url, {
-      postBody: body,
-      evalObj: "return_chat_id_obj",
+      postBody: params,
+      update: wrapperId,
       onComplete: function () {
         clearTimeout(failTimer);
         if (!activeRequest) return;
         activeRequest = false;
         try {
-          const obj = w.return_chat_id_obj;
-          if (obj && obj._MO_OBJ_STATUS === "OK" && obj._MO_OBJ_ETXT) {
-            renderResults(obj._MO_OBJ_ETXT);
-          } else if (obj && obj._MO_OBJ_ETXT) {
-            renderError(obj._MO_OBJ_ETXT);
+          const html = wrapper ? wrapper.innerHTML : "";
+          if (html && html.length > 30) {
+            renderResults(html);
           } else {
             renderError("Kein Ergebnis gefunden.");
           }
