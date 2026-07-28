@@ -812,6 +812,7 @@
       err.textContent = msg;
       results.appendChild(err);
     }
+    let previewEl;
     function renderResults(html) {
       results.innerHTML = "";
       if (!html || html.length < 30) {
@@ -876,24 +877,19 @@
               window.open(fullUrl, "_blank");
             });
             thumb.addEventListener("mouseenter", function(e) {
-              const preview = document.getElementById("bcc-id-thumb-preview");
-              if (preview) {
-                preview.src = fullUrl;
-                preview.style.display = "block";
-                preview.style.left = e.clientX + 16 + "px";
-                preview.style.top = e.clientY - 75 + "px";
-              }
+              previewEl.src = fullUrl;
+              previewEl.style.display = "block";
+              previewEl.style.left = e.clientX + 16 + "px";
+              previewEl.style.top = e.clientY - 75 + "px";
             });
             thumb.addEventListener("mousemove", function(e) {
-              const preview = document.getElementById("bcc-id-thumb-preview");
-              if (preview && preview.style.display === "block") {
-                preview.style.left = e.clientX + 16 + "px";
-                preview.style.top = e.clientY - 75 + "px";
+              if (previewEl.style.display === "block") {
+                previewEl.style.left = e.clientX + 16 + "px";
+                previewEl.style.top = e.clientY - 75 + "px";
               }
             });
             thumb.addEventListener("mouseleave", function() {
-              const preview = document.getElementById("bcc-id-thumb-preview");
-              if (preview) preview.style.display = "none";
+              previewEl.style.display = "none";
             });
           }
           thumb.addEventListener("error", function() {
@@ -966,10 +962,10 @@
     card.appendChild(searchArea);
     card.appendChild(results);
     overlay.appendChild(card);
-    const thumbPreview = document.createElement("img");
-    thumbPreview.id = "bcc-id-thumb-preview";
-    thumbPreview.className = "bcc-id-thumb-preview";
-    overlay.appendChild(thumbPreview);
+    previewEl = document.createElement("img");
+    previewEl.id = "bcc-id-thumb-preview";
+    previewEl.className = "bcc-id-thumb-preview";
+    overlay.appendChild(previewEl);
     document.body.appendChild(overlay);
     if (!prename) searchInput.focus();
     function closePopup() {

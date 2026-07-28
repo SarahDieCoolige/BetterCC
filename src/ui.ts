@@ -524,6 +524,8 @@ export function showIdPopup(prename: string): void {
     results.appendChild(err);
   }
 
+  let previewEl: HTMLImageElement;
+
   function renderResults(html: string): void {
     results.innerHTML = "";
     if (!html || html.length < 30) {
@@ -598,24 +600,19 @@ export function showIdPopup(prename: string): void {
           });
           // Hover preview
           thumb.addEventListener("mouseenter", function (e: MouseEvent) {
-            const preview = document.getElementById("bcc-id-thumb-preview") as HTMLImageElement | null;
-            if (preview) {
-              preview.src = fullUrl;
-              preview.style.display = "block";
-              preview.style.left = (e.clientX + 16) + "px";
-              preview.style.top = (e.clientY - 75) + "px";
-            }
+            previewEl.src = fullUrl;
+            previewEl.style.display = "block";
+            previewEl.style.left = (e.clientX + 16) + "px";
+            previewEl.style.top = (e.clientY - 75) + "px";
           });
           thumb.addEventListener("mousemove", function (e: MouseEvent) {
-            const preview = document.getElementById("bcc-id-thumb-preview") as HTMLImageElement | null;
-            if (preview && preview.style.display === "block") {
-              preview.style.left = (e.clientX + 16) + "px";
-              preview.style.top = (e.clientY - 75) + "px";
+            if (previewEl.style.display === "block") {
+              previewEl.style.left = (e.clientX + 16) + "px";
+              previewEl.style.top = (e.clientY - 75) + "px";
             }
           });
           thumb.addEventListener("mouseleave", function () {
-            const preview = document.getElementById("bcc-id-thumb-preview") as HTMLImageElement | null;
-            if (preview) preview.style.display = "none";
+            previewEl.style.display = "none";
           });
         }
         thumb.addEventListener("error", function () {
@@ -698,10 +695,10 @@ export function showIdPopup(prename: string): void {
   overlay.appendChild(card);
 
   // Hover preview for user images
-  const thumbPreview = document.createElement("img");
-  thumbPreview.id = "bcc-id-thumb-preview";
-  thumbPreview.className = "bcc-id-thumb-preview";
-  overlay.appendChild(thumbPreview);
+  previewEl = document.createElement("img");
+  previewEl.id = "bcc-id-thumb-preview";
+  previewEl.className = "bcc-id-thumb-preview";
+  overlay.appendChild(previewEl);
   document.body.appendChild(overlay);
 
   // Focus input if empty
