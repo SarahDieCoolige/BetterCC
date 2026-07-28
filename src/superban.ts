@@ -63,7 +63,7 @@ export function enableSuperban(userStore: string): void {
         nickToBan.toUpperCase() +
         " wirklich aus deiner Ignoreliste entfernen?";
       if (window.confirm(confirmStr)) {
-        superbans = superbans.filter(function (item) {
+	        superbans = superbans.filter(function (item: string) {
           return String(item) !== nickToBan;
         });
         ccnotify(

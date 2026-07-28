@@ -19,7 +19,7 @@ export function ccnotify(message: string, title = "", tag = "", timeout = 3000):
       timeout: timeout,
       silent: true,
       onclick: () => {
-        event.preventDefault();
+        (window.event as Event)?.preventDefault();
         cclog("Notification clicked.");
         window.focus();
       },

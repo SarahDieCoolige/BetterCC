@@ -146,7 +146,7 @@ export function betterUserList(userStore: string): void {
   (unsafeWindow.bettercc as any).addPinnedUser = async function (username: string) {
     username = username.toLowerCase();
 
-    let pinnedUsers = GM_getValue(userStorePinnedUsers, []);
+    let pinnedUsers: string[] = GM_getValue(userStorePinnedUsers, []);
 
     if (!pinnedUsers.includes(username)) {
       pinnedUsers.push(username);
@@ -255,6 +255,7 @@ export function betterUserList(userStore: string): void {
 
 export function betterInput(replace: boolean): void {
   var form: HTMLFormElement | null = null;
+  var originalInput: Element | null = null;
   try {
     form = document.querySelector('form[name="hold"]') as HTMLFormElement | null;
     if (!form) {
@@ -265,8 +266,6 @@ export function betterInput(replace: boolean): void {
     if (!inputText) {
       throw new Error('Input of type "text" not found in the form.');
     }
-
-    var originalInput: Element | null = null;
 
     if (replace) {
       const newTextarea = document.createElement("textarea");
@@ -283,7 +282,7 @@ export function betterInput(replace: boolean): void {
 
       newTextarea.addEventListener("keypress", function (e: KeyboardEvent) {
         if (e.key === "Enter" && !e.shiftKey) {
-          form.submit();
+          form!.submit();
           e.preventDefault();
         }
       });
@@ -294,7 +293,7 @@ export function betterInput(replace: boolean): void {
   } catch (error: any) {
     console.error("An error occurred in betterInput:", error.message);
 
-    if (replace && originalInput) {
+    if (replace && originalInput && form) {
       const customInput = form.querySelector("#custom_input_text");
       if (customInput) customInput.replaceWith(originalInput);
     }
