@@ -56,5 +56,8 @@ describe("build output", () => {
 
     // jQuery removal tracking — addCustomCss + cleanup use vanilla DOM
     expect(content).not.toContain(".removeAttr(");           // cleanup: jQuery-only method
+
+    // jQuery removal tracking — betterInput uses vanilla DOM
+    expect(content).not.toContain('$("<textarea>"');         // jQuery element creation
   });
 });

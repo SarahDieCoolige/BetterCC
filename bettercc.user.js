@@ -595,40 +595,42 @@
     waitForSetUinfo1Function();
   }
   function betterInput(replace) {
+    var form = null;
     try {
-      var $form = $('form[name="hold"]');
-      if ($form.length === 0) {
+      form = document.querySelector('form[name="hold"]');
+      if (!form) {
         throw new Error('Form with name "hold" not found.');
       }
-      var $inputText = $form.children('input[type="text"]');
-      if ($inputText.length === 0) {
+      const inputText = form.querySelector('input[type="text"]');
+      if (!inputText) {
         throw new Error('Input of type "text" not found in the form.');
       }
       var originalInput = null;
       if (replace) {
-        var newTextarea = $("<textarea>", {
-          id: "custom_input_text",
-          placeholder: "Du chattest mit allen...",
-          maxlength: 1024,
-          name: "OUT1",
-          rows: 3,
-          wrap: "soft"
-        });
-        originalInput = $inputText.clone();
-        $inputText.replaceWith(newTextarea);
-        $("#custom_input_text").keypress(function(e) {
-          if (e.which == 13 && !e.shiftKey) {
-            $form.submit();
+        const newTextarea = document.createElement("textarea");
+        newTextarea.id = "custom_input_text";
+        newTextarea.placeholder = "Du chattest mit allen...";
+        newTextarea.maxLength = 1024;
+        newTextarea.name = "OUT1";
+        newTextarea.rows = 3;
+        newTextarea.wrap = "soft";
+        originalInput = inputText.cloneNode(true);
+        inputText.replaceWith(newTextarea);
+        newTextarea.addEventListener("keypress", function(e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            form.submit();
             e.preventDefault();
           }
         });
       } else {
-        $inputText.attr("id", "custom_input_text").attr("placeholder", "Du chattest mit allen...");
+        inputText.id = "custom_input_text";
+        inputText.placeholder = "Du chattest mit allen...";
       }
     } catch (error) {
       console.error("An error occurred in betterInput:", error.message);
       if (replace && originalInput) {
-        $form.children("#custom_input_text").replaceWith(originalInput);
+        const customInput = form.querySelector("#custom_input_text");
+        if (customInput) customInput.replaceWith(originalInput);
       }
     }
   }
