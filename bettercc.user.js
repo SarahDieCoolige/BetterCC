@@ -776,9 +776,6 @@
     overlay.className = "bcc-id-overlay";
     const card = document.createElement("div");
     card.className = "bcc-id-card";
-    card.style.left = "50%";
-    card.style.top = "50%";
-    card.style.transform = "translate(-50%, -50%)";
     const header = document.createElement("div");
     header.className = "bcc-id-header";
     const title = document.createElement("span");
@@ -980,9 +977,12 @@
       dragging = true;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
-      cardStartLeft = card.offsetLeft;
-      cardStartTop = card.offsetTop;
-      card.style.transform = "";
+      const rect = card.getBoundingClientRect();
+      cardStartLeft = rect.left;
+      cardStartTop = rect.top;
+      card.style.translate = "0 0";
+      card.style.left = cardStartLeft + "px";
+      card.style.top = cardStartTop + "px";
       e.preventDefault();
     });
     function onMouseMove(e) {

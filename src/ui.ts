@@ -471,10 +471,6 @@ export function showIdPopup(prename: string): void {
   // ─── Card ───
   const card = document.createElement("div");
   card.className = "bcc-id-card";
-  // Center initially (drag will override with pixel values in Task 3)
-  card.style.left = "50%";
-  card.style.top = "50%";
-  card.style.transform = "translate(-50%, -50%)";
 
   // ─── Header ───
   const header = document.createElement("div");
@@ -720,9 +716,13 @@ export function showIdPopup(prename: string): void {
     dragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
-    cardStartLeft = card.offsetLeft;
-    cardStartTop = card.offsetTop;
-    card.style.transform = "";
+    // Read actual rendered position (CSS centers via translate: -50% -50%)
+    const rect = card.getBoundingClientRect();
+    cardStartLeft = rect.left;
+    cardStartTop = rect.top;
+    card.style.translate = "0 0";
+    card.style.left = cardStartLeft + "px";
+    card.style.top = cardStartTop + "px";
     e.preventDefault();
   });
 

@@ -586,8 +586,11 @@ i.fad {
 
 .bcc-id-card {
   position: fixed;
-  min-width: 300px;
-  max-width: 420px;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: fit-content;
+  max-width: calc(100vw - 32px);
   max-height: 70vh;
   background: var(--ulistColor);
   color: var(--chatText);
@@ -689,9 +692,9 @@ i.fad {
 }
 
 .bcc-id-name {
-  color: var(--buttonColor);
   text-decoration: none;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .bcc-id-name:hover {
