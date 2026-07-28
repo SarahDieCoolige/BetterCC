@@ -59,5 +59,8 @@ describe("build output", () => {
 
     // jQuery removal tracking — betterInput uses vanilla DOM
     expect(content).not.toContain('$("<textarea>"');         // jQuery element creation
+
+    // jQuery removal tracking — doColorStuff theme UI uses vanilla DOM
+    expect(content).not.toContain("appendTo($colorWrap)");  // jQuery chaining
   });
 });

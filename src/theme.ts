@@ -12,32 +12,34 @@ export function doColorStuff(
   cclogFn: (str: string, tag?: string) => void
 ): void {
   // Remove table border
-  $("#r_off1 table").attr("border", "0");
+  const rOffTable = document.querySelector("#r_off1 table");
+  if (rOffTable) rOffTable.setAttribute("border", "0");
 
-  $("#u_stats").hide();
+  const uStats = document.querySelector("#u_stats") as HTMLElement | null;
+  if (uStats) uStats.style.display = "none";
+
   waitForElements(
     "#u_stats a.unc .value",
     function (_el: Element) {
-      $("#u_stats span.name").remove();
-      $("#u_stats")
-        .clone(true)
-        .attr("id", "u_stats_clone")
-        .show()
-        .insertAfter("#u_stats");
+      const nameSpans = document.querySelectorAll("#u_stats span.name");
+      nameSpans.forEach(s => s.remove());
 
-      $("#u_stats_clone .value").remove();
+      const uStatsClone = (document.querySelector("#u_stats") as HTMLElement).cloneNode(true) as HTMLElement;
+      uStatsClone.id = "u_stats_clone";
+      uStatsClone.style.display = "";
+      (document.querySelector("#u_stats") as HTMLElement).after(uStatsClone);
 
-      $(
-        '<span id="uonl_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-id-card fa-stack-1x"></i></span>'
-      ).appendTo("#u_stats_clone a.uonl");
+      const cloneValues = uStatsClone.querySelectorAll(".value");
+      cloneValues.forEach(v => v.remove());
 
-      $(
-        '<span id="ufri_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-user-plus fa-stack-1x"></i></span>'
-      ).appendTo("#u_stats_clone a.ufri");
+      const uonlA = uStatsClone.querySelector("a.uonl");
+      if (uonlA) uonlA.insertAdjacentHTML("beforeend", '<span id="uonl_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-id-card fa-stack-1x"></i></span>');
 
-      $(
-        '<span id="unc_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-envelope fa-stack-1x"></i></span>'
-      ).appendTo("#u_stats_clone a.unc");
+      const ufriA = uStatsClone.querySelector("a.ufri");
+      if (ufriA) ufriA.insertAdjacentHTML("beforeend", '<span id="ufri_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-user-plus fa-stack-1x"></i></span>');
+
+      const uncA = uStatsClone.querySelector("a.unc");
+      if (uncA) uncA.insertAdjacentHTML("beforeend", '<span id="unc_span" class="fa-stack fa-2x has-badge value no" data-count="0">  <i class="fa fa-envelope fa-stack-1x"></i></span>');
 
       updateStats();
       setInterval(updateStats, 10000);
@@ -51,83 +53,107 @@ export function doColorStuff(
       update: "u_stats",
     });
 
-    var friendsOnline = $("#u_stats a.uonl .value").text();
-    var frendRequests = $("#u_stats a.ufri .value").text();
-    var mailCount = $("#u_stats a.unc .value").text();
+    var uStatsEl = document.querySelector("#u_stats");
+    var friendsOnline = uStatsEl?.querySelector("a.uonl .value")?.textContent || "0";
+    var frendRequests = uStatsEl?.querySelector("a.ufri .value")?.textContent || "0";
+    var mailCount = uStatsEl?.querySelector("a.unc .value")?.textContent || "0";
 
-    $("#uonl_span")
-      .attr("data-count", friendsOnline)
-      .toggleClass("no", friendsOnline < 1);
-    $("#ufri_span")
-      .attr("data-count", frendRequests)
-      .toggleClass("no", frendRequests < 1);
-    $("#unc_span")
-      .attr("data-count", mailCount)
-      .toggleClass("no", mailCount < 1);
+    const uonlSpan = document.querySelector("#uonl_span");
+    if (uonlSpan) {
+      uonlSpan.setAttribute("data-count", friendsOnline);
+      uonlSpan.classList.toggle("no", Number(friendsOnline) < 1);
+    }
+    const ufriSpan = document.querySelector("#ufri_span");
+    if (ufriSpan) {
+      ufriSpan.setAttribute("data-count", frendRequests);
+      ufriSpan.classList.toggle("no", Number(frendRequests) < 1);
+    }
+    const uncSpan = document.querySelector("#unc_span");
+    if (uncSpan) {
+      uncSpan.setAttribute("data-count", mailCount);
+      uncSpan.classList.toggle("no", Number(mailCount) < 1);
+    }
   }
 
-  $('form[name="OF"]').wrap('<div id="options"></div>');
+  // Wrap form with options container
+  const ofForm = document.querySelector('form[name="OF"]');
+  if (ofForm) {
+    const wrapper = document.createElement("div");
+    wrapper.id = "options";
+    ofForm.parentNode?.insertBefore(wrapper, ofForm);
+    wrapper.appendChild(ofForm);
+  }
 
-  $('<div id="betteroptions"></div>').appendTo("#options");
+  const betterOpts = document.createElement("div");
+  betterOpts.id = "betteroptions";
+  document.querySelector("#options")?.appendChild(betterOpts);
 
-  var $colorWrap = $('<label for="bgcolorpicker" class="bcc-color-btn bcc-color-picker-wrap"></label>');
-  $colorWrap.css("--swatch-color", "#ff0000");
-  $('<input type="color" id="bgcolorpicker">')
-    .val("#ff0000")
-    .addClass("bcc-color-swatch-hidden")
-    .on("input", function (this: HTMLInputElement, e: any) {
-      var bg = this.value.substring(1);
-      var fg = fgDef;
-      $colorWrap.css("--swatch-color", this.value);
-      (async () => {
-        await GM.setValue(userStoreColor, bg);
-      })();
-      (unsafeWindow.bettercc as any).setColors(bg, fg, 0);
-    })
-    .change(function (this: HTMLInputElement) {
-      var bg = this.value.substring(1);
-      (async () => {
-        await GM.setValue(userStoreColor, bg);
-      })();
-    })
-    .appendTo($colorWrap);
-  $colorWrap.appendTo("#betteroptions");
+  // Color picker
+  var colorWrap = document.createElement("label");
+  colorWrap.htmlFor = "bgcolorpicker";
+  colorWrap.className = "bcc-color-btn bcc-color-picker-wrap";
+  colorWrap.style.setProperty("--swatch-color", "#ff0000");
 
-  $("<button>", {
-    id: "reloadbutton",
-    type: "button",
-    class: "bcc-icon-btn",
-    title: "Chat neu laden (mimimi)",
-    html: '<i class="fas fa-sync-alt"></i>',
-  })
-    .on("click", function () {
-      (unsafeWindow.bettercc as any).reloadChat();
-    })
-    .appendTo("#betteroptions");
+  const bgPicker = document.createElement("input");
+  bgPicker.type = "color";
+  bgPicker.id = "bgcolorpicker";
+  bgPicker.value = "#ff0000";
+  bgPicker.className = "bcc-color-swatch-hidden";
 
-  $("<button>", {
-    id: "helpbutton",
-    type: "button",
-    class: "bcc-icon-btn",
-    title: "BetterCC Hilfe",
-    html: '<i class="fas fa-question-circle"></i>',
-  })
-    .on("click", function () {
-      printHelpFn();
-    })
-    .appendTo("#betteroptions");
+  bgPicker.addEventListener("input", function (this: HTMLInputElement) {
+    var bg = this.value.substring(1);
+    var fg = fgDef;
+    colorWrap.style.setProperty("--swatch-color", this.value);
+    (async () => {
+      await GM.setValue(userStoreColor, bg);
+    })();
+    (unsafeWindow.bettercc as any).setColors(bg, fg, 0);
+  });
+  bgPicker.addEventListener("change", function (this: HTMLInputElement) {
+    var bg = this.value.substring(1);
+    (async () => {
+      await GM.setValue(userStoreColor, bg);
+    })();
+  });
 
-  $("<button>", {
-    id: "settingsbutton",
-    type: "button",
-    class: "bcc-icon-btn",
-    title: "BetterCC Settings",
-    html: '<i class="fas fa-cog"></i>',
-  })
-    .on("click", function () {
-      showSettingsModalFn();
-    })
-    .appendTo("#betteroptions");
+  colorWrap.appendChild(bgPicker);
+  betterOpts.appendChild(colorWrap);
+
+  // Reload button
+  const reloadBtn = document.createElement("button");
+  reloadBtn.id = "reloadbutton";
+  reloadBtn.type = "button";
+  reloadBtn.className = "bcc-icon-btn";
+  reloadBtn.title = "Chat neu laden (mimimi)";
+  reloadBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+  reloadBtn.addEventListener("click", function () {
+    (unsafeWindow.bettercc as any).reloadChat();
+  });
+  betterOpts.appendChild(reloadBtn);
+
+  // Help button
+  const helpBtn = document.createElement("button");
+  helpBtn.id = "helpbutton";
+  helpBtn.type = "button";
+  helpBtn.className = "bcc-icon-btn";
+  helpBtn.title = "BetterCC Hilfe";
+  helpBtn.innerHTML = '<i class="fas fa-question-circle"></i>';
+  helpBtn.addEventListener("click", function () {
+    printHelpFn();
+  });
+  betterOpts.appendChild(helpBtn);
+
+  // Settings button
+  const settingsBtn = document.createElement("button");
+  settingsBtn.id = "settingsbutton";
+  settingsBtn.type = "button";
+  settingsBtn.className = "bcc-icon-btn";
+  settingsBtn.title = "BetterCC Settings";
+  settingsBtn.innerHTML = '<i class="fas fa-cog"></i>';
+  settingsBtn.addEventListener("click", function () {
+    showSettingsModalFn();
+  });
+  betterOpts.appendChild(settingsBtn);
 
   setTimeout(setTheme, 1000);
 
