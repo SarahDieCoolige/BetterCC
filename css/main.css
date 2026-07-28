@@ -670,8 +670,8 @@ i.fad {
 .bcc-id-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 16px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--footerBackground);
 }
 
@@ -680,8 +680,8 @@ i.fad {
 }
 
 .bcc-id-thumb {
-  width: 44px;
-  height: 44px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -693,8 +693,8 @@ i.fad {
 
 .bcc-id-thumb-preview {
   position: fixed;
-  width: 150px;
-  height: 150px;
+  width: 260px;
+  height: 260px;
   object-fit: cover;
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -704,8 +704,9 @@ i.fad {
 }
 
 .bcc-id-name {
+  color: inherit;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
 }
 
