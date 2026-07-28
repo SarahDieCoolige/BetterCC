@@ -673,8 +673,11 @@ export function showIdPopup(prename: string): void {
   // ─── Close helpers ───
   function closePopup(): void {
     activeRequest = false;
+    dragging = false;
     overlay.remove();
     document.removeEventListener("keydown", onKeyDown);
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
   }
 
   function onKeyDown(e: KeyboardEvent): void {
@@ -699,32 +702,34 @@ export function showIdPopup(prename: string): void {
   let cardStartTop = 0;
 
   header.addEventListener("mousedown", function (e: MouseEvent) {
-    if ((e.target as HTMLElement).closest(".bcc-id-close")) return; // don't drag on close button
+    if ((e.target as HTMLElement).closest(".bcc-id-close")) return;
     dragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     cardStartLeft = card.offsetLeft;
     cardStartTop = card.offsetTop;
-    card.style.transform = ""; // remove centering transform during drag
+    card.style.transform = "";
     e.preventDefault();
   });
 
-  document.addEventListener("mousemove", function (e: MouseEvent) {
+  function onMouseMove(e: MouseEvent): void {
     if (!dragging) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
     let left = cardStartLeft + dx;
     let top = cardStartTop + dy;
-    // Keep within viewport
     left = Math.max(0, Math.min(left, window.innerWidth - card.offsetWidth));
     top = Math.max(0, Math.min(top, window.innerHeight - card.offsetHeight));
     card.style.left = left + "px";
     card.style.top = top + "px";
-  });
+  }
 
-  document.addEventListener("mouseup", function () {
+  function onMouseUp(): void {
     dragging = false;
-  });
+  }
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
 
   // ─── Search handlers ───
   searchInput.addEventListener("keydown", function (e: KeyboardEvent) {

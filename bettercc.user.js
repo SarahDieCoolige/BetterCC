@@ -941,8 +941,11 @@
     if (!prename) searchInput.focus();
     function closePopup() {
       activeRequest = false;
+      dragging = false;
       overlay.remove();
       document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
     }
     function onKeyDown(e) {
       if (e.key === "Escape") closePopup();
@@ -970,7 +973,7 @@
       card.style.transform = "";
       e.preventDefault();
     });
-    document.addEventListener("mousemove", function(e) {
+    function onMouseMove(e) {
       if (!dragging) return;
       const dx = e.clientX - dragStartX;
       const dy = e.clientY - dragStartY;
@@ -980,10 +983,12 @@
       top = Math.max(0, Math.min(top, window.innerHeight - card.offsetHeight));
       card.style.left = left + "px";
       card.style.top = top + "px";
-    });
-    document.addEventListener("mouseup", function() {
+    }
+    function onMouseUp() {
       dragging = false;
-    });
+    }
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
     searchInput.addEventListener("keydown", function(e) {
       if (e.key === "Enter") doSearch(searchInput.value.trim());
     });
