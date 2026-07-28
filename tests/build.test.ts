@@ -45,5 +45,8 @@ describe("build output", () => {
     // Must contain the WebSocket hook
     expect(content).toContain("injectIntoChatframe");      // function name in log strings
     expect(content).toContain("chatout_auth_dead");        // upstream global usage
+
+    // GM_wrench is being phased out — no waitForKeyElements references
+    expect(content).not.toContain("GM_wrench.waitForKeyElements");
   });
 });

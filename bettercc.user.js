@@ -136,14 +136,42 @@
   function setUserStore(nick, isGast) {
     userStore = isGast ? "gast" : nick.toLowerCase();
   }
+  function waitForElements(selector, callback, once, intervalMs) {
+    const existing = document.querySelectorAll(selector);
+    existing.forEach((el) => callback(el));
+    if (once && existing.length > 0) return;
+    const observer = new MutationObserver(() => {
+      const matches = document.querySelectorAll(selector);
+      if (matches.length > 0) {
+        for (let i = 0; i < matches.length; i++) {
+          callback(matches[i]);
+        }
+        if (once) {
+          observer.disconnect();
+        }
+      }
+    });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+    if (!once && intervalMs > 0) {
+      setInterval(() => {
+        const matches = document.querySelectorAll(selector);
+        for (let i = 0; i < matches.length; i++) {
+          callback(matches[i]);
+        }
+      }, intervalMs);
+    }
+  }
 
   // src/theme.ts
   function doColorStuff(userStoreColor, userStoreColorScheme, bgDef, fgDef, printHelpFn, showSettingsModalFn, cclogFn) {
     $("#r_off1 table").attr("border", "0");
     $("#u_stats").hide();
-    GM_wrench.waitForKeyElements(
+    waitForElements(
       "#u_stats a.unc .value",
-      function() {
+      function(_el) {
         $("#u_stats span.name").remove();
         $("#u_stats").clone(true).attr("id", "u_stats_clone").show().insertAfter("#u_stats");
         $("#u_stats_clone .value").remove();
@@ -460,12 +488,15 @@
     GM_wrench.addCss(main_css);
   }
   function cleanup() {
-    GM_wrench.waitForKeyElements(
+    waitForElements(
       "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']",
-      function(jNode) {
-        $("head").find(
-          "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']:not(:last)"
-        ).remove();
+      function(el) {
+        const allScripts = document.head.querySelectorAll(
+          "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']"
+        );
+        for (let i = 0; i < allScripts.length - 1; i++) {
+          allScripts[i].remove();
+        }
       },
       false,
       3e4

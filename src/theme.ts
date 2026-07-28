@@ -1,6 +1,6 @@
 // ─── Color engine: setColors, applyStoredColors, setTheme, color observer ───
 
-import { getChatDoc, applyThemeToIframe } from "./utils";
+import { getChatDoc, applyThemeToIframe, waitForElements } from "./utils";
 
 export function doColorStuff(
   userStoreColor: string,
@@ -15,9 +15,9 @@ export function doColorStuff(
   $("#r_off1 table").attr("border", "0");
 
   $("#u_stats").hide();
-  GM_wrench.waitForKeyElements(
+  waitForElements(
     "#u_stats a.unc .value",
-    function () {
+    function (_el: Element) {
       $("#u_stats span.name").remove();
       $("#u_stats")
         .clone(true)

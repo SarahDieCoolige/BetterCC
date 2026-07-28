@@ -146,3 +146,47 @@ export function setUserStore(nick: string, isGast: boolean): void {
 export function getUserStore(): string {
   return userStore;
 }
+
+// ─── DOM utility: MutationObserver-based element watcher ───
+// Replaces GM_wrench.waitForKeyElements
+
+export function waitForElements(
+  selector: string,
+  callback: (el: Element) => void,
+  once: boolean,
+  intervalMs: number
+): void {
+  // Run against already-present elements
+  const existing = document.querySelectorAll(selector);
+  existing.forEach((el) => callback(el));
+
+  if (once && existing.length > 0) return;
+
+  // Watch for future additions
+  const observer = new MutationObserver(() => {
+    const matches = document.querySelectorAll(selector);
+    if (matches.length > 0) {
+      for (let i = 0; i < matches.length; i++) {
+        callback(matches[i]);
+      }
+      if (once) {
+        observer.disconnect();
+      }
+    }
+  });
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+
+  // For non-once mode, also set up periodic re-check as fallback
+  if (!once && intervalMs > 0) {
+    setInterval(() => {
+      const matches = document.querySelectorAll(selector);
+      for (let i = 0; i < matches.length; i++) {
+        callback(matches[i]);
+      }
+    }, intervalMs);
+  }
+}

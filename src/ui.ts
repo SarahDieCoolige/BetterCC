@@ -1,7 +1,7 @@
 // ─── DOM: showSettingsModal, forceNoChatBackgrounds, addCustomCss, cleanup,
 //           betterUserList, betterInput, redesignFooter ───
 
-import { setUserStore, cclog } from "./utils";
+import { setUserStore, cclog, waitForElements } from "./utils";
 
 export function showSettingsModal(userStore: string): void {
   const modalOverlay = document.createElement("div");
@@ -93,14 +93,16 @@ export function addCustomCss(): void {
 
 export function cleanup(): void {
   // remove all but last ulist regularly since cc is just appending these instead of replacing
-  GM_wrench.waitForKeyElements(
+  waitForElements(
     "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']",
-    function (jNode: any) {
-      $("head")
-        .find(
-          "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']:not(:last)"
-        )
-        .remove();
+    function (el: Element) {
+      const allScripts = document.head.querySelectorAll(
+        "script[src^='https://www.chatcity.de/cc_chat/ulist?AKTION']"
+      );
+      // Remove all but the last one
+      for (let i = 0; i < allScripts.length - 1; i++) {
+        allScripts[i].remove();
+      }
     },
     false,
     30000
