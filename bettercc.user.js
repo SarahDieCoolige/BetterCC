@@ -2,7 +2,7 @@
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version      2.0.2
+// @version      2.0.3
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
@@ -12,8 +12,8 @@
 //
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.2
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.2
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.3
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.3
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
