@@ -75,5 +75,9 @@ describe("build output", () => {
     // jQuery removal tracking — superban + userlist use vanilla DOM
     expect(content).not.toContain('$("<script>")');           // jQuery script injection
     expect(content).not.toContain('$("#fuu")');               // jQuery user popup
+
+    // Final: jQuery and jQuery UI @require lines removed from header
+    expect(content).not.toContain("jquery-3.5.1");
+    expect(content).not.toContain("jquery-ui");
   });
 });

@@ -12,8 +12,6 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
-// @require  https://code.jquery.com/jquery-3.5.1.min.js
-// @require  https://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 //
 // @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/main.css?r=1.48
@@ -42,7 +40,7 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @homepageURL  https://github.com/SarahDieCoolige/BetterCC
 
 	// ==/UserScript==
-/* globals jQuery, $, ajax, tinycolor */
+/* globals ajax, tinycolor */
 `;
 
 const DORMANT_CHATLOG = `
@@ -71,5 +69,5 @@ await esbuild.build({
   target: "es2020",
   platform: "browser",
   // External: these are provided by Tampermonkey @require
-  external: ["jquery", "tinycolor"],
+  external: ["tinycolor"],
 });
