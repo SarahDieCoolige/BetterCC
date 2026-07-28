@@ -460,9 +460,11 @@
   function forceNoChatBackgrounds() {
   }
   function addCustomCss() {
-    $(
-      '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css" crossorigin="anonymous">'
-    ).appendTo("head");
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://use.fontawesome.com/releases/v6.5.1/css/all.css";
+    link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
     var main_css = GM_getResourceText("main_css");
     if (main_css) GM_addStyle(main_css);
   }
@@ -480,18 +482,26 @@
       false,
       3e4
     );
-    $("#popup-chat").removeAttr("ondragstart").removeAttr("ondrop");
-    $("head").find("script[src='https://ssl.google-analytics.com/ga.js']").remove();
-    $("#adv720").remove();
-    $("#right_ad").remove();
-    $(
-      '#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]'
-    ).closest("tr").remove();
-    $("#popup-chat > table > tbody > tr:nth-child(1)").remove();
-    $("#ulscrollhelper").remove();
-    $("#ul").addClass("headless");
-    $(".chat_i1").remove();
-    $(".b7").attr("onclick", "bye()");
+    const popup = document.querySelector("#popup-chat");
+    if (popup) {
+      popup.removeAttribute("ondragstart");
+      popup.removeAttribute("ondrop");
+    }
+    const gaScript = document.head.querySelector("script[src='https://ssl.google-analytics.com/ga.js']");
+    if (gaScript) gaScript.remove();
+    document.querySelector("#adv720")?.remove();
+    document.querySelector("#right_ad")?.remove();
+    const adFrame = document.querySelector('#r_off1 table iframe[src="https://www.chatcity.de/cc_chat/html?PAGE=300x250.html"]');
+    if (adFrame) {
+      const tr = adFrame.closest("tr");
+      if (tr) tr.remove();
+    }
+    document.querySelector("#popup-chat > table > tbody > tr:nth-child(1)")?.remove();
+    document.querySelector("#ulscrollhelper")?.remove();
+    document.querySelector("#ul")?.classList.add("headless");
+    document.querySelectorAll(".chat_i1").forEach((el) => el.remove());
+    const exitBtn = document.querySelector(".b7");
+    if (exitBtn) exitBtn.setAttribute("onclick", "bye()");
     unsafeWindow.resize_fix = function resize_fix() {
       return true;
     };

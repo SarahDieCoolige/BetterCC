@@ -53,5 +53,8 @@ describe("build output", () => {
 
     // jQuery removal tracking — dead $help table removed from utils
     expect(content).not.toContain("helpTable");
+
+    // jQuery removal tracking — addCustomCss + cleanup use vanilla DOM
+    expect(content).not.toContain(".removeAttr(");           // cleanup: jQuery-only method
   });
 });
