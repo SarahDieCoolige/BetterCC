@@ -646,10 +646,20 @@ export function showIdPopup(prename: string): void {
     const AjaxLib = w.ajax || (window as any).ajax;
 
     w.return_chat_id_obj = null;
+
+    // Timeout fallback: upstream ajax library only calls onComplete for
+    // HTTP 200. Network errors, 404, 500 are silently ignored.
+    const failTimer = setTimeout(function () {
+      if (!activeRequest) return;
+      activeRequest = false;
+      renderError("Zeit\u00fcberschreitung \u2014 ID-Card kann trotzdem ge\u00f6ffnet werden.");
+    }, 8000);
+
     new AjaxLib(url, {
       postBody: body,
       evalObj: "return_chat_id_obj",
       onComplete: function () {
+        clearTimeout(failTimer);
         if (!activeRequest) return;
         activeRequest = false;
         try {
@@ -664,11 +674,6 @@ export function showIdPopup(prename: string): void {
         } catch (e) {
           renderError("Fehler beim Verarbeiten der Antwort.");
         }
-      },
-      onError: function () {
-        if (!activeRequest) return;
-        activeRequest = false;
-        renderError("Netzwerkfehler — ID-Card kann trotzdem geöffnet werden.");
       },
     });
   }
