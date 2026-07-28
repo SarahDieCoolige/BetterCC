@@ -12,7 +12,7 @@ import {
 import { addAutoscrollBanner } from "./chat";
 import { doColorStuff } from "./theme";
 import {
-  showSettingsModal, forceNoChatBackgrounds,
+  showSettingsModal, showIdPopup, forceNoChatBackgrounds,
   addCustomCss, cleanup, betterUserList,
   betterInput, redesignFooter,
 } from "./ui";
@@ -31,6 +31,7 @@ import {
 
   // ─── window functions ───
   var bettercc = (unsafeWindow.bettercc = {} as any);
+  bettercc.showIdPopup = showIdPopup;  // /id mini-ID popup
 
   // ─── MAIN CHAT ───
   if (/cpop.html/.test(window.location.href)) {

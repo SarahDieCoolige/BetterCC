@@ -429,3 +429,181 @@ export function redesignFooter(): void {
   // ─── Replace table ───
   footerTable.replaceWith(footer);
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// /id command — modern mini-ID popup
+// ═══════════════════════════════════════════════════════════════════════
+
+function encodeIdUrl(name: string): string {
+  try {
+    const linkEncode = (unsafeWindow as any).link_encode;
+    if (typeof linkEncode === "function") {
+      return linkEncode(name);
+    }
+  } catch { /* fall through */ }
+  // Fallback: basic encoding
+  let encoded = "";
+  for (let i = 0; i < name.length; i++) {
+    const ch = name.charAt(i);
+    const code = ch.charCodeAt(0);
+    if ((code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+      encoded += ch;
+    } else if (ch === " ") {
+      encoded += "+";
+    } else if (code <= 255) {
+      encoded += ":" + code.toString(16).toUpperCase().padStart(2, "0") + ":";
+    } else {
+      encoded += "+";
+    }
+  }
+  return encoded;
+}
+
+export function showIdPopup(prename: string): void {
+  // Remove any existing popup
+  const existing = document.querySelector("#bcc-id-overlay") as HTMLElement | null;
+  if (existing) existing.remove();
+
+  // ─── Overlay ───
+  const overlay = document.createElement("div");
+  overlay.id = "bcc-id-overlay";
+  overlay.style.cssText =
+    "position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1000;" +
+    "display:flex;align-items:center;justify-content:center;";
+
+  // ─── Card ───
+  const card = document.createElement("div");
+  card.style.cssText =
+    "background:var(--inputBackground);color:var(--inputText);" +
+    "width:350px;max-height:70vh;border-radius:8px;" +
+    "box-shadow:0 0 12px rgba(0,0,0,0.25);z-index:1001;" +
+    "display:flex;flex-direction:column;overflow:hidden;";
+
+  // ─── Header ───
+  const header = document.createElement("div");
+  header.style.cssText =
+    "display:flex;justify-content:space-between;align-items:center;" +
+    "padding:12px 16px;border-bottom:1px solid var(--footerBackground);";
+
+  const title = document.createElement("span");
+  title.textContent = "ID Suche";
+  title.style.cssText = "font-weight:600;font-size:14px;";
+  header.appendChild(title);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+  closeBtn.style.cssText =
+    "background:none;border:none;color:var(--iconColor);" +
+    "cursor:pointer;font-size:14px;padding:4px 8px;";
+  header.appendChild(closeBtn);
+
+  // ─── Search area ───
+  const searchArea = document.createElement("div");
+  searchArea.style.cssText = "padding:12px 16px;display:flex;gap:8px;";
+
+  const searchInput = document.createElement("input");
+  searchInput.type = "text";
+  searchInput.placeholder = "Username...";
+  searchInput.value = prename;
+  searchInput.style.cssText =
+    "flex:1;padding:6px 10px;border:1px solid var(--footerBackground);" +
+    "border-radius:4px;background:var(--inputBackground);color:var(--inputText);" +
+    "font-size:14px;outline:none;";
+
+  const searchBtn = document.createElement("button");
+  searchBtn.textContent = "Suchen";
+  searchBtn.style.cssText =
+    "background:var(--buttonColor);color:var(--buttonText);" +
+    "border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px;";
+
+  // ─── ID link area ───
+  const linkArea = document.createElement("div");
+  linkArea.style.cssText = "padding:0 16px 8px;";
+
+  function updateIdLink(name: string): void {
+    linkArea.innerHTML = "";
+    if (!name) return;
+    const encoded = encodeIdUrl(name);
+    const link = document.createElement("a");
+    link.textContent = name;
+    link.href = "//www.chatcity.de/de/id/" + encoded + ".html";
+    link.target = "_blank";
+    link.style.cssText =
+      "color:var(--buttonColor);text-decoration:none;font-size:13px;";
+    link.title = "ID-Card öffnen";
+    const arrow = document.createElement("span");
+    arrow.textContent = " →";
+    arrow.style.fontSize = "11px";
+    link.appendChild(arrow);
+    linkArea.appendChild(link);
+  }
+
+  updateIdLink(prename);
+
+  // ─── Results container ───
+  const results = document.createElement("div");
+  results.style.cssText =
+    "padding:0 16px 12px;overflow-y:auto;flex:1;min-height:0;";
+
+  const loadingEl = document.createElement("div");
+  loadingEl.textContent = "Wird geladen...";
+  loadingEl.style.cssText = "text-align:center;color:var(--placeholderColor);font-size:13px;";
+  results.appendChild(loadingEl);
+
+  // ─── Assemble ───
+  searchArea.appendChild(searchInput);
+  searchArea.appendChild(searchBtn);
+  card.appendChild(header);
+  card.appendChild(searchArea);
+  card.appendChild(linkArea);
+  card.appendChild(results);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  // Focus input if empty
+  if (!prename) searchInput.focus();
+
+  // ─── Close helpers ───
+  function closePopup(): void {
+    overlay.remove();
+    document.removeEventListener("keydown", onKeyDown);
+  }
+
+  function onKeyDown(e: KeyboardEvent): void {
+    if (e.key === "Escape") closePopup();
+  }
+
+  closeBtn.addEventListener("click", closePopup);
+  overlay.addEventListener("click", function (e: MouseEvent) {
+    if (e.target === overlay) closePopup();
+  });
+  document.addEventListener("keydown", onKeyDown);
+
+  // Prevent card clicks from closing
+  card.addEventListener("click", function (e: MouseEvent) {
+    e.stopPropagation();
+  });
+
+  // ─── Search on Enter ───
+  searchInput.addEventListener("keydown", function (e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      const name = searchInput.value.trim();
+      updateIdLink(name);
+      if (name) {
+        results.innerHTML = "";
+        results.appendChild(loadingEl);
+        // fetchResults(name, results, loadingEl);  // Task 2
+      }
+    }
+  });
+
+  searchBtn.addEventListener("click", function () {
+    const name = searchInput.value.trim();
+    updateIdLink(name);
+    if (name) {
+      results.innerHTML = "";
+      results.appendChild(loadingEl);
+      // fetchResults(name, results, loadingEl);  // Task 2
+    }
+  });
+}
