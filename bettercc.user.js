@@ -485,7 +485,7 @@
       '<link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.1/css/all.css" crossorigin="anonymous">'
     ).appendTo("head");
     var main_css = GM_getResourceText("main_css");
-    GM_wrench.addCss(main_css);
+    if (main_css) GM_addStyle(main_css);
   }
   function cleanup() {
     waitForElements(

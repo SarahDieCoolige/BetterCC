@@ -88,7 +88,7 @@ export function addCustomCss(): void {
   ).appendTo("head");
 
   var main_css = GM_getResourceText("main_css");
-  GM_wrench.addCss(main_css);
+  if (main_css) GM_addStyle(main_css);
 }
 
 export function cleanup(): void {
