@@ -2,8 +2,8 @@
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version      2.0
-// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
+// @version      2.0.1
+// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
 // @match  https://ccc.chatcity.de/de/cpop.html?*RURL=*
@@ -12,8 +12,8 @@
 //
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=2.0
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=2.0
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.1
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.1
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -31,8 +31,8 @@
 // @sandbox  JavaScript
 // @run-at document-idle
 //
-// @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/bettercc.user.js
-// @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/bettercc.user.js
+// @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/bettercc.user.js
+// @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/bettercc.user.js
 //
 // @supportURL  https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL  https://github.com/SarahDieCoolige/BetterCC
@@ -655,7 +655,7 @@
         inputText.replaceWith(newTextarea);
         newTextarea.addEventListener("keypress", function(e) {
           if (e.key === "Enter" && !e.shiftKey) {
-            form.submit();
+            form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
             e.preventDefault();
           }
         });

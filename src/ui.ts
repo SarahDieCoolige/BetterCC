@@ -282,7 +282,9 @@ export function betterInput(replace: boolean): void {
 
       newTextarea.addEventListener("keypress", function (e: KeyboardEvent) {
         if (e.key === "Enter" && !e.shiftKey) {
-          form!.submit();
+          // Dispatch submit event to trigger handlers without native form submission.
+          // jQuery's $form.submit() only fired handlers; native submit() navigates.
+          form!.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
           e.preventDefault();
         }
       });
