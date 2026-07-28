@@ -2,8 +2,8 @@
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version      1.48
-// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/BetterCC.png
+// @version      2.0
+// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
 // @match  https://ccc.chatcity.de/de/cpop.html?*RURL=*
@@ -12,8 +12,8 @@
 //
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/main.css?r=1.48
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/websocket/css/iframe.css?r=1.48
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/main.css?r=2.0
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/main/css/iframe.css?r=2.0
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -40,6 +40,7 @@
 	// ==/UserScript==
 /* globals ajax, tinycolor */
 
+"use strict";
 (() => {
   // src/utils.ts
   var superbanEnable = 1;
@@ -59,7 +60,7 @@
         timeout,
         silent: true,
         onclick: () => {
-          event.preventDefault();
+          window.event?.preventDefault();
           cclog("Notification clicked.");
           window.focus();
         }
@@ -642,6 +643,7 @@
   }
   function betterInput(replace) {
     var form = null;
+    var originalInput = null;
     try {
       form = document.querySelector('form[name="hold"]');
       if (!form) {
@@ -651,7 +653,6 @@
       if (!inputText) {
         throw new Error('Input of type "text" not found in the form.');
       }
-      var originalInput = null;
       if (replace) {
         const newTextarea = document.createElement("textarea");
         newTextarea.id = "custom_input_text";
@@ -674,7 +675,7 @@
       }
     } catch (error) {
       console.error("An error occurred in betterInput:", error.message);
-      if (replace && originalInput) {
+      if (replace && originalInput && form) {
         const customInput = form.querySelector("#custom_input_text");
         if (customInput) customInput.replaceWith(originalInput);
       }

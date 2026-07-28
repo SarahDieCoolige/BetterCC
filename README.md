@@ -30,3 +30,16 @@ Wenn ihr noch andere Ideen oder Vorschläge habt, oder eine Funktion vermisst,
 die ich noch nicht gemacht habe, sagt mir einfach im Chat oder hier auf der Seite Bescheid.
 Man kann hier ein [Issue](https://github.com/SarahDieCoolige/BetterCC/issues) öffnen.
 Das könnt ihr gerne machen wenn ihr Probleme mit der Erweiterung habt, oder mir cooolige Ideen mitteilen wollt.
+
+### Entwicklung
+
+Das Script wird aus TypeScript-Modulen in `src/` gebaut.
+
+```bash
+npm install          # Abhängigkeiten installieren
+npm run build        # bettercc.user.js erzeugen
+npm test             # Tests ausführen
+npm run typecheck    # TypeScript prüfen
+```
+
+Die erzeugte `bettercc.user.js` kann direkt in Tampermonkey geladen werden.
