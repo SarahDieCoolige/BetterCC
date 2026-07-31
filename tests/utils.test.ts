@@ -14,17 +14,19 @@ describe("getUserKey", () => {
     setUserStore("testuser", false);
   });
 
-  it("prefixes key with lowercase nick", () => {
-    expect(getUserKey("ban_list")).toBe("testuser_ban_list");
+  it("suffixes the key with the lowercase nick: {key}_{user}", () => {
+    // Matches the old path's hand-rolled keys ("color_" + userStore) so v3
+    // reads existing users' saved data with no migration (spec §6.5, A6).
+    expect(getUserKey("ban")).toBe("ban_testuser");
   });
 
   it("handles empty key", () => {
-    expect(getUserKey("")).toBe("testuser_");
+    expect(getUserKey("")).toBe("_testuser");
   });
 
-  it("uses 'gast' prefix when user is guest", () => {
+  it("uses 'gast' as the user suffix when the user is a guest", () => {
     setUserStore("Anything", true);
-    expect(getUserKey("color")).toBe("gast_color");
+    expect(getUserKey("color")).toBe("color_gast");
   });
 });
 

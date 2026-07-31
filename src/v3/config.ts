@@ -1,9 +1,11 @@
 // ─── v3 config: typed GM-storage wrapper (spec §2.5) ──────────────────────
 //
 // A thin typed read/write layer over GM.getValue/GM.setValue, keyed via the
-// existing getUserKey() helper (so keys stay user-scoped: {user}_{key}, or
-// gast_{key} for guests). Keys are UNCHANGED from the old path (rollback
-// safety, A6): color, colorscheme, ban, pinned, whisper, plus the flag bcc_v3.
+// existing getUserKey() helper (which produces prefix keys: {key}_{user}, or
+// {key}_gast for guests). Keys match the old path's hand-rolled keys
+// ("color_" + userStore, "ban_" + userStore, ...) so v3 reads existing users'
+// saved data with no migration (rollback safety, A6): color, colorscheme,
+// ban, pinned, whisper, plus the new flag bcc_v3.
 //
 // The GM boundary is a side-effecting seam (no jsdom in the test suite), so the
 // pure contract this module exposes — the known keys, their defaults, and the
@@ -12,7 +14,7 @@
 
 import { getUserKey } from "../utils";
 
-/** Every known GM key (suffix; user-scoping is applied by getUserKey). */
+/** Every known GM key (key name; user-scoping prefix is applied by getUserKey). */
 export const KNOWN_KEYS = [
   "color",
   "colorscheme",

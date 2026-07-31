@@ -95,8 +95,12 @@ export function applyThemeToIframe(bgColor: string, fgColor: string): void {
 
 let userStore: string = ""; // set during init
 
+// Prefix format: {key}_{user} — NOT {user}_{key}. This matches the keys the
+// old path hand-rolls everywhere ("color_" + userStore, "ban_" + userStore,
+// etc.), so the v3 config module reads what existing users already have saved.
+// No data migration (spec §6.5, A6). Guests use "gast" as the user suffix.
 export function getUserKey(key: string): string {
-  return `${userStore}_${key}`;
+  return `${key}_${userStore}`;
 }
 
 export function setUserStore(nick: string, isGast: boolean): void {

@@ -1,9 +1,11 @@
 // Tests for the v3 config module — typed GM-storage wrapper (spec §2.5).
 //
 // GM keys are unchanged for rollback safety (A6): color_{user}, ban_{user},
-// pinned_{user}, whisper_{user}, colorscheme_{user}, plus the flag bcc_v3_{user}.
-// The module is a typed read/write wrapper over GM.getValue/GM.setValue keyed
-// via the existing getUserKey() helper. Keys are user-scoped; guests use "gast".
+// pinned_{user}, whisper_{user}, colorscheme_{user}, plus the flag bcc_v3_{user}
+// — all produced by getUserKey() in prefix format ({key}_{user}), matching the
+// old path's hand-rolled keys so existing saved data is read with no migration.
+// The module is a typed read/write wrapper over GM.getValue/GM.setValue. Guests
+// use "gast" as the suffix.
 //
 // The GM boundary itself isn't unit-testable (no jsdom), so we use a tiny
 // in-memory GM fake (a Map) — the skill's preferred "fake" double. This proves
