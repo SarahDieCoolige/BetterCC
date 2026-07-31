@@ -1644,6 +1644,7 @@
   var session;
   var timer = null;
   function initSession() {
+    if (timer) clearInterval(timer);
     const w = unsafeWindow;
     session = {
       nick: String(w.chat_nick ?? ""),
@@ -1719,47 +1720,58 @@
   var textarea = null;
   var onSubmitOrig = null;
   var currentWhisperNick = "";
-  async function doSubmit(whispernick) {
-    const docHold = document.hold;
-    if (!docHold) return;
-    let mymsg = (textarea?.value ?? "").trim();
-    const cmd = classifyMessage(mymsg);
+  function prepareMessage(rawMsg, whisperNick) {
+    const cmd = classifyMessage(rawMsg);
     if (cmd.handled) {
       switch (cmd.type) {
         case "help":
-          printHelp();
-          clearInput(docHold);
-          return;
         case "reload":
-          unsafeWindow.bettercc.reloadChat();
-          clearInput(docHold);
-          return;
         case "open-whisper":
-          await superwhisper("");
-          clearInput(docHold);
-          return;
         case "superwhisper":
-          await superwhisper(cmd.nick, false);
-          clearInput(docHold);
-          return;
-        case "open-msg":
-          mymsg = cmd.message;
-          break;
         case "superban":
-          clearInput(docHold);
-          return;
         case "id":
-          cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
-          clearInput(docHold);
-          return;
+          return { action: "handled", clear: true };
+        case "open-msg":
+          return { action: "send", message: cmd.message };
       }
     }
+    return { action: "send", message: rewriteForWhisper(rawMsg, whisperNick) };
+  }
+  async function doSubmit(whispernick) {
+    const docHold = document.hold;
+    if (!docHold) return;
+    const rawMsg = (textarea?.value ?? "").trim();
     const finalNick = whispernick ?? currentWhisperNick;
-    if (finalNick) {
-      mymsg = rewriteForWhisper(mymsg, finalNick);
+    const decision = prepareMessage(rawMsg, finalNick);
+    if (decision.action === "handled") {
+      const cmd = classifyMessage(rawMsg);
+      if (cmd.handled) {
+        switch (cmd.type) {
+          case "help":
+            printHelp();
+            break;
+          case "reload":
+            unsafeWindow.bettercc.reloadChat();
+            break;
+          case "open-whisper":
+            await superwhisper("");
+            break;
+          case "superwhisper":
+            await superwhisper(cmd.nick, false);
+            break;
+          case "superban":
+            break;
+          // Stub for T12.
+          case "id":
+            cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
+            break;
+        }
+      }
+      clearInput(docHold);
+      return;
     }
-    if (onSubmitOrig && mymsg) {
-      docHold.OUT1.value = mymsg;
+    if (onSubmitOrig && decision.message) {
+      docHold.OUT1.value = decision.message;
       onSubmitOrig();
     }
     if (textarea) textarea.value = "";
@@ -1864,8 +1876,13 @@
   function buildOnlineCount() {
     const span = document.createElement("span");
     span.className = "bcc-online-count";
-    const count = Math.floor((unsafeWindow.cha_my?.length ?? 0) / 2);
-    span.textContent = String(count) + " online";
+    const render = (n) => {
+      span.textContent = String(n) + " online";
+    };
+    render(Math.floor((unsafeWindow.cha_my?.length ?? 0) / 2));
+    subscribe((e) => {
+      if (e.type === "userlist") render(e.users.length);
+    });
     return span;
   }
   function patchSetStatus() {

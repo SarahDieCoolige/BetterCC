@@ -20,6 +20,10 @@ let timer: ReturnType<typeof setInterval> | null = null;
  * can seed their state immediately.
  */
 export function initSession(): void {
+  // Idempotency guard: a re-init (HMR, double initV3) would otherwise stack a
+  // second polling interval and double-emit on every change. Clear the old one.
+  if (timer) clearInterval(timer);
+
   const w = unsafeWindow as any;
 
   session = {

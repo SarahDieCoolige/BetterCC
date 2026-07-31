@@ -5,6 +5,7 @@
 // Ported from old redesignFooter (src/ui.ts:305) but builds fresh buttons.
 
 import { cclog, printHelp } from "../utils";
+import { subscribe, type BccEvent } from "./store";
 
 let reloadBtn: HTMLElement | null = null;
 
@@ -65,8 +66,12 @@ function buildExitBtn(): HTMLButtonElement {
 function buildOnlineCount(): HTMLElement {
   const span = document.createElement("span");
   span.className = "bcc-online-count";
-  const count = Math.floor(((unsafeWindow as any).cha_my?.length ?? 0) / 2);
-  span.textContent = String(count) + " online";
+  // Seed with the current count, then keep it live as users join/leave.
+  const render = (n: number) => { span.textContent = String(n) + " online"; };
+  render(Math.floor(((unsafeWindow as any).cha_my?.length ?? 0) / 2));
+  subscribe((e: BccEvent) => {
+    if (e.type === "userlist") render(e.users.length);
+  });
   return span;
 }
 

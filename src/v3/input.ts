@@ -12,65 +12,91 @@ let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: Function | null = null;
 let currentWhisperNick = "";
 
-// ─── The submit handler ────────────────────────────────────────────────────
+// ─── The send-path decision (pure — extracted from doSubmit, tested) ───────
+//
+// Given the raw textarea message and the active whisper nick, decide what to
+// do: send a (possibly rewritten) message, or let a command consume it. This
+// is the layer that ties classifyMessage + rewriteForWhisper together — it
+// was untested originally, which is how the /o-under-superwhisper bug (C1)
+// slipped through. doSubmit is now a thin wrapper over this.
+
+export type SendDecision =
+  | { action: "send"; message: string }
+  | { action: "handled"; clear: true };
+
+export function prepareMessage(rawMsg: string, whisperNick: string): SendDecision {
+  const cmd = classifyMessage(rawMsg);
+  if (cmd.handled) {
+    switch (cmd.type) {
+      case "help":
+      case "reload":
+      case "open-whisper":
+      case "superwhisper":
+      case "superban":
+      case "id":
+        // These commands consume the message — the caller runs their side
+        // effects (printHelp, reloadChat, superwhisper toggle, …) and clears
+        // the input. Nothing is sent.
+        return { action: "handled", clear: true };
+      case "open-msg":
+        // /o (send-to-all) strips its prefix and sends to EVERYONE — it must
+        // NOT be whisper-rewritten even when superwhisper is active. Returning
+        // here skips the rewrite below. (C1 regression test covers this.)
+        return { action: "send", message: cmd.message };
+    }
+  }
+  // Plain message, or an explicit /w / /me the user typed manually.
+  // rewriteForWhisper skips messages starting with "/", so explicit commands
+  // pass through unchanged; only plain messages get the /w prefix.
+  return { action: "send", message: rewriteForWhisper(rawMsg, whisperNick) };
+}
+
+// ─── The submit handler (thin wrapper over prepareMessage) ─────────────────
 
 async function doSubmit(whispernick?: string): Promise<void> {
   const docHold = (document as any).hold as HTMLFormElement | null;
   if (!docHold) return;
 
-  // v3's textarea is separate from the hidden hold form. Read the message
-  // from the textarea, then copy it into the hold form for the send contract.
-  let mymsg = (textarea?.value ?? "").trim();
-
-  // 1. Command dispatch (pure — tested)
-  const cmd = classifyMessage(mymsg);
-  if (cmd.handled) {
-    switch (cmd.type) {
-      case "help":
-        printHelp();
-        clearInput(docHold);
-        return;
-      case "reload":
-        (unsafeWindow.bettercc as any).reloadChat();
-        clearInput(docHold);
-        return;
-      case "open-whisper":
-        await superwhisper("");
-        clearInput(docHold);
-        return;
-      case "superwhisper":
-        await superwhisper(cmd.nick, false);
-        clearInput(docHold);
-        return;
-      case "open-msg":
-        mymsg = cmd.message;
-        break;
-      case "superban":
-        // Stub for T12 — the real implementation wires superban from src/superban.ts.
-        // Temporarily do nothing.
-        clearInput(docHold);
-        return;
-      case "id":
-        // Stub for T13 — the real showIdPopup is wired there.
-        cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
-        clearInput(docHold);
-        return;
-    }
-  }
-
-  // 2. Superwhisper rewrite (if active and not a command)
+  const rawMsg = (textarea?.value ?? "").trim();
   const finalNick = whispernick ?? currentWhisperNick;
-  if (finalNick) {
-    mymsg = rewriteForWhisper(mymsg, finalNick);
+  const decision = prepareMessage(rawMsg, finalNick);
+
+  if (decision.action === "handled") {
+    // Run the command's side effect. classifyMessage is pure + cheap; calling
+    // it again here (instead of threading cmd through prepareMessage) keeps
+    // the SendDecision type simple and the test assertions clean.
+    const cmd = classifyMessage(rawMsg);
+    if (cmd.handled) {
+      switch (cmd.type) {
+        case "help":
+          printHelp();
+          break;
+        case "reload":
+          (unsafeWindow.bettercc as any).reloadChat();
+          break;
+        case "open-whisper":
+          await superwhisper("");
+          break;
+        case "superwhisper":
+          await superwhisper(cmd.nick, false);
+          break;
+        case "superban":
+          break; // Stub for T12.
+        case "id":
+          cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
+          break;
+      }
+    }
+    clearInput(docHold);
+    return;
   }
 
-  // 3. Send through the patched-handler (normalize, away-timer, delout)
-  if (onSubmitOrig && mymsg) {
-    (docHold.OUT1 as HTMLInputElement).value = mymsg;
+  // action === "send": route through the patched upstream handler
+  // (normalize, away-timer reset, delout → inf form).
+  if (onSubmitOrig && decision.message) {
+    (docHold.OUT1 as HTMLInputElement).value = decision.message;
     onSubmitOrig();
   }
-
-  // 4. Clear the textarea
   if (textarea) textarea.value = "";
 }
 
