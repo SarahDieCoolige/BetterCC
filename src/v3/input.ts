@@ -18,7 +18,9 @@ async function doSubmit(whispernick?: string): Promise<void> {
   const docHold = (document as any).hold as HTMLFormElement | null;
   if (!docHold) return;
 
-  let mymsg = (docHold.OUT1 as HTMLInputElement).value.trim();
+  // v3's textarea is separate from the hidden hold form. Read the message
+  // from the textarea, then copy it into the hold form for the send contract.
+  let mymsg = (textarea?.value ?? "").trim();
 
   // 1. Command dispatch (pure — tested)
   const cmd = classifyMessage(mymsg);

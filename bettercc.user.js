@@ -1722,7 +1722,7 @@
   async function doSubmit(whispernick) {
     const docHold = document.hold;
     if (!docHold) return;
-    let mymsg = docHold.OUT1.value.trim();
+    let mymsg = (textarea?.value ?? "").trim();
     const cmd = classifyMessage(mymsg);
     if (cmd.handled) {
       switch (cmd.type) {
