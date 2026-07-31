@@ -186,6 +186,41 @@
   padding: 6px 12px;
   font-size: 13px;
   color: var(--bcc-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bcc-footer-left,
+.bcc-footer-center,
+.bcc-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bcc-footer-center { justify-content: center; flex: 1; }
+.bcc-footer-right  { margin-left: auto; }
+
+/* ─── Footer pill buttons ─── */
+.bcc-pill {
+  background: var(--bcc-surface-raised);
+  color: var(--bcc-text-raised);
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.bcc-pill:hover  { background: var(--bcc-surface-hover); }
+.bcc-pill:active { background: var(--bcc-surface-active); }
+.bcc-pill.bcc-active { background: var(--bcc-accent-whisper); color: var(--bcc-surface); }
+
+.bcc-online-count {
+  font-size: 12px;
+  opacity: 0.8;
 }
 
 /* Placeholder labels for not-yet-built sections (T7/T8/T9) */

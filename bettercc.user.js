@@ -1819,6 +1819,104 @@
     cclog("input mounted \u2014 textarea + send contract + superwhisper", "v3");
   }
 
+  // src/v3/footer.ts
+  var reloadBtn = null;
+  function pillButton(icon, title, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-pill";
+    btn.title = title;
+    btn.innerHTML = '<i class="fas ' + icon + '"></i>';
+    btn.addEventListener("click", onClick);
+    return btn;
+  }
+  function buildReloadBtn() {
+    return pillButton("fa-sync", "Chat neu laden", () => {
+      unsafeWindow.bettercc.reloadChat();
+    });
+  }
+  function buildAutoscrollBtn() {
+    const btn = pillButton("fa-angle-double-down", "Autoscroll ein/aus", () => {
+      const cb2 = document.querySelector('form[name="OF"] input[name="AS"]');
+      if (cb2) cb2.click();
+      btn.classList.toggle("bcc-active", cb2?.checked ?? false);
+    });
+    const cb = document.querySelector('form[name="OF"] input[name="AS"]');
+    if (cb?.checked) btn.classList.add("bcc-active");
+    return btn;
+  }
+  function buildHelpBtn() {
+    return pillButton("fa-question", "Hilfe", () => {
+      printHelp();
+    });
+  }
+  function buildSettingsBtn() {
+    return pillButton("fa-cog", "Einstellungen", () => {
+      cclog("settings clicked \u2014 stub (T10)", "v3");
+    });
+  }
+  function buildExitBtn() {
+    return pillButton("fa-sign-out-alt", "Verlassen", () => {
+      const w = unsafeWindow;
+      if (typeof w.bye === "function") w.bye();
+    });
+  }
+  function buildOnlineCount() {
+    const span = document.createElement("span");
+    span.className = "bcc-online-count";
+    const count = Math.floor((unsafeWindow.cha_my?.length ?? 0) / 2);
+    span.textContent = String(count) + " online";
+    return span;
+  }
+  function patchSetStatus() {
+    const w = unsafeWindow;
+    if (typeof w.chatout_setstatus !== "function") return;
+    const orig = w.chatout_setstatus;
+    w.chatout_setstatus = function(text, color, bold) {
+      if (reloadBtn) {
+        reloadBtn.style.color = color || "#888";
+        reloadBtn.title = "Chat neu laden \u2014 " + text;
+      }
+      orig.call(this, text, color, bold);
+    };
+  }
+  function injectFontAwesome() {
+    if (document.querySelector('link[href*="fontawesome"]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://use.fontawesome.com/releases/v6.5.1/css/all.css";
+    document.head.appendChild(link);
+  }
+  function mountFooter() {
+    const footerEl = document.querySelector(".bcc-footer");
+    if (!footerEl) return;
+    injectFontAwesome();
+    const onlineCount = buildOnlineCount();
+    reloadBtn = buildReloadBtn();
+    const autoscrollBtn = buildAutoscrollBtn();
+    const helpBtn = buildHelpBtn();
+    const settingsBtn = buildSettingsBtn();
+    const exitBtn = buildExitBtn();
+    const left = document.createElement("div");
+    left.className = "bcc-footer-left";
+    left.appendChild(onlineCount);
+    left.appendChild(autoscrollBtn);
+    const center = document.createElement("div");
+    center.className = "bcc-footer-center";
+    center.appendChild(reloadBtn);
+    center.appendChild(helpBtn);
+    center.appendChild(settingsBtn);
+    const right = document.createElement("div");
+    right.className = "bcc-footer-right";
+    right.appendChild(exitBtn);
+    footerEl.innerHTML = "";
+    footerEl.appendChild(left);
+    footerEl.appendChild(center);
+    footerEl.appendChild(right);
+    patchSetStatus();
+    cclog("footer mounted \u2014 pills + FA + setstatus patch", "v3");
+  }
+
   // src/v3/index.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
@@ -1846,6 +1944,7 @@
     hookChatoutConnect();
     mountSidebar();
     mountInput();
+    mountFooter();
   }
 
   // src/theme.ts
@@ -1937,16 +2036,16 @@
     });
     colorWrap.appendChild(bgPicker);
     betterOpts.appendChild(colorWrap);
-    const reloadBtn = document.createElement("button");
-    reloadBtn.id = "reloadbutton";
-    reloadBtn.type = "button";
-    reloadBtn.className = "bcc-icon-btn";
-    reloadBtn.title = "Chat neu laden (mimimi)";
-    reloadBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-    reloadBtn.addEventListener("click", function() {
+    const reloadBtn2 = document.createElement("button");
+    reloadBtn2.id = "reloadbutton";
+    reloadBtn2.type = "button";
+    reloadBtn2.className = "bcc-icon-btn";
+    reloadBtn2.title = "Chat neu laden (mimimi)";
+    reloadBtn2.innerHTML = '<i class="fas fa-sync-alt"></i>';
+    reloadBtn2.addEventListener("click", function() {
       unsafeWindow.bettercc.reloadChat();
     });
-    betterOpts.appendChild(reloadBtn);
+    betterOpts.appendChild(reloadBtn2);
     const helpBtn = document.createElement("button");
     helpBtn.id = "helpbutton";
     helpBtn.type = "button";
@@ -2403,7 +2502,7 @@
     var debugTools = document.querySelector("#chatout_debug_tools");
     var asCheckbox = autoscrollForm?.querySelector('input[name="AS"]');
     var colorWrap = document.querySelector(".bcc-color-picker-wrap");
-    var reloadBtn = document.querySelector("#reloadbutton");
+    var reloadBtn2 = document.querySelector("#reloadbutton");
     var helpBtn = document.querySelector("#helpbutton");
     var settingsBtn = document.querySelector("#settingsbutton");
     var anmelden = actionCell.querySelector("a.b3");
@@ -2450,7 +2549,7 @@
     });
     var chatActionsPill = document.createElement("div");
     chatActionsPill.className = "bcc-pill bcc-pill-2 bcc-chat-actions";
-    [autoscrollBtn, reloadBtn, colorWrap].forEach(function(el) {
+    [autoscrollBtn, reloadBtn2, colorWrap].forEach(function(el) {
       if (el) chatActionsPill.appendChild(el);
     });
     var betterccPill = document.createElement("div");

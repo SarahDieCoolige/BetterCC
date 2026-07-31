@@ -42,6 +42,7 @@ import { overrideSetUinfo1 } from "./userlist-wire";
 import { mountSidebar } from "./sidebar";
 import { initSession } from "./session";
 import { mountInput } from "./input";
+import { mountFooter } from "./footer";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (ui.ts) did this plus
@@ -121,5 +122,7 @@ export function initV3(): void {
   // and BetterCC command dispatch (/sw /open /reload /help).
   mountInput();
 
-  // TODO(T9): footer pills.
+  // Mount the footer — pills (reload, autoscroll, help, settings stub, exit),
+  // Font Awesome CDN, online count, and chatout_setstatus → reload button color.
+  mountFooter();
 }
