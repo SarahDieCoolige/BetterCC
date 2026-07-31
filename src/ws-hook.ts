@@ -30,9 +30,18 @@ export function injectIntoChatframe(): void {
     }
   }
 
-  // 2) Apply saved theme
+  // 2) Apply saved theme — sets --chatBackground / --chatText on the iframe's
+  // :root. Also override the body's inline white background (set by a <script>
+  // in cpop_kylr.html) so the CSS variables actually paint the page.
   if (typeof (unsafeWindow.bettercc as any)?.setTheme === "function") {
     (unsafeWindow.bettercc as any).setTheme();
+  }
+  // Regardless of whether a user theme was loaded yet, override the upstream
+  // inline white: the injected iframe.css already provides fallback
+  // --chatBackground / --chatText on :root, so the body resolves those.
+  if (doc.body) {
+    doc.body.style.setProperty("background-color", "var(--chatBackground)");
+    doc.body.style.setProperty("color", "var(--chatText)");
   }
 
   // 3) Add autoscroll banner
@@ -52,6 +61,15 @@ export function betterccOnWsMessage(ev: Event): void {
   }
 }
 
+/** Listens for the mock's bcc-init event (not a chat message — bypasses
+ *  contentDocument.write()). Triggers injectIntoChatframe after the prefill
+ *  has arrived and our WS hook is attached, without duplicating content. */
+export function betterccOnBccInit(_ev: Event): void {
+  if (!chatframeReady) {
+    injectIntoChatframe();
+  }
+}
+
 export function betterccOnWsClose(): void {
   // Upstream handles reconnect automatically.
 }
@@ -61,6 +79,10 @@ export function attachWsListeners(): void {
     unsafeWindow.chatout_ws.addEventListener(
       "message",
       betterccOnWsMessage
+    );
+    unsafeWindow.chatout_ws.addEventListener(
+      "bcc-init",
+      betterccOnBccInit
     );
     unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
   }

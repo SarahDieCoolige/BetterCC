@@ -39,4 +39,11 @@ export function overrideSetUinfo1(): void {
     emit({ type: "userlist", users: newList, added, removed });
   };
   cclog("set_uinfo1 overridden — userlist events now feed the store", "v3");
+  // Replay the current cha_my now. The mock pre-schedules a set_uinfo1 call
+  // (globals.mjs:60) with a 20ms timer that can fire BEFORE this override is
+  // installed — in which case the initial userlist data hits the original mock
+  // handler and the sidebar never sees it. Replaying here closes the race:
+  // whoever won, the sidebar gets the data.
+  const chaMy: string[] = (unsafeWindow as any).cha_my ?? [];
+  if (chaMy.length > 0) (unsafeWindow as any).set_uinfo1();
 }

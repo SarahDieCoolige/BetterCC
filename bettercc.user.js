@@ -206,11 +206,20 @@
     if (typeof unsafeWindow.bettercc?.setTheme === "function") {
       unsafeWindow.bettercc.setTheme();
     }
+    if (doc.body) {
+      doc.body.style.setProperty("background-color", "var(--chatBackground)");
+      doc.body.style.setProperty("color", "var(--chatText)");
+    }
     addAutoscrollBanner(doc, win);
     chatframeReady = true;
     cclog("injectIntoChatframe: injection complete");
   }
   function betterccOnWsMessage(ev) {
+    if (!chatframeReady) {
+      injectIntoChatframe();
+    }
+  }
+  function betterccOnBccInit(_ev) {
     if (!chatframeReady) {
       injectIntoChatframe();
     }
@@ -222,6 +231,10 @@
       unsafeWindow.chatout_ws.addEventListener(
         "message",
         betterccOnWsMessage
+      );
+      unsafeWindow.chatout_ws.addEventListener(
+        "bcc-init",
+        betterccOnBccInit
       );
       unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
     }
@@ -1516,12 +1529,14 @@
   function overrideSetUinfo1() {
     const upstream = unsafeWindow.set_uinfo1;
     unsafeWindow.set_uinfo1 = function() {
-      const chaMy = unsafeWindow.cha_my ?? [];
-      const { newList, added, removed } = processUserlist(chaMy, prevList);
+      const chaMy2 = unsafeWindow.cha_my ?? [];
+      const { newList, added, removed } = processUserlist(chaMy2, prevList);
       prevList = newList;
       emit({ type: "userlist", users: newList, added, removed });
     };
     cclog("set_uinfo1 overridden \u2014 userlist events now feed the store", "v3");
+    const chaMy = unsafeWindow.cha_my ?? [];
+    if (chaMy.length > 0) unsafeWindow.set_uinfo1();
   }
 
   // src/v3/config.ts
