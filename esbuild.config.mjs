@@ -59,7 +59,7 @@ const DORMANT_CHATLOG = `
   // ═══════════════════════════════════════════════════════════════════════
 `;
 
-await esbuild.build({
+const buildConfig = {
   entryPoints: ["src/index.ts"],
   bundle: true,
   outfile: "bettercc.user.js",
@@ -70,4 +70,14 @@ await esbuild.build({
   platform: "browser",
   // External: these are provided by Tampermonkey @require
   external: ["tinycolor"],
-});
+};
+
+const isWatch = process.argv.includes("--watch");
+
+if (isWatch) {
+  const ctx = await esbuild.context(buildConfig);
+  await ctx.watch();
+  console.log("[esbuild] Watching src/ for changes...");
+} else {
+  await esbuild.build(buildConfig);
+}
