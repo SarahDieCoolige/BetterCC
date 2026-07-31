@@ -13,10 +13,10 @@
 //   - Keep the iframe + WS pipeline untouched.
 
 import { cclog } from "../utils";
+import { buildShell, reloadChat } from "./shell";
 
 /**
- * Initialize the v3 parent-page UI. Stub for now — real UI lands in later
- * tasks (T6: UI shell, T7: sidebar, T8: input, T9: footer, ...).
+ * Initialize the v3 parent-page UI.
  *
  * Called from src/index.ts after the same userStore setup the old path uses,
  * so both paths share the GM-storage key namespace via getUserKey().
@@ -24,7 +24,12 @@ import { cclog } from "../utils";
 export function initV3(): void {
   cclog("v3 init (parent-page rewrite, iteration 1)");
 
-  // TODO(T6): extract #chatframe, remove the table, build the Grid shell.
+  // T6: build the Grid shell (moves #chatframe, hides the table, adds header).
+  // Expose reloadChat on the bettercc API — the old path's reloadChat (defined
+  // inside doColorStuff) never runs under v3, so v3 owns its own.
+  (unsafeWindow.bettercc as any).reloadChat = reloadChat;
+  buildShell();
+
   // TODO(T7): userlist sidebar (diff-and-patch).
   // TODO(T8): better input + send contract + superwhisper/commands.
   // TODO(T9): footer pills.

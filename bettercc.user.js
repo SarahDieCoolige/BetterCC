@@ -150,9 +150,88 @@
     return v === true || v === 1 || v === "1";
   }
 
+  // src/v3/shell.ts
+  function buildShell() {
+    const chatframe = document.getElementById("chatframe");
+    const table = document.querySelector("table.c_tab");
+    if (!chatframe || !table) {
+      cclog("v3 shell: chatframe or table not found \u2014 aborting", "v3");
+      return false;
+    }
+    if (document.querySelector(".bcc-shell")) return true;
+    const hold = document.querySelector('form[name="hold"]');
+    const of = document.querySelector('form[name="OF"]');
+    if (hold) {
+      document.body.appendChild(hold);
+      hold.style.display = "none";
+    }
+    if (of) {
+      document.body.appendChild(of);
+      of.style.display = "none";
+    }
+    const shell = document.createElement("div");
+    shell.className = "bcc-shell";
+    const header = document.createElement("header");
+    header.className = "bcc-header";
+    header.appendChild(buildChannelLabel());
+    header.appendChild(buildReloadButton());
+    const sidebar = document.createElement("aside");
+    sidebar.className = "bcc-sidebar";
+    sidebar.innerHTML = '<div class="bcc-sidebar-placeholder">Userlist (T7)</div>';
+    const main = document.createElement("main");
+    main.className = "bcc-main";
+    main.appendChild(chatframe);
+    const inputArea = document.createElement("div");
+    inputArea.className = "bcc-input";
+    inputArea.innerHTML = '<div class="bcc-input-placeholder">Input (T8)</div>';
+    const footer = document.createElement("footer");
+    footer.className = "bcc-footer";
+    footer.innerHTML = '<div class="bcc-footer-placeholder">Footer (T9)</div>';
+    shell.append(header, sidebar, main, inputArea, footer);
+    document.body.appendChild(shell);
+    table.style.display = "none";
+    cclog("v3 shell built \u2014 chatframe moved, table hidden", "v3");
+    return true;
+  }
+  function buildChannelLabel() {
+    const label = document.createElement("span");
+    label.className = "bcc-channel";
+    const channel = unsafeWindow.chat_channel;
+    label.textContent = channel ? String(channel) : "Chatcity";
+    label.title = "Channel";
+    return label;
+  }
+  function buildReloadButton() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-reload";
+    btn.title = "Chat neu laden (mimimi)";
+    btn.textContent = "\u21BB";
+    btn.addEventListener("click", () => {
+      unsafeWindow.bettercc.reloadChat();
+    });
+    return btn;
+  }
+  function reloadChat() {
+    if (unsafeWindow.chatout_auth_dead) {
+      cclog("reloadChat: auth_dead, doing full page reload", "v3");
+      location.reload();
+      return;
+    }
+    const ws = unsafeWindow.chatout_ws;
+    if (ws) {
+      cclog("reloadChat: closing WS to trigger reconnect", "v3");
+      ws.close();
+    } else {
+      cclog("reloadChat: no WS \u2014 nothing to reconnect", "v3");
+    }
+  }
+
   // src/v3/index.ts
   function initV3() {
     cclog("v3 init (parent-page rewrite, iteration 1)");
+    unsafeWindow.bettercc.reloadChat = reloadChat;
+    buildShell();
   }
 
   // src/theme.ts
@@ -275,7 +354,7 @@
     });
     betterOpts.appendChild(settingsBtn);
     setTimeout(setTheme, 1e3);
-    unsafeWindow.bettercc.reloadChat = function reloadChat() {
+    unsafeWindow.bettercc.reloadChat = function reloadChat2() {
       if (unsafeWindow.chatout_auth_dead) {
         cclogFn("reloadChat: auth_dead, doing full page reload");
         location.reload();

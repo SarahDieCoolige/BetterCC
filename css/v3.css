@@ -30,3 +30,131 @@
   --bcc-surface-hover: #b8cede;
   --bcc-surface-active: #a8bed2;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * UI shell — CSS Grid layout (T6, spec §1.4)
+ *
+ *   ┌──────────────────────────────────────┐
+ *   │             header                    │
+ *   ├──────────┬───────────────────────────┤
+ *   │          │                            │
+ *   │ sidebar  │           main             │
+ *   │          │       (chatframe)          │
+ *   ├──────────┴───────────────────────────┤
+ *   │             input                     │
+ *   ├──────────────────────────────────────┤
+ *   │             footer                    │
+ *   └──────────────────────────────────────┘
+ *
+ * Below 600px the sidebar collapses (hidden) — matches the spec's responsive
+ * collapse (§9 Q-adjacent: mobile/narrow viewports).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+.bcc-shell {
+  display: grid;
+  /* rows: header auto, middle 1fr (sidebar+main), input auto, footer auto */
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-columns: minmax(140px, 220px) 1fr;
+  grid-template-areas:
+    "header  header"
+    "sidebar main"
+    "input   input"
+    "footer  footer";
+  height: 100vh;
+  width: 100vw;
+  background: var(--bcc-surface);
+  color: var(--bcc-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+
+.bcc-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--bcc-surface-footer);
+  border-bottom: 1px solid var(--bcc-border);
+}
+
+.bcc-channel {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bcc-reload {
+  margin-left: auto;
+  background: var(--bcc-surface-raised);
+  color: var(--bcc-text-raised);
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bcc-reload:hover { background: var(--bcc-surface-hover); }
+.bcc-reload:active { background: var(--bcc-surface-active); }
+
+.bcc-sidebar {
+  grid-area: sidebar;
+  overflow-y: auto;
+  background: var(--bcc-surface-sidebar);
+  color: var(--bcc-text-sidebar);
+  border-right: 1px solid var(--bcc-border);
+  padding: 8px;
+}
+
+.bcc-main {
+  grid-area: main;
+  /* chatframe fills the main area; it's already width/height 100% upstream */
+  display: flex;
+  min-height: 0;        /* allow the grid track to shrink, iframe to fill */
+  min-width: 0;
+}
+.bcc-main > #chatframe {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.bcc-input {
+  grid-area: input;
+  background: var(--bcc-surface-input);
+  color: var(--bcc-text-input);
+  border-top: 1px solid var(--bcc-border);
+  padding: 8px 12px;
+}
+
+.bcc-footer {
+  grid-area: footer;
+  background: var(--bcc-surface-footer);
+  border-top: 1px solid var(--bcc-border);
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--bcc-text-muted);
+}
+
+/* Placeholder labels for not-yet-built sections (T7/T8/T9) */
+.bcc-sidebar-placeholder,
+.bcc-input-placeholder,
+.bcc-footer-placeholder {
+  opacity: 0.6;
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* ─── Responsive: <600px collapses the sidebar ─────────────────────────── */
+@media (max-width: 599px) {
+  .bcc-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main"
+      "input"
+      "footer";
+  }
+  .bcc-sidebar { display: none; }
+}
