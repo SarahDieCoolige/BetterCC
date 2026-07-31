@@ -1,0 +1,32 @@
+/* ═══════════════════════════════════════════════════════════════════════
+ * BetterCC v3 stylesheet (spec §1.4 / §6.1)
+ *
+ * Consumes ONLY --bcc-* custom properties (the v3 namespace; spec A9). The
+ * theme bridge (src/v3/theme.ts, T3) populates them from generateScheme().
+ *
+ * This file is populated across Tier 0 tasks (T6 shell grid, T7 sidebar,
+ * T8 input, T9 footer). For now it carries only the :root fallback defaults
+ * so ?bcc=new renders a coherent (if minimal) page before the shell lands —
+ * the values mirror main.css's documented defaults as a sane starting point.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Fallbacks only — overwritten by the theme bridge at runtime. */
+  --bcc-surface: #c8dae4;
+  --bcc-text: #0e0f0f;
+  --bcc-surface-raised: #ffffff;
+  --bcc-text-raised: #0e0f0f;
+  --bcc-surface-input: #ffffff;
+  --bcc-text-input: #000000;
+  --bcc-surface-footer: #84acc2;
+  --bcc-surface-sidebar: #b7cedc;
+  --bcc-text-sidebar: #0e0f0f;
+  --bcc-text-muted: #000000;
+  --bcc-text-placeholder: #0e0f0f;
+  --bcc-icon: #0e0f0f;
+  --bcc-accent-whisper: green;
+  --bcc-accent-ban: red;
+  --bcc-border: #84acc2;
+  --bcc-surface-hover: #b8cede;
+  --bcc-surface-active: #a8bed2;
+}
