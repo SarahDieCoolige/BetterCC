@@ -239,6 +239,18 @@
     }
   }
 
+  // src/v3/store.ts
+  var listeners = /* @__PURE__ */ new Set();
+  function subscribe(fn) {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  }
+  function emit(e) {
+    for (const fn of listeners) fn(e);
+  }
+
   // src/v3/shell.ts
   function buildShell() {
     const chatframe = document.getElementById("chatframe");
@@ -288,6 +300,11 @@
     const channel = unsafeWindow.chat_channel;
     label.textContent = channel ? String(channel) : "Chatcity";
     label.title = "Channel";
+    subscribe((e) => {
+      if (e.type === "session") {
+        label.textContent = e.session.channel || "Chatcity";
+      }
+    });
     return label;
   }
   function buildReloadButton() {
@@ -1489,18 +1506,6 @@
     });
   }
 
-  // src/v3/store.ts
-  var listeners = /* @__PURE__ */ new Set();
-  function subscribe(fn) {
-    listeners.add(fn);
-    return () => {
-      listeners.delete(fn);
-    };
-  }
-  function emit(e) {
-    for (const fn of listeners) fn(e);
-  }
-
   // src/v3/userlist-wire.ts
   var prevList = [];
   function processUserlist(chaMy, prev) {
@@ -1635,6 +1640,35 @@
     cclog("sidebar mounted \u2014 subscribed to userlist events", "v3");
   }
 
+  // src/v3/session.ts
+  var session;
+  var timer = null;
+  function initSession() {
+    const w = unsafeWindow;
+    session = {
+      nick: String(w.chat_nick ?? ""),
+      registered: String(w.chat_ui ?? "").includes("R"),
+      guest: String(w.chat_ui ?? "").includes("h") && !String(w.chat_ui ?? "").includes("R"),
+      userId: String(w.chat_id ?? ""),
+      sessionId: String(w.chat_sid ?? ""),
+      channel: String(w.chat_channel ?? ""),
+      authDead: !!w.chatout_auth_dead
+    };
+    emit({ type: "session", session: { ...session } });
+    let prevChannel = session.channel;
+    let prevAuthDead = session.authDead;
+    timer = setInterval(() => {
+      const newChannel = String(unsafeWindow.chat_channel ?? "");
+      const newAuthDead = !!unsafeWindow.chatout_auth_dead;
+      if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
+        prevChannel = session.channel = newChannel;
+        prevAuthDead = session.authDead = newAuthDead;
+        emit({ type: "session", session: { ...session } });
+      }
+    }, 2e3);
+    cclog("session: init done \u2014 nick=" + session.nick + " channel=" + session.channel, "v3");
+  }
+
   // src/v3/index.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
@@ -1648,6 +1682,7 @@
     const v3Css = GM_getResourceText("v3_css");
     if (v3Css) GM_addStyle(v3Css);
     neuterResizeFix();
+    initSession();
     const schemeRef = { current: null };
     loadTheme(getUserKey("color"), getUserKey("colorscheme")).then((scheme) => {
       schemeRef.current = scheme;

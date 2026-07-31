@@ -40,6 +40,7 @@ import { loadTheme, applyScheme } from "./theme";
 import type { BccColorScheme } from "../scheme";
 import { overrideSetUinfo1 } from "./userlist-wire";
 import { mountSidebar } from "./sidebar";
+import { initSession } from "./session";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (ui.ts) did this plus
@@ -72,6 +73,11 @@ export function initV3(): void {
 
   // Neuter resize_fix before anything triggers it (it throws upstream).
   neuterResizeFix();
+
+  // Seed session state (reads chat_nick/chat_channel/etc. once, then polls
+  // auth-dead + channel every 2s). Must run before buildShell so the header
+  // label can read chat_channel for its initial value.
+  initSession();
 
   // Apply the saved theme (tier-0 per spec §5.3): read color_{user}, regenerate
   // or reuse the cached scheme, write --bcc-* to :root. The old path did this

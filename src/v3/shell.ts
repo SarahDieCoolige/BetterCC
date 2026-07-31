@@ -17,6 +17,7 @@
 // here (close WS to reconnect, or full reload if auth_dead).
 
 import { cclog } from "../utils";
+import { subscribe } from "./store";
 
 /**
  * Build the v3 shell: Grid container, moved chatframe, hidden table, header
@@ -91,15 +92,22 @@ export function buildShell(): boolean {
   return true;
 }
 
-/** Header channel label, read once from the upstream global. */
+/** Header channel label. Reads the upstream global for the initial value,
+ *  then subscribes to session events so the label updates on /j channel
+ *  changes (T4b — was a TODO from T6). */
 function buildChannelLabel(): HTMLElement {
-  // TODO(T4b): re-render this label on a `session` event when the channel
-  // changes (/j). Today it's static — correct at init, stale after a jump.
   const label = document.createElement("span");
   label.className = "bcc-channel";
   const channel = (unsafeWindow as any).chat_channel;
   label.textContent = channel ? String(channel) : "Chatcity";
   label.title = "Channel";
+
+  subscribe((e) => {
+    if (e.type === "session") {
+      label.textContent = e.session.channel || "Chatcity";
+    }
+  });
+
   return label;
 }
 
