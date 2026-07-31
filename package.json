@@ -13,7 +13,9 @@
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.0",
+    "@types/tinycolor2": "^1.4.6",
     "esbuild": "^0.25.0",
+    "tinycolor2": "^1.6.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },
