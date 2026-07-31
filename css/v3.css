@@ -157,6 +157,28 @@
   padding: 8px 12px;
 }
 
+.bcc-input-field {
+  width: 100%;
+  min-height: 60px;
+  background: var(--bcc-surface-input);
+  color: var(--bcc-text-input);
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+.bcc-input-field:focus {
+  border-color: var(--bcc-accent-whisper);
+  box-shadow: 0 0 0 1px var(--bcc-accent-whisper);
+}
+
+.bcc-superwhisper {
+  border-color: var(--bcc-accent-whisper);
+}
+
 .bcc-footer {
   grid-area: footer;
   background: var(--bcc-surface-footer);

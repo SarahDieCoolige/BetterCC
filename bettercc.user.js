@@ -1669,6 +1669,156 @@
     cclog("session: init done \u2014 nick=" + session.nick + " channel=" + session.channel, "v3");
   }
 
+  // src/v3/commands.ts
+  var openMsgCmdRegex = /^\/open\s|^\/o\s/;
+  var openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
+  var superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
+  var superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
+  var superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
+  var superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
+  var idMsgCmdRegex = /^\/id\b/i;
+  var idMsgArgRegex = /^\/id\s+/i;
+  function classifyMessage(mymsg) {
+    const lower = mymsg.toLowerCase();
+    if (lower === "/help" || lower === "/bettercc") {
+      return { handled: true, type: "help" };
+    }
+    if (lower === "/sb" || lower === "/superban") {
+      return { handled: true, type: "superban", nick: "" };
+    }
+    if (superbanMsgCmdRegex.test(lower)) {
+      const nick = mymsg.replace(superbanMsgReplaceRegex, "").split(" ")[0];
+      return { handled: true, type: "superban", nick };
+    }
+    if (idMsgCmdRegex.test(lower)) {
+      let name = mymsg.replace(idMsgArgRegex, "").replace(/^\/id$/i, "").trim();
+      return { handled: true, type: "id", name };
+    }
+    if (lower === "/open") {
+      return { handled: true, type: "open-whisper" };
+    }
+    if (lower === "/reload") {
+      return { handled: true, type: "reload" };
+    }
+    if (superwhisperMsgCmdRegex.test(lower)) {
+      const nick = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
+      return { handled: true, type: "superwhisper", nick };
+    }
+    if (openMsgCmdRegex.test(lower)) {
+      const message = mymsg.replace(openMsgReplaceRegex, "");
+      return { handled: true, type: "open-msg", message };
+    }
+    return { handled: false, message: mymsg };
+  }
+  function rewriteForWhisper(msg, nick) {
+    if (!nick || msg.startsWith("/")) return msg;
+    return "/w " + nick + " " + msg;
+  }
+
+  // src/v3/input.ts
+  var textarea = null;
+  var onSubmitOrig = null;
+  var currentWhisperNick = "";
+  async function doSubmit(whispernick) {
+    const docHold = document.hold;
+    if (!docHold) return;
+    let mymsg = docHold.OUT1.value.trim();
+    const cmd = classifyMessage(mymsg);
+    if (cmd.handled) {
+      switch (cmd.type) {
+        case "help":
+          printHelp();
+          clearInput(docHold);
+          return;
+        case "reload":
+          unsafeWindow.bettercc.reloadChat();
+          clearInput(docHold);
+          return;
+        case "open-whisper":
+          await superwhisper("");
+          clearInput(docHold);
+          return;
+        case "superwhisper":
+          await superwhisper(cmd.nick, false);
+          clearInput(docHold);
+          return;
+        case "open-msg":
+          mymsg = cmd.message;
+          break;
+        case "superban":
+          clearInput(docHold);
+          return;
+        case "id":
+          cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
+          clearInput(docHold);
+          return;
+      }
+    }
+    const finalNick = whispernick ?? currentWhisperNick;
+    if (finalNick) {
+      mymsg = rewriteForWhisper(mymsg, finalNick);
+    }
+    if (onSubmitOrig && mymsg) {
+      docHold.OUT1.value = mymsg;
+      onSubmitOrig();
+    }
+    if (textarea) textarea.value = "";
+  }
+  function clearInput(docHold) {
+    docHold.OUT1.value = "";
+    if (textarea) textarea.value = "";
+  }
+  async function superwhisper(whispernick, toggle = true) {
+    const prevNick = await getConfig("whisper", "");
+    if (toggle && whispernick && prevNick.toLowerCase() === whispernick.toLowerCase() || !whispernick) {
+      await setConfig("whisper", "");
+      currentWhisperNick = "";
+      if (textarea) {
+        textarea.classList.remove("bcc-superwhisper");
+        textarea.placeholder = "Du chattest mit allen...\n\nSuperwhisper: /sw Sariam  |  Ban: /sb Wendigo  |  Hilfe: /help";
+      }
+    } else {
+      await setConfig("whisper", whispernick);
+      currentWhisperNick = whispernick;
+      if (textarea) {
+        textarea.classList.add("bcc-superwhisper");
+        textarea.placeholder = "Du fl\xFCsterst mit " + whispernick + "...\n\nSuperwhisper aus: /open  |  /o Hi All :)  |  Hilfe: /help";
+      }
+    }
+  }
+  function mountInput() {
+    const inputArea = document.querySelector(".bcc-input");
+    if (!inputArea) return;
+    inputArea.innerHTML = "";
+    textarea = document.createElement("textarea");
+    textarea.className = "bcc-input-field";
+    textarea.rows = 3;
+    textarea.placeholder = "Du chattest mit allen...\n\nSuperwhisper: /sw Sariam  |  Ban: /sb Wendigo  |  Hilfe: /help";
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        doSubmit();
+      }
+    });
+    inputArea.appendChild(textarea);
+    const holdForm = document.querySelector('form[name="hold"]');
+    let onSubmitOrigStr = holdForm?.getAttribute("onsubmit") || "";
+    if (onSubmitOrigStr) {
+      onSubmitOrigStr = onSubmitOrigStr.replace(
+        'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){',
+        'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){'
+      );
+      onSubmitOrig = new Function(onSubmitOrigStr);
+    }
+    unsafeWindow.bettercc.onSubmit = doSubmit;
+    unsafeWindow.bettercc.superwhisper = superwhisper;
+    getConfig("whisper", "").then((nick) => {
+      const n = nick || "";
+      if (n) superwhisper(n, false);
+    });
+    cclog("input mounted \u2014 textarea + send contract + superwhisper", "v3");
+  }
+
   // src/v3/index.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
@@ -1695,6 +1845,7 @@
     buildShell();
     hookChatoutConnect();
     mountSidebar();
+    mountInput();
   }
 
   // src/theme.ts
@@ -2603,14 +2754,14 @@
       'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){',
       'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){'
     );
-    let onSubmitOrig = new Function(onSubmitOrigStr);
+    let onSubmitOrig2 = new Function(onSubmitOrigStr);
     unsafeWindow.bettercc.onSubmit = async function(whispernick) {
-      let openMsgCmdRegex = /^\/open\s|^\/o\s/;
-      let openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
-      let superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
-      let superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
-      let superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
-      let superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
+      let openMsgCmdRegex2 = /^\/open\s|^\/o\s/;
+      let openMsgReplaceRegex2 = /^\/open\s+|^\/o\s+/gi;
+      let superbanMsgCmdRegex2 = /^\/superban\s|^\/sb\s/;
+      let superbanMsgReplaceRegex2 = /^\/superban\s+|^\/sb\s+/gi;
+      let superwhisperMsgCmdRegex2 = /^\/superwhisper\s|^\/sw\s/;
+      let superwhisperMsgReplaceRegex2 = /^\/superwhisper\s+|^\/sw\s+/gi;
       let docHold = document.hold;
       let mymsg = docHold.OUT1.value.trim();
       if (mymsg.toLowerCase() === "/bettercc" || mymsg.toLowerCase() === "/help") {
@@ -2628,8 +2779,8 @@
           docHold.OUT1.value = mymsg;
           return false;
         }
-        if (superbanMsgCmdRegex.test(mymsg.toLowerCase())) {
-          mymsg = mymsg.replace(superbanMsgReplaceRegex, "").split(" ")[0];
+        if (superbanMsgCmdRegex2.test(mymsg.toLowerCase())) {
+          mymsg = mymsg.replace(superbanMsgReplaceRegex2, "").split(" ")[0];
           unsafeWindow.bettercc.superban(mymsg);
           cclog("Superban:" + mymsg);
           mymsg = "";
@@ -2637,10 +2788,10 @@
           return false;
         }
       }
-      let idMsgCmdRegex = /^\/id\b/i;
-      let idMsgArgRegex = /^\/id\s+/i;
-      if (idMsgCmdRegex.test(mymsg.toLowerCase())) {
-        let name = mymsg.replace(idMsgArgRegex, "").replace(/^\/id$/i, "").trim();
+      let idMsgCmdRegex2 = /^\/id\b/i;
+      let idMsgArgRegex2 = /^\/id\s+/i;
+      if (idMsgCmdRegex2.test(mymsg.toLowerCase())) {
+        let name = mymsg.replace(idMsgArgRegex2, "").replace(/^\/id$/i, "").trim();
         unsafeWindow.bettercc.showIdPopup(name);
         mymsg = "";
         docHold.OUT1.value = mymsg;
@@ -2658,22 +2809,22 @@
         docHold.OUT1.value = mymsg;
         return false;
       }
-      if (superwhisperMsgCmdRegex.test(mymsg.toLowerCase())) {
-        mymsg = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
+      if (superwhisperMsgCmdRegex2.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(superwhisperMsgReplaceRegex2, "").split(" ")[0];
         unsafeWindow.bettercc.superwhisper(mymsg, false);
         mymsg = "";
         docHold.OUT1.value = mymsg;
         return false;
       }
-      if (openMsgCmdRegex.test(mymsg.toLowerCase())) {
-        mymsg = mymsg.replace(openMsgReplaceRegex, "");
+      if (openMsgCmdRegex2.test(mymsg.toLowerCase())) {
+        mymsg = mymsg.replace(openMsgReplaceRegex2, "");
       } else if (whispernick !== void 0) {
         if (!mymsg.startsWith("/")) {
           mymsg = "/w " + whispernick + " " + mymsg;
         }
       }
       docHold.OUT1.value = mymsg;
-      onSubmitOrig();
+      onSubmitOrig2();
     };
     if (holdForm) {
       holdForm.setAttribute("onsubmit", "bettercc.onSubmit();");
@@ -2702,8 +2853,8 @@
       let input = document.getElementById("custom_input_text");
       let submitStr = null;
       let placeholderStr = null;
-      let currentWhisperNick = await GM.getValue(userStoreWhisper);
-      if (toggle && currentWhisperNick.toLowerCase() === whispernick.toLowerCase() || whispernick === "" || whispernick === void 0) {
+      let currentWhisperNick2 = await GM.getValue(userStoreWhisper);
+      if (toggle && currentWhisperNick2.toLowerCase() === whispernick.toLowerCase() || whispernick === "" || whispernick === void 0) {
         submitStr = "bettercc.onSubmit();";
         placeholderStr = "Du chattest mit allen...\n\nSuperwhisper: /sw Sariam  |  Ban: /sb Wendigo  |  Hilfe: /help";
         if (input) input.classList.remove("superwhisper");

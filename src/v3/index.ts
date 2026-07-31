@@ -41,6 +41,7 @@ import type { BccColorScheme } from "../scheme";
 import { overrideSetUinfo1 } from "./userlist-wire";
 import { mountSidebar } from "./sidebar";
 import { initSession } from "./session";
+import { mountInput } from "./input";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (ui.ts) did this plus
@@ -115,6 +116,10 @@ export function initV3(): void {
   // Must be after buildShell() so .bcc-sidebar exists.
   mountSidebar();
 
-  // TODO(T8): better input + send contract + superwhisper/commands.
+  // Mount the input area — textarea, send contract (reuses hold form's
+  // onsubmit handler via the patched-handler approach), superwhisper,
+  // and BetterCC command dispatch (/sw /open /reload /help).
+  mountInput();
+
   // TODO(T9): footer pills.
 }
