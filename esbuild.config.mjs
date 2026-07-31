@@ -16,6 +16,7 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 //
 // @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/main.css?r=2.0.4
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/iframe.css?r=2.0.4
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/modernize/css/v3.css?r=2.0.4
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue

@@ -6,14 +6,52 @@
 // Iteration 1 scope: parent-page UI only. The chat iframe and WebSocket
 // message handling stay upstream-owned (rebuilt in later iterations).
 //
-// CONTRACT (spec §5 / tasks/plan.md A5):
-//   - Import only from ../utils (shared helpers) and ./v3/* — NEVER from the
-//     old ui.ts/theme.ts/commands.ts/superban.ts. That isolation is what lets
-//     the old code be deleted once v3 is verified.
+// CONTRACT (spec §5.1):
+//   - Import only from ../utils, ../ws-hook, and ./v3/* — NEVER from the old
+//     ui.ts/theme.ts/commands.ts/superban.ts. Those four are the "frozen behind
+//     the flag, then deleted" set; v3 must not couple to them or they can't be
+//     removed once v3 is verified. ws-hook.ts is in a DIFFERENT bucket —
+//     "untouched in iter 1, reused" (spec §3.3 requires its injectIntoChatframe
+//     to keep running under v3) — so importing it is correct.
 //   - Keep the iframe + WS pipeline untouched.
+//
+// The early return in src/index.ts means v3 must re-wire the pieces of the old
+// init that are load-bearing AND in the reusable bucket:
+//   - hookChatoutConnect() (ws-hook.ts) — attaches the WS listener that injects
+//     iframe.css, the theme mirror, and the autoscroll banner on first message
+//     (spec §3.3). Without it the chat renders unstyled.
+//   - v3_css @resource — the Grid stylesheet. Prod loads it via
+//     GM_getResourceText (§4.7); the dev server inlines it into <head> for
+//     ?bcc=new, so the call is a harmless no-op there.
+//   - resize_fix neutering + size-interval clears — the upstream resize_fix
+//     throws (AGENTS.md gotcha #6); the old path neutered it in cleanup().
+//     cleanup() lives in ui.ts (deletable bucket), so v3 inlines only this
+//     load-bearing subset rather than importing it (see neuterResizeFix).
+//   - loadTheme() — apply the saved color scheme to :root (tier-0, spec §5.3).
+//     The old path did this inside doColorStuff (deletable bucket); v3 calls
+//     the pure theme bridge (./theme, T3) instead. A v3 setTheme is exposed so
+//     ws-hook.ts's injectIntoChatframe re-applies the --bcc-* scheme (not the
+//     old --chatX engine) on reconnect.
 
-import { cclog } from "../utils";
+import { cclog, getUserKey } from "../utils";
+import { hookChatoutConnect } from "../ws-hook";
 import { buildShell, reloadChat } from "./shell";
+import { loadTheme, applyScheme } from "./theme";
+import type { BccColorScheme } from "../scheme";
+
+/**
+ * Neuter the upstream resize_fix path. The old cleanup() (ui.ts) did this plus
+ * table-DOM surgery; only this subset is load-bearing under v3 (the rest is
+ * either cosmetic or targets the hidden table). Inlined here — not imported —
+ * because ui.ts is in the "frozen then deleted" bucket (spec §5.1).
+ */
+function neuterResizeFix(): void {
+  (unsafeWindow as any).resize_fix = function resize_fix(): boolean {
+    return true;
+  };
+  clearTimeout((unsafeWindow as any).size_timeout);
+  clearInterval((unsafeWindow as any).size_interval);
+}
 
 /**
  * Initialize the v3 parent-page UI.
@@ -24,11 +62,40 @@ import { buildShell, reloadChat } from "./shell";
 export function initV3(): void {
   cclog("v3 init (parent-page rewrite, iteration 1)");
 
-  // T6: build the Grid shell (moves #chatframe, hides the table, adds header).
+  // Load the v3 stylesheet first so the shell paints with Grid layout from the
+  // start. Dev server already inlines it for ?bcc=new → GM_getResourceText
+  // returns "" → no-op. Production fetches it via the @resource (spec §4.7).
+  const v3Css = GM_getResourceText("v3_css");
+  if (v3Css) GM_addStyle(v3Css);
+
+  // Neuter resize_fix before anything triggers it (it throws upstream).
+  neuterResizeFix();
+
+  // Apply the saved theme (tier-0 per spec §5.3): read color_{user}, regenerate
+  // or reuse the cached scheme, write --bcc-* to :root. The old path did this
+  // inside doColorStuff (skipped under v3); v3 calls the pure theme bridge T3
+  // built. Also expose a v3 setTheme so injectIntoChatframe's call to
+  // bettercc.setTheme() (ws-hook.ts) re-applies the --bcc-* scheme under v3
+  // instead of the old --chatX engine.
+  const schemeRef: { current: BccColorScheme | null } = { current: null };
+  loadTheme(getUserKey("color"), getUserKey("colorscheme")).then((scheme) => {
+    schemeRef.current = scheme;
+  });
+  (unsafeWindow.bettercc as any).setTheme = function setTheme(): void {
+    if (schemeRef.current) applyScheme(schemeRef.current);
+  };
+
+  // Build the Grid shell (moves #chatframe, hides the table, adds header).
   // Expose reloadChat on the bettercc API — the old path's reloadChat (defined
   // inside doColorStuff) never runs under v3, so v3 owns its own.
   (unsafeWindow.bettercc as any).reloadChat = reloadChat;
   buildShell();
+
+  // Attach the WS hook so iframe.css + theme mirror + autoscroll banner inject
+  // on the first message (spec §3.3). The hook only attaches listeners to
+  // chatout_ws — it doesn't touch the iframe until a message arrives — so it's
+  // safe to call after buildShell moved #chatframe.
+  hookChatoutConnect();
 
   // TODO(T7): userlist sidebar (diff-and-patch).
   // TODO(T8): better input + send contract + superwhisper/commands.

@@ -38,6 +38,11 @@ export function injectIntoChatframe(): void {
   // 3) Add autoscroll banner
   addAutoscrollBanner(doc, win);
 
+  // Latch ready so the WS message handler re-injects only once. Without this,
+  // betterccOnWsMessage re-runs on EVERY message — iframe.css <style> tags and
+  // autoscroll-banner divs accumulate with chat length (one per message).
+  chatframeReady = true;
+
   cclog("injectIntoChatframe: injection complete");
 }
 
