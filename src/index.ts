@@ -8,6 +8,8 @@ import {
   noChatBackgroundsEnable, NotificationsEnable,
   betterUserListEnable,
 } from "./utils";
+import { shouldUseV3 } from "./v3/flag";
+import { initV3 } from "./v3";
 
 import { addAutoscrollBanner } from "./chat";
 import { doColorStuff } from "./theme";
@@ -44,6 +46,17 @@ import {
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     let userStore = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
     setUserStore(unsafeWindow.chat_nick, !!gast);
+
+    // ─── v3 feature flag (iteration 1: parent-page rewrite) ──────────────
+    // Temporary migration/rollback toggle, not a permanent dual-UI feature.
+    // Default OFF → old init. Either the GM-stored per-user flag or the
+    // dev-server `?bcc=new` override enables the v3 path. The two paths never
+    // run together. See src/v3/flag.ts and docs/redesign-spec.md §1.1/A5.
+    const v3Flag = GM_getValue(getUserKey("bcc_v3"), false);
+    if (shouldUseV3(v3Flag, window.location.href)) {
+      initV3();
+      return;
+    }
 
     // ─── Show settings modal (commented out, preserved) ───
     // showSettingsModal(userStore);

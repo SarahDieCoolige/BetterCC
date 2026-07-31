@@ -101,6 +101,9 @@
     doc.body.style.color = "var(--chatText)";
   }
   var userStore = "";
+  function getUserKey(key) {
+    return `${userStore}_${key}`;
+  }
   function setUserStore(nick, isGast) {
     userStore = isGast ? "gast" : nick.toLowerCase();
   }
@@ -131,6 +134,25 @@
         }
       }, intervalMs);
     }
+  }
+
+  // src/v3/flag.ts
+  function shouldUseV3(storedFlag, url) {
+    if (isTruthy(storedFlag)) return true;
+    try {
+      const parsed = new URL(url, "http://localhost");
+      return parsed.searchParams.get("bcc") === "new";
+    } catch {
+      return false;
+    }
+  }
+  function isTruthy(v) {
+    return v === true || v === 1 || v === "1";
+  }
+
+  // src/v3/index.ts
+  function initV3() {
+    cclog("v3 init (parent-page rewrite, iteration 1)");
   }
 
   // src/theme.ts
@@ -1400,6 +1422,11 @@
       let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
       let userStore2 = gast ? "gast" : unsafeWindow.chat_nick.toLowerCase();
       setUserStore(unsafeWindow.chat_nick, !!gast);
+      const v3Flag = GM_getValue(getUserKey("bcc_v3"), false);
+      if (shouldUseV3(v3Flag, window.location.href)) {
+        initV3();
+        return;
+      }
       if (noChatBackgroundsEnable) forceNoChatBackgrounds();
       addCustomCss();
       cleanup();
