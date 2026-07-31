@@ -69,8 +69,12 @@ export function schemeToCssVars(scheme: BccColorScheme): Record<string, string> 
  * The cached scheme persisted under `colorscheme_{user}`. `bgHex` tags the base
  * the cache was built from so `loadTheme` can detect a stale cache when the
  * user picks a new color.
+ *
+ * Structurally identical to BccColorScheme — it's a type alias, not an
+ * extension, so the storage shape can diverge from the paint shape later
+ * without touching call sites.
  */
-export interface StoredScheme extends BccColorScheme {}
+export type StoredScheme = BccColorScheme;
 
 /** Snapshot a scheme for storage, tagged with its base hex (cache-key). */
 export function schemeToStorage(scheme: BccColorScheme): StoredScheme {

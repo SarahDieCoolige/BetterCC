@@ -84,12 +84,10 @@ const SORT_OPTS: Intl.CollatorOptions = {
  */
 export function sortUsers(users: User[], pinned: Set<string>): User[] {
   const cmp = new Intl.Collator(LOCALE, SORT_OPTS);
-  const sorted = [...users].sort((a, b) => cmp.compare(a.name, b.name));
-  // Stable partition: pinned first, preserving the alphabetical order within
-  // each section.
-  return sorted.sort((a, b) => {
+  return [...users].sort((a, b) => {
+    // Pinned-first partition, then alphabetical within each section.
     const pa = pinned.has(a.name) ? 0 : 1;
     const pb = pinned.has(b.name) ? 0 : 1;
-    return pa - pb;
+    return pa - pb || cmp.compare(a.name, b.name);
   });
 }

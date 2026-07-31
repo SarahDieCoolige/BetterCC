@@ -61,7 +61,7 @@
     "input   input"
     "footer  footer";
   height: 100vh;
-  width: 100vw;
+  width: 100%; /* not 100vw — that includes the scrollbar gutter and can overflow horizontally */
   background: var(--bcc-surface);
   color: var(--bcc-text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

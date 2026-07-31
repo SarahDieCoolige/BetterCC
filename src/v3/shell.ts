@@ -93,6 +93,8 @@ export function buildShell(): boolean {
 
 /** Header channel label, read once from the upstream global. */
 function buildChannelLabel(): HTMLElement {
+  // TODO(T4b): re-render this label on a `session` event when the channel
+  // changes (/j). Today it's static — correct at init, stale after a jump.
   const label = document.createElement("span");
   label.className = "bcc-channel";
   const channel = (unsafeWindow as any).chat_channel;

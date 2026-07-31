@@ -68,9 +68,6 @@ const STEP = {
   accentMaxLight: 65,
 } as const;
 
-const WCAG_AA = { level: "AA" as const, size: "small" as const };
-const WCAG_AA_LARGE = { level: "AA" as const, size: "large" as const };
-
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 function toHex6(color: any): string {
@@ -86,7 +83,7 @@ function toHex6(color: any): string {
 function pickReadable(bg: any, candidates: any[], large = false): any {
   const chosen = tinycolor.mostReadable(bg, candidates, {
     includeFallbackColors: true,
-    level: large ? "AA" : "AA",
+    level: "AA",
     size: large ? "large" : "small",
   });
   return chosen;
@@ -150,12 +147,16 @@ export function generateScheme(
   // ── Sidebar tier (nudge from footer) ───────────────────────────────
   const sidebar = nudge(footer, STEP.sidebarShift);
 
-  // ── Input / raised surfaces (desaturated for legibility) ───────────
+  // ── Input / raised surfaces ────────────────────────────────────────
+  // Input and raised share one tier today (both desaturated fields on the
+  // same luminance step). Kept as two derivations from `inputBase` rather
+  // than aliased, so a future divergence (e.g. raised lifted a notch) is a
+  // localized edit here, not an uncovering of hidden duplication downstream.
   const inputBase = darkMode
     ? footer.clone().darken(STEP.inputDarken)
     : footer.clone().brighten(STEP.inputBrighten);
-  const input = inputBase.desaturate(0);
-  const raised = input;
+  const input = inputBase;
+  const raised = inputBase;
 
   // ── Per-tier text colors (each AA against its own surface) ─────────
   const textRaised = pickReadable(raised, raised.monochromatic(), true);
