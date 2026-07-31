@@ -106,6 +106,35 @@
   padding: 8px;
 }
 
+/* ─── Userlist rows ─── */
+.bcc-userlist-pinned,
+.bcc-userlist-regular {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bcc-userrow {
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 13px;
+  transition: opacity 0.15s ease;
+}
+.bcc-userrow:hover { background: var(--bcc-surface-hover); }
+
+.bcc-userrow-name { user-select: none; }
+
+/* Status styling — ported from main.css u_away / u_sep (opacity 0.5) */
+.bcc-away { opacity: 0.5; }
+.bcc-sep { opacity: 0.5; font-style: italic; }
+
+/* Divider between pinned and regular sections */
+.bcc-userlist-divider {
+  height: 10px;
+  width: 100%;
+  background-color: transparent;
+}
+
 .bcc-main {
   grid-area: main;
   /* chatframe fills the main area; it's already width/height 100% upstream */

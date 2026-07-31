@@ -1444,6 +1444,197 @@
     return scheme;
   }
 
+  // src/v3/userlist.ts
+  function parseUserlist(chaMy) {
+    const users = [];
+    for (let i = 0; i + 1 < chaMy.length; i += 2) {
+      const name = chaMy[i];
+      if (name === "") break;
+      const status = chaMy[i + 1] ?? "";
+      users.push(decodeStatus(name, status));
+    }
+    return users;
+  }
+  function decodeStatus(name, status) {
+    const registered = status.includes("R");
+    const guest = status.includes("h") && !registered;
+    return {
+      name,
+      registered,
+      guest,
+      sep: status.includes("S"),
+      away: status.includes("A")
+    };
+  }
+  function diffUserlists(oldList, newList) {
+    const oldNames = new Set(oldList.map((u) => u.name));
+    const newNames = new Set(newList.map((u) => u.name));
+    const added = [];
+    const removed = [];
+    for (const u of newList) if (!oldNames.has(u.name)) added.push(u.name);
+    for (const u of oldList) if (!newNames.has(u.name)) removed.push(u.name);
+    return { added, removed };
+  }
+  var LOCALE = "de";
+  var SORT_OPTS = {
+    sensitivity: "base",
+    collation: "phonebk"
+  };
+  function sortUsers(users, pinned) {
+    const cmp = new Intl.Collator(LOCALE, SORT_OPTS);
+    return [...users].sort((a, b) => {
+      const pa = pinned.has(a.name) ? 0 : 1;
+      const pb = pinned.has(b.name) ? 0 : 1;
+      return pa - pb || cmp.compare(a.name, b.name);
+    });
+  }
+
+  // src/v3/store.ts
+  var listeners = /* @__PURE__ */ new Set();
+  function subscribe(fn) {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  }
+  function emit(e) {
+    for (const fn of listeners) fn(e);
+  }
+
+  // src/v3/userlist-wire.ts
+  var prevList = [];
+  function processUserlist(chaMy, prev) {
+    const newList = parseUserlist(chaMy);
+    const { added, removed } = diffUserlists(prev, newList);
+    return { newList, added, removed };
+  }
+  function overrideSetUinfo1() {
+    const upstream = unsafeWindow.set_uinfo1;
+    unsafeWindow.set_uinfo1 = function() {
+      const chaMy = unsafeWindow.cha_my ?? [];
+      const { newList, added, removed } = processUserlist(chaMy, prevList);
+      prevList = newList;
+      emit({ type: "userlist", users: newList, added, removed });
+    };
+    cclog("set_uinfo1 overridden \u2014 userlist events now feed the store", "v3");
+  }
+
+  // src/v3/config.ts
+  var DEFAULTS = {
+    color: "6AAED8",
+    colorscheme: null,
+    // regenerated from color on load (theme bridge T3)
+    ban: [],
+    pinned: [],
+    whisper: "",
+    // "" = no superwhisper target
+    bcc_v3: false
+  };
+  async function getConfig(key, fallback) {
+    const def = fallback ?? DEFAULTS[key];
+    return await GM.getValue(getUserKey(key), def);
+  }
+  async function setConfig(key, value) {
+    await GM.setValue(getUserKey(key), value);
+  }
+
+  // src/v3/sidebar.ts
+  function getStatusText(user) {
+    if (user.sep) return "[S] ";
+    if (user.away) return "[A] ";
+    return "";
+  }
+  function getStatusClasses(user) {
+    const classes = ["bcc-userrow"];
+    if (user.away) classes.push("bcc-away");
+    if (user.sep) classes.push("bcc-sep");
+    return classes.join(" ");
+  }
+  function buildRow(user) {
+    const li = document.createElement("li");
+    li.className = getStatusClasses(user);
+    li.dataset.name = user.name;
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "bcc-userrow-name";
+    nameSpan.textContent = getStatusText(user) + user.name;
+    li.appendChild(nameSpan);
+    li.addEventListener("click", () => handleRowClick(user));
+    return li;
+  }
+  var pinnedCache = /* @__PURE__ */ new Set();
+  async function refreshPinned() {
+    const list = await getConfig("pinned", []);
+    pinnedCache = new Set(list);
+  }
+  async function togglePin(user) {
+    const list = await getConfig("pinned", []);
+    const idx = list.indexOf(user.name);
+    if (idx === -1) {
+      list.push(user.name);
+    } else {
+      list.splice(idx, 1);
+    }
+    await setConfig("pinned", list);
+    pinnedCache = new Set(list);
+    renderSidebar(lastUserlistEvent ?? []);
+  }
+  function handleRowClick(user) {
+    togglePin(user).catch(() => {
+      cclog("pin toggle failed for " + user.name, "v3");
+    });
+    cclog("userlist row click: " + user.name + " (pin toggled, popup stub)", "v3");
+  }
+  var lastUserlistEvent = null;
+  var rowMap = /* @__PURE__ */ new Map();
+  function renderSidebar(users) {
+    const sidebar = document.querySelector(".bcc-sidebar");
+    if (!sidebar) return;
+    const sorted = sortUsers(users, pinnedCache);
+    const scrollTop = sidebar.scrollTop;
+    sidebar.innerHTML = "";
+    const pinnedUl = document.createElement("ul");
+    pinnedUl.className = "bcc-userlist-pinned";
+    const regularUl = document.createElement("ul");
+    regularUl.className = "bcc-userlist-regular";
+    const divider = document.createElement("div");
+    divider.className = "bcc-userlist-divider";
+    const newMap = /* @__PURE__ */ new Map();
+    let hasPinned = false;
+    let hasRegular = false;
+    for (const user of sorted) {
+      const isPinned = pinnedCache.has(user.name);
+      if (isPinned) hasPinned = true;
+      else hasRegular = true;
+      let row = rowMap.get(user.name);
+      if (row) {
+        row.className = getStatusClasses(user);
+        const nameSpan = row.querySelector(".bcc-userrow-name");
+        if (nameSpan) nameSpan.textContent = getStatusText(user) + user.name;
+      } else {
+        row = buildRow(user);
+      }
+      (isPinned ? pinnedUl : regularUl).appendChild(row);
+      newMap.set(user.name, row);
+    }
+    if (hasPinned) sidebar.appendChild(pinnedUl);
+    if (hasPinned && hasRegular) sidebar.appendChild(divider);
+    if (hasRegular) sidebar.appendChild(regularUl);
+    sidebar.scrollTop = Math.min(scrollTop, sidebar.scrollHeight);
+    rowMap = newMap;
+    lastUserlistEvent = users;
+  }
+  function mountSidebar() {
+    refreshPinned().catch(() => {
+      cclog("mountSidebar: failed to read pinned config", "v3");
+    });
+    subscribe((e) => {
+      if (e.type === "userlist") {
+        renderSidebar(e.users);
+      }
+    });
+    cclog("sidebar mounted \u2014 subscribed to userlist events", "v3");
+  }
+
   // src/v3/index.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
@@ -1464,9 +1655,11 @@
     unsafeWindow.bettercc.setTheme = function setTheme() {
       if (schemeRef.current) applyScheme(schemeRef.current);
     };
+    overrideSetUinfo1();
     unsafeWindow.bettercc.reloadChat = reloadChat;
     buildShell();
     hookChatoutConnect();
+    mountSidebar();
   }
 
   // src/theme.ts

@@ -1,0 +1,42 @@
+// ─── v3 set_uinfo1 override — feeds the store, not the #ul table (spec §2.4) ─
+//
+// Upstream calls set_uinfo1() on every ulist poll (~20s) and at startup.
+// The old betterUserList() (ui.ts:210) overrode this to inject pinned users.
+// v3 overrides it to parse + diff + emit a "userlist" store event — the sidebar
+// subscribes and renders from the store, and the #ul/#uinfo table stays hidden.
+//
+// This module does NOT call the upstream set_uinfo1; the hidden userlist table
+// is never updated. The sidebar replaces it.
+
+import { parseUserlist, diffUserlists } from "./userlist";
+import { emit, type User } from "./store";
+import { cclog } from "../utils";
+
+let prevList: User[] = [];
+
+/**
+ * Pure core (tested): parse the flat cha_my array and diff against the
+ * previous snapshot, returning everything the store event needs.
+ */
+export function processUserlist(chaMy: string[], prev: User[]) {
+  const newList = parseUserlist(chaMy);
+  const { added, removed } = diffUserlists(prev, newList);
+  return { newList, added, removed };
+}
+
+/**
+ * Override the upstream set_uinfo1 so userlist polls feed the store instead of
+ * writing to the hidden #ul / #uinfo. Does NOT fire immediately — the existing
+ * setTimeout (dev mock, 20ms) or __dev__.setUsers() triggers the first event
+ * after mountSidebar has subscribed.
+ */
+export function overrideSetUinfo1(): void {
+  const upstream = (unsafeWindow as any).set_uinfo1;
+  (unsafeWindow as any).set_uinfo1 = function () {
+    const chaMy: string[] = (unsafeWindow as any).cha_my ?? [];
+    const { newList, added, removed } = processUserlist(chaMy, prevList);
+    prevList = newList;
+    emit({ type: "userlist", users: newList, added, removed });
+  };
+  cclog("set_uinfo1 overridden — userlist events now feed the store", "v3");
+}

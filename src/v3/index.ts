@@ -38,6 +38,8 @@ import { hookChatoutConnect } from "../ws-hook";
 import { buildShell, reloadChat } from "./shell";
 import { loadTheme, applyScheme } from "./theme";
 import type { BccColorScheme } from "../scheme";
+import { overrideSetUinfo1 } from "./userlist-wire";
+import { mountSidebar } from "./sidebar";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (ui.ts) did this plus
@@ -85,6 +87,11 @@ export function initV3(): void {
     if (schemeRef.current) applyScheme(schemeRef.current);
   };
 
+  // Intercept the upstream set_uinfo1 BEFORE buildShell so the hook is
+  // in place before the dev mock's 20ms setTimeout fires. Userlist polls
+  // now emit "userlist" store events instead of writing to the hidden #ul.
+  overrideSetUinfo1();
+
   // Build the Grid shell (moves #chatframe, hides the table, adds header).
   // Expose reloadChat on the bettercc API — the old path's reloadChat (defined
   // inside doColorStuff) never runs under v3, so v3 owns its own.
@@ -97,7 +104,11 @@ export function initV3(): void {
   // safe to call after buildShell moved #chatframe.
   hookChatoutConnect();
 
-  // TODO(T7): userlist sidebar (diff-and-patch).
+  // Mount the userlist sidebar — subscribes to "userlist" store events and
+  // does diff-and-patch rendering (reuses DOM nodes, never innerHTML).
+  // Must be after buildShell() so .bcc-sidebar exists.
+  mountSidebar();
+
   // TODO(T8): better input + send contract + superwhisper/commands.
   // TODO(T9): footer pills.
 }
