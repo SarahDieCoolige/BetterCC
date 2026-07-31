@@ -68,8 +68,8 @@ const buildConfig = {
   format: "iife",
   target: "es2020",
   platform: "browser",
-  // External: these are provided by Tampermonkey @require
-  external: ["tinycolor"],
+  // tinycolor2 is bundled (imported in src/scheme.ts). Old frozen code
+  // (theme.ts/ui.ts) still resolves the bare `tinycolor` global via @require.
 };
 
 const isWatch = process.argv.includes("--watch");

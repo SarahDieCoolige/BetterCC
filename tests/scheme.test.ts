@@ -1,19 +1,12 @@
 // Tests for the pure color-scheme generator.
 //
-// Production code (src/scheme.ts) references the bare `tinycolor` global that
-// Tampermonkey injects via @require CDN. In Vitest that global doesn't exist,
-// so we load the REAL tinycolor2 (npm devDep, same library) onto globalThis.
-// This is not a mock — it is the genuine library exercising the same code path
-// the browser runs. Per spec §6.2 the function stays "pure, zero mocks".
+// Production code (src/scheme.ts) imports tinycolor2 directly (bundled into the
+// userscript — spec A8 superseded by the v3 Architecture Decisions). Tests use
+// the same real library, no mocks. Per spec §6.2 the function stays "pure,
+// zero mocks".
 
-import { beforeAll, describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import tinycolorFactory from "tinycolor2";
-
-// Make the production global reference resolve in Node.
-beforeAll(() => {
-  (globalThis as any).tinycolor = tinycolorFactory;
-});
-
 import { generateScheme, type BccColorScheme } from "../src/scheme";
 
 // ─── Helpers ──────────────────────────────────────────────────────────

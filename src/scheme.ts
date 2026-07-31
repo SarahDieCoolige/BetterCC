@@ -5,13 +5,13 @@
 // 130-line, DOM-mutating `theme.ts:setColors` with a function that has no
 // side effects — the big testability win (spec §6).
 //
-// The only dependency is the `tinycolor` global injected by Tampermonkey's
-// @require (spec A8). It stays CDN-external; esbuild leaves it as a bare
-// global reference. In Vitest the test setup assigns the real tinycolor2 to
-// globalThis so this same code path runs.
+// tinycolor2 is imported directly and bundled into the userscript (v3
+// Architecture Decisions supersede spec A8). Old frozen code (theme.ts/ui.ts)
+// still resolves the bare `tinycolor` global via the kept @require; this module
+// does not depend on that global.
 // ═══════════════════════════════════════════════════════════════════════
 
-declare var tinycolor: any;
+import tinycolor from "tinycolor2";
 
 /** Every `--bcc-*` role produced from one base color (spec §6.1). */
 export interface BccColorScheme {
