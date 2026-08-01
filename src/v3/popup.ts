@@ -125,8 +125,15 @@ export function openUserPopup(
     })
   );
 
-  // Position below the anchor row.
-  document.body.appendChild(popup);
+  // Mount inside .bcc-shell (NOT document.body) so the popup inherits the
+  // --bcc-* theme vars, which now live on .bcc-shell rather than :root (see
+  // theme.ts applyScheme). The popup is position:fixed, so it's taken out of
+  // flow and doesn't disturb the shell's grid layout, and its viewport-relative
+  // coords are unaffected by the parent (no transform/filter/perspective on
+  // .bcc-shell or its ancestors). Falls back to body defensively in case the
+  // shell isn't built yet (shouldn't happen — popups open after mount).
+  const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
+  mount.appendChild(popup);
   const rect = anchor.getBoundingClientRect();
   popup.style.position = "fixed";
   popup.style.left = Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8) + "px";
