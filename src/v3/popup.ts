@@ -15,7 +15,7 @@
 //   - ID (/id)          → stub (T13 id-popup; logs)
 
 import { type User } from "./store";
-import { getConfig, setConfig } from "./config";
+import { setConfig } from "./config";
 import { cclog } from "../utils";
 
 let openPopup: HTMLElement | null = null;
@@ -146,11 +146,3 @@ export function openUserPopup(
   };
   document.addEventListener("click", onOutsideClick);
 }
-
-/** True if a popup is currently open (used by tests / callers). */
-export function isPopupOpen(): boolean {
-  return openPopup !== null;
-}
-
-// Re-export config read so callers can seed pin state without a second import.
-export { getConfig };
