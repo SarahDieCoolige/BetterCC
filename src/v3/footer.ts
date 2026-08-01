@@ -1,15 +1,27 @@
-// ─── v3 footer — pills, Font Awesome, connection status (spec §4.3 / T9) ──
+// ─── v3 chatbar footer — pill groups matching the v2 footer design ───────
 //
-// Builds footer pills (reload, autoscroll, help, settings stub, exit) calling
-// upstream functions directly — NO DOM scavenging from the hidden table.
-// Ported from old redesignFooter (src/ui.ts:305) but builds fresh buttons.
+// Builds the pill groups that sit to the RIGHT of the textarea in .bcc-chatbar
+// (mountInput builds the textarea on the left). Matches the v2 footer layout:
+// grouped icon buttons in translucent rounded "pill" containers, plus a row of
+// preset nick-color circles and a red exit button.
+//
+// Groups (left → right after the textarea):
+//   1. Account pill   — away / awayoff / sysmsg on / off  (upstream fns)
+//   2. Chat actions   — autoscroll + reload + local color picker
+//   3. BetterCC pill  — help + settings
+//   4. Preset colors  — 6 nick-color circles (upstream color_set, NOT local theme)
+//   5. Links pill     — ID + forum + external help
+//   6. Exit           — red sign-out icon button (standalone)
+//
+// The color picker (3) is the LOCAL theme (saveColor → --bcc-*); the preset
+// circles (4) set the SERVER-SIDE nick color via upstream color_set — distinct.
 
-import { cclog, printHelp } from "../utils";
-import { subscribe, type BccEvent } from "./store";
+import { cclog, getUserKey, printHelp } from "../utils";
+import { saveColor } from "./theme";
+import { getConfig } from "./config";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
-// (header + footer); the old single-reloadBtn field only colored the footer
-// one. Track both so a status change is visible in both places.
+// (header + footer); track both so a status change is visible in both places.
 const reloadButtons: HTMLElement[] = [];
 
 /** Register a reload button so setstatus colors it. Call at build time. */
@@ -20,153 +32,187 @@ function trackReloadButton(btn: HTMLElement): HTMLElement {
 
 // ─── Button factories ──────────────────────────────────────────────────────
 
-function pillButton(icon: string, title: string, onClick: () => void): HTMLButtonElement {
+/** Icon button (32×32) living inside a pill. Uses a Font Awesome glyph. */
+function iconBtn(iconClass: string, title: string, onClick: () => void): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "bcc-pill";
-  btn.title = title;
-  btn.setAttribute("aria-label", title); // title alone isn't an a11y name (R4)
-  btn.innerHTML = '<i class="fas ' + icon + '" aria-hidden="true"></i>';
-  btn.addEventListener("click", onClick);
-  return btn;
-}
-
-/** A text-or-icon link button that calls an upstream fn directly. */
-function linkButton(label: string, title: string, onClick: () => void): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "bcc-pill bcc-link";
+  btn.className = "bcc-icon-btn";
   btn.title = title;
   btn.setAttribute("aria-label", title);
-  btn.textContent = label;
-  btn.addEventListener("click", onClick);
+  btn.innerHTML = '<i class="fas ' + iconClass + '" aria-hidden="true"></i>';
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation(); // don't bubble to the popup's outside-click listener
+    onClick();
+  });
   return btn;
 }
 
-// ─── Buttons ───────────────────────────────────────────────────────────────
-
-function buildReloadBtn(): HTMLButtonElement {
-  return pillButton("fa-sync", "Chat neu laden", () => {
-    (unsafeWindow.bettercc as any).reloadChat();
-  });
+/** A pill container — a translucent rounded grid wrapping a group of buttons. */
+function pill(columns: number, ...children: HTMLElement[]): HTMLElement {
+  const p = document.createElement("div");
+  p.className = "bcc-pill bcc-pill-" + columns;
+  for (const c of children) p.appendChild(c);
+  return p;
 }
-
-function buildAutoscrollBtn(): HTMLButtonElement {
-  const btn = pillButton("fa-angle-double-down", "Autoscroll ein/aus", () => {
-    const cb = document.querySelector('form[name="OF"] input[name="AS"]') as HTMLInputElement | null;
-    if (cb) cb.click();
-    btn.classList.toggle("bcc-active", cb?.checked ?? false);
-  });
-  // Sync initial state with the AS checkbox (relocated to body in T6).
-  const cb = document.querySelector('form[name="OF"] input[name="AS"]') as HTMLInputElement | null;
-  if (cb?.checked) btn.classList.add("bcc-active");
-  return btn;
-}
-
-function buildHelpBtn(): HTMLButtonElement {
-  return pillButton("fa-question", "Hilfe", () => {
-    printHelp();
-  });
-}
-
-function buildSettingsBtn(): HTMLButtonElement {
-  return pillButton("fa-cog", "Einstellungen", () => {
-    // Stub — real settings modal lands in T10.
-    cclog("settings clicked — stub (T10)", "v3");
-  });
-}
-
-function buildExitBtn(): HTMLButtonElement {
-  return pillButton("fa-sign-out-alt", "Verlassen", () => {
-    const w = unsafeWindow as any;
-    if (typeof w.bye === "function") w.bye();
-  });
-}
-
-// ─── Account / status links (R2) — fresh buttons calling the same upstream
-//   fns as the old scavenged .bN anchors (verified against the fixture):
-//   away → /away, awayoff → /awayoff (both via hold.OUT1 + delout, b2/b3),
-//   message on/off → com_set('/messageon'|'/messageoff') (b5/b6),
-//   forum → window.open('//www.chatcity.de/f101/') (b15),
-//   id → window.open('//www.chatcity.de/de/id/<nick>.html') (b16).
 
 /** Run an upstream "set OUT1 + delout" command (/away, /awayoff, /bye…). */
 function sendSlashCommand(cmd: string): void {
   const docHold = (document as any).hold;
   if (!docHold) return;
   docHold.OUT1.value = cmd;
-  // delout() reads hold.OUT1 → inf.OUT → inf.submit(). Upstream sets a 1s
-  // timeout around it in the real onclicks; calling delout directly works
-  // because v3 already routed submit through the patched handler.
   const w = unsafeWindow as any;
   if (typeof w.delout === "function") w.delout();
 }
 
-function buildAwayToggleBtn(): HTMLButtonElement {
-  return linkButton("Away", "Away-Status umschalten (/away)", () => sendSlashCommand("/away"));
-}
+// ─── Group 1: Account / status ─────────────────────────────────────────────
+// away / awayoff via hold.OUT1 + delout; sysmsg on/off via com_set.
 
-function buildAwayOffBtn(): HTMLButtonElement {
-  return linkButton("Zurück", "Als zurück markiert (/awayoff)", () =>
-    sendSlashCommand("/awayoff")
-  );
-}
-
-function buildMessageOnBtn(): HTMLButtonElement {
-  return linkButton("Sysan", "Systemmeldungen ein (/messageon)", () => {
+function buildAccountPill(): HTMLElement {
+  const away = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
+  const awayOff = iconBtn("b3", "Zurück (/awayoff)", () => sendSlashCommand("/awayoff"));
+  const sysOn = iconBtn("b5", "Systemmeldungen an", () => {
     const w = unsafeWindow as any;
     if (typeof w.com_set === "function") w.com_set("/messageon");
   });
-}
-
-function buildMessageOffBtn(): HTMLButtonElement {
-  return linkButton("Sysaus", "Systemmeldungen aus (/messageoff)", () => {
+  const sysOff = iconBtn("b6", "Systemmeldungen aus", () => {
     const w = unsafeWindow as any;
     if (typeof w.com_set === "function") w.com_set("/messageoff");
   });
+  return pill(2, away, sysOn, awayOff, sysOff);
 }
 
-function buildForumBtn(): HTMLButtonElement {
-  return linkButton("Forum", "Forum öffnen", () => {
-    window.open("//www.chatcity.de/f101/", "_blank");
+// ─── Group 2: Chat actions (autoscroll + reload + local color picker) ──────
+
+function buildAutoscrollBtn(): HTMLButtonElement {
+  const btn = iconBtn("fa-angle-double-down", "Autoscroll ein/aus", () => {
+    const cb = document.querySelector('form[name="OF"] input[name="AS"]') as HTMLInputElement | null;
+    if (cb) cb.click();
+    btn.classList.toggle("bcc-active", cb?.checked ?? false);
+  });
+  const cb = document.querySelector('form[name="OF"] input[name="AS"]') as HTMLInputElement | null;
+  if (cb?.checked) btn.classList.add("bcc-active");
+  return btn;
+}
+
+function buildReloadBtn(): HTMLButtonElement {
+  return iconBtn("fa-sync", "Chat neu laden", () => {
+    (unsafeWindow.bettercc as any).reloadChat();
   });
 }
 
-function buildIdBtn(): HTMLButtonElement {
-  return linkButton("ID", "Eigene ID anzeigen", () => {
+/**
+ * Local color picker swatch — a native <input type="color"> styled as a color
+ * circle. oninput regenerates the scheme via saveColor (writes --bcc-* to
+ * :root + mirrors into the iframe). Seeds from the stored base color.
+ */
+function buildColorSwatch(): HTMLElement {
+  const wrap = document.createElement("label");
+  wrap.className = "bcc-color-btn bcc-color-picker-wrap";
+  wrap.title = "Thema-Farbe wählen";
+
+  const input = document.createElement("input");
+  input.type = "color";
+  input.className = "bcc-color-input";
+  input.setAttribute("aria-label", "Thema-Farbe wählen");
+  input.value = "#6aaed8"; // default until the stored color loads
+
+  getConfig("color", "6AAED8").then((hex) => {
+    input.value = "#" + String(hex).replace(/^#/, "");
+    wrap.style.setProperty("--swatch-color", input.value);
+  });
+
+  input.addEventListener("input", () => {
+    const baseHex = input.value.replace(/^#/, "").toUpperCase();
+    wrap.style.setProperty("--swatch-color", input.value);
+    saveColor(baseHex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
+      cclog("color swatch: saveColor failed — " + (e as Error).message, "v3");
+    });
+  });
+
+  wrap.appendChild(input);
+  return wrap;
+}
+
+function buildChatActionsPill(): HTMLElement {
+  return pill(1, buildAutoscrollBtn(), trackReloadButton(buildReloadBtn()), buildColorSwatch());
+}
+
+// ─── Group 3: BetterCC (help + settings) ───────────────────────────────────
+
+function buildBetterccPill(): HTMLElement {
+  const help = iconBtn("fa-question", "Hilfe", () => printHelp());
+  const settings = iconBtn("fa-cog", "Einstellungen", () => {
+    cclog("settings clicked — stub (T10)", "v3");
+  });
+  return pill(1, help, settings);
+}
+
+// ─── Group 4: Preset nick-color circles (upstream color_set) ───────────────
+// These set the SERVER-SIDE nick color (what other chatters see) via
+// color_set('/color HEX') → com_set → AJAX /chatin. Distinct from the local
+// theme picker above.
+
+const PRESET_COLORS: ReadonlyArray<readonly [cls: string, hex: string]> = [
+  ["b10", "AA0000"], // red
+  ["b13", "00AA00"], // green
+  ["b14", "0000AA"], // blue
+  ["b8", "AAAA00"], // yellow
+  ["b12", "00AAAA"], // cyan
+  ["b11", "AA00AA"], // magenta
+];
+
+function buildPresetColorPill(): HTMLElement {
+  const children = PRESET_COLORS.map(([cls, hex]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-color-btn " + cls;
+    btn.title = "Nick-Farbe #" + hex;
+    btn.setAttribute("aria-label", "Nick-Farbe auf #" + hex + " setzen");
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const w = unsafeWindow as any;
+      if (typeof w.color_set === "function") w.color_set(hex);
+      else cclog("preset color: upstream color_set not found", "v3");
+    });
+    return btn;
+  });
+  return pill(3, ...children);
+}
+
+// ─── Group 5: Links (ID + forum + external help) ───────────────────────────
+
+function buildLinksPill(): HTMLElement {
+  const id = iconBtn("b16", "Eigene ID", () => {
     const nick = String((unsafeWindow as any).chat_nick ?? "");
     if (nick) window.open("//www.chatcity.de/de/id/" + nick + ".html", "IDCARD");
   });
-}
-
-function buildUpHelpBtn(): HTMLButtonElement {
-  return linkButton("?", "Chat-Hilfe (extern)", () => {
+  const forum = iconBtn("b15", "Forum", () => {
+    window.open("//www.chatcity.de/f101/", "_blank");
+  });
+  const help = iconBtn("b1", "Chat-Hilfe (extern)", () => {
     window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
   });
+  return pill(2, id, forum, help);
 }
 
-// ─── Online count ──────────────────────────────────────────────────────────
+// ─── Group 6: Exit (red, standalone) ───────────────────────────────────────
 
-function buildOnlineCount(): HTMLElement {
-  const span = document.createElement("span");
-  span.className = "bcc-online-count";
-  // Seed with the current count, then keep it live as users join/leave.
-  const render = (n: number) => { span.textContent = String(n) + " online"; };
-  render(Math.floor(((unsafeWindow as any).cha_my?.length ?? 0) / 2));
-  subscribe((e: BccEvent) => {
-    if (e.type === "userlist") render(e.users.length);
+function buildExitBtn(): HTMLElement {
+  const btn = iconBtn("b7", "Verlassen", () => {
+    const w = unsafeWindow as any;
+    if (typeof w.bye === "function") w.bye();
   });
-  return span;
+  btn.classList.add("bcc-danger");
+  return btn;
 }
 
-// ─── chatout_setstatus patch (connection → reload button color) ─────────────
+// ─── chatout_setstatus patch (connection → reload button color) ────────────
 
 function patchSetStatus(): void {
   const w = unsafeWindow as any;
   if (typeof w.chatout_setstatus !== "function") return;
   const orig = w.chatout_setstatus;
   w.chatout_setstatus = function (text: string, color: string, bold: boolean) {
-    // R3: color every tracked reload button (header + footer), not just one.
     for (const btn of reloadButtons) {
       btn.style.color = color || "#888";
       btn.title = "Chat neu laden — " + text;
@@ -178,7 +224,7 @@ function patchSetStatus(): void {
 // ─── Font Awesome CDN injection ────────────────────────────────────────────
 
 function injectFontAwesome(): void {
-  if (document.querySelector('link[href*="fontawesome"]')) return; // already injected
+  if (document.querySelector('link[href*="fontawesome"]')) return;
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href = "https://use.fontawesome.com/releases/v6.5.1/css/all.css";
@@ -188,60 +234,27 @@ function injectFontAwesome(): void {
 // ─── Mount ─────────────────────────────────────────────────────────────────
 
 export function mountFooter(): void {
-  const footerEl = document.querySelector(".bcc-footer");
-  if (!footerEl) return;
+  const chatbar = document.querySelector(".bcc-chatbar");
+  if (!chatbar) return;
 
   injectFontAwesome();
 
-  // Build pills
-  const onlineCount = buildOnlineCount();
-  const reloadBtn = trackReloadButton(buildReloadBtn()); // R3: tracked
-  const autoscrollBtn = buildAutoscrollBtn();
-  const helpBtn = buildHelpBtn();
-  const settingsBtn = buildSettingsBtn();
-  const exitBtn = buildExitBtn();
+  // Append the pill groups AFTER the textarea area (mountInput already put
+  // .bcc-input-area first; it's flex:1 so these sit to its right).
+  chatbar.append(
+    buildAccountPill(),
+    buildChatActionsPill(),
+    buildBetterccPill(),
+    buildPresetColorPill(),
+    buildLinksPill(),
+    buildExitBtn()
+  );
 
   // R3: also track the header reload button so setstatus colors it too.
   const headerReload = document.querySelector(".bcc-reload") as HTMLElement | null;
   if (headerReload) trackReloadButton(headerReload);
 
-  // Layout groups.
-  const left = document.createElement("div");
-  left.className = "bcc-footer-left";
-  left.appendChild(onlineCount);
-  left.appendChild(autoscrollBtn);
-
-  const center = document.createElement("div");
-  center.className = "bcc-footer-center";
-  center.appendChild(reloadBtn);
-  center.appendChild(helpBtn);
-  center.appendChild(settingsBtn);
-
-  // R2: account/status/links group (was missing — only reload/help/settings/exit shipped).
-  const links = document.createElement("div");
-  links.className = "bcc-footer-links";
-  links.append(
-    buildAwayToggleBtn(),
-    buildAwayOffBtn(),
-    buildMessageOnBtn(),
-    buildMessageOffBtn(),
-    buildForumBtn(),
-    buildIdBtn(),
-    buildUpHelpBtn()
-  );
-
-  const right = document.createElement("div");
-  right.className = "bcc-footer-right";
-  right.appendChild(exitBtn);
-
-  footerEl.innerHTML = "";
-  footerEl.appendChild(left);
-  footerEl.appendChild(center);
-  footerEl.appendChild(links);
-  footerEl.appendChild(right);
-
-  // Connection-status → reload button color (all tracked buttons now)
   patchSetStatus();
 
-  cclog("footer mounted — pills + links + FA + setstatus patch", "v3");
+  cclog("footer mounted — pill groups + FA + setstatus patch", "v3");
 }
