@@ -239,6 +239,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap; /* let link group wrap on narrow viewports (R2) */
 }
 
 .bcc-footer-left,
@@ -271,6 +272,18 @@
 .bcc-online-count {
   font-size: 12px;
   opacity: 0.8;
+}
+
+/* R2: account/status/link pills — text labels, slightly smaller. */
+.bcc-link {
+  padding: 3px 6px;
+  font-size: 11px;
+}
+.bcc-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
 }
 
 /* Placeholder labels for not-yet-built sections (T7/T8/T9) */
