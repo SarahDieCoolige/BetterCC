@@ -2,7 +2,7 @@
 // @name  BetterCC
 // @description  BetterCC is better
 // @author  Sarah
-// @version      3.0.0
+// @version      2.0.4
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
@@ -12,9 +12,9 @@
 //
 // @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
 //
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/main.css?r=3.0.0
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.0
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.0
+// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/main.css?r=2.0.4
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=2.0.4
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=2.0.4
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1566,11 +1566,15 @@
 
   // src/v3/popup.ts
   var openPopup = null;
+  var onOutsideClick = null;
   function closePopup() {
-    if (openPopup) {
-      openPopup.remove();
-      openPopup = null;
-      document.removeEventListener("keydown", onKeydown, true);
+    if (!openPopup) return;
+    openPopup.remove();
+    openPopup = null;
+    document.removeEventListener("keydown", onKeydown, true);
+    if (onOutsideClick) {
+      document.removeEventListener("click", onOutsideClick);
+      onOutsideClick = null;
     }
   }
   function onKeydown(e) {
@@ -1586,7 +1590,8 @@
     btn.textContent = label;
     btn.title = title;
     btn.setAttribute("aria-label", title);
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       onClick();
       closePopup();
     });
@@ -1638,15 +1643,10 @@
     popup.style.top = rect.bottom + 4 + "px";
     openPopup = popup;
     document.addEventListener("keydown", onKeydown, true);
-    setTimeout(() => {
-      document.addEventListener(
-        "click",
-        (e) => {
-          if (openPopup && !openPopup.contains(e.target)) closePopup();
-        },
-        { once: true }
-      );
-    }, 0);
+    onOutsideClick = (e) => {
+      if (openPopup && !openPopup.contains(e.target)) closePopup();
+    };
+    document.addEventListener("click", onOutsideClick);
   }
 
   // src/v3/sidebar.ts
@@ -1672,12 +1672,16 @@
     nameSpan.className = "bcc-userrow-name";
     nameSpan.textContent = getStatusText(user) + user.name;
     li.appendChild(nameSpan);
-    const open = () => handleRowClick(user, li);
+    const open = (e) => {
+      e?.stopPropagation();
+      handleRowClick(user, li);
+    };
     li.addEventListener("click", open);
     li.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        open();
+        e.stopPropagation();
+        handleRowClick(user, li);
       }
     });
     return li;
