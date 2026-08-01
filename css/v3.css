@@ -68,6 +68,24 @@
   overflow: hidden;
 }
 
+/* R4 / spec §4.6: theme color transition scoped to the shell (not a global *
+   rule that would fight upstream CSS). Disabled under reduced-motion. */
+.bcc-shell,
+.bcc-shell .bcc-pill,
+.bcc-shell .bcc-input-field {
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease,
+    border-color 0.5s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bcc-shell,
+  .bcc-shell *,
+  .bcc-userrow {
+    transition: none !important;
+  }
+}
+
 .bcc-header {
   grid-area: header;
   display: flex;
@@ -121,6 +139,11 @@
   transition: opacity 0.15s ease;
 }
 .bcc-userrow:hover { background: var(--bcc-surface-hover); }
+/* R4: keyboard focus indicator for the role=button rows. */
+.bcc-userrow:focus-visible {
+  outline: 2px solid var(--bcc-accent-whisper);
+  outline-offset: -2px;
+}
 
 .bcc-userrow-name { user-select: none; }
 

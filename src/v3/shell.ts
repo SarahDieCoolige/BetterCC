@@ -117,6 +117,7 @@ function buildReloadButton(): HTMLElement {
   btn.type = "button";
   btn.className = "bcc-reload";
   btn.title = "Chat neu laden (mimimi)";
+  btn.setAttribute("aria-label", "Chat neu laden"); // R4: title alone isn't an a11y name
   btn.textContent = "↻";
   btn.addEventListener("click", () => {
     (unsafeWindow.bettercc as any).reloadChat();
