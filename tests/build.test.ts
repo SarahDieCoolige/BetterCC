@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 const OUTPUT_FILE = resolve(import.meta.dirname, "../bettercc.user.js");
 
 describe("build output", () => {
-  it("produces a valid userscript file", () => {
+  it("produces a valid v3-only userscript file", () => {
     expect(existsSync(OUTPUT_FILE), "bettercc.user.js must exist after build").toBe(true);
 
     const content = readFileSync(OUTPUT_FILE, "utf-8");
@@ -21,65 +21,40 @@ describe("build output", () => {
 
     // Must contain the IIFE wrapper
     expect(content).toContain('"use strict"');
-
-    // Must contain the closing IIFE
     expect(content).toContain("})();");
 
-    // Must contain BetterCC public API methods (property assignments survive bundling)
+    // ── v3 public API (property assignments survive bundling) ──────────────
+    // The v2-only API (bettercc.superban / getSuperbans / setColors / showIdPopup)
+    // was removed with the v2 UI. v3 exposes these four instead.
     expect(content).toContain("bettercc.reloadChat");
     expect(content).toContain("bettercc.onSubmit");
     expect(content).toContain("bettercc.superwhisper");
-    expect(content).toContain("bettercc.superban");
-    expect(content).toContain("bettercc.getSuperbans");
-    expect(content).toContain("bettercc.setColors");
     expect(content).toContain("bettercc.setTheme");
 
-    // Must contain key feature string markers (string literals survive bundling)
-    expect(content).toContain("autoscroll-banner");         // autoscroll banner element
-    expect(content).toContain("Superwhisper");             // superwhisper feature
-    expect(content).toContain("Better Ignore");            // superban feature
-    expect(content).toContain("Du chattest mit allen");    // input placeholder
-    expect(content).toContain("color_");                   // GM storage key pattern
-    expect(content).toContain("chatout_connect");          // WebSocket hook
+    // ── v3 must NOT ship the removed v2 API ─────────────────────────────────
+    expect(content).not.toContain("bettercc.superban");
+    expect(content).not.toContain("bettercc.getSuperbans");
+    expect(content).not.toContain("bettercc.setColors");
+    expect(content).not.toContain("showIdPopup");
 
-    // Must contain the WebSocket hook
-    expect(content).toContain("injectIntoChatframe");      // function name in log strings
-    expect(content).toContain("chatout_auth_dead");        // upstream global usage
+    // ── Key feature string markers (string literals survive bundling) ───────
+    expect(content).toContain("autoscroll-banner");      // autoscroll banner element
+    expect(content).toContain("Superwhisper");            // superwhisper feature
+    expect(content).toContain("Du chattest mit allen");   // input placeholder
+    expect(content).toContain("chatout_connect");         // WebSocket hook
+    expect(content).toContain("injectIntoChatframe");     // function name in log strings
+    expect(content).toContain("chatout_auth_dead");       // upstream global usage
 
-    // Must contain the /id popup function
-    expect(content).toContain("showIdPopup");              // /id command mini-ID popup
+    // ── tinycolor2 is bundled, not @required ───────────────────────────────
+    // The CDN @require was dropped; tinycolor arrives via the npm import in
+    // scheme.ts and is inlined into the bundle.
+    expect(content).not.toContain("@require  https://raw.githubusercontent.com/bgrins/TinyColor");
 
-    // GM_wrench is fully removed — no references remain
-    expect(content).not.toContain("GM_wrench.waitForKeyElements");
-    expect(content).not.toContain("GM_wrench.addCss");
-    expect(content).not.toContain("GM_wrench");              // no @require, no globals comment
+    // ── main.css @resource removed with the v2 UI ──────────────────────────
+    expect(content).not.toContain("@resource  main_css");
 
-    // jQuery removal tracking — dead $help table removed from utils
-    expect(content).not.toContain("helpTable");
-
-    // jQuery removal tracking — addCustomCss + cleanup use vanilla DOM
-    expect(content).not.toContain(".removeAttr(");           // cleanup: jQuery-only method
-
-    // jQuery removal tracking — betterInput uses vanilla DOM
-    expect(content).not.toContain('$("<textarea>"');         // jQuery element creation
-
-    // jQuery removal tracking — doColorStuff theme UI uses vanilla DOM
-    expect(content).not.toContain("appendTo($colorWrap)");  // jQuery chaining
-
-    // jQuery removal tracking — applyStoredColors uses vanilla DOM
-    expect(content).not.toContain('$(":root")');             // jQuery :root selector
-
-    // jQuery removal tracking — replaceOnSubmit uses vanilla DOM
-    expect(content).not.toContain('.attr("onsubmit"');       // jQuery attr set
-
-    // jQuery removal tracking — redesignFooter uses vanilla DOM
-    expect(content).not.toContain('$("<button>",');          // jQuery element constructor
-
-    // jQuery removal tracking — superban + userlist use vanilla DOM
-    expect(content).not.toContain('$("<script>")');           // jQuery script injection
-    expect(content).not.toContain('$("#fuu")');               // jQuery user popup
-
-    // Final: jQuery and jQuery UI @require lines removed from header
+    // ── jQuery removal regression guards (still hold under v3) ──────────────
+    expect(content).not.toContain("GM_wrench");
     expect(content).not.toContain("jquery-3.5.1");
     expect(content).not.toContain("jquery-ui");
   });

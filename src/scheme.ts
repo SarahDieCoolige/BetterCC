@@ -6,9 +6,7 @@
 // side effects — the big testability win (spec §6).
 //
 // tinycolor2 is imported directly and bundled into the userscript (v3
-// Architecture Decisions supersede spec A8). Old frozen code (theme.ts/ui.ts)
-// still resolves the bare `tinycolor` global via the kept @require; this module
-// does not depend on that global.
+// Architecture Decisions supersede spec A8). No CDN @require or global.
 // ═══════════════════════════════════════════════════════════════════════
 
 import tinycolor from "tinycolor2";

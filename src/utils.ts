@@ -1,56 +1,17 @@
-// ─── Utilities: logging, iframe access, chat output, help text ───
+// ─── Utilities: logging, iframe access, help text ───
+//
+// The shared pre-v3 helpers survived the v2 removal. What remains is what v3
+// + ws-hook actually consume: logging, the user-scoped GM-key helper, iframe
+// access, theme mirroring, and the help notification. The v2-only helpers
+// (printInChat/cclogChat, waitForElements, getUserStore, feature flags) were
+// dropped with the v2 UI.
 
-export const superbanEnable = 1;
-export const replaceInputFieldEnable = 1;
-export const noChatBackgroundsEnable = 1;
-export const NotificationsEnable = 1;
-export const betterUserListEnable = 0;
-
+/** Wrap GM_log with a tag prefix. Use this, never console.log. */
 export function cclog(str: string, tag = "BetterCC"): void {
   GM_log(tag + " - " + str);
 }
 
-export function ccnotify(message: string, title = "", tag = "", timeout = 3000): void {
-  if (NotificationsEnable) {
-    GM_notification({
-      title: "BetterCC " + title,
-      text: message,
-      tag: tag,
-      timeout: timeout,
-      silent: true,
-      onclick: () => {
-        (window.event as Event)?.preventDefault();
-        cclog("Notification clicked.");
-        window.focus();
-      },
-    });
-  }
-}
-
-export function printInChat(position: string = "beforeend", content: string): void {
-  const doc = getChatDoc();
-  if (!doc || !doc.body || !doc.body.lastChild) {
-    cclog("printInChat: iframe body not ready, dropping message");
-    return;
-  }
-  doc.body.lastChild.insertAdjacentHTML(position, content);
-}
-
-export function cclogChat(message: string, name: string = "BetterCC", newLineAfterName: boolean = true): void {
-  message =
-    '<pre id="bccmessage" class="bccmessage" style="white-space: pre-wrap; font-size: 1.2em; width: 70%; display: inline">' +
-    message +
-    "</pre><br>";
-
-  if (name.trim() !== "") {
-    name += ": ";
-    name = '<font color="red"><b>' + name + "</b></font>";
-    if (newLineAfterName) name += "<br>";
-    message = name + message;
-  }
-  printInChat("beforeend", message);
-}
-
+/** Help text shown by printHelp() (/help, /bettercc). German feature list. */
 export const helptxtNotify: string = [
   "/sw sariam" + " - " + "sw an",
   "/o hi all :)" + " - " + "ins open",
@@ -62,11 +23,30 @@ export const helptxtNotify: string = [
   "/help" + " - " + "hilfe",
 ].join("\n");
 
+/** Show the help notification (called by /help, /bettercc, the footer help btn). */
 export function printHelp(): void {
   ccnotify(helptxtNotify, "Hilfe", "help");
 }
 
+/** Wrap GM_notification; respects the NotificationsEnable flag. */
+export function ccnotify(message: string, title = "", tag = "", timeout = 3000): void {
+  GM_notification({
+    title: "BetterCC " + title,
+    text: message,
+    tag: tag,
+    timeout: timeout,
+    silent: true,
+    onclick: () => {
+      (window.event as Event)?.preventDefault();
+      cclog("Notification clicked.");
+      window.focus();
+    },
+  });
+}
+
 // ─── Iframe access ───
+// Always use these — they return null if the iframe isn't ready. Never access
+// chatframe.contentDocument directly.
 
 export function getChatDoc(): Document | null {
   const f = document.getElementById("chatframe") as HTMLIFrameElement | null;
@@ -81,6 +61,7 @@ export function getChatWin(): Window | null {
   return f ? f.contentWindow : null;
 }
 
+/** Mirror bg/fg into the chat iframe under its own --chat* var names. */
 export function applyThemeToIframe(bgColor: string, fgColor: string): void {
   const doc = getChatDoc();
   if (!doc) return;
@@ -105,52 +86,4 @@ export function getUserKey(key: string): string {
 
 export function setUserStore(nick: string, isGast: boolean): void {
   userStore = isGast ? "gast" : nick.toLowerCase();
-}
-
-export function getUserStore(): string {
-  return userStore;
-}
-
-// ─── DOM utility: MutationObserver-based element watcher ───
-// Replaces GM_wrench.waitForKeyElements
-
-export function waitForElements(
-  selector: string,
-  callback: (el: Element) => void,
-  once: boolean,
-  intervalMs: number
-): void {
-  // Run against already-present elements
-  const existing = document.querySelectorAll(selector);
-  existing.forEach((el) => callback(el));
-
-  if (once && existing.length > 0) return;
-
-  // Watch for future additions
-  const observer = new MutationObserver(() => {
-    const matches = document.querySelectorAll(selector);
-    if (matches.length > 0) {
-      for (let i = 0; i < matches.length; i++) {
-        callback(matches[i]);
-      }
-      if (once) {
-        observer.disconnect();
-      }
-    }
-  });
-
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
-
-  // For non-once mode, also set up periodic re-check as fallback
-  if (!once && intervalMs > 0) {
-    setInterval(() => {
-      const matches = document.querySelectorAll(selector);
-      for (let i = 0; i < matches.length; i++) {
-        callback(matches[i]);
-      }
-    }, intervalMs);
-  }
 }

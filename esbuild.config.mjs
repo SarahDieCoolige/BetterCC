@@ -12,9 +12,6 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
-// @require  https://raw.githubusercontent.com/bgrins/TinyColor/master/tinycolor.js
-//
-// @resource  main_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/main.css?r=2.0.4
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=2.0.4
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=2.0.4
 //
@@ -41,7 +38,7 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @homepageURL  https://github.com/SarahDieCoolige/BetterCC
 
 	// ==/UserScript==
-/* globals ajax, tinycolor */
+/* globals ajax */
 `;
 
 const DORMANT_CHATLOG = `
@@ -69,8 +66,7 @@ const buildConfig = {
   format: "iife",
   target: "es2020",
   platform: "browser",
-  // tinycolor2 is bundled (imported in src/scheme.ts). Old frozen code
-  // (theme.ts/ui.ts) still resolves the bare `tinycolor` global via @require.
+  // tinycolor2 is bundled (imported in src/scheme.ts); no CDN @require needed.
 };
 
 const isWatch = process.argv.includes("--watch");
