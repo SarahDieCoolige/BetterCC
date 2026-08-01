@@ -1,8 +1,8 @@
 import * as esbuild from "esbuild";
 
 const USERSCRIPT_HEADER = `// ==UserScript==
-// @name  BetterCC
-// @description  BetterCC is better
+// @name  BetterCC (alpha)
+// @description  BetterCC v3 alpha — install alongside the stable release for testing
 // @author  Sarah
 // @version      2.0.4
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
