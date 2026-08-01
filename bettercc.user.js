@@ -1210,7 +1210,7 @@
     };
   }
 
-  // src/scheme.ts
+  // src/scheme-v1.ts
   var STEP = {
     /** Footer/sidebar sit one tier below the main surface. */
     footerDarken: 15,
@@ -1317,6 +1317,186 @@
     };
   }
 
+  // src/scheme-v2.ts
+  var STEP2 = {
+    // ── Surface luminance deltas (HSL lightness units) ───────────────────
+    /** surface-1: subtle elevation (footer / sidebar) — 8 units from base. */
+    surface1Step: 4,
+    /** surface-2: raised (popups / overlays) — 16 units from base. */
+    surface2Step: 16,
+    /** surface-3: sunken (inputs) — 8 units, opposite direction. */
+    surface3Step: 8,
+    // ── Desaturation ─────────────────────────────────────────────────────
+    /** How much of the base saturation to strip per derived tier.
+     *  0 = keep full saturation, 1 = fully greyscale. */
+    desatFactor: 0.1,
+    // ── Luminance bounds (WCAG relative luminance, 0‑1) ──────────────────
+    /** Minimum WCAG luminance gap between adjacent surface tiers. */
+    minLuminanceGap: 0.015,
+    // ── Border offsets (from surface‑1, HSL lightness units) ─────────────
+    /** border-0: barely-there sibling separators. */
+    borderSubtleShift: 4,
+    /** border-1: region separators (chatbar top, stats bar). */
+    borderMediumShift: 10,
+    /** border-2: outlines, popup edges. */
+    borderStrongShift: 20,
+    // ── Interaction nudge amounts ────────────────────────────────────────
+    hoverShift: 6,
+    activeShift: 12
+  };
+  function toHex62(color) {
+    return color.toHexString().slice(1).toUpperCase();
+  }
+  function pickReadable2(bg, candidates, large = false) {
+    return tinycolor.mostReadable(bg, candidates, {
+      includeFallbackColors: true,
+      level: "AA",
+      size: large ? "large" : "small"
+    });
+  }
+  function nudge2(color, amount) {
+    return color.isLight() ? color.clone().darken(amount) : color.clone().lighten(amount);
+  }
+  function liftAccent2(bg, accent) {
+    const minContrast = 3;
+    if (tinycolor.readability(bg, accent) >= minContrast) return accent.clone();
+    const ops = [
+      (c) => c.lighten(20),
+      (c) => c.darken(20),
+      (c) => c.saturate(30).lighten(15),
+      (c) => c.saturate(30).darken(15),
+      (c) => c.lighten(40),
+      (c) => c.darken(40)
+    ];
+    for (const op of ops) {
+      const cand = op(accent.clone());
+      if (tinycolor.readability(bg, cand) >= minContrast) return cand;
+    }
+    return accent.clone();
+  }
+  function wcagLum(color) {
+    return color.getLuminance();
+  }
+  function pickTinted(bg, candidates, targetContrast = 4.5, minContrast = 3) {
+    let best = candidates[0];
+    let bestDiff = Infinity;
+    for (const c of candidates) {
+      const cr = tinycolor.readability(bg, c);
+      if (cr < minContrast) continue;
+      const diff = Math.abs(cr - targetContrast);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = c;
+      }
+    }
+    return best;
+  }
+  function tierStep(color, amount, darkMode) {
+    return darkMode ? color.clone().lighten(amount) : color.clone().darken(amount);
+  }
+  function generateScheme2(baseColor, options) {
+    const raw = tinycolor(baseColor);
+    const darkMode = options?.darkMode ?? !raw.isLight();
+    const base = raw.clone();
+    const s0 = base.clone();
+    const s1 = tierStep(s0, STEP2.surface1Step, darkMode);
+    const s2 = tierStep(s0, STEP2.surface2Step, darkMode);
+    const s3 = tierStep(s0, STEP2.surface3Step, !darkMode);
+    const baseSat = base.toHsl().s;
+    for (const [surf, tier] of [[s1, 1], [s2, 2], [s3, 1]]) {
+      if (baseSat > 0.4) {
+        const desatAmount = Math.round(baseSat * STEP2.desatFactor * tier * 100);
+        if (desatAmount > 0) surf.desaturate(desatAmount);
+      }
+    }
+    const tiers = [s0, s1, s2, s3];
+    for (let i = 1; i < tiers.length; i++) {
+      const prev = tiers[i - 1];
+      const curr = tiers[i];
+      const gap = Math.abs(wcagLum(curr) - wcagLum(prev));
+      if (gap < STEP2.minLuminanceGap) {
+        const pushAmount = 6;
+        if (darkMode) {
+          if (i === 3) curr.darken(pushAmount);
+          else curr.lighten(pushAmount);
+        } else {
+          if (i === 3) curr.lighten(pushAmount);
+          else curr.darken(pushAmount);
+        }
+      }
+    }
+    const text0 = pickReadable2(s0, s0.monochromatic().concat(s0.analogous()));
+    const text1 = pickReadable2(
+      s1,
+      s0.monochromatic().concat(s0.analogous())
+    );
+    const textRaisedVal = pickReadable2(s2, s2.monochromatic(), true);
+    const textInputVal = pickReadable2(s3, s3.monochromatic());
+    const textSidebarVal = pickTinted(
+      s1,
+      s1.monochromatic().concat(s0.monochromatic()),
+      4.5,
+      // target body-text AA
+      3
+      // minimum large-text AA (sidebar uses 14px/600)
+    );
+    const textMutedVal = text1;
+    const textPlaceholderVal = text1;
+    const iconVal = pickTinted(s1, s1.monochromatic(), 3.5, 3);
+    const border0 = nudge2(s1, STEP2.borderSubtleShift);
+    const border1 = nudge2(s1, STEP2.borderMediumShift);
+    const border2 = nudge2(s1, STEP2.borderStrongShift);
+    const surfaceHoverVal = nudge2(s0, STEP2.hoverShift);
+    const surfaceActiveVal = nudge2(s0, STEP2.activeShift);
+    const triad2 = s0.triad();
+    const accentWhisperVal = liftAccent2(s0, triad2[1]);
+    const accentBanVal = liftAccent2(s0, triad2[2]);
+    const statusOnlineVal = liftAccent2(s1, tinycolor("#3aa55c"));
+    const statusSepVal = liftAccent2(s1, tinycolor("#d08a1e"));
+    const textAwayVal = pickReadable2(
+      s1,
+      [textSidebarVal.clone().desaturate(60), textMutedVal.clone()]
+    );
+    return {
+      // ── Old element-named fields (drop-in compat) ───────────────────
+      surface: toHex62(s0),
+      text: toHex62(text0),
+      surfaceRaised: toHex62(s2),
+      textRaised: toHex62(textRaisedVal),
+      surfaceInput: toHex62(s3),
+      textInput: toHex62(textInputVal),
+      surfaceFooter: toHex62(s1),
+      surfaceSidebar: toHex62(s1),
+      textSidebar: toHex62(textSidebarVal),
+      textMuted: toHex62(textMutedVal),
+      textPlaceholder: toHex62(textPlaceholderVal),
+      icon: toHex62(iconVal),
+      accentWhisper: toHex62(accentWhisperVal),
+      accentBan: toHex62(accentBanVal),
+      statusOnline: toHex62(statusOnlineVal),
+      statusSep: toHex62(statusSepVal),
+      textAway: toHex62(textAwayVal),
+      border: toHex62(border1),
+      surfaceHover: toHex62(surfaceHoverVal),
+      surfaceActive: toHex62(surfaceActiveVal),
+      bgHex: toHex62(raw),
+      // ── New generic-purpose names (for future CSS migration) ─────────
+      surface0: toHex62(s0),
+      surface1: toHex62(s1),
+      surface2: toHex62(s2),
+      surface3: toHex62(s3),
+      text0: toHex62(text0),
+      text1: toHex62(text1),
+      border0: toHex62(border0),
+      border1: toHex62(border1),
+      border2: toHex62(border2)
+    };
+  }
+
+  // src/scheme.ts
+  var _v2 = typeof location !== "undefined" && new URLSearchParams(location.search).has("schemev2");
+  var generateScheme3 = (base, opts) => _v2 ? generateScheme2(base, opts) : generateScheme(base, opts);
+
   // src/v3/theme.ts
   var BCC_ROLE_VARS = [
     ["surface", "--bcc-surface"],
@@ -1365,7 +1545,7 @@
   }
   async function saveColor(baseHex, colorKey, schemeKey) {
     await GM.setValue(colorKey, baseHex);
-    const scheme = generateScheme(baseHex);
+    const scheme = generateScheme3(baseHex);
     await GM.setValue(schemeKey, schemeToStorage(scheme));
     applyScheme(scheme);
     return scheme;
@@ -1378,7 +1558,7 @@
       applyScheme(stored);
       return stored;
     }
-    const scheme = generateScheme(base);
+    const scheme = generateScheme3(base);
     await GM.setValue(schemeKey, schemeToStorage(scheme));
     applyScheme(scheme);
     return scheme;

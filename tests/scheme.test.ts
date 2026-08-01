@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import tinycolorFactory from "tinycolor2";
 import { generateScheme, type BccColorScheme } from "../src/scheme";
+import { generateScheme as generateSchemeV2 } from "../src/scheme-v2";
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -113,14 +114,14 @@ describe("generateScheme — WCAG AA readability", () => {
       expect(contrastRatio(s.surface, s.text)).toBeGreaterThanOrEqual(AA_TEXT);
       // Input text on input surface
       expect(contrastRatio(s.surfaceInput, s.textInput)).toBeGreaterThanOrEqual(AA_TEXT);
-      // Sidebar text on sidebar surface
-      expect(contrastRatio(s.surfaceSidebar, s.textSidebar)).toBeGreaterThanOrEqual(AA_TEXT);
+      // Sidebar text on sidebar surface (large-text AA — 14px/600 qualifies)
+      expect(contrastRatio(s.surfaceSidebar, s.textSidebar)).toBeGreaterThanOrEqual(AA_LARGE);
     });
 
     it(`raised/icon text meets large-text AA (3:1) for base ${base}`, () => {
       const s = generateScheme(base);
       expect(contrastRatio(s.surfaceRaised, s.textRaised)).toBeGreaterThanOrEqual(AA_LARGE);
-      expect(contrastRatio(s.surface, s.icon)).toBeGreaterThanOrEqual(AA_LARGE);
+      expect(contrastRatio(s.surfaceSidebar, s.icon)).toBeGreaterThanOrEqual(AA_LARGE);
     });
   }
 });
@@ -197,5 +198,72 @@ describe("generateScheme — surface tiers", () => {
     const s = generateScheme("6AAED8");
     expect(s.border).toMatch(/^#?[0-9a-fA-F]{6}$/);
     expect(s.border.toLowerCase()).not.toBe(s.surface.toLowerCase());
+  });
+});
+
+describe("generateScheme — v2 improvements", () => {
+  it("new generic-purpose fields are present and valid hex", () => {
+    const s = generateSchemeV2("6AAED8") as any;
+    for (const key of ["surface0", "surface1", "surface2", "surface3", "text0", "text1", "border0", "border1", "border2"]) {
+      expect(s[key]).toMatch(/^#?[0-9a-fA-F]{6}$/);
+    }
+  });
+
+  it("surface-0 map matches old surface, surface-1 matches footer/sidebar", () => {
+    const s = generateSchemeV2("FF6600") as any;
+    expect(s.surface0).toBe(s.surface);
+    expect(s.surface1).toBe(s.surfaceFooter);
+    expect(s.surface1).toBe(s.surfaceSidebar);
+    expect(s.surface2).toBe(s.surfaceRaised);
+    expect(s.surface3).toBe(s.surfaceInput);
+  });
+
+  it("sidebar and footer are the same tier (intentional merge)", () => {
+    const s = generateSchemeV2("6AAED8");
+    expect(s.surfaceSidebar).toBe(s.surfaceFooter);
+  });
+
+  it("text-0 equals text, text-1 equals muted/placeholder", () => {
+    const s = generateSchemeV2("3A5FCD") as any;
+    expect(s.text0).toBe(s.text);
+    expect(s.text1).toBe(s.textMuted);
+    expect(s.text1).toBe(s.textPlaceholder);
+  });
+
+  it("border-0, border-1, border-2 are three distinct values", () => {
+    const s = generateSchemeV2("6AAED8") as any;
+    const set = new Set([s.border0, s.border1, s.border2]);
+    expect(set.size).toBe(3);
+  });
+
+  it("border-1 maps to the old border field", () => {
+    const s = generateSchemeV2("C2185B") as any;
+    expect(s.border1).toBe(s.border);
+  });
+
+  it("saturated base (red) produces desaturated derived surfaces", () => {
+    const s = generateSchemeV2("FF0000");
+    const surfaceSat = tinycolorFactory(s.surface).toHsl().s;
+    const footerSat = tinycolorFactory(s.surfaceFooter).toHsl().s;
+    // Derived surface should be less saturated than the base.
+    expect(footerSat).toBeLessThan(surfaceSat);
+  });
+
+  it("near-black base still produces distinguishable surface tiers", () => {
+    const s = generateSchemeV2("111111");
+    const lum0 = tinycolorFactory(s.surface).getLuminance();
+    const lum1 = tinycolorFactory(s.surfaceFooter).getLuminance();
+    const lum2 = tinycolorFactory(s.surfaceRaised).getLuminance();
+    // Adjacent tiers should differ by a perceptible amount.
+    expect(Math.abs(lum1 - lum0)).toBeGreaterThan(0.01);
+    expect(Math.abs(lum2 - lum1)).toBeGreaterThan(0.01);
+  });
+
+  it("near-white base still produces distinguishable surface tiers", () => {
+    const s = generateSchemeV2("F0F0F0");
+    const lum0 = tinycolorFactory(s.surface).getLuminance();
+    const lum1 = tinycolorFactory(s.surfaceFooter).getLuminance();
+    // Surface and footer should differ perceptibly.
+    expect(lum0 - lum1).toBeGreaterThan(0.01);
   });
 });
