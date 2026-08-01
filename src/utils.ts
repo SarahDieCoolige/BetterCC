@@ -28,14 +28,13 @@ export function printHelp(): void {
   ccnotify(helptxtNotify, "Hilfe", "help");
 }
 
-/** Wrap GM_notification; respects the NotificationsEnable flag. */
+/** Wrap GM_notification. */
 export function ccnotify(message: string, title = "", tag = "", timeout = 3000): void {
   GM_notification({
     title: "BetterCC " + title,
     text: message,
     tag: tag,
     timeout: timeout,
-    silent: true,
     onclick: () => {
       (window.event as Event)?.preventDefault();
       cclog("Notification clicked.");
