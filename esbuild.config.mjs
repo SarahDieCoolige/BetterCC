@@ -1,10 +1,14 @@
 import * as esbuild from "esbuild";
+import { readFileSync } from "fs";
+
+const PKG = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8"));
+const V = PKG.version;
 
 const USERSCRIPT_HEADER = `// ==UserScript==
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.0.1
+// @version      ${V}
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
@@ -12,8 +16,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.1
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.1
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=${V}
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=${V}
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue

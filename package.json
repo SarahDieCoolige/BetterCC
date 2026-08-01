@@ -1,7 +1,7 @@
 {
   "name": "bettercc",
-  "version": "3.0.1",
-  "description": "Tampermonkey userscript that enhances ChatCity.de",
+  "version": "3.0.2",
+  "description": "BetterCC is better",
   "private": true,
   "type": "module",
   "scripts": {
