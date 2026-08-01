@@ -44,12 +44,20 @@ function buildRow(user: User): HTMLLIElement {
   nameSpan.textContent = getStatusText(user) + user.name;
   li.appendChild(nameSpan);
   // Open the popup on click OR Enter/Space (R1: discoverable; was silent log).
-  const open = () => handleRowClick(user, li);
+  // stopPropagation on click so the opening event doesn't bubble to the
+  // popup's document-level outside-click listener (which would close the
+  // popup immediately and, on the 2nd open, leave a dangling listener that
+  // swallows the next click — the "click twice then stuck" bug).
+  const open = (e?: Event) => {
+    e?.stopPropagation();
+    handleRowClick(user, li);
+  };
   li.addEventListener("click", open);
   li.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      open();
+      e.stopPropagation();
+      handleRowClick(user, li);
     }
   });
   return li;

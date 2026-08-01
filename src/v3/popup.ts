@@ -20,11 +20,19 @@ import { cclog } from "../utils";
 
 let openPopup: HTMLElement | null = null;
 
+let onOutsideClick: ((e: MouseEvent) => void) | null = null;
+
 function closePopup(): void {
-  if (openPopup) {
-    openPopup.remove();
-    openPopup = null;
-    document.removeEventListener("keydown", onKeydown, true);
+  if (!openPopup) return;
+  openPopup.remove();
+  openPopup = null;
+  document.removeEventListener("keydown", onKeydown, true);
+  // Remove the outside-click listener explicitly — a {once:true} listener
+  // would linger after a no-op close (popup already null) and swallow the
+  // NEXT row click, producing the "click twice then stuck" bug.
+  if (onOutsideClick) {
+    document.removeEventListener("click", onOutsideClick);
+    onOutsideClick = null;
   }
 }
 
@@ -42,7 +50,8 @@ function actionBtn(label: string, title: string, onClick: () => void): HTMLButto
   btn.textContent = label;
   btn.title = title;
   btn.setAttribute("aria-label", title);
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation(); // don't let the action click bubble to outside-click
     onClick();
     closePopup();
   });
@@ -126,16 +135,16 @@ export function openUserPopup(
   openPopup = popup;
   document.addEventListener("keydown", onKeydown, true);
 
-  // Close on outside click (next tick so the opening click doesn't close it).
-  setTimeout(() => {
-    document.addEventListener(
-      "click",
-      (e: MouseEvent) => {
-        if (openPopup && !openPopup.contains(e.target as Node)) closePopup();
-      },
-      { once: true }
-    );
-  }, 0);
+  // Outside-click closes the popup. Managed explicitly (not {once:true}) so
+  // closePopup() can remove it — a once-listener would linger after a no-op
+  // close and swallow the next row click (the "click twice then stuck" bug).
+  // The opening row's click handler calls stopPropagation, so this listener is
+  // only armed AFTER the opening click has finished dispatching — it never
+  // sees its own opening event.
+  onOutsideClick = (e: MouseEvent) => {
+    if (openPopup && !openPopup.contains(e.target as Node)) closePopup();
+  };
+  document.addEventListener("click", onOutsideClick);
 }
 
 /** True if a popup is currently open (used by tests / callers). */
