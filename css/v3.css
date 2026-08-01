@@ -44,9 +44,7 @@
 /* ═══════════════════════════════════════════════════════════════════════
  * UI shell — CSS Grid layout (T6, spec §1.4)
  *
- *   ┌──────────────────────────────────────┐
- *   │             header                    │
- *   ├───────────────────────────┬──────────┤
+ *   ┌───────────────────────────┬──────────┐
  *   │                           │          │
  *   │           main            │  sidebar │
  *   │       (chatframe)         │          │
@@ -64,13 +62,12 @@
      chatbar collapses the old separate input + footer rows into one
      horizontal bar (matches the v2 footer design — textarea + pill groups
      as flex siblings, see .bcc-chatbar). */
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   /* columns: main (chatframe) on the left, sidebar on the right — the
      conventional chat layout (and the old ChatCity layout). The first track
      is the chat area (1fr); the sidebar track is a fixed-width column. */
   grid-template-columns: 1fr minmax(140px, 220px);
   grid-template-areas:
-    "header   header"
     "main     sidebar"
     "chatbar  chatbar";
   height: 100vh;
@@ -111,59 +108,44 @@
   }
 }
 
-.bcc-header {
-  grid-area: header;
+/* Channel-select + online-count row in the sidebar. Count on the left,
+ * select on the right — both muted. */
+.bcc-online-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
-  background: var(--bcc-surface-footer);
+  gap: 4px;
+  padding: 2px 4px 6px;
+  margin-bottom: 4px;
   border-bottom: 1px solid var(--bcc-border);
 }
-
-/* Channel selector — a <select> in the header (also styles the read-only
-   fallback .bcc-channel span when ccc/ccg are absent). Compact, bordered,
-   themed via --bcc-*; optgroups carry the ccg group labels (Klassik/Erotik/
-   International). */
-.bcc-channel-select,
-.bcc-channel {
+.bcc-sidebar .bcc-online-count {
+  font-size: 11px;
   font-weight: 600;
-  font-size: 14px;
-  font-family: inherit;
-}
-.bcc-channel-select {
-  background: var(--bcc-surface-raised);
-  color: var(--bcc-text-raised);
-  border: 1px solid var(--bcc-border);
-  border-radius: 4px;
-  padding: 2px 6px;
-  cursor: pointer;
-  max-width: 160px; /* long channel names (e.g. "Fortysomething") shouldn't crowd the reload button */
-}
-.bcc-channel-select:hover {
-  background: var(--bcc-surface-hover);
-}
-.bcc-channel-select:focus-visible {
-  outline: 2px solid var(--bcc-accent-whisper);
-  outline-offset: -2px;
-}
-
-.bcc-reload {
-  margin-left: auto;
-  background: var(--bcc-surface-raised);
-  color: var(--bcc-text-raised);
-  border: 1px solid var(--bcc-border);
-  border-radius: 4px;
-  padding: 2px 10px;
-  font-size: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bcc-text-muted);
   line-height: 1;
-  cursor: pointer;
 }
-.bcc-reload:hover {
+.bcc-online-row .bcc-channel-select {
+  font-weight: 600;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--bcc-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  padding: 0 6px;
+  cursor: pointer;
+  margin-left: auto;
+  text-align-last: center;
+  max-width: 100px;
+}
+.bcc-online-row .bcc-channel-select:hover {
   background: var(--bcc-surface-hover);
 }
-.bcc-reload:active {
-  background: var(--bcc-surface-active);
+.bcc-online-row .bcc-channel-select:focus-visible {
+  outline: 2px solid var(--bcc-accent-whisper);
+  outline-offset: -1px;
 }
 
 .bcc-sidebar {
@@ -175,21 +157,6 @@
   color: var(--bcc-text-sidebar);
   border-left: 1px solid var(--bcc-border);
   padding: 8px;
-}
-
-/* Online-count header — a small muted heading in the fixed header area
-   above the scrollable regular userlist. No longer needs sticky positioning
-   because the .bcc-sidebar itself is a flex column with overflow:hidden and
-   only .bcc-userlist-scroll scrolls. */
-.bcc-sidebar .bcc-online-count {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--bcc-text-muted);
-  padding: 2px 4px 6px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--bcc-border);
 }
 
 /* ─── Stats bar (Freunde Online / Anfragen / Nachrichten badges) ───────────
@@ -716,7 +683,6 @@
   .bcc-shell {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "header"
       "main"
       "chatbar";
   }

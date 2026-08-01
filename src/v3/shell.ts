@@ -17,7 +17,6 @@
 // here (close WS to reconnect, or full reload if auth_dead).
 
 import { cclog } from "../utils";
-import { buildChannelSelect } from "./channel-select";
 
 /**
  * Build the v3 shell: Grid container, moved chatframe, hidden table, header
@@ -57,11 +56,6 @@ export function buildShell(): boolean {
   const shell = document.createElement("div");
   shell.className = "bcc-shell";
 
-  const header = document.createElement("header");
-  header.className = "bcc-header";
-  header.appendChild(buildChannelSelect());
-  header.appendChild(buildReloadButton());
-
   const sidebar = document.createElement("aside");
   sidebar.className = "bcc-sidebar";
   sidebar.innerHTML = '<div class="bcc-sidebar-placeholder">Userlist (T7)</div>';
@@ -75,7 +69,7 @@ export function buildShell(): boolean {
   inputArea.className = "bcc-chatbar";
   inputArea.innerHTML = '<div class="bcc-chatbar-placeholder">Chatbar (T8/T9)</div>';
 
-  shell.append(header, sidebar, main, inputArea);
+  shell.append(sidebar, main, inputArea);
   document.body.appendChild(shell);
 
   // ── 3. Hide the upstream table ──────────────────────────────────────
@@ -86,20 +80,6 @@ export function buildShell(): boolean {
 
   cclog("v3 shell built — chatframe moved, table hidden", "v3");
   return true;
-}
-
-/** Reload button — defines bettercc.reloadChat (WS close → reconnect). */
-function buildReloadButton(): HTMLElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "bcc-reload";
-  btn.title = "Chat neu laden (mimimi)";
-  btn.setAttribute("aria-label", "Chat neu laden"); // R4: title alone isn't an a11y name
-  btn.textContent = "↻";
-  btn.addEventListener("click", () => {
-    (unsafeWindow.bettercc as any).reloadChat();
-  });
-  return btn;
 }
 
 /**

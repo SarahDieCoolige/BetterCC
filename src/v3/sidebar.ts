@@ -15,6 +15,7 @@ import { sortUsers } from "./userlist";
 import { getConfig, setConfig } from "./config";
 import { openUserPopup } from "./popup";
 import { cclog } from "../utils";
+import { buildChannelSelect } from "./channel-select";
 
 // ─── Pure helpers (exported for testing) ────────────────────────────────────
 
@@ -153,14 +154,17 @@ function ensureContainers(sidebar: HTMLElement): void {
   if (pinnedUl && pinnedUl.isConnected) return;
   sidebar.innerHTML = "";
 
-  // Online-count header (moved here from the footer in the chatbar redesign).
-  // A small muted heading row above the lists; renderSidebar updates its text.
+  // Online count + channel select row. The channel select sits to the right.
+  const onlineRow = document.createElement("div");
+  onlineRow.className = "bcc-online-row";
   onlineCount = document.createElement("div");
   onlineCount.className = "bcc-online-count";
   onlineCount.setAttribute("role", "status");
   onlineCount.setAttribute("aria-live", "polite");
   onlineCount.textContent = "0 online";
-  sidebar.appendChild(onlineCount);
+  onlineRow.appendChild(onlineCount);
+  onlineRow.appendChild(buildChannelSelect());
+  sidebar.appendChild(onlineRow);
 
   // Pinned panel — a tinted, rounded container wrapping the header + pinned
   // list so the pinned section reads as a distinct visual group, not a bare
