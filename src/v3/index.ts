@@ -81,10 +81,24 @@ export function initV3(): void {
   // label can read chat_channel for its initial value.
   initSession();
 
+  // Build the Grid shell FIRST (moves #chatframe, hides the table, adds
+  // header). Must exist before loadTheme() below — applyScheme writes --bcc-*
+  // to .bcc-shell (not :root), so the shell has to be in the DOM or the first
+  // theme apply would land on the wrong element. Expose reloadChat on the
+  // bettercc API here too — the old path's reloadChat (defined inside
+  // doColorStuff) never runs under v3, so v3 owns its own.
+  (unsafeWindow.bettercc as any).reloadChat = reloadChat;
+  buildShell();
+
+  // Intercept the upstream set_uinfo1 BEFORE mountSidebar so the hook is in
+  // place before the dev mock's 20ms setTimeout fires. Userlist polls now
+  // emit "userlist" store events instead of writing to the hidden #ul.
+  overrideSetUinfo1();
+
   // Apply the saved theme (tier-0 per spec §5.3): read color_{user}, regenerate
-  // or reuse the cached scheme, write --bcc-* to :root. The old path did this
-  // inside doColorStuff (skipped under v3); v3 calls the pure theme bridge T3
-  // built. Also expose a v3 setTheme so injectIntoChatframe's call to
+  // or reuse the cached scheme, write --bcc-* to .bcc-shell. The old path did
+  // this inside doColorStuff (skipped under v3); v3 calls the pure theme bridge
+  // T3 built. Also expose a v3 setTheme so injectIntoChatframe's call to
   // bettercc.setTheme() (ws-hook.ts) re-applies the --bcc-* scheme under v3
   // instead of the old --chatX engine.
   //
@@ -96,17 +110,6 @@ export function initV3(): void {
   (unsafeWindow.bettercc as any).setTheme = function setTheme(): void {
     schemePromise.then((scheme: BccColorScheme) => applyScheme(scheme));
   };
-
-  // Intercept the upstream set_uinfo1 BEFORE buildShell so the hook is
-  // in place before the dev mock's 20ms setTimeout fires. Userlist polls
-  // now emit "userlist" store events instead of writing to the hidden #ul.
-  overrideSetUinfo1();
-
-  // Build the Grid shell (moves #chatframe, hides the table, adds header).
-  // Expose reloadChat on the bettercc API — the old path's reloadChat (defined
-  // inside doColorStuff) never runs under v3, so v3 owns its own.
-  (unsafeWindow.bettercc as any).reloadChat = reloadChat;
-  buildShell();
 
   // Attach the WS hook so iframe.css + theme mirror + autoscroll banner inject
   // on the first message (spec §3.3). The hook only attaches listeners to

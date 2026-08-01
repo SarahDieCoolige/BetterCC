@@ -1,7 +1,7 @@
 // ─── v3 theme bridge (spec §6.4 / §6.5) ────────────────────────────────────
 //
 // Connects the pure `generateScheme()` engine to the DOM and GM storage:
-//   scheme → --bcc-* on :root          (applyScheme)
+//   scheme → --bcc-* on .bcc-shell     (applyScheme)
 //   base hex → color_{user}            (saveColor)
 //   scheme cache → colorscheme_{user}  (saveScheme)
 //   load: read base; reuse cache or regenerate (loadTheme)
@@ -95,13 +95,31 @@ export function matchesStoredBase(stored: StoredScheme | null | undefined, baseH
 // ─── DOM + GM bridge (thin shems, not unit-tested) ────────────────────────
 
 /**
- * Apply a scheme to the page: write every `--bcc-*` to `:root`, then mirror
- * the base bg/fg into the chat iframe. The iframe vars stay under their old
- * names (`--chatBackground`/`--chatText`) — iframe.css is untouched and the
- * iframe is a black box (spec §6.4).
+ * Apply a scheme to the page: write every `--bcc-*` to `.bcc-shell`, then
+ * mirror the base bg/fg into the chat iframe.
+ *
+ * WHY .bcc-shell, not :root — the live ChatCity page periodically clears
+ * `:root`'s inline style (correlated with the chat_info_friends XHR and with
+ * user-popup opens). When our vars lived on `:root`, that clear wiped them
+ * and the cascade fell back to the (blue) defaults in v3.css — the "theme
+ * resets to default blue" bug. `.bcc-shell` is our own element; upstream
+ * never touches it, so vars set here survive a `:root` clear. The v2 code
+ * papered over this with a MutationObserver that re-asserted the vars after
+ * each clear; owning the element is the clean fix that replaces that hack.
+ *
+ * Falls back to `documentElement` only if the shell isn't built yet (initV3
+ * orders buildShell() before loadTheme(), so the shell exists by the time
+ * this runs in practice — the fallback is defensive).
+ *
+ * The iframe vars stay under their old names (`--chatBackground`/
+ * `--chatText`) on the iframe's own `:root` — iframe.css is untouched and the
+ * iframe is a black box (spec §6.4). The iframe is a separate document, so a
+ * parent-page `:root` clear never reaches it (which is why the chatframe
+ * kept its colors while the rest of the UI reset).
  */
 export function applyScheme(scheme: BccColorScheme): void {
-  const root = document.documentElement;
+  const target = document.querySelector(".bcc-shell") as HTMLElement | null;
+  const root = target ?? document.documentElement;
   for (const [varName, value] of Object.entries(schemeToCssVars(scheme))) {
     root.style.setProperty(varName, value);
   }
