@@ -270,9 +270,25 @@
   justify-items: center;
   flex-shrink: 0;
 }
-.bcc-pill-1 { grid-template-columns: repeat(1, auto); }
+/* Bare .bcc-pill = single centered column (children stack vertically); the
+   -N variants add N columns so children flow into rows of N (the last partial
+   row centers via justify-items: center on the container). Mirrors v2. */
 .bcc-pill-2 { grid-template-columns: repeat(2, auto); }
 .bcc-pill-3 { grid-template-columns: repeat(3, auto); }
+
+/* Chat-actions pill: the local color picker spans the full width and centers
+   below the autoscroll + reload row (v2 parity). */
+.bcc-chat-actions .bcc-color-picker-wrap {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+/* Links pill (id + forum + help): the last child spans + centers, so a 3-item
+   2-col pill reads [id forum] / [help] centered, not [id forum] / [help _]. */
+.bcc-pill.bcc-links > :last-child {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
 
 /* ─── Icon buttons (32×32) ─── */
 .bcc-icon-btn {

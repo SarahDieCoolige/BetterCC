@@ -56,10 +56,18 @@ function iconBtn(iconClass: string, title: string, onClick: () => void): HTMLBut
   return btn;
 }
 
-/** A pill container — a translucent rounded grid wrapping a group of buttons. */
-function pill(columns: number, ...children: HTMLElement[]): HTMLElement {
+/**
+ * A pill container — a translucent rounded grid wrapping a group of buttons.
+ *
+ * `columns` mirrors the v2 design: 0 = bare .bcc-pill (single centered column,
+ * children stack vertically); 2/3 = N-column grid (children flow into rows of
+ * N, last partial row centered via justify-items). `extraClass` adds a modifier
+ * (e.g. "bcc-chat-actions") for special-case spanning rules in v3.css.
+ */
+function pill(columns: number, extraClass: string, ...children: HTMLElement[]): HTMLElement {
   const p = document.createElement("div");
-  p.className = "bcc-pill bcc-pill-" + columns;
+  p.className = columns > 0 ? "bcc-pill bcc-pill-" + columns : "bcc-pill";
+  if (extraClass) p.classList.add(extraClass);
   for (const c of children) p.appendChild(c);
   return p;
 }
@@ -87,7 +95,7 @@ function buildAccountPill(): HTMLElement {
     const w = unsafeWindow as any;
     if (typeof w.com_set === "function") w.com_set("/messageoff");
   });
-  return pill(2, away, sysOn, awayOff, sysOff);
+  return pill(2, "", away, sysOn, awayOff, sysOff);
 }
 
 // ─── Group 2: Chat actions (autoscroll + reload + local color picker) ──────
@@ -143,7 +151,9 @@ function buildColorSwatch(): HTMLElement {
 }
 
 function buildChatActionsPill(): HTMLElement {
-  return pill(1, buildAutoscrollBtn(), trackReloadButton(buildReloadBtn()), buildColorSwatch());
+  // 2-column pill (autoscroll + reload on row 1); the color picker spans the
+  // full width centered on row 2 via the .bcc-chat-actions rule in v3.css.
+  return pill(2, "bcc-chat-actions", buildAutoscrollBtn(), trackReloadButton(buildReloadBtn()), buildColorSwatch());
 }
 
 // ─── Group 3: BetterCC (help + settings) ───────────────────────────────────
@@ -153,7 +163,9 @@ function buildBetterccPill(): HTMLElement {
   const settings = iconBtn("fa-cog", "Einstellungen", () => {
     cclog("settings clicked — stub (T10)", "v3");
   });
-  return pill(1, help, settings);
+  // Bare .bcc-pill — single centered column, help above settings (matches v2
+  // "BetterCC pill" which had no grid-template-columns override).
+  return pill(0, "", help, settings);
 }
 
 // ─── Group 4: Preset nick-color circles (upstream color_set) ───────────────
@@ -185,7 +197,7 @@ function buildPresetColorPill(): HTMLElement {
     });
     return btn;
   });
-  return pill(3, ...children);
+  return pill(3, "", ...children);
 }
 
 // ─── Group 5: Links (ID + forum + external help) ───────────────────────────
@@ -201,7 +213,7 @@ function buildLinksPill(): HTMLElement {
   const help = iconBtn("b1", "Chat-Hilfe (extern)", () => {
     window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
   });
-  return pill(2, id, forum, help);
+  return pill(2, "bcc-links", id, forum, help);
 }
 
 // ─── Group 6: Exit (red, standalone) ───────────────────────────────────────
