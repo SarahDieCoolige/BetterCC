@@ -4,13 +4,17 @@
  * Consumes ONLY --bcc-* custom properties (the v3 namespace; spec A9). The
  * theme bridge (src/v3/theme.ts, T3) populates them from generateScheme().
  *
+ * The fallback defaults live on .bcc-shell (NOT :root) for the same reason
+ * applyScheme writes to .bcc-shell: the live ChatCity page periodically
+ * clears :root's inline style, and our vars must not depend on :root
+ * surviving that. .bcc-shell is our element; defaults + overrides both live
+ * here so the cascade is fully isolated from upstream.
+ *
  * This file is populated across Tier 0 tasks (T6 shell grid, T7 sidebar,
- * T8 input, T9 footer). For now it carries only the :root fallback defaults
- * so ?bcc=new renders a coherent (if minimal) page before the shell lands —
- * the values mirror main.css's documented defaults as a sane starting point.
+ * T8 input, T9 footer).
  * ═══════════════════════════════════════════════════════════════════════ */
 
-:root {
+.bcc-shell {
   /* Fallbacks only — overwritten by the theme bridge at runtime. */
   --bcc-surface: #c8dae4;
   --bcc-text: #0e0f0f;
