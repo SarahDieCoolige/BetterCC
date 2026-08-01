@@ -32,11 +32,20 @@ function trackReloadButton(btn: HTMLElement): HTMLElement {
 
 // ─── Button factories ──────────────────────────────────────────────────────
 
-/** Icon button (32×32) living inside a pill. Uses a Font Awesome glyph. */
+/**
+ * Icon button (32×32) living inside a pill.
+ *
+ * iconClass is either a Font Awesome class (e.g. "fa-sync") rendered via an
+ * inner <i>, OR a v2-style bN class (e.g. "b2") whose glyph is defined as a
+ * ::before in v3.css. For bN classes we ALSO add the class to the button so
+ * the .bcc-icon-btn.bN::before rule matches (and the > i hide rule fires so
+ * the empty <i> doesn't take up the cell).
+ */
 function iconBtn(iconClass: string, title: string, onClick: () => void): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "bcc-icon-btn";
+  const isBnClass = /^b\d+$/.test(iconClass);
+  btn.className = isBnClass ? "bcc-icon-btn " + iconClass : "bcc-icon-btn";
   btn.title = title;
   btn.setAttribute("aria-label", title);
   btn.innerHTML = '<i class="fas ' + iconClass + '" aria-hidden="true"></i>';
