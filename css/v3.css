@@ -251,6 +251,146 @@
   border-color: var(--bcc-accent-whisper);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+ * Chatbar pill groups — clean rewrite of the v2 footer design (--bcc-*)
+ *
+ * Visual language ported from the v2 footer (css/main.css), rebuilt clean
+ * for the v3 namespace (no code copied): translucent rounded pill containers
+ * holding 32×32 icon buttons; circular color swatches with an 18px dot.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── Pill container (translucent, rounded, grid) ─── */
+.bcc-pill {
+  display: inline-grid;
+  gap: 3px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.07);
+  align-items: center;
+  justify-items: center;
+  flex-shrink: 0;
+}
+.bcc-pill-1 { grid-template-columns: repeat(1, auto); }
+.bcc-pill-2 { grid-template-columns: repeat(2, auto); }
+.bcc-pill-3 { grid-template-columns: repeat(3, auto); }
+
+/* ─── Icon buttons (32×32) ─── */
+.bcc-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--bcc-text-muted);
+  font-size: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, opacity 0.15s ease, color 0.15s ease;
+}
+.bcc-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.bcc-icon-btn:active {
+  transform: scale(0.88);
+  background: rgba(255, 255, 255, 0.28);
+}
+.bcc-icon-btn.bcc-active {
+  color: var(--bcc-icon);
+  filter: brightness(1.3);
+}
+.bcc-icon-btn.bcc-danger {
+  flex-shrink: 0;
+  margin: 0 3px;
+  color: #e84848;
+}
+.bcc-icon-btn.bcc-danger:hover {
+  background: rgba(232, 72, 72, 0.18);
+}
+
+/* FontAwesome glyphs for the upstream-style buttons (b1..b16). The element
+   carries both .bcc-icon-btn and the .bN class; the <i class="fas ..."> inside
+   is replaced by a ::before so the bN glyph wins. */
+.bcc-icon-btn.b1::before,
+.bcc-icon-btn.b2::before,
+.bcc-icon-btn.b3::before,
+.bcc-icon-btn.b5::before,
+.bcc-icon-btn.b6::before,
+.bcc-icon-btn.b7::before,
+.bcc-icon-btn.b15::before,
+.bcc-icon-btn.b16::before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+}
+.bcc-icon-btn.b1::before  { content: "\f059"; } /* fa-question-circle: Hilfe */
+.bcc-icon-btn.b2::before  { content: "\e552"; } /* away */
+.bcc-icon-btn.b3::before  { content: "\e551"; } /* awayoff */
+.bcc-icon-btn.b5::before  { content: "\f0f3"; } /* fa-bell: sysmsg on */
+.bcc-icon-btn.b6::before  { content: "\f1f6"; } /* fa-bell-slash: sysmsg off */
+.bcc-icon-btn.b7::before  { content: "\f2f5"; } /* fa-sign-out-alt: exit */
+.bcc-icon-btn.b15::before { content: "\f086"; } /* fa-comments: forum */
+.bcc-icon-btn.b16::before { content: "\f2c2"; } /* fa-id-card: ID */
+/* Hide the inner <i> when a bN glyph is defined above (avoid double icon). */
+.bcc-icon-btn.b1 > i,
+.bcc-icon-btn.b2 > i,
+.bcc-icon-btn.b3 > i,
+.bcc-icon-btn.b5 > i,
+.bcc-icon-btn.b6 > i,
+.bcc-icon-btn.b7 > i,
+.bcc-icon-btn.b15 > i,
+.bcc-icon-btn.b16 > i { display: none; }
+
+/* ─── Color circle buttons (presets + picker wrap) ─── */
+.bcc-color-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 0;
+  background: transparent;
+  position: relative;
+  transition: transform 0.12s ease;
+}
+.bcc-color-btn::after {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.bcc-color-btn:hover { transform: scale(1.15); }
+.bcc-color-btn:active { transform: scale(0.92); }
+
+/* Preset nick colors (upstream color_set — server-side nick color). */
+.bcc-color-btn.b8::after  { background-color: #AAAA00; }
+.bcc-color-btn.b10::after { background-color: #AA0000; }
+.bcc-color-btn.b11::after { background-color: #AA00AA; }
+.bcc-color-btn.b12::after { background-color: #00AAAA; }
+.bcc-color-btn.b13::after { background-color: #00AA00; }
+.bcc-color-btn.b14::after { background-color: #0000AA; }
+
+/* Local-theme color picker — a color circle whose dot is the current theme
+   color. The native <input type=color> is layered invisibly over the circle. */
+.bcc-color-picker-wrap::after {
+  background-color: var(--swatch-color, #6aaed8);
+}
+.bcc-color-picker-wrap .bcc-color-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+
 /* Whisper indicator pill — visible while superwhisper is armed (C2).
    Lives above the textarea inside .bcc-input-area. */
 .bcc-whisper-indicator {
