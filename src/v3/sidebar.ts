@@ -61,7 +61,10 @@ async function togglePin(user: User): Promise<void> {
   }
   await setConfig("pinned", list);
   pinnedCache = new Set(list);
-  renderSidebar(lastUserlistEvent ?? []);
+  // Re-render from the last known userlist with a trivial diff (everything is
+  // "unchanged" — sortUsers + section placement handle the move between
+  // pinned/regular; no rows are added or removed by a pin toggle).
+  if (lastUserlistEvent) renderSidebar(lastUserlistEvent, [], []);
 }
 
 function handleRowClick(user: User): void {
@@ -72,67 +75,113 @@ function handleRowClick(user: User): void {
 }
 
 // ─── Rendering ──────────────────────────────────────────────────────────────
+//
+// True diff-and-patch (spec §2.4 / review C3). The two <ul> containers and the
+// divider are created ONCE at mount and never wiped. Each userlist event carries
+// {users, added, removed} from the store — we drop removed rows, add new ones,
+// and re-insert the rest in sorted order into their section. Unchanged rows
+// keep their <li> node (event listeners and state survive); only their status
+// classes/text get refreshed. Scroll position is preserved because the
+// container is never rebuilt.
 
 let lastUserlistEvent: User[] | null = null;
 let rowMap: Map<string, HTMLLIElement> = new Map();
+let pinnedUl: HTMLUListElement | null = null;
+let regularUl: HTMLUListElement | null = null;
+let divider: HTMLElement | null = null;
 
-function renderSidebar(users: User[]): void {
-  const sidebar = document.querySelector(".bcc-sidebar");
-  if (!sidebar) return;
-
-  const sorted = sortUsers(users, pinnedCache);
-  const scrollTop = sidebar.scrollTop;
-
-  // Build the two UL sections + divider.
+/** Create the stable section containers (once). Idempotent. */
+function ensureContainers(sidebar: HTMLElement): void {
+  if (pinnedUl && pinnedUl.isConnected) return;
   sidebar.innerHTML = "";
-  const pinnedUl = document.createElement("ul");
+  pinnedUl = document.createElement("ul");
   pinnedUl.className = "bcc-userlist-pinned";
-  const regularUl = document.createElement("ul");
+  pinnedUl.setAttribute("role", "list");
+  regularUl = document.createElement("ul");
   regularUl.className = "bcc-userlist-regular";
-  const divider = document.createElement("div");
+  regularUl.setAttribute("role", "list");
+  divider = document.createElement("div");
   divider.className = "bcc-userlist-divider";
+  sidebar.append(pinnedUl, divider, regularUl);
+}
 
-  const newMap = new Map<string, HTMLLIElement>();
-  let hasPinned = false;
-  let hasRegular = false;
+/** Show/hide the pinned section + divider depending on whether any pinned
+ *  users exist. Keeps the divider from showing with no pinned users above it. */
+function refreshSectionVisibility(): void {
+  const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
+  const hasRegular = regularUl ? regularUl.children.length > 0 : false;
+  if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
+  if (divider) divider.style.display = hasPinned && hasRegular ? "" : "none";
+}
+
+/** Patch the sidebar from a userlist store event (consumes the diff). */
+function renderSidebar(users: User[], added: string[], removed: string[]): void {
+  const sidebar = document.querySelector(".bcc-sidebar");
+  if (!sidebar || !pinnedUl || !regularUl) return;
+
+  // 1) Drop removed rows (their <li>s are GC'd). This is the cheap path the
+  //    store pre-computed so we don't scan the whole list.
+  for (const name of removed) {
+    const row = rowMap.get(name);
+    if (row) row.remove();
+    rowMap.delete(name);
+  }
+
+  // 2) Sort once for this event, then place every (possibly reused) row in
+  //    sorted order within its section. appendChild on an existing node MOVES
+  //    it (preserving listeners), so this re-orders without rebuilding.
+  const scrollTop = sidebar.scrollTop;
+  const sorted = sortUsers(users, pinnedCache);
+  let pinnedInserted = 0;
+  let regularInserted = 0;
 
   for (const user of sorted) {
     const isPinned = pinnedCache.has(user.name);
-    if (isPinned) hasPinned = true;
-    else hasRegular = true;
+    const target = isPinned ? pinnedUl : regularUl;
 
     let row = rowMap.get(user.name);
     if (row) {
-      // Reuse existing node — just update status classes.
+      // Unchanged user — refresh status in place (a status flip like
+      // away↔present is NOT an add/remove; it reuses the node).
       row.className = getStatusClasses(user);
       const nameSpan = row.querySelector(".bcc-userrow-name");
       if (nameSpan) nameSpan.textContent = getStatusText(user) + user.name;
+      // If the user moved between pinned/regular sections, the section change
+      // is handled by the appendChild below (moves the node). When the section
+      // is unchanged, skip the move to avoid a no-op DOM write per row.
+      if (row.parentElement === target) continue;
     } else {
       row = buildRow(user);
+      rowMap.set(user.name, row);
     }
-    (isPinned ? pinnedUl : regularUl).appendChild(row);
-    newMap.set(user.name, row);
+    target.appendChild(row);
+    if (isPinned) pinnedInserted++;
+    else regularInserted++;
   }
 
-  if (hasPinned) sidebar.appendChild(pinnedUl);
-  if (hasPinned && hasRegular) sidebar.appendChild(divider);
-  if (hasRegular) sidebar.appendChild(regularUl);
-
+  // 3) Preserve scroll — we patched, not rebuilt, so the offset is stable.
+  //    Clamp in case the list shrank past the current offset.
   sidebar.scrollTop = Math.min(scrollTop, sidebar.scrollHeight);
-  rowMap = newMap;
+  refreshSectionVisibility();
   lastUserlistEvent = users;
+  void added; // diff already consumed via removed[] + rowMap reuse above
 }
 
 // ─── Mount ──────────────────────────────────────────────────────────────────
 
 export function mountSidebar(): void {
+  const sidebar = document.querySelector(".bcc-sidebar");
+  if (!sidebar) return;
+
+  ensureContainers(sidebar as HTMLElement);
+
   refreshPinned().catch(() => {
     cclog("mountSidebar: failed to read pinned config", "v3");
   });
 
   subscribe((e: BccEvent) => {
     if (e.type === "userlist") {
-      renderSidebar(e.users);
+      renderSidebar(e.users, e.added, e.removed);
     }
   });
 
