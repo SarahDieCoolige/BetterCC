@@ -126,6 +126,23 @@
   padding: 8px;
 }
 
+/* Online-count header — a small muted heading at the top of the sidebar
+   (moved out of the footer when input+footer merged into the chatbar). */
+.bcc-sidebar .bcc-online-count {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bcc-text-muted);
+  padding: 2px 4px 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--bcc-border);
+  position: sticky;
+  top: -8px; /* offset for the sidebar's 8px padding so it sticks to the very top */
+  background: var(--bcc-surface-sidebar);
+  z-index: 1;
+}
+
 /* ─── Userlist rows ─── */
 .bcc-userlist-pinned,
 .bcc-userlist-regular {

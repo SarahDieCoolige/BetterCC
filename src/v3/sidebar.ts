@@ -111,11 +111,22 @@ let rowMap: Map<string, HTMLLIElement> = new Map();
 let pinnedUl: HTMLUListElement | null = null;
 let regularUl: HTMLUListElement | null = null;
 let divider: HTMLElement | null = null;
+let onlineCount: HTMLElement | null = null;
 
 /** Create the stable section containers (once). Idempotent. */
 function ensureContainers(sidebar: HTMLElement): void {
   if (pinnedUl && pinnedUl.isConnected) return;
   sidebar.innerHTML = "";
+
+  // Online-count header (moved here from the footer in the chatbar redesign).
+  // A small, muted heading row above the lists; renderSidebar updates its text.
+  onlineCount = document.createElement("div");
+  onlineCount.className = "bcc-online-count";
+  onlineCount.setAttribute("role", "status");
+  onlineCount.setAttribute("aria-live", "polite");
+  onlineCount.textContent = "0 online";
+  sidebar.appendChild(onlineCount);
+
   pinnedUl = document.createElement("ul");
   pinnedUl.className = "bcc-userlist-pinned";
   pinnedUl.setAttribute("role", "list");
@@ -185,6 +196,7 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
   //    Clamp in case the list shrank past the current offset.
   sidebar.scrollTop = Math.min(scrollTop, sidebar.scrollHeight);
   refreshSectionVisibility();
+  if (onlineCount) onlineCount.textContent = users.length + " online";
   lastUserlistEvent = users;
   void added; // diff already consumed via removed[] + rowMap reuse above
 }
