@@ -87,12 +87,14 @@ export function initV3(): void {
   // built. Also expose a v3 setTheme so injectIntoChatframe's call to
   // bettercc.setTheme() (ws-hook.ts) re-applies the --bcc-* scheme under v3
   // instead of the old --chatX engine.
-  const schemeRef: { current: BccColorScheme | null } = { current: null };
-  loadTheme(getUserKey("color"), getUserKey("colorscheme")).then((scheme) => {
-    schemeRef.current = scheme;
-  });
+  //
+  // O4: hold the *promise*, not the resolved scheme, so a setTheme() call that
+  // races the initial load (e.g. a fast WS reconnect firing
+  // injectIntoChatframe → bettercc.setTheme before loadTheme resolves) awaits
+  // the pending scheme instead of silently no-op'ing on a null ref.
+  const schemePromise = loadTheme(getUserKey("color"), getUserKey("colorscheme"));
   (unsafeWindow.bettercc as any).setTheme = function setTheme(): void {
-    if (schemeRef.current) applyScheme(schemeRef.current);
+    schemePromise.then((scheme: BccColorScheme) => applyScheme(scheme));
   };
 
   // Intercept the upstream set_uinfo1 BEFORE buildShell so the hook is
