@@ -52,14 +52,16 @@
 
 .bcc-shell {
   display: grid;
-  /* rows: header auto, middle 1fr (sidebar+main), input auto, footer auto */
-  grid-template-rows: auto 1fr auto auto;
+  /* rows: header auto, middle 1fr (sidebar+main), chatbar auto.
+     chatbar collapses the old separate input + footer rows into one
+     horizontal bar (matches the v2 footer design — textarea + pill groups
+     as flex siblings, see .bcc-chatbar). */
+  grid-template-rows: auto 1fr auto;
   grid-template-columns: minmax(140px, 220px) 1fr;
   grid-template-areas:
-    "header  header"
-    "sidebar main"
-    "input   input"
-    "footer  footer";
+    "header   header"
+    "sidebar  main"
+    "chatbar  chatbar";
   height: 100vh;
   width: 100%; /* not 100vw — that includes the scrollbar gutter and can overflow horizontally */
   background: var(--bcc-surface);
@@ -174,73 +176,66 @@
                In our Grid the iframe owns the main area — override it. */
 }
 
-.bcc-input {
-  grid-area: input;
-  background: var(--bcc-surface-input);
-  color: var(--bcc-text-input);
+/* ═══════════════════════════════════════════════════════════════════════
+ * Chatbar — single horizontal bar (textarea + pill groups)
+ *
+ * Replaces the old two-row input+footer design. Matches the v2 footer:
+ * textarea fills the left (flex:1), pill groups of icon buttons sit to its
+ * right, exit button far right. Fixed 95px height like the old footer.
+ * ═══════════════════════════════════════════════════════════════════════ */
+.bcc-chatbar {
+  grid-area: chatbar;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 95px;
+  max-height: 95px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--bcc-surface-footer);
   border-top: 1px solid var(--bcc-border);
-  padding: 8px 12px;
 }
 
-.bcc-input-field {
+/* ─── Input area (textarea fills the bar's left, flex:1) ─── */
+.bcc-input-area {
+  flex: 1 1 200px;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bcc-input-area .bcc-input-field {
   width: 100%;
-  min-height: 60px;
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  box-sizing: border-box;
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  padding: 8px 12px;
   background: var(--bcc-surface-input);
   color: var(--bcc-text-input);
-  border: 1px solid var(--bcc-border);
-  border-radius: 4px;
-  padding: 6px 10px;
+  font-size: 1.15em;
   font-family: inherit;
-  font-size: 13px;
-  resize: vertical;
   outline: none;
 }
-.bcc-input-field:focus {
+.bcc-input-area .bcc-input-field:focus {
   border-color: var(--bcc-accent-whisper);
   box-shadow: 0 0 0 1px var(--bcc-accent-whisper);
 }
-
-.bcc-superwhisper {
+.bcc-input-area .bcc-input-field::placeholder {
+  color: var(--bcc-text-placeholder);
+  opacity: 0.6;
+}
+.bcc-input-area .bcc-superwhisper {
   border-color: var(--bcc-accent-whisper);
 }
 
-/* ─── Input row: textarea + color swatch side by side ─── */
-.bcc-input-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-.bcc-input-row .bcc-input-field {
-  flex: 1 1 auto;
-}
-.bcc-input-row .bcc-color-swatch {
-  flex: 0 0 auto;
-}
-
-/* Color picker swatch — native <input type=color> styled as a small tile.
-   The native picker handles its own popover/accessibility; we just size it. */
-.bcc-color-swatch {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--bcc-border);
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: pointer;
-  background: var(--bcc-surface-raised);
-}
-.bcc-color-input {
-  width: 200%;
-  height: 200%;
-  margin: -25% 0 0 -25%;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-}
-
-/* Whisper indicator pill — visible while superwhisper is armed (C2). */
+/* Whisper indicator pill — visible while superwhisper is armed (C2).
+   Lives above the textarea inside .bcc-input-area. */
 .bcc-whisper-indicator {
   display: none;
   align-self: flex-start;
@@ -252,67 +247,9 @@
   color: var(--bcc-surface);
 }
 
-.bcc-footer {
-  grid-area: footer;
-  background: var(--bcc-surface-footer);
-  border-top: 1px solid var(--bcc-border);
-  padding: 6px 12px;
-  font-size: 13px;
-  color: var(--bcc-text-muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap; /* let link group wrap on narrow viewports (R2) */
-}
-
-.bcc-footer-left,
-.bcc-footer-center,
-.bcc-footer-right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.bcc-footer-center { justify-content: center; flex: 1; }
-.bcc-footer-right  { margin-left: auto; }
-
-/* ─── Footer pill buttons ─── */
-.bcc-pill {
-  background: var(--bcc-surface-raised);
-  color: var(--bcc-text-raised);
-  border: 1px solid var(--bcc-border);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.bcc-pill:hover  { background: var(--bcc-surface-hover); }
-.bcc-pill:active { background: var(--bcc-surface-active); }
-.bcc-pill.bcc-active { background: var(--bcc-accent-whisper); color: var(--bcc-surface); }
-
-.bcc-online-count {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-/* R2: account/status/link pills — text labels, slightly smaller. */
-.bcc-link {
-  padding: 3px 6px;
-  font-size: 11px;
-}
-.bcc-footer-links {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-wrap: wrap;
-}
-
-/* Placeholder labels for not-yet-built sections (T7/T8/T9) */
+/* Placeholder labels for not-yet-built sections */
 .bcc-sidebar-placeholder,
-.bcc-input-placeholder,
-.bcc-footer-placeholder {
+.bcc-chatbar-placeholder {
   opacity: 0.6;
   font-style: italic;
   font-size: 12px;
@@ -325,8 +262,7 @@
     grid-template-areas:
       "header"
       "main"
-      "input"
-      "footer";
+      "chatbar";
   }
   .bcc-sidebar { display: none; }
 }

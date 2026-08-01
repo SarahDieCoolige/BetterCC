@@ -72,14 +72,10 @@ export function buildShell(): boolean {
   main.appendChild(chatframe);
 
   const inputArea = document.createElement("div");
-  inputArea.className = "bcc-input";
-  inputArea.innerHTML = '<div class="bcc-input-placeholder">Input (T8)</div>';
+  inputArea.className = "bcc-chatbar";
+  inputArea.innerHTML = '<div class="bcc-chatbar-placeholder">Chatbar (T8/T9)</div>';
 
-  const footer = document.createElement("footer");
-  footer.className = "bcc-footer";
-  footer.innerHTML = '<div class="bcc-footer-placeholder">Footer (T9)</div>';
-
-  shell.append(header, sidebar, main, inputArea, footer);
+  shell.append(header, sidebar, main, inputArea);
   document.body.appendChild(shell);
 
   // ── 3. Hide the upstream table ──────────────────────────────────────
