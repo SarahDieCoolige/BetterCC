@@ -14,6 +14,15 @@ let onSubmitOrig: ((...args: any[]) => any) | null = null;
 let currentWhisperNick = "";
 let whisperIndicator: HTMLElement | null = null;
 
+// Placeholder strings — shared trailing hint block (defined once so the
+// "no whisper" and "whispering to X" variants can't drift apart).
+const HINTS_ALL = "Superwhisper: /sw Sariam  |  Ban: /sb Wendigo  |  Hilfe: /help";
+const HINTS_WHISPER = "Superwhisper aus: /open  |  /o Hi All :)  |  Hilfe: /help";
+const PLACEHOLDER_ALL = "Du chattest mit allen...\n\n" + HINTS_ALL;
+function placeholderFor(nick: string): string {
+  return "Du flüsterst mit " + nick + "...\n\n" + HINTS_WHISPER;
+}
+
 // ─── The send-path decision (pure — extracted from doSubmit, tested) ───────
 //
 // Given the raw textarea message and the active whisper nick, decide what to
@@ -123,14 +132,7 @@ async function superwhisper(whispernick: string, toggle = true): Promise<void> {
 
     if (textarea) {
       textarea.classList.remove("bcc-superwhisper");
-      textarea.placeholder =
-        "Du chattest mit allen..." +
-        "\n\n" +
-        "Superwhisper: /sw Sariam" +
-        "  |  " +
-        "Ban: /sb Wendigo" +
-        "  |  " +
-        "Hilfe: /help";
+      textarea.placeholder = PLACEHOLDER_ALL;
     }
     updateWhisperIndicator(null);
   } else {
@@ -140,16 +142,7 @@ async function superwhisper(whispernick: string, toggle = true): Promise<void> {
 
     if (textarea) {
       textarea.classList.add("bcc-superwhisper");
-      textarea.placeholder =
-        "Du flüsterst mit " +
-        whispernick +
-        "..." +
-        "\n\n" +
-        "Superwhisper aus: /open" +
-        "  |  " +
-        "/o Hi All :)" +
-        "  |  " +
-        "Hilfe: /help";
+      textarea.placeholder = placeholderFor(whispernick);
     }
     updateWhisperIndicator(whispernick);
   }
@@ -193,14 +186,7 @@ export function mountInput(): void {
   textarea = document.createElement("textarea");
   textarea.className = "bcc-input-field";
   textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
-  textarea.placeholder =
-    "Du chattest mit allen..." +
-    "\n\n" +
-    "Superwhisper: /sw Sariam" +
-    "  |  " +
-    "Ban: /sb Wendigo" +
-    "  |  " +
-    "Hilfe: /help";
+  textarea.placeholder = PLACEHOLDER_ALL;
   textarea.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
