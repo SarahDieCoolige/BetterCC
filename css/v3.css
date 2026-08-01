@@ -181,6 +181,54 @@
   border-color: var(--bcc-accent-whisper);
 }
 
+/* ─── Input row: textarea + color swatch side by side ─── */
+.bcc-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.bcc-input-row .bcc-input-field {
+  flex: 1 1 auto;
+}
+.bcc-input-row .bcc-color-swatch {
+  flex: 0 0 auto;
+}
+
+/* Color picker swatch — native <input type=color> styled as a small tile.
+   The native picker handles its own popover/accessibility; we just size it. */
+.bcc-color-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bcc-surface-raised);
+}
+.bcc-color-input {
+  width: 200%;
+  height: 200%;
+  margin: -25% 0 0 -25%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Whisper indicator pill — visible while superwhisper is armed (C2). */
+.bcc-whisper-indicator {
+  display: none;
+  align-self: flex-start;
+  margin-bottom: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 10px;
+  background: var(--bcc-accent-whisper);
+  color: var(--bcc-surface);
+}
+
 .bcc-footer {
   grid-area: footer;
   background: var(--bcc-surface-footer);
