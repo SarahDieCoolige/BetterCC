@@ -13,6 +13,7 @@
 import { subscribe, type BccEvent, type User } from "./store";
 import { sortUsers } from "./userlist";
 import { getConfig, setConfig } from "./config";
+import { openUserPopup } from "./popup";
 import { cclog } from "../utils";
 
 // ─── Pure helpers (exported for testing) ────────────────────────────────────
@@ -34,11 +35,23 @@ function buildRow(user: User): HTMLLIElement {
   const li = document.createElement("li");
   li.className = getStatusClasses(user);
   li.dataset.name = user.name;
+  // tabindex + role so the list is keyboard-navigable (spec §4.5 / R4).
+  li.tabIndex = 0;
+  li.setAttribute("role", "button");
+  li.setAttribute("aria-label", "Aktionen für " + user.name);
   const nameSpan = document.createElement("span");
   nameSpan.className = "bcc-userrow-name";
   nameSpan.textContent = getStatusText(user) + user.name;
   li.appendChild(nameSpan);
-  li.addEventListener("click", () => handleRowClick(user));
+  // Open the popup on click OR Enter/Space (R1: discoverable; was silent log).
+  const open = () => handleRowClick(user, li);
+  li.addEventListener("click", open);
+  li.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      open();
+    }
+  });
   return li;
 }
 
@@ -67,11 +80,12 @@ async function togglePin(user: User): Promise<void> {
   if (lastUserlistEvent) renderSidebar(lastUserlistEvent, [], []);
 }
 
-function handleRowClick(user: User): void {
-  togglePin(user).catch(() => {
-    cclog("pin toggle failed for " + user.name, "v3");
+function handleRowClick(user: User, anchor: HTMLElement): void {
+  openUserPopup(anchor, user, pinnedCache.has(user.name), (u) => {
+    togglePin(u).catch(() => {
+      cclog("pin toggle failed for " + u.name, "v3");
+    });
   });
-  cclog("userlist row click: " + user.name + " (pin toggled, popup stub)", "v3");
 }
 
 // ─── Rendering ──────────────────────────────────────────────────────────────

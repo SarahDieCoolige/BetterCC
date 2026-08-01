@@ -294,3 +294,40 @@
   }
   .bcc-sidebar { display: none; }
 }
+
+/* ─── User popup (R1) ─── */
+.bcc-user-popup {
+  z-index: 1000;
+  min-width: 180px;
+  background: var(--bcc-surface-raised);
+  color: var(--bcc-text-raised);
+  border: 1px solid var(--bcc-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  font-size: 13px;
+}
+.bcc-popup-header {
+  font-weight: 600;
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--bcc-border);
+  margin-bottom: 4px;
+}
+.bcc-popup-action {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--bcc-text-raised);
+  border: 0;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bcc-popup-action:hover { background: var(--bcc-surface-hover); }
+.bcc-popup-action:active { background: var(--bcc-surface-active); }
+.bcc-popup-action:focus-visible {
+  outline: 2px solid var(--bcc-accent-whisper);
+  outline-offset: -2px;
+}
