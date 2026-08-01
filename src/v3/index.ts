@@ -40,6 +40,7 @@ import { loadTheme, applyScheme } from "./theme";
 import type { BccColorScheme } from "../scheme";
 import { overrideSetUinfo1 } from "./userlist-wire";
 import { mountSidebar } from "./sidebar";
+import { mountStatsBar } from "./stats";
 import { initSession } from "./session";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
@@ -121,6 +122,12 @@ export function initV3(): void {
   // does diff-and-patch rendering (reuses DOM nodes, never innerHTML).
   // Must be after buildShell() so .bcc-sidebar exists.
   mountSidebar();
+
+  // Mount the stats bar (Freunde Online / Anfragen / Nachrichten badges) at the
+  // TOP of the sidebar, above the online-count heading. Polled from
+  // chat_info_friends_nc.html via the upstream ajax class's onComplete. After
+  // mountSidebar so the sidebar element exists (mountStatsBar prepends to it).
+  mountStatsBar(document.querySelector(".bcc-sidebar") as HTMLElement);
 
   // Mount the input area — textarea, send contract (reuses hold form's
   // onsubmit handler via the patched-handler approach), superwhisper,

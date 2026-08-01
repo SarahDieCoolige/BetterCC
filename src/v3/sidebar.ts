@@ -18,10 +18,20 @@ import { cclog } from "../utils";
 
 // ─── Pure helpers (exported for testing) ────────────────────────────────────
 
-export function getStatusText(user: User): string {
-  if (user.sep) return "[S] ";
-  if (user.away) return "[A] ";
-  return "";
+/** Status-dot color class for a user row. The dot encodes ONLY sep — amber for
+ *  sep, green for everyone else. Away and guest are NOT in the dot: away dims
+ *  the NAME (bcc-name-away), guest adds a " [G]" SUFFIX via userNameText. This
+ *  keeps the three signals orthogonal so sep and away never compete for the
+ *  dot. */
+export function statusDotClass(user: User): string {
+  return user.sep ? "bcc-dot-sep" : "bcc-dot-online";
+}
+
+/** Whether the row should render a 'gast' chip after the name. Guest tier is
+ *  shown as a small pill element (not name text) so it reads cleanly without
+ *  adding reading load to the name. */
+export function isGuestTag(user: User): boolean {
+  return user.guest;
 }
 
 export function getStatusClasses(user: User): string {
@@ -39,10 +49,31 @@ function buildRow(user: User): HTMLLIElement {
   li.tabIndex = 0;
   li.setAttribute("role", "button");
   li.setAttribute("aria-label", "Aktionen für " + user.name);
+  // Status icon — a Font Awesome glyph (fa-circle present / fa-circle-half-
+  // stroke sep) colored via the scheme-derived --bcc-status-* var. Encodes
+  // ONLY sep vs present; away/guest are not dot states (away recolors the
+  // name; guest shows a 'gast' chip).
+  const dot = document.createElement("i");
+  dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " +
+    (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+  dot.setAttribute("aria-hidden", "true");
+  li.appendChild(dot);
+  // Name — away dims the name (bcc-name-away) via opacity on the NAME span
+  // (not the whole row), so sep+away still reads as a full-brightness amber
+  // dot + a dimmed name (not a uniformly faded row).
   const nameSpan = document.createElement("span");
   nameSpan.className = "bcc-userrow-name";
-  nameSpan.textContent = getStatusText(user) + user.name;
+  if (user.away) nameSpan.classList.add("bcc-name-away");
+  nameSpan.textContent = user.name;
   li.appendChild(nameSpan);
+  // Guest tier — a small 'gast' pill chip after the name (not name text, so
+  // it reads cleanly without bloating the name). Built/unbuilt per render.
+  if (isGuestTag(user)) {
+    const gast = document.createElement("span");
+    gast.className = "bcc-user-tag bcc-gast";
+    gast.textContent = "gast";
+    li.appendChild(gast);
+  }
   // Open the popup on click OR Enter/Space (R1: discoverable; was silent log).
   // stopPropagation on click so the opening event doesn't bubble to the
   // popup's document-level outside-click listener (which would close the
@@ -110,7 +141,8 @@ let lastUserlistEvent: User[] | null = null;
 let rowMap: Map<string, HTMLLIElement> = new Map();
 let pinnedUl: HTMLUListElement | null = null;
 let regularUl: HTMLUListElement | null = null;
-let divider: HTMLElement | null = null;
+let pinnedPanel: HTMLElement | null = null; // wraps the pinned header + UL
+let scrollContainer: HTMLElement | null = null; // wraps the regular UL (scrolls)
 let onlineCount: HTMLElement | null = null;
 
 /** Create the stable section containers (once). Idempotent. */
@@ -119,7 +151,7 @@ function ensureContainers(sidebar: HTMLElement): void {
   sidebar.innerHTML = "";
 
   // Online-count header (moved here from the footer in the chatbar redesign).
-  // A small, muted heading row above the lists; renderSidebar updates its text.
+  // A small muted heading row above the lists; renderSidebar updates its text.
   onlineCount = document.createElement("div");
   onlineCount.className = "bcc-online-count";
   onlineCount.setAttribute("role", "status");
@@ -127,24 +159,37 @@ function ensureContainers(sidebar: HTMLElement): void {
   onlineCount.textContent = "0 online";
   sidebar.appendChild(onlineCount);
 
+  // Pinned panel — a tinted, rounded container wrapping the header + pinned
+  // list so the pinned section reads as a distinct visual group, not a bare
+  // label above an undifferentiated column (refreshSectionVisibility toggles
+  // the whole panel when there are no pinned users).
+  pinnedPanel = document.createElement("div");
+  pinnedPanel.className = "bcc-pinned-panel";
+  const pinnedHeader = document.createElement("div");
+  pinnedHeader.className = "bcc-userlist-section";
+  pinnedHeader.textContent = "Angespinnt";
   pinnedUl = document.createElement("ul");
   pinnedUl.className = "bcc-userlist-pinned";
   pinnedUl.setAttribute("role", "list");
+  pinnedPanel.append(pinnedHeader, pinnedUl);
   regularUl = document.createElement("ul");
   regularUl.className = "bcc-userlist-regular";
   regularUl.setAttribute("role", "list");
-  divider = document.createElement("div");
-  divider.className = "bcc-userlist-divider";
-  sidebar.append(pinnedUl, divider, regularUl);
+  // Scroll container — wraps ONLY the regular UL so the header area (stats +
+  // online count + pinned panel) stays fixed at the top. .bcc-sidebar is a
+  // flex column; this container fills the remaining space and scrolls.
+  scrollContainer = document.createElement("div");
+  scrollContainer.className = "bcc-userlist-scroll";
+  scrollContainer.appendChild(regularUl);
+  sidebar.append(pinnedPanel, scrollContainer);
 }
 
-/** Show/hide the pinned section + divider depending on whether any pinned
- *  users exist. Keeps the divider from showing with no pinned users above it. */
+/** Show/hide the pinned panel depending on whether any pinned users exist.
+ *  The whole panel (header + list) is the pinned section's visual unit, so it
+ *  shows/hidden as one — independent of the regular list. */
 function refreshSectionVisibility(): void {
   const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
-  const hasRegular = regularUl ? regularUl.children.length > 0 : false;
-  if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
-  if (divider) divider.style.display = hasPinned && hasRegular ? "" : "none";
+  if (pinnedPanel) pinnedPanel.style.display = hasPinned ? "" : "none";
 }
 
 /** Patch the sidebar from a userlist store event (consumes the diff). */
@@ -163,7 +208,7 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
   // 2) Sort once for this event, then place every (possibly reused) row in
   //    sorted order within its section. appendChild on an existing node MOVES
   //    it (preserving listeners), so this re-orders without rebuilding.
-  const scrollTop = sidebar.scrollTop;
+  const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
   const sorted = sortUsers(users, pinnedCache);
   let pinnedInserted = 0;
   let regularInserted = 0;
@@ -175,18 +220,41 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
     let row = rowMap.get(user.name);
     if (row) {
       // Unchanged user — refresh status in place (a status flip like
-      // away↔present is NOT an add/remove; it reuses the node).
+      // away↔present is NOT an add/remove; it reuses the node). Update the row
+      // classes, the status-dot color class, the name, and the gast chip.
       row.className = getStatusClasses(user);
+      const dot = row.querySelector(".bcc-status-dot");
+      if (dot) {
+        dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " +
+          (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+      }
       const nameSpan = row.querySelector(".bcc-userrow-name");
-      if (nameSpan) nameSpan.textContent = getStatusText(user) + user.name;
-      // If the user moved between pinned/regular sections, the section change
-      // is handled by the appendChild below (moves the node). When the section
-      // is unchanged, skip the move to avoid a no-op DOM write per row.
-      if (row.parentElement === target) continue;
+      if (nameSpan) {
+        nameSpan.classList.toggle("bcc-name-away", user.away);
+        nameSpan.textContent = user.name;
+      }
+      // Add/remove the gast chip to match the current guest flag (a row can
+      // flip guest↔registered only by re-registering, but handle it anyway).
+      const existingChip = row.querySelector(".bcc-gast");
+      if (isGuestTag(user) && !existingChip) {
+        const gast = document.createElement("span");
+        gast.className = "bcc-user-tag bcc-gast";
+        gast.textContent = "gast";
+        row.appendChild(gast);
+      } else if (!isGuestTag(user) && existingChip) {
+        existingChip.remove();
+      }
     } else {
       row = buildRow(user);
       rowMap.set(user.name, row);
     }
+    // Always (re)place in sorted order. appendChild MOVES an existing node
+    // (preserving listeners) — iterating sorted and appending each yields the
+    // correct order even when adds/removes shift a row's position within its
+    // section. Skipping this for rows "already in the right section" was an
+    // optimization that left rows in stale order after the sorted order
+    // changed (e.g. a new user "Alice" sorted to the front was appended to
+    // the end instead). The DOM move is O(1); always placing is cheap.
     target.appendChild(row);
     if (isPinned) pinnedInserted++;
     else regularInserted++;
@@ -194,7 +262,7 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
 
   // 3) Preserve scroll — we patched, not rebuilt, so the offset is stable.
   //    Clamp in case the list shrank past the current offset.
-  sidebar.scrollTop = Math.min(scrollTop, sidebar.scrollHeight);
+  if (scrollContainer) scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
   refreshSectionVisibility();
   if (onlineCount) onlineCount.textContent = users.length + " online";
   lastUserlistEvent = users;

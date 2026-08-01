@@ -209,6 +209,79 @@
     for (const fn of listeners) fn(e);
   }
 
+  // src/v3/channel-select.ts
+  function parseChannels(ccc, ccg) {
+    if (!Array.isArray(ccg) || !Array.isArray(ccc)) return [];
+    const groups = [];
+    const byId = /* @__PURE__ */ new Map();
+    for (let i = 0; i + 1 < ccg.length; i += 2) {
+      const id = Number(ccg[i]);
+      const label = String(ccg[i + 1] ?? "");
+      if (!Number.isFinite(id)) continue;
+      byId.set(id, groups.length);
+      groups.push({ id, label, channels: [] });
+    }
+    for (let i = 0; i + 3 < ccc.length; i += 4) {
+      const name = ccc[i];
+      const groupId = Number(ccc[i + 2]);
+      if (typeof name !== "string" || name.length === 0) continue;
+      const idx = byId.get(groupId);
+      if (idx === void 0) continue;
+      groups[idx].channels.push(name);
+    }
+    return groups;
+  }
+  function buildChannelSelect() {
+    const ccc = unsafeWindow.ccc;
+    const ccg = unsafeWindow.ccg;
+    const groups = parseChannels(ccc, ccg);
+    const active = String(unsafeWindow.chat_channel ?? "");
+    if (groups.length === 0) {
+      cclog("buildChannelSelect: ccc/ccg absent \u2014 falling back to static label", "v3");
+      const span = document.createElement("span");
+      span.className = "bcc-channel";
+      span.textContent = active || "Chatcity";
+      span.title = "Channel";
+      return span;
+    }
+    const select = document.createElement("select");
+    select.className = "bcc-channel-select";
+    select.title = "Channel wechseln";
+    select.setAttribute("aria-label", "Channel wechseln");
+    for (const group of groups) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.label;
+      for (const name of group.channels) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        if (name.toLowerCase() === active.toLowerCase()) option.selected = true;
+        optgroup.appendChild(option);
+      }
+      select.appendChild(optgroup);
+    }
+    select.addEventListener("change", () => {
+      const comSet = unsafeWindow.com_set;
+      if (typeof comSet !== "function") {
+        cclog("buildChannelSelect: com_set unavailable \u2014 channel switch dropped", "v3");
+        return;
+      }
+      comSet("/j " + select.value);
+    });
+    subscribe((e) => {
+      if (e.type === "session" && e.session.channel) {
+        const lower = e.session.channel.toLowerCase();
+        for (const opt of Array.from(select.options)) {
+          if (opt.value.toLowerCase() === lower) {
+            if (!opt.selected) opt.selected = true;
+            return;
+          }
+        }
+      }
+    });
+    return select;
+  }
+
   // src/v3/shell.ts
   function buildShell() {
     const chatframe = document.getElementById("chatframe");
@@ -232,7 +305,7 @@
     shell.className = "bcc-shell";
     const header = document.createElement("header");
     header.className = "bcc-header";
-    header.appendChild(buildChannelLabel());
+    header.appendChild(buildChannelSelect());
     header.appendChild(buildReloadButton());
     const sidebar = document.createElement("aside");
     sidebar.className = "bcc-sidebar";
@@ -248,19 +321,6 @@
     table.style.display = "none";
     cclog("v3 shell built \u2014 chatframe moved, table hidden", "v3");
     return true;
-  }
-  function buildChannelLabel() {
-    const label = document.createElement("span");
-    label.className = "bcc-channel";
-    const channel = unsafeWindow.chat_channel;
-    label.textContent = channel ? String(channel) : "Chatcity";
-    label.title = "Channel";
-    subscribe((e) => {
-      if (e.type === "session") {
-        label.textContent = e.session.channel || "Chatcity";
-      }
-    });
-    return label;
   }
   function buildReloadButton() {
     const btn = document.createElement("button");
@@ -1336,6 +1396,12 @@
     const triad2 = surface.triad();
     const accentWhisper = liftAccent(surface, triad2[1]);
     const accentBan = liftAccent(surface, triad2[2]);
+    const statusOnline = liftAccent(sidebar, tinycolor("#3aa55c"));
+    const statusSep = liftAccent(sidebar, tinycolor("#d08a1e"));
+    const textAway = pickReadable(
+      sidebar,
+      [textSidebar.clone().desaturate(60), textMuted.clone()]
+    );
     const surfaceHover = nudge(surface, STEP.hoverShift);
     const surfaceActive = nudge(surface, STEP.activeShift);
     const border = surface.clone().darken(STEP.borderDarken);
@@ -1354,6 +1420,9 @@
       icon: toHex6(icon),
       accentWhisper: toHex6(accentWhisper),
       accentBan: toHex6(accentBan),
+      statusOnline: toHex6(statusOnline),
+      statusSep: toHex6(statusSep),
+      textAway: toHex6(textAway),
       border: toHex6(border),
       surfaceHover: toHex6(surfaceHover),
       surfaceActive: toHex6(surfaceActive),
@@ -1377,6 +1446,9 @@
     ["icon", "--bcc-icon"],
     ["accentWhisper", "--bcc-accent-whisper"],
     ["accentBan", "--bcc-accent-ban"],
+    ["statusOnline", "--bcc-status-online"],
+    ["statusSep", "--bcc-status-sep"],
+    ["textAway", "--bcc-text-away"],
     ["border", "--bcc-border"],
     ["surfaceHover", "--bcc-surface-hover"],
     ["surfaceActive", "--bcc-surface-active"]
@@ -1528,13 +1600,20 @@
       closePopup();
     }
   }
-  function actionBtn(label, title, onClick) {
+  function actionBtn(iconClass, label, title, onClick) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "bcc-popup-action";
-    btn.textContent = label;
     btn.title = title;
     btn.setAttribute("aria-label", title);
+    const icon = document.createElement("i");
+    icon.className = "fas " + iconClass;
+    icon.setAttribute("aria-hidden", "true");
+    btn.appendChild(icon);
+    const text = document.createElement("span");
+    text.className = "bcc-popup-action-label";
+    text.textContent = label;
+    btn.appendChild(text);
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       onClick();
@@ -1554,30 +1633,34 @@
     header.textContent = user.name;
     popup.appendChild(header);
     popup.appendChild(
-      actionBtn(isPinned ? "\u{1F4CC} Angeheftet entfernen" : "\u{1F4CC} Anheften", "Benutzer anheften", () => {
-        onTogglePin(user);
-      })
+      actionBtn(
+        isPinned ? "fa-thumbtack-slash" : "fa-thumbtack",
+        isPinned ? "Angeheftet entfernen" : "Anheften",
+        "Benutzer anheften",
+        () => {
+          onTogglePin(user);
+        }
+      )
     );
     popup.appendChild(
-      actionBtn("\u{1F4AC} Superwhisper", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
+      actionBtn("fa-comment-dots", "Superwhisper", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
         const api = unsafeWindow.bettercc;
         if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
       })
     );
     popup.appendChild(
-      actionBtn("\u{1F4E8} Fl\xFCstern (1\xD7)", "Einmal an " + user.name + " fl\xFCstern", async () => {
-        await setConfig("whisper", user.name);
+      actionBtn("fa-paper-plane", "Fl\xFCstern (1\xD7)", "Einmal an " + user.name + " fl\xFCstern", () => {
         const api = unsafeWindow.bettercc;
-        if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
+        if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
       })
     );
     popup.appendChild(
-      actionBtn("\u{1F6AB} Ignorieren", "Benutzer ignorieren (T12)", () => {
+      actionBtn("fa-ban", "Ignorieren", "Benutzer ignorieren (T12)", () => {
         cclog("user popup: ignore stubbed (T12) \u2014 " + user.name, "v3");
       })
     );
     popup.appendChild(
-      actionBtn("\u{1FAAA} ID", "ID von " + user.name + " anzeigen (T13)", () => {
+      actionBtn("fa-id-card", "ID", "ID von " + user.name + " anzeigen (T13)", () => {
         cclog("user popup: /id stubbed (T13) \u2014 " + user.name, "v3");
       })
     );
@@ -1596,10 +1679,11 @@
   }
 
   // src/v3/sidebar.ts
-  function getStatusText(user) {
-    if (user.sep) return "[S] ";
-    if (user.away) return "[A] ";
-    return "";
+  function statusDotClass(user) {
+    return user.sep ? "bcc-dot-sep" : "bcc-dot-online";
+  }
+  function isGuestTag(user) {
+    return user.guest;
   }
   function getStatusClasses(user) {
     const classes = ["bcc-userrow"];
@@ -1614,10 +1698,21 @@
     li.tabIndex = 0;
     li.setAttribute("role", "button");
     li.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
+    const dot = document.createElement("i");
+    dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " + (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+    dot.setAttribute("aria-hidden", "true");
+    li.appendChild(dot);
     const nameSpan = document.createElement("span");
     nameSpan.className = "bcc-userrow-name";
-    nameSpan.textContent = getStatusText(user) + user.name;
+    if (user.away) nameSpan.classList.add("bcc-name-away");
+    nameSpan.textContent = user.name;
     li.appendChild(nameSpan);
+    if (isGuestTag(user)) {
+      const gast = document.createElement("span");
+      gast.className = "bcc-user-tag bcc-gast";
+      gast.textContent = "gast";
+      li.appendChild(gast);
+    }
     const open = (e) => {
       e?.stopPropagation();
       handleRowClick(user, li);
@@ -1660,7 +1755,8 @@
   var rowMap = /* @__PURE__ */ new Map();
   var pinnedUl = null;
   var regularUl = null;
-  var divider = null;
+  var pinnedPanel = null;
+  var scrollContainer = null;
   var onlineCount = null;
   function ensureContainers(sidebar) {
     if (pinnedUl && pinnedUl.isConnected) return;
@@ -1671,21 +1767,26 @@
     onlineCount.setAttribute("aria-live", "polite");
     onlineCount.textContent = "0 online";
     sidebar.appendChild(onlineCount);
+    pinnedPanel = document.createElement("div");
+    pinnedPanel.className = "bcc-pinned-panel";
+    const pinnedHeader = document.createElement("div");
+    pinnedHeader.className = "bcc-userlist-section";
+    pinnedHeader.textContent = "Angespinnt";
     pinnedUl = document.createElement("ul");
     pinnedUl.className = "bcc-userlist-pinned";
     pinnedUl.setAttribute("role", "list");
+    pinnedPanel.append(pinnedHeader, pinnedUl);
     regularUl = document.createElement("ul");
     regularUl.className = "bcc-userlist-regular";
     regularUl.setAttribute("role", "list");
-    divider = document.createElement("div");
-    divider.className = "bcc-userlist-divider";
-    sidebar.append(pinnedUl, divider, regularUl);
+    scrollContainer = document.createElement("div");
+    scrollContainer.className = "bcc-userlist-scroll";
+    scrollContainer.appendChild(regularUl);
+    sidebar.append(pinnedPanel, scrollContainer);
   }
   function refreshSectionVisibility() {
     const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
-    const hasRegular = regularUl ? regularUl.children.length > 0 : false;
-    if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
-    if (divider) divider.style.display = hasPinned && hasRegular ? "" : "none";
+    if (pinnedPanel) pinnedPanel.style.display = hasPinned ? "" : "none";
   }
   function renderSidebar(users, added, removed) {
     const sidebar = document.querySelector(".bcc-sidebar");
@@ -1695,7 +1796,7 @@
       if (row) row.remove();
       rowMap.delete(name);
     }
-    const scrollTop = sidebar.scrollTop;
+    const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
     const sorted = sortUsers(users, pinnedCache);
     let pinnedInserted = 0;
     let regularInserted = 0;
@@ -1705,9 +1806,24 @@
       let row = rowMap.get(user.name);
       if (row) {
         row.className = getStatusClasses(user);
+        const dot = row.querySelector(".bcc-status-dot");
+        if (dot) {
+          dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " + (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+        }
         const nameSpan = row.querySelector(".bcc-userrow-name");
-        if (nameSpan) nameSpan.textContent = getStatusText(user) + user.name;
-        if (row.parentElement === target) continue;
+        if (nameSpan) {
+          nameSpan.classList.toggle("bcc-name-away", user.away);
+          nameSpan.textContent = user.name;
+        }
+        const existingChip = row.querySelector(".bcc-gast");
+        if (isGuestTag(user) && !existingChip) {
+          const gast = document.createElement("span");
+          gast.className = "bcc-user-tag bcc-gast";
+          gast.textContent = "gast";
+          row.appendChild(gast);
+        } else if (!isGuestTag(user) && existingChip) {
+          existingChip.remove();
+        }
       } else {
         row = buildRow(user);
         rowMap.set(user.name, row);
@@ -1716,7 +1832,7 @@
       if (isPinned) pinnedInserted++;
       else regularInserted++;
     }
-    sidebar.scrollTop = Math.min(scrollTop, sidebar.scrollHeight);
+    if (scrollContainer) scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
     refreshSectionVisibility();
     if (onlineCount) onlineCount.textContent = users.length + " online";
     lastUserlistEvent = users;
@@ -1735,6 +1851,123 @@
       }
     });
     cclog("sidebar mounted \u2014 subscribed to userlist events", "v3");
+  }
+
+  // src/v3/stats.ts
+  function parseStats(html) {
+    const empty = { friendsOnline: 0, requests: 0, messages: 0 };
+    if (typeof html !== "string" || html.length === 0) return empty;
+    const read = (cls) => {
+      const anchorRe = new RegExp('class="[^"]*\\b' + cls + '\\b[^"]*"[^]*?</a>', "i");
+      const anchorMatch = html.match(anchorRe);
+      if (!anchorMatch) return 0;
+      const block = anchorMatch[0];
+      const valueRe = /<span\s+class="value(?:\s+[^"]*)?"\s*>\s*(\d+)\s*<\/span>/i;
+      const valueMatch = block.match(valueRe);
+      const n = valueMatch ? Number(valueMatch[1]) : 0;
+      return Number.isFinite(n) ? n : 0;
+    };
+    return {
+      friendsOnline: read("uonl"),
+      requests: read("ufri"),
+      messages: read("unc")
+    };
+  }
+  var BADGES = [
+    {
+      statKey: "friendsOnline",
+      iconClass: "fa-users",
+      title: "Freunde Online",
+      // Old layout: friends-online badge opened the ID card.
+      url: (nick) => "https://www.chatcity.de/de/id/" + encodeURIComponent(nick) + ":5F:.html"
+    },
+    {
+      statKey: "requests",
+      iconClass: "fa-user-plus",
+      title: "Neue Freundesanfragen",
+      // Old layout: requests opened /de/friends/<id-card-url>.
+      url: (nick) => "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encodeURIComponent(nick) + ":5F:.html"
+    },
+    {
+      statKey: "messages",
+      iconClass: "fa-envelope",
+      title: "Neue Nachrichten",
+      url: () => "//www.chatcity.de/de/nc/index.html"
+    }
+  ];
+  var POLL_INTERVAL_MS = 1e4;
+  var statsBar = null;
+  var pollTimer = null;
+  function buildStatsBar(nick) {
+    const bar = document.createElement("div");
+    bar.className = "bcc-stats";
+    for (const spec of BADGES) {
+      const link = document.createElement("a");
+      link.className = "bcc-stat bcc-stat-" + spec.statKey;
+      link.href = "#";
+      link.title = spec.title;
+      link.setAttribute("role", "button");
+      link.setAttribute("aria-label", spec.title);
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        window.open(spec.url(nick), "IDCARD", "width=810,height=800,scrollbars=yes");
+      });
+      const icon = document.createElement("i");
+      icon.className = "fas " + spec.iconClass;
+      icon.setAttribute("aria-hidden", "true");
+      link.appendChild(icon);
+      const count = document.createElement("span");
+      count.className = "bcc-stat-count bcc-stat-no";
+      count.textContent = "0";
+      link.appendChild(count);
+      bar.appendChild(link);
+    }
+    statsBar = bar;
+    return bar;
+  }
+  function renderStats(stats) {
+    if (!statsBar) return;
+    for (const spec of BADGES) {
+      const link = statsBar.querySelector(".bcc-stat-" + spec.statKey);
+      if (!link) continue;
+      const count = link.querySelector(".bcc-stat-count");
+      if (!count) continue;
+      const value = stats[spec.statKey];
+      count.textContent = String(value);
+      count.classList.toggle("bcc-stat-no", value < 1);
+    }
+  }
+  function pollOnce() {
+    try {
+      const w = unsafeWindow;
+      const ajax = w.ajax;
+      const pajax = w.PAJAX;
+      if (typeof ajax !== "function" || typeof pajax !== "string") {
+        cclog("stats: upstream ajax/PAJAX unavailable \u2014 skipping poll", "v3");
+        return;
+      }
+      new ajax(pajax + "chat_info_friends_nc.html", {
+        onComplete: (transport) => {
+          try {
+            renderStats(parseStats(transport?.responseText ?? ""));
+          } catch (e) {
+            cclog("stats: parse failed \u2014 " + e.message, "v3");
+          }
+        }
+      });
+    } catch (e) {
+      cclog("stats: poll error \u2014 " + e.message, "v3");
+    }
+  }
+  function mountStatsBar(parent) {
+    if (statsBar && statsBar.isConnected) return;
+    const nick = String(unsafeWindow.chat_nick ?? "");
+    parent.insertBefore(buildStatsBar(nick), parent.firstChild);
+    pollOnce();
+    pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
+    window.addEventListener("unload", () => {
+      if (pollTimer !== null) window.clearInterval(pollTimer);
+    });
   }
 
   // src/v3/session.ts
@@ -1901,6 +2134,13 @@
     docHold.OUT1.value = "";
     if (textarea) textarea.value = "";
   }
+  function prefillWhisper(nick) {
+    if (!textarea) return;
+    textarea.value = "/w " + nick + " ";
+    textarea.focus();
+    const end = textarea.value.length;
+    textarea.setSelectionRange(end, end);
+  }
   async function superwhisper(whispernick, toggle = true) {
     const prevNick = await getConfig("whisper", "");
     if (toggle && whispernick && prevNick.toLowerCase() === whispernick.toLowerCase() || !whispernick) {
@@ -1924,8 +2164,9 @@
   function updateWhisperIndicator(nick) {
     if (!whisperIndicator) return;
     if (nick) {
-      whisperIndicator.textContent = "\u{1F464} Fl\xFCstern an: " + nick;
-      whisperIndicator.style.display = "";
+      const nickEl = whisperIndicator.querySelector(".bcc-whisper-nick");
+      if (nickEl) nickEl.textContent = nick;
+      whisperIndicator.style.display = "flex";
     } else {
       whisperIndicator.style.display = "none";
     }
@@ -1940,6 +2181,23 @@
     whisperIndicator = document.createElement("div");
     whisperIndicator.className = "bcc-whisper-indicator";
     whisperIndicator.style.display = "none";
+    const wiIcon = document.createElement("i");
+    wiIcon.className = "bcc-whisper-icon fas fa-comment-dots";
+    wiIcon.setAttribute("aria-hidden", "true");
+    whisperIndicator.appendChild(wiIcon);
+    const wiNick = document.createElement("span");
+    wiNick.className = "bcc-whisper-nick";
+    whisperIndicator.appendChild(wiNick);
+    const wiClose = document.createElement("button");
+    wiClose.type = "button";
+    wiClose.className = "bcc-whisper-close fas fa-times";
+    wiClose.title = "Superwhisper beenden";
+    wiClose.setAttribute("aria-label", "Superwhisper beenden");
+    wiClose.addEventListener("click", (e) => {
+      e.stopPropagation();
+      superwhisper("");
+    });
+    whisperIndicator.appendChild(wiClose);
     inputArea.appendChild(whisperIndicator);
     textarea = document.createElement("textarea");
     textarea.className = "bcc-input-field";
@@ -1960,6 +2218,7 @@
     }
     unsafeWindow.bettercc.onSubmit = doSubmit;
     unsafeWindow.bettercc.superwhisper = superwhisper;
+    unsafeWindow.bettercc.prefillWhisper = prefillWhisper;
     getConfig("whisper", "").then((nick) => {
       const n = nick || "";
       if (n) superwhisper(n, false);
@@ -2174,6 +2433,7 @@
     };
     hookChatoutConnect();
     mountSidebar();
+    mountStatsBar(document.querySelector(".bcc-sidebar"));
     mountInput();
     mountFooter();
   }

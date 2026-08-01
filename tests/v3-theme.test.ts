@@ -52,10 +52,10 @@ describe("schemeToCssVars — --bcc-* mapping", () => {
     }
   });
 
-  it("BCC_CSS_VARS lists exactly the 17 spec roles, no more, no less", () => {
-    expect(BCC_CSS_VARS).toHaveLength(17);
+  it("BCC_CSS_VARS lists exactly the 20 spec roles, no more, no less", () => {
+    expect(BCC_CSS_VARS).toHaveLength(20);
     // No duplicate var names.
-    expect(new Set(BCC_CSS_VARS).size).toBe(17);
+    expect(new Set(BCC_CSS_VARS).size).toBe(20);
     // All in the --bcc-* namespace (spec A9).
     for (const v of BCC_CSS_VARS) expect(v.startsWith("--bcc-")).toBe(true);
   });

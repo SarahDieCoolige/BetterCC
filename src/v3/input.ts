@@ -118,6 +118,20 @@ function clearInput(docHold: HTMLFormElement): void {
 
 // ─── Superwhisper (spec §3.2.4) ─────────────────────────────────────────────
 
+/** One-shot whisper: clear the textarea, set it to "/w <nick> ", and focus.
+ *  Does NOT arm superwhisper (no persistent rewrite) — the user sends once,
+ *  the prefix they see is the actual message that goes out. Used by the
+ *  popup's "Flüstern (1×)" action. Clears any existing text first so the
+ *  prefix isn't appended to a half-typed message. */
+function prefillWhisper(nick: string): void {
+  if (!textarea) return;
+  textarea.value = "/w " + nick + " ";
+  textarea.focus();
+  // Caret at the end so the user can keep typing the message body.
+  const end = textarea.value.length;
+  textarea.setSelectionRange(end, end);
+}
+
 async function superwhisper(whispernick: string, toggle = true): Promise<void> {
   const prevNick = (await getConfig("whisper", "")) as string;
 
@@ -148,12 +162,16 @@ async function superwhisper(whispernick: string, toggle = true): Promise<void> {
   }
 }
 
-/** Show/hide the whisper-target indicator pill above the textarea (C2). */
+/** Show/hide the whisper-target indicator on the left of the textarea (C2).
+ *  Uses display:flex (not "") so it overrides the CSS default display:none —
+ *  clearing the inline style would fall back to the stylesheet and re-hide it
+ *  (the "always hidden" bug). */
 function updateWhisperIndicator(nick: string | null): void {
   if (!whisperIndicator) return;
   if (nick) {
-    whisperIndicator.textContent = "👤 Flüstern an: " + nick;
-    whisperIndicator.style.display = "";
+    const nickEl = whisperIndicator.querySelector(".bcc-whisper-nick");
+    if (nickEl) nickEl.textContent = nick;
+    whisperIndicator.style.display = "flex";
   } else {
     whisperIndicator.style.display = "none";
   }
@@ -165,21 +183,41 @@ export function mountInput(): void {
   const chatbar = document.querySelector(".bcc-chatbar");
   if (!chatbar) return;
 
-  // Build the input area — a flex:1 column (whisper indicator + textarea)
-  // that fills the LEFT of the chatbar. The pill groups mountFooter() adds
-  // sit to its right (flex-shrink:0). The placeholder is replaced.
+  // Build the input area — a flex:1 ROW: whisper indicator (left, fixed) +
+  // textarea (fills the rest). The pill groups mountFooter() adds sit to the
+  // chatbar's right (flex-shrink:0). The placeholder is replaced.
   const inputArea = document.createElement("div");
   inputArea.className = "bcc-input-area";
   chatbar.innerHTML = "";
   chatbar.appendChild(inputArea);
 
-  // ── Whisper indicator (above the textarea) — C2 ──────────────────────
-  // A small pill that stays visible while superwhisper is armed, so the user
-  // always knows their next message goes to one person (not just the
-  // placeholder text, which vanishes the moment they type).
+  // ── Whisper indicator (LEFT of the textarea) — C2 ────────────────────
+  // A vertical pill pinned to the input area's left edge while superwhisper is
+  // armed, so the user always knows their next message goes to one person (not
+  // just the placeholder text, which vanishes the moment they type). Includes
+  // a × button to exit superwhisper without opening the popup again. Icon is a
+  // theme-aware Font Awesome glyph (inherits --bcc-text-muted), not a fixed
+  // emoji — matches the popup/footer icon language.
   whisperIndicator = document.createElement("div");
   whisperIndicator.className = "bcc-whisper-indicator";
-  whisperIndicator.style.display = "none";
+  whisperIndicator.style.display = "none"; // shown by updateWhisperIndicator
+  const wiIcon = document.createElement("i");
+  wiIcon.className = "bcc-whisper-icon fas fa-comment-dots";
+  wiIcon.setAttribute("aria-hidden", "true");
+  whisperIndicator.appendChild(wiIcon);
+  const wiNick = document.createElement("span");
+  wiNick.className = "bcc-whisper-nick";
+  whisperIndicator.appendChild(wiNick);
+  const wiClose = document.createElement("button");
+  wiClose.type = "button";
+  wiClose.className = "bcc-whisper-close fas fa-times";
+  wiClose.title = "Superwhisper beenden";
+  wiClose.setAttribute("aria-label", "Superwhisper beenden");
+  wiClose.addEventListener("click", (e) => {
+    e.stopPropagation();
+    superwhisper(""); // eslint-disable-line @typescript-eslint/no-floating-promises
+  });
+  whisperIndicator.appendChild(wiClose);
   inputArea.appendChild(whisperIndicator);
 
   // ── Textarea — fills the bar's height ────────────────────────────────
@@ -208,6 +246,7 @@ export function mountInput(): void {
   // Expose BetterCC API (same signatures as the old path)
   (unsafeWindow.bettercc as any).onSubmit = doSubmit;
   (unsafeWindow.bettercc as any).superwhisper = superwhisper;
+  (unsafeWindow.bettercc as any).prefillWhisper = prefillWhisper;
 
   // Restore any previously-set superwhisper
   getConfig("whisper", "").then((nick) => {

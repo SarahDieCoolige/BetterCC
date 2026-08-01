@@ -17,7 +17,7 @@
 // here (close WS to reconnect, or full reload if auth_dead).
 
 import { cclog } from "../utils";
-import { subscribe } from "./store";
+import { buildChannelSelect } from "./channel-select";
 
 /**
  * Build the v3 shell: Grid container, moved chatframe, hidden table, header
@@ -59,7 +59,7 @@ export function buildShell(): boolean {
 
   const header = document.createElement("header");
   header.className = "bcc-header";
-  header.appendChild(buildChannelLabel());
+  header.appendChild(buildChannelSelect());
   header.appendChild(buildReloadButton());
 
   const sidebar = document.createElement("aside");
@@ -86,25 +86,6 @@ export function buildShell(): boolean {
 
   cclog("v3 shell built — chatframe moved, table hidden", "v3");
   return true;
-}
-
-/** Header channel label. Reads the upstream global for the initial value,
- *  then subscribes to session events so the label updates on /j channel
- *  changes (T4b — was a TODO from T6). */
-function buildChannelLabel(): HTMLElement {
-  const label = document.createElement("span");
-  label.className = "bcc-channel";
-  const channel = (unsafeWindow as any).chat_channel;
-  label.textContent = channel ? String(channel) : "Chatcity";
-  label.title = "Channel";
-
-  subscribe((e) => {
-    if (e.type === "session") {
-      label.textContent = e.session.channel || "Chatcity";
-    }
-  });
-
-  return label;
 }
 
 /** Reload button — defines bettercc.reloadChat (WS close → reconnect). */

@@ -15,7 +15,6 @@
 //   - ID (/id)          → stub (T13 id-popup; logs)
 
 import { type User } from "./store";
-import { setConfig } from "./config";
 import { cclog } from "../utils";
 
 let openPopup: HTMLElement | null = null;
@@ -43,13 +42,23 @@ function onKeydown(e: KeyboardEvent): void {
   }
 }
 
-function actionBtn(label: string, title: string, onClick: () => void): HTMLButtonElement {
+/** A popup action button: a theme-aware Font Awesome icon + a text label.
+ *  The icon inherits the popup's text color (--bcc-text-raised), so it recolors
+ *  with the theme — no fixed emoji that ignores the color scheme. */
+function actionBtn(iconClass: string, label: string, title: string, onClick: () => void): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "bcc-popup-action";
-  btn.textContent = label;
   btn.title = title;
   btn.setAttribute("aria-label", title);
+  const icon = document.createElement("i");
+  icon.className = "fas " + iconClass;
+  icon.setAttribute("aria-hidden", "true");
+  btn.appendChild(icon);
+  const text = document.createElement("span");
+  text.className = "bcc-popup-action-label";
+  text.textContent = label;
+  btn.appendChild(text);
   btn.addEventListener("click", (e) => {
     e.stopPropagation(); // don't let the action click bubble to outside-click
     onClick();
@@ -87,40 +96,42 @@ export function openUserPopup(
 
   // Pin / Unpin
   popup.appendChild(
-    actionBtn(isPinned ? "📌 Angeheftet entfernen" : "📌 Anheften", "Benutzer anheften", () => {
-      onTogglePin(user);
-    })
+    actionBtn(
+      isPinned ? "fa-thumbtack-slash" : "fa-thumbtack",
+      isPinned ? "Angeheftet entfernen" : "Anheften",
+      "Benutzer anheften",
+      () => { onTogglePin(user); },
+    )
   );
 
   // Superwhisper (persistent) — toggles via the exposed API
   popup.appendChild(
-    actionBtn("💬 Superwhisper", "Dauerhaft an " + user.name + " flüstern", () => {
+    actionBtn("fa-comment-dots", "Superwhisper", "Dauerhaft an " + user.name + " flüstern", () => {
       const api = (unsafeWindow as any).bettercc;
       if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
     })
   );
 
-  // One-shot whisper — same GM key but we mark it transient via a flag the
-  // input path already understands: setting whisper target then clearing on
-  // next send is a future refinement; for now it behaves like superwhisper-on.
+  // One-shot whisper — prefill the textarea with "/w <nick> " and focus it.
+  // Does NOT arm superwhisper (no persistent rewrite); the user sends the one
+  // prefilled message, then types normally again.
   popup.appendChild(
-    actionBtn("📨 Flüstern (1×)", "Einmal an " + user.name + " flüstern", async () => {
-      await setConfig("whisper", user.name);
+    actionBtn("fa-paper-plane", "Flüstern (1×)", "Einmal an " + user.name + " flüstern", () => {
       const api = (unsafeWindow as any).bettercc;
-      if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
+      if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
     })
   );
 
   // Ignore (superban) — T12
   popup.appendChild(
-    actionBtn("🚫 Ignorieren", "Benutzer ignorieren (T12)", () => {
+    actionBtn("fa-ban", "Ignorieren", "Benutzer ignorieren (T12)", () => {
       cclog("user popup: ignore stubbed (T12) — " + user.name, "v3");
     })
   );
 
   // ID — T13
   popup.appendChild(
-    actionBtn("🪪 ID", "ID von " + user.name + " anzeigen (T13)", () => {
+    actionBtn("fa-id-card", "ID", "ID von " + user.name + " anzeigen (T13)", () => {
       cclog("user popup: /id stubbed (T13) — " + user.name, "v3");
     })
   );

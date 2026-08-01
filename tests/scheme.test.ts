@@ -138,6 +138,37 @@ describe("generateScheme — accent colors", () => {
   });
 });
 
+// ─── Status colors (userlist accents, against the SIDEBAR) ─────────────
+
+describe("generateScheme — userlist status colors", () => {
+  it("statusOnline and statusSep are present and distinct from each other", () => {
+    const s = generateScheme("6AAED8");
+    expect(s.statusOnline).toBeTruthy();
+    expect(s.statusSep).toBeTruthy();
+    expect(s.statusOnline).not.toBe(s.statusSep);
+  });
+
+  it("status accents meet large-text AA (3:1) against the sidebar surface", () => {
+    // The status dots/glyphs render on the sidebar, so their AA guarantee must
+    // hold against surfaceSidebar — not surface. The old fixed-hex dots blended
+    // into green/amber sidebars; deriving via liftAccent(sidebar, …) fixes that.
+    for (const base of ["6AAED8", "AA0000", "3A5FCD", "FFD700", "2E8B57"]) {
+      const s = generateScheme(base);
+      expect(contrastRatio(s.surfaceSidebar, s.statusOnline), `online@${base}`).toBeGreaterThanOrEqual(AA_LARGE);
+      expect(contrastRatio(s.surfaceSidebar, s.statusSep), `sep@${base}`).toBeGreaterThanOrEqual(AA_LARGE);
+    }
+  });
+
+  it("textAway meets body-text AA against the sidebar (replaces raw opacity)", () => {
+    // Away names used to be opacity:.5, which dropped below AA on low-contrast
+    // surfaces. textAway is a derived real color guaranteed AA-readable.
+    for (const base of ["6AAED8", "AA0000", "3A5FCD"]) {
+      const s = generateScheme(base);
+      expect(contrastRatio(s.surfaceSidebar, s.textAway), `away@${base}`).toBeGreaterThanOrEqual(AA_TEXT);
+    }
+  });
+});
+
 // ─── Surface tiering ──────────────────────────────────────────────────
 
 describe("generateScheme — surface tiers", () => {

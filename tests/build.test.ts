@@ -66,4 +66,19 @@ describe("build output", () => {
     expect(content).not.toContain("jquery-3.5.1");
     expect(content).not.toContain("jquery-ui");
   });
+
+  // ── Sidebar sits to the RIGHT of the chatframe (layout-polish Task A) ─────
+  // v3.css is an external @resource (not inlined by esbuild), so the layout
+  // invariant is asserted against the CSS source directly. The conventional
+  // chat layout + old ChatCity layout put the userlist on the right; a silent
+  // revert to the left-side "sidebar main" layout fails here.
+  it("places the sidebar to the right of the chatframe in v3.css", () => {
+    const css = readFileSync(resolve(import.meta.dirname, "../css/v3.css"), "utf-8");
+    // grid-template-areas middle row: main (left), sidebar (right)
+    expect(css).toContain('"main     sidebar"');
+    expect(css).not.toContain('"sidebar  main"');
+    // Sidebar border on its left edge (it's the right column now)
+    expect(css).toContain("border-left: 1px solid var(--bcc-border)");
+    expect(css).not.toContain("border-right: 1px solid var(--bcc-border)");
+  });
 });
