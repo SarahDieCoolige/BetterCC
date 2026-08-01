@@ -8,7 +8,7 @@
 // missing count hides its badge.
 
 import { describe, it, expect } from "vitest";
-import { parseStats } from "../src/v3/stats";
+import { parseStats, encodeChatLink } from "../src/v3/stats";
 
 // The exact response the dev mock returns (dev/server.mjs chat_info_friends_nc
 // route): 3 friends online, 1 friend request, 0 messages (the messages value
@@ -58,7 +58,11 @@ describe("parseStats — tolerance", () => {
   });
 
   it("returns zeros for input with no recognizable anchors", () => {
-    expect(parseStats("<div>nothing here</div>")).toEqual({ friendsOnline: 0, requests: 0, messages: 0 });
+    expect(parseStats("<div>nothing here</div>")).toEqual({
+      friendsOnline: 0,
+      requests: 0,
+      messages: 0,
+    });
   });
 
   it("treats a missing .value span as zero (partial response)", () => {
@@ -77,5 +81,33 @@ describe("parseStats — tolerance", () => {
   it("does not throw on a null-ish input (defensive)", () => {
     expect(() => parseStats(null as any)).not.toThrow();
     expect(parseStats(null as any)).toEqual({ friendsOnline: 0, requests: 0, messages: 0 });
+  });
+});
+
+// ─── encodeChatLink — ChatCity nick-to-URL encoder ────────────────────────
+
+describe("encodeChatLink — replicates the upstream Encode_Link", () => {
+  it("passes alphanumeric characters through unchanged", () => {
+    expect(encodeChatLink("TestUser")).toBe("TestUser");
+    expect(encodeChatLink("abcXYZ123")).toBe("abcXYZ123");
+  });
+
+  it("replaces spaces with hyphens", () => {
+    expect(encodeChatLink("Cool Nick")).toBe("Cool-Nick");
+    expect(encodeChatLink("a b c")).toBe("a-b-c");
+  });
+
+  it("hex-encodes ASCII special characters as :XX:", () => {
+    // Underscore (_) → :5F: (the fixture's :5F: artifact confirmed correct)
+    expect(encodeChatLink("Test_User")).toBe("Test:5F:User");
+    // Dot (.) → :2E:
+    expect(encodeChatLink("dr.evil")).toBe("dr:2E:evil");
+    // Hyphen in name (the actual hyphen, not space-encoded)
+    expect(encodeChatLink("x-y")).toBe("x:2D:y");
+  });
+
+  it("handles mixed safe + special characters", () => {
+    expect(encodeChatLink("Hello_World")).toBe("Hello:5F:World");
+    expect(encodeChatLink("a.b-c")).toBe("a:2E:b:2D:c");
   });
 });

@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      2.0.4
+// @version      3.0.1
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html?*RURL=*
@@ -10,8 +10,8 @@
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=2.0.4
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=2.0.4
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.1
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.1
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1873,20 +1873,45 @@
       messages: read("unc")
     };
   }
+  function encodeChatLink(name) {
+    const SAFE = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const HEX = "0123456789ABCDEF";
+    let encoded = "";
+    for (let i = 0; i < name.length; i++) {
+      const ch = name.charAt(i);
+      if (ch === " ") {
+        encoded += "-";
+      } else if (SAFE.indexOf(ch) !== -1) {
+        encoded += ch;
+      } else {
+        const code = ch.charCodeAt(0);
+        if (code > 255) {
+          const escaped = encodeURIComponent(ch);
+          encoded += ":" + escaped.substring(1, 99) + ":";
+        } else {
+          encoded += ":";
+          encoded += HEX.charAt(code >> 4 & 15);
+          encoded += HEX.charAt(code & 15);
+          encoded += ":";
+        }
+      }
+    }
+    return encoded;
+  }
   var BADGES = [
     {
       statKey: "friendsOnline",
       iconClass: "fa-users",
       title: "Freunde Online",
-      // Old layout: friends-online badge opened the ID card.
-      url: (nick) => "https://www.chatcity.de/de/id/" + encodeURIComponent(nick) + ":5F:.html"
+      // ID card: PPATH + 'id/' + Encode_Link(name) + '.html' (chat_pop_kylr.js:193)
+      url: (encNick) => "//www.chatcity.de/de/id/" + encNick + ".html"
     },
     {
       statKey: "requests",
       iconClass: "fa-user-plus",
       title: "Neue Freundesanfragen",
-      // Old layout: requests opened /de/friends/<id-card-url>.
-      url: (nick) => "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encodeURIComponent(nick) + ":5F:.html"
+      // Upstream: /de/friends/<id-card-url> (e.g. /de/friends/https://.../id/username01:5F:.html)
+      url: (encNick) => "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encNick + ".html"
     },
     {
       statKey: "messages",
@@ -1901,6 +1926,7 @@
   function buildStatsBar(nick) {
     const bar = document.createElement("div");
     bar.className = "bcc-stats";
+    const encNick = encodeChatLink(nick);
     for (const spec of BADGES) {
       const link = document.createElement("a");
       link.className = "bcc-stat bcc-stat-" + spec.statKey;
@@ -1910,7 +1936,7 @@
       link.setAttribute("aria-label", spec.title);
       link.addEventListener("click", (e) => {
         e.preventDefault();
-        window.open(spec.url(nick), "IDCARD", "width=810,height=800,scrollbars=yes");
+        window.open(spec.url(encNick), "IDCARD", "width=810,height=800,scrollbars=yes");
       });
       const icon = document.createElement("i");
       icon.className = "fas " + spec.iconClass;

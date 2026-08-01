@@ -61,13 +61,43 @@ export function parseStats(html: string): Stats {
   };
 }
 
+/**
+ * Encode a nick for a ChatCity URL path, replicating the upstream Encode_Link
+ * (dev/fixture/.../utils_kylr.js:38). Safe characters (A-Za-z0-9) pass through,
+ * space → '-', unsafe ASCII → `:XX:` hex, Unicode → `:%XX:` escaped.
+ */
+export function encodeChatLink(name: string): string {
+  const SAFE = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const HEX = "0123456789ABCDEF";
+  let encoded = "";
+  for (let i = 0; i < name.length; i++) {
+    const ch = name.charAt(i);
+    if (ch === " ") {
+      encoded += "-";
+    } else if (SAFE.indexOf(ch) !== -1) {
+      encoded += ch;
+    } else {
+      const code = ch.charCodeAt(0);
+      if (code > 255) {
+        const escaped = encodeURIComponent(ch);
+        encoded += ":" + escaped.substring(1, 99) + ":";
+      } else {
+        encoded += ":";
+        encoded += HEX.charAt((code >> 4) & 0xf);
+        encoded += HEX.charAt(code & 0xf);
+        encoded += ":";
+      }
+    }
+  }
+  return encoded;
+}
+
 /** The three badge specs: CSS class, Font Awesome icon, and popup URL target. */
 interface BadgeSpec {
   statKey: keyof Stats;
-  iconClass: string; // Font Awesome class (e.g. "fa-users")
-  /** Builds the popup URL from session globals (read once at mount). */
-  url: (nick: string) => string;
-  /** "Freunde Online" opens the user's own ID card, like the old layout. */
+  iconClass: string;
+  /** URL to open on click, built from the encoded nick. */
+  url: (encNick: string) => string;
   title: string;
 }
 
@@ -76,17 +106,16 @@ const BADGES: BadgeSpec[] = [
     statKey: "friendsOnline",
     iconClass: "fa-users",
     title: "Freunde Online",
-    // Old layout: friends-online badge opened the ID card.
-    url: (nick) => "https://www.chatcity.de/de/id/" + encodeURIComponent(nick) + ":5F:.html",
+    // ID card: PPATH + 'id/' + Encode_Link(name) + '.html' (chat_pop_kylr.js:193)
+    url: (encNick) => "//www.chatcity.de/de/id/" + encNick + ".html",
   },
   {
     statKey: "requests",
     iconClass: "fa-user-plus",
     title: "Neue Freundesanfragen",
-    // Old layout: requests opened /de/friends/<id-card-url>.
-    url: (nick) =>
-      "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" +
-      encodeURIComponent(nick) + ":5F:.html",
+    // Upstream: /de/friends/<id-card-url> (e.g. /de/friends/https://.../id/username01:5F:.html)
+    url: (encNick) =>
+      "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encNick + ".html",
   },
   {
     statKey: "messages",
@@ -109,6 +138,7 @@ let pollTimer: number | null = null;
 export function buildStatsBar(nick: string): HTMLElement {
   const bar = document.createElement("div");
   bar.className = "bcc-stats";
+  const encNick = encodeChatLink(nick);
 
   for (const spec of BADGES) {
     const link = document.createElement("a");
@@ -117,10 +147,9 @@ export function buildStatsBar(nick: string): HTMLElement {
     link.title = spec.title;
     link.setAttribute("role", "button");
     link.setAttribute("aria-label", spec.title);
-    // Popup on click — same window features the old #u_stats onclick used.
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      window.open(spec.url(nick), "IDCARD", "width=810,height=800,scrollbars=yes");
+      window.open(spec.url(encNick), "IDCARD", "width=810,height=800,scrollbars=yes");
     });
 
     const icon = document.createElement("i");
@@ -169,7 +198,6 @@ function pollOnce(): void {
       cclog("stats: upstream ajax/PAJAX unavailable — skipping poll", "v3");
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions, no-new
     new ajax(pajax + "chat_info_friends_nc.html", {
       onComplete: (transport: any) => {
         try {
