@@ -87,18 +87,19 @@
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
 }
 
-/* R4 / spec §4.6: theme color transition scoped to the shell (not a global *
-   rule that would fight upstream CSS). Disabled under reduced-motion. */
+/* R4 / spec §4.6: theme colour transitions scoped to the shell and all
+   descendants.  When the scheme generator is toggled live (footer v1↔v2
+   pill), every surface, text, and border morphs smoothly instead of
+   flashing.  Disabled under reduced-motion. */
 .bcc-shell,
-.bcc-shell .bcc-pill,
-.bcc-shell .bcc-input-field {
+.bcc-shell * {
   transition:
-    background-color 0.5s ease,
-    color 0.5s ease,
-    border-color 0.5s ease;
+    background-color 0.45s ease,
+    color 0.45s ease,
+    border-color 0.45s ease,
+    box-shadow 0.45s ease;
 }
 @media (prefers-reduced-motion: reduce) {
   .bcc-shell,
@@ -446,7 +447,6 @@
 /* Chat-actions pill: the local color picker spans the full width and centers
    below the autoscroll + reload row (v2 parity). */
 .bcc-chat-actions .bcc-color-picker-wrap {
-  grid-column: 1 / -1;
   justify-self: center;
 }
 

@@ -18,6 +18,16 @@ export function enableV2Scheme(): void {
   _v2 = true;
 }
 
+/** Disable v2 and return to v1. */
+export function disableV2Scheme(): void {
+  _v2 = false;
+}
+
+/** Query whether v2 is currently active. */
+export function isV2Scheme(): boolean {
+  return _v2;
+}
+
 /** Thin wrapper — delegates to the active generator. */
 export const generateScheme: typeof v1 = (base, opts?) =>
   _v2 ? v2(base, opts as any) : v1(base, opts);

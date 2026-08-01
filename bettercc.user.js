@@ -1495,7 +1495,36 @@
 
   // src/scheme.ts
   var _v2 = typeof location !== "undefined" && new URLSearchParams(location.search).has("schemev2");
+  function enableV2Scheme() {
+    _v2 = true;
+  }
+  function disableV2Scheme() {
+    _v2 = false;
+  }
+  function isV2Scheme() {
+    return _v2;
+  }
   var generateScheme3 = (base, opts) => _v2 ? generateScheme2(base, opts) : generateScheme(base, opts);
+
+  // src/v3/config.ts
+  var DEFAULTS = {
+    color: "6AAED8",
+    colorscheme: null,
+    // regenerated from color on load (theme bridge T3)
+    ban: [],
+    pinned: [],
+    whisper: "",
+    // "" = no superwhisper target
+    bcc_v3: false,
+    scheme_v2: false
+  };
+  async function getConfig(key, fallback) {
+    const def = fallback ?? DEFAULTS[key];
+    return await GM.getValue(getUserKey(key), def);
+  }
+  async function setConfig(key, value) {
+    await GM.setValue(getUserKey(key), value);
+  }
 
   // src/v3/theme.ts
   var BCC_ROLE_VARS = [
@@ -1562,6 +1591,21 @@
     await GM.setValue(schemeKey, schemeToStorage(scheme));
     applyScheme(scheme);
     return scheme;
+  }
+  async function toggleSchemeVersion() {
+    const currentV2 = await getConfig("scheme_v2", false);
+    const nextV2 = !currentV2;
+    await setConfig("scheme_v2", nextV2);
+    if (nextV2) enableV2Scheme();
+    else disableV2Scheme();
+    const base = await getConfig("color", "6AAED8");
+    const scheme = generateScheme3(base);
+    const schemeKey = getUserKey("colorscheme");
+    await GM.setValue(schemeKey, schemeToStorage(scheme));
+    applyScheme(scheme);
+  }
+  function getSchemeVersion() {
+    return isV2Scheme();
   }
 
   // src/v3/userlist.ts
@@ -1638,25 +1682,6 @@
     cclog("set_uinfo1 overridden \u2014 userlist events now feed the store", "v3");
     const chaMy = unsafeWindow.cha_my ?? [];
     if (chaMy.length > 0) unsafeWindow.set_uinfo1();
-  }
-
-  // src/v3/config.ts
-  var DEFAULTS = {
-    color: "6AAED8",
-    colorscheme: null,
-    // regenerated from color on load (theme bridge T3)
-    ban: [],
-    pinned: [],
-    whisper: "",
-    // "" = no superwhisper target
-    bcc_v3: false
-  };
-  async function getConfig(key, fallback) {
-    const def = fallback ?? DEFAULTS[key];
-    return await GM.getValue(getUserKey(key), def);
-  }
-  async function setConfig(key, value) {
-    await GM.setValue(getUserKey(key), value);
   }
 
   // src/v3/popup.ts
@@ -2458,12 +2483,30 @@
     return wrap;
   }
   function buildChatActionsPill() {
+    const schemeToggle = document.createElement("button");
+    schemeToggle.type = "button";
+    schemeToggle.className = "bcc-icon-btn";
+    const updateToggle = () => {
+      const v2 = getSchemeVersion();
+      schemeToggle.title = v2 ? "Scheme v2 \u2014 klick f\xFCr v1" : "Scheme v1 \u2014 klick f\xFCr v2";
+      schemeToggle.setAttribute("aria-label", schemeToggle.title);
+      schemeToggle.innerHTML = '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
+    };
+    updateToggle();
+    schemeToggle.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      schemeToggle.style.pointerEvents = "none";
+      await toggleSchemeVersion();
+      updateToggle();
+      schemeToggle.style.pointerEvents = "";
+    });
     return pill(
       2,
       "bcc-chat-actions",
       buildAutoscrollBtn(),
       trackReloadButton(buildReloadBtn()),
-      buildColorSwatch()
+      buildColorSwatch(),
+      schemeToggle
     );
   }
   function buildBetterccPill() {
@@ -2579,6 +2622,9 @@
     unsafeWindow.bettercc.reloadChat = reloadChat;
     buildShell();
     overrideSetUinfo1();
+    getConfig("scheme_v2").then((v2) => {
+      if (v2) enableV2Scheme();
+    });
     const schemePromise = loadTheme(getUserKey("color"), getUserKey("colorscheme"));
     unsafeWindow.bettercc.setTheme = function setTheme() {
       schemePromise.then((scheme) => applyScheme(scheme));

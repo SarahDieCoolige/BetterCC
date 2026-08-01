@@ -38,6 +38,8 @@ import { hookChatoutConnect } from "../ws-hook";
 import { buildShell, reloadChat } from "./shell";
 import { loadTheme, applyScheme } from "./theme";
 import type { BccColorScheme } from "../scheme";
+import { enableV2Scheme } from "../scheme";
+import { getConfig } from "./config";
 import { overrideSetUinfo1 } from "./userlist-wire";
 import { mountSidebar } from "./sidebar";
 import { mountStatsBar } from "./stats";
@@ -95,6 +97,12 @@ export function initV3(): void {
   // place before the dev mock's 20ms setTimeout fires. Userlist polls now
   // emit "userlist" store events instead of writing to the hidden #ul.
   overrideSetUinfo1();
+
+  // Load the scheme-version preference (v1/v2) before the theme engine runs
+  // so the first generateScheme() call delegates to the correct generator.
+  getConfig("scheme_v2").then((v2) => {
+    if (v2) enableV2Scheme();
+  });
 
   // Apply the saved theme (tier-0 per spec §5.3): read color_{user}, regenerate
   // or reuse the cached scheme, write --bcc-* to .bcc-shell. The old path did

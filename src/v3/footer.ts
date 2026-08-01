@@ -81,6 +81,8 @@ function sendSlashCommand(cmd: string): void {
   if (typeof w.delout === "function") w.delout();
 }
 
+import { toggleSchemeVersion, getSchemeVersion } from "./theme";
+
 // ─── Group 1: Account / status ─────────────────────────────────────────────
 // away / awayoff via hold.OUT1 + delout; sysmsg on/off via com_set.
 
@@ -153,14 +155,35 @@ function buildColorSwatch(): HTMLElement {
 }
 
 function buildChatActionsPill(): HTMLElement {
-  // 2-column pill (autoscroll + reload on row 1); the color picker spans the
-  // full width centered on row 2 via the .bcc-chat-actions rule in v3.css.
+  // Scheme-version toggle (v1 ↔ v2, live, no reload) — small button next to
+  // the theme colour swatch so both colour-related controls sit together.
+  const schemeToggle = document.createElement("button");
+  schemeToggle.type = "button";
+  schemeToggle.className = "bcc-icon-btn";
+  const updateToggle = () => {
+    const v2 = getSchemeVersion();
+    schemeToggle.title = v2 ? "Scheme v2 — klick für v1" : "Scheme v1 — klick für v2";
+    schemeToggle.setAttribute("aria-label", schemeToggle.title);
+    schemeToggle.innerHTML = '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
+  };
+  updateToggle();
+  schemeToggle.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    schemeToggle.style.pointerEvents = "none";
+    await toggleSchemeVersion();
+    updateToggle();
+    schemeToggle.style.pointerEvents = "";
+  });
+
+  // 2-column pill (autoscroll + reload on row 1); the color swatch + scheme
+  // toggle share row 2 via the .bcc-chat-actions rule in v3.css.
   return pill(
     2,
     "bcc-chat-actions",
     buildAutoscrollBtn(),
     trackReloadButton(buildReloadBtn()),
     buildColorSwatch(),
+    schemeToggle,
   );
 }
 

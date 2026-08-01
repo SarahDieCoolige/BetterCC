@@ -15,7 +15,7 @@
 import { getUserKey } from "../utils";
 
 /** Every known GM key (key name; user-scoping prefix is applied by getUserKey). */
-export const KNOWN_KEYS = ["color", "colorscheme", "ban", "pinned", "whisper", "bcc_v3"] as const;
+export const KNOWN_KEYS = ["color", "colorscheme", "ban", "pinned", "whisper", "bcc_v3", "scheme_v2"] as const;
 export type ConfigKey = (typeof KNOWN_KEYS)[number];
 
 /** Documented defaults, returned by getConfig when nothing is stored. */
@@ -26,6 +26,7 @@ export const DEFAULTS: Record<ConfigKey, unknown> = {
   pinned: [],
   whisper: "", // "" = no superwhisper target
   bcc_v3: false,
+  scheme_v2: false,
 };
 
 /**

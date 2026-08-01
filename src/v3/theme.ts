@@ -17,8 +17,9 @@
 // difference (v3 stores hex roles, old stored HSL strings) is harmless: each
 // path only trusts its own cache.
 
-import { generateScheme, type BccColorScheme } from "../scheme";
-import { applyThemeToIframe } from "../utils";
+import { generateScheme, enableV2Scheme, disableV2Scheme, isV2Scheme, type BccColorScheme } from "../scheme";
+import { applyThemeToIframe, getUserKey } from "../utils";
+import { getConfig, setConfig } from "./config";
 
 // ─── Pure: the --bcc-* name map (spec §6.1) ───────────────────────────────
 
@@ -176,4 +177,35 @@ export async function loadTheme(
   await GM.setValue(schemeKey, schemeToStorage(scheme));
   applyScheme(scheme);
   return scheme;
+}
+
+// ─── Scheme-version toggle (live switching without page reload) ────────────
+
+/**
+ * Toggle between v1 and v2 scheme generators at runtime, regenerate fresh,
+ * apply with CSS transitions, and persist the preference to GM storage.
+ *
+ * Called from the footer pill — no page reload needed.
+ */
+export async function toggleSchemeVersion(): Promise<void> {
+  // Flip the preference.
+  const currentV2 = (await getConfig("scheme_v2", false)) as boolean;
+  const nextV2 = !currentV2;
+  await setConfig("scheme_v2", nextV2);
+
+  // Update the module-level switch so generateScheme() delegates correctly.
+  if (nextV2) enableV2Scheme();
+  else disableV2Scheme();
+
+  // Read the current base colour (source of truth) and regenerate.
+  const base = (await getConfig("color", "6AAED8")) as string;
+  const scheme = generateScheme(base);
+  const schemeKey = getUserKey("colorscheme");
+  await GM.setValue(schemeKey, schemeToStorage(scheme));
+  applyScheme(scheme);
+}
+
+/** Query whether the v2 scheme generator is currently active. */
+export function getSchemeVersion(): boolean {
+  return isV2Scheme();
 }
