@@ -183,14 +183,21 @@
   // src/ws-hook.ts
   var chatframeReady = false;
   var upstreamChatoutConnect = null;
+  var INJECTION_RETRY_MS = 50;
+  var MAX_INJECTION_ATTEMPTS = 50;
+  var injectionAttempts = 0;
   function injectIntoChatframe() {
     const doc = getChatDoc();
     const win = getChatWin();
     if (!doc || !win) {
-      cclog("injectIntoChatframe: iframe not ready, will retry on next message");
+      cclog("injectIntoChatframe: iframe not ready, retrying");
       chatframeReady = false;
+      if (injectionAttempts++ < MAX_INJECTION_ATTEMPTS) {
+        setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
+      }
       return;
     }
+    injectionAttempts = 0;
     const iframeCss = GM_getResourceText("iframe_css");
     if (iframeCss) {
       const style = doc.createElement("style");
@@ -219,11 +226,6 @@
       injectIntoChatframe();
     }
   }
-  function betterccOnBccInit(_ev) {
-    if (!chatframeReady) {
-      injectIntoChatframe();
-    }
-  }
   function betterccOnWsClose() {
   }
   function attachWsListeners() {
@@ -231,10 +233,6 @@
       unsafeWindow.chatout_ws.addEventListener(
         "message",
         betterccOnWsMessage
-      );
-      unsafeWindow.chatout_ws.addEventListener(
-        "bcc-init",
-        betterccOnBccInit
       );
       unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
     }

@@ -6,15 +6,30 @@ import { addAutoscrollBanner } from "./chat";
 export let chatframeReady: boolean = false;
 export let upstreamChatoutConnect: any = null;
 
+// Bounded retry for the prefill race (see injectIntoChatframe bail branch).
+// The upstream onmessage handler calls contentDocument.write() synchronously
+// before this listener fires; <body> isn't parsed yet at that instant, so
+// getChatDoc() returns null. We retry on a short timer until the body exists.
+// 50 tries × 50ms = up to 2.5s, which is far longer than the parser ever takes
+// to build <body> after a write. Reset to 0 once injection succeeds, so a later
+// WS reconnect can re-inject if it ever needs to.
+const INJECTION_RETRY_MS = 50;
+const MAX_INJECTION_ATTEMPTS = 50;
+let injectionAttempts = 0;
+
 // Runs ONCE after the first WebSocket message populates the iframe.
 export function injectIntoChatframe(): void {
   const doc = getChatDoc();
   const win = getChatWin();
   if (!doc || !win) {
-    cclog("injectIntoChatframe: iframe not ready, will retry on next message");
+    cclog("injectIntoChatframe: iframe not ready, retrying");
     chatframeReady = false;
+    if (injectionAttempts++ < MAX_INJECTION_ATTEMPTS) {
+      setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
+    }
     return;
   }
+  injectionAttempts = 0;
 
   // 1) Inject iframe.css
   const iframeCss = GM_getResourceText("iframe_css");
@@ -61,15 +76,6 @@ export function betterccOnWsMessage(ev: Event): void {
   }
 }
 
-/** Listens for the mock's bcc-init event (not a chat message — bypasses
- *  contentDocument.write()). Triggers injectIntoChatframe after the prefill
- *  has arrived and our WS hook is attached, without duplicating content. */
-export function betterccOnBccInit(_ev: Event): void {
-  if (!chatframeReady) {
-    injectIntoChatframe();
-  }
-}
-
 export function betterccOnWsClose(): void {
   // Upstream handles reconnect automatically.
 }
@@ -79,10 +85,6 @@ export function attachWsListeners(): void {
     unsafeWindow.chatout_ws.addEventListener(
       "message",
       betterccOnWsMessage
-    );
-    unsafeWindow.chatout_ws.addEventListener(
-      "bcc-init",
-      betterccOnBccInit
     );
     unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
   }
