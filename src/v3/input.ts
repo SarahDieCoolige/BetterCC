@@ -4,11 +4,10 @@
 // through the reused upstream onsubmit handler for message normalization +
 // away-timer reset, and handles BetterCC commands + superwhisper.
 
-import { cclog, getUserKey, printHelp } from "../utils";
+import { cclog, printHelp } from "../utils";
 import { getConfig, setConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { buildPatchedHandler } from "./patched-handler";
-import { saveColor } from "./theme";
 
 let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: ((...args: any[]) => any) | null = null;
@@ -170,11 +169,16 @@ function updateWhisperIndicator(nick: string | null): void {
 // ─── Mount ──────────────────────────────────────────────────────────────────
 
 export function mountInput(): void {
-  const inputArea = document.querySelector(".bcc-input");
-  if (!inputArea) return;
+  const chatbar = document.querySelector(".bcc-chatbar");
+  if (!chatbar) return;
 
-  // Clear the placeholder
-  inputArea.innerHTML = "";
+  // Build the input area — a flex:1 column (whisper indicator + textarea)
+  // that fills the LEFT of the chatbar. The pill groups mountFooter() adds
+  // sit to its right (flex-shrink:0). The placeholder is replaced.
+  const inputArea = document.createElement("div");
+  inputArea.className = "bcc-input-area";
+  chatbar.innerHTML = "";
+  chatbar.appendChild(inputArea);
 
   // ── Whisper indicator (above the textarea) — C2 ──────────────────────
   // A small pill that stays visible while superwhisper is armed, so the user
@@ -185,13 +189,9 @@ export function mountInput(): void {
   whisperIndicator.style.display = "none";
   inputArea.appendChild(whisperIndicator);
 
-  // ── Input row: textarea + color swatch ───────────────────────────────
-  const row = document.createElement("div");
-  row.className = "bcc-input-row";
-
+  // ── Textarea — fills the bar's height ────────────────────────────────
   textarea = document.createElement("textarea");
   textarea.className = "bcc-input-field";
-  textarea.rows = 3;
   textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
   textarea.placeholder =
     "Du chattest mit allen..." +
@@ -207,10 +207,7 @@ export function mountInput(): void {
       doSubmit(); // eslint-disable-line @typescript-eslint/no-floating-promises
     }
   });
-  row.appendChild(textarea);
-
-  row.appendChild(buildColorSwatch());
-  inputArea.appendChild(row);
+  inputArea.appendChild(textarea);
 
   // ── Send contract — reuse the hold form's patched onsubmit (O1) ──────
   // buildPatchedHandler surfaces an upstream needle change as a thrown error
@@ -232,43 +229,5 @@ export function mountInput(): void {
     if (n) superwhisper(n, false);
   });
 
-  cclog("input mounted — textarea + color picker + whisper indicator + send contract", "v3");
-}
-
-/**
- * Color picker swatch — a native <input type="color"> behind a small visual
- * swatch (spec §4.3 / §5.2, review C1). oninput regenerates the scheme via
- * saveColor (the engine was already there in v3/theme.ts but had no UI call
- * site — users had no way to change color). Seeds the swatch from the stored
- * base color so it opens at the user's current theme.
- */
-function buildColorSwatch(): HTMLElement {
-  const wrap = document.createElement("label");
-  wrap.className = "bcc-color-swatch";
-  wrap.title = "Farbe wählen";
-
-  const input = document.createElement("input");
-  input.type = "color";
-  input.className = "bcc-color-input";
-  input.setAttribute("aria-label", "Hintergrundfarbe wählen");
-  // Default until the stored color loads; saveColor updates --bcc-* on change.
-  input.value = "#6aaed8";
-
-  // Seed the swatch with the stored base color. GM.getValue resolves hex
-  // without a leading #; the <input type=color> needs the #.
-  getConfig("color", "6AAED8").then((hex) => {
-    input.value = "#" + String(hex).replace(/^#/, "");
-  });
-
-  input.addEventListener("input", () => {
-    const baseHex = input.value.replace(/^#/, "").toUpperCase();
-    // saveColor persists color_{user}, regenerates the scheme, and applies it
-    // (writes --bcc-* to :root + mirrors into the iframe).
-    saveColor(baseHex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
-      cclog("color swatch: saveColor failed — " + (e as Error).message, "v3");
-    });
-  });
-
-  wrap.appendChild(input);
-  return wrap;
+  cclog("input mounted — textarea + whisper indicator + send contract", "v3");
 }
