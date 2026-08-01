@@ -18,8 +18,7 @@ function extractFirstImageUrl(html: string): string | null {
 
 describe("stripThumbnailSuffix", () => {
   it("strips _3 suffix from thumbnail URL", () => {
-    expect(stripThumbnailSuffix("userfiles/a/b/c/abc123_3.jpg"))
-      .toBe("userfiles/a/b/c/abc123.jpg");
+    expect(stripThumbnailSuffix("userfiles/a/b/c/abc123_3.jpg")).toBe("userfiles/a/b/c/abc123.jpg");
   });
 
   it("strips _1 suffix", () => {
@@ -41,25 +40,26 @@ describe("stripThumbnailSuffix", () => {
 
 describe("hasUserfilesImage", () => {
   it("detects userfiles image URL", () => {
-    expect(hasUserfilesImage('<img src="https://images.chatcity.de/userfiles/g/8/F/X/E/noP3vrGimXVO0HRIJa2ti0_3.jpg">'))
-      .toBe(true);
+    expect(
+      hasUserfilesImage(
+        '<img src="https://images.chatcity.de/userfiles/g/8/F/X/E/noP3vrGimXVO0HRIJa2ti0_3.jpg">',
+      ),
+    ).toBe(true);
   });
 
   it("returns false for non-userfiles images", () => {
-    expect(hasUserfilesImage('<img src="/grafiken/chat/send.gif">'))
-      .toBe(false);
+    expect(hasUserfilesImage('<img src="/grafiken/chat/send.gif">')).toBe(false);
   });
 });
 
 describe("extractFirstImageUrl", () => {
   it("extracts userfiles image URL from HTML", () => {
-    const html = '<a href="/id/test.html"><img src="https://images.chatcity.de/userfiles/a/b/photo_3.jpg" width="80"></a>';
-    expect(extractFirstImageUrl(html))
-      .toBe("https://images.chatcity.de/userfiles/a/b/photo_3.jpg");
+    const html =
+      '<a href="/id/test.html"><img src="https://images.chatcity.de/userfiles/a/b/photo_3.jpg" width="80"></a>';
+    expect(extractFirstImageUrl(html)).toBe("https://images.chatcity.de/userfiles/a/b/photo_3.jpg");
   });
 
   it("returns null when no userfiles image present", () => {
-    expect(extractFirstImageUrl('<a href="/id/test.html">test</a>'))
-      .toBeNull();
+    expect(extractFirstImageUrl('<a href="/id/test.html">test</a>')).toBeNull();
   });
 });

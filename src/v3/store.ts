@@ -11,9 +11,9 @@
 export interface User {
   name: string;
   registered: boolean; // status contains "hR"
-  guest: boolean;      // status contains "h"  (without R)
-  sep: boolean;        // status contains "S"
-  away: boolean;       // status contains "A"
+  guest: boolean; // status contains "h"  (without R)
+  sep: boolean; // status contains "S"
+  away: boolean; // status contains "A"
 }
 
 /** Session state read from unsafeWindow globals (spec §2.3). */

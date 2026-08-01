@@ -59,13 +59,13 @@ export interface GenerateSchemeOptions {
 // the thresholds that were hard-coded in the old setColors().
 const STEP = {
   /** Footer/sidebar sit one tier below the main surface. */
-  footerDarken: 15,        // was: chatBg.darken(15) when light
-  footerLighten: 5,        // was: chatBg.lighten(5) when dark
+  footerDarken: 15, // was: chatBg.darken(15) when light
+  footerLighten: 5, // was: chatBg.lighten(5) when dark
   footerBrighten: 5,
-  sidebarShift: 5,         // ulistcolor = footercolor ± 5
+  sidebarShift: 5, // ulistcolor = footercolor ± 5
   /** Input/raised fields are desaturated for legibility. */
-  inputDarken: 10,         // was: darken(10) on dark footers
-  inputBrighten: 30,       // was: brighten(30) on light footers
+  inputDarken: 10, // was: darken(10) on dark footers
+  inputBrighten: 30, // was: brighten(30) on light footers
   /** Hover/active feedback layers. */
   hoverShift: 8,
   activeShift: 14,
@@ -132,20 +132,14 @@ function liftAccent(bg: any, accent: any): any {
 
 // ─── Main ──────────────────────────────────────────────────────────────
 
-export function generateScheme(
-  baseColor: string,
-  options?: GenerateSchemeOptions,
-): BccColorScheme {
+export function generateScheme(baseColor: string, options?: GenerateSchemeOptions): BccColorScheme {
   const surface = tinycolor(baseColor);
   const darkMode = options?.darkMode ?? !surface.isLight();
 
   // ── Main text on surface ───────────────────────────────────────────
   // Monochromatic + analogous shades give mostReadable a smooth ramp; the
   // WCAG level guarantees 4.5:1 body text.
-  const text = pickReadable(
-    surface,
-    surface.monochromatic().concat(surface.analogous()),
-  );
+  const text = pickReadable(surface, surface.monochromatic().concat(surface.analogous()));
 
   // ── Footer tier (one step below surface) ───────────────────────────
   const footer = darkMode
@@ -173,10 +167,7 @@ export function generateScheme(
     sidebar,
     sidebar.monochromatic().concat(surface.monochromatic()),
   );
-  const textMuted = pickReadable(
-    footer,
-    surface.monochromatic().concat(surface.analogous()),
-  );
+  const textMuted = pickReadable(footer, surface.monochromatic().concat(surface.analogous()));
   // Placeholder is a softened input text (still legible).
   const textPlaceholder = textInput.clone();
 
@@ -199,10 +190,7 @@ export function generateScheme(
   // Away text = sidebar text desaturated and pushed toward the muted tier,
   // but kept AA-readable against the sidebar (a real color, not opacity —
   // opacity:.5 dropped below AA on low-contrast surfaces).
-  const textAway = pickReadable(
-    sidebar,
-    [textSidebar.clone().desaturate(60), textMuted.clone()],
-  );
+  const textAway = pickReadable(sidebar, [textSidebar.clone().desaturate(60), textMuted.clone()]);
 
   // ── Interaction layers ─────────────────────────────────────────────
   const surfaceHover = nudge(surface, STEP.hoverShift);

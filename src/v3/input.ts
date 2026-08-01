@@ -31,9 +31,7 @@ function placeholderFor(nick: string): string {
 // was untested originally, which is how the /o-under-superwhisper bug (C1)
 // slipped through. doSubmit is now a thin wrapper over this.
 
-export type SendDecision =
-  | { action: "send"; message: string }
-  | { action: "handled"; clear: true };
+export type SendDecision = { action: "send"; message: string } | { action: "handled"; clear: true };
 
 export function prepareMessage(rawMsg: string, whisperNick: string): SendDecision {
   const cmd = classifyMessage(rawMsg);
@@ -215,7 +213,7 @@ export function mountInput(): void {
   wiClose.setAttribute("aria-label", "Superwhisper beenden");
   wiClose.addEventListener("click", (e) => {
     e.stopPropagation();
-    superwhisper(""); // eslint-disable-line @typescript-eslint/no-floating-promises
+    superwhisper("");  
   });
   whisperIndicator.appendChild(wiClose);
   inputArea.appendChild(whisperIndicator);
@@ -228,7 +226,7 @@ export function mountInput(): void {
   textarea.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      doSubmit(); // eslint-disable-line @typescript-eslint/no-floating-promises
+      doSubmit();  
     }
   });
   inputArea.appendChild(textarea);

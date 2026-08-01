@@ -13,14 +13,11 @@ export function addAutoscrollBanner(iframeDoc: Document, iframeWin: Window): voi
     scrollbanner.style.display = "none";
   });
 
-  let lastScrollTop =
-    iframeWin.scrollY || iframeDoc.documentElement.scrollTop;
+  let lastScrollTop = iframeWin.scrollY || iframeDoc.documentElement.scrollTop;
 
   iframeWin.addEventListener("scroll", function () {
-    const scrollPosition =
-      iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
-    const maxScroll =
-      iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+    const scrollPosition = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
+    const maxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
 
     if (scrollPosition < lastScrollTop) {
       if ((iframeWin as any).scrolling && scrollPosition < maxScroll - 1) {

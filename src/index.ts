@@ -20,7 +20,7 @@ import { initV3 } from "./v3";
   cclog("Version: " + GM_info.script.version + " - " + window.location.href);
 
   // ─── window functions ───
-  var bettercc = (unsafeWindow.bettercc = {} as any);
+  unsafeWindow.bettercc = {} as any;
 
   // ─── MAIN CHAT ───
   if (/cpop.html/.test(window.location.href)) {

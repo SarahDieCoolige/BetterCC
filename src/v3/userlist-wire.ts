@@ -31,7 +31,6 @@ export function processUserlist(chaMy: string[], prev: User[]) {
  * after mountSidebar has subscribed.
  */
 export function overrideSetUinfo1(): void {
-  const upstream = (unsafeWindow as any).set_uinfo1;
   (unsafeWindow as any).set_uinfo1 = function () {
     const chaMy: string[] = (unsafeWindow as any).cha_my ?? [];
     const { newList, added, removed } = processUserlist(chaMy, prevList);

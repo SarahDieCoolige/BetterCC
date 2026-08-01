@@ -168,7 +168,7 @@
     chatframeReady = true;
     cclog("injectIntoChatframe: injection complete");
   }
-  function betterccOnWsMessage(ev) {
+  function betterccOnWsMessage(_ev) {
     if (!chatframeReady) {
       injectIntoChatframe();
     }
@@ -177,10 +177,7 @@
   }
   function attachWsListeners() {
     if (unsafeWindow.chatout_ws) {
-      unsafeWindow.chatout_ws.addEventListener(
-        "message",
-        betterccOnWsMessage
-      );
+      unsafeWindow.chatout_ws.addEventListener("message", betterccOnWsMessage);
       unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
     }
   }
@@ -1372,10 +1369,7 @@
   function generateScheme(baseColor, options) {
     const surface = tinycolor(baseColor);
     const darkMode = options?.darkMode ?? !surface.isLight();
-    const text = pickReadable(
-      surface,
-      surface.monochromatic().concat(surface.analogous())
-    );
+    const text = pickReadable(surface, surface.monochromatic().concat(surface.analogous()));
     const footer = darkMode ? surface.clone().lighten(STEP.footerLighten).brighten(STEP.footerBrighten) : surface.clone().darken(STEP.footerDarken).brighten(STEP.footerBrighten);
     const sidebar = nudge(footer, STEP.sidebarShift);
     const inputBase = darkMode ? footer.clone().darken(STEP.inputDarken) : footer.clone().brighten(STEP.inputBrighten);
@@ -1387,10 +1381,7 @@
       sidebar,
       sidebar.monochromatic().concat(surface.monochromatic())
     );
-    const textMuted = pickReadable(
-      footer,
-      surface.monochromatic().concat(surface.analogous())
-    );
+    const textMuted = pickReadable(footer, surface.monochromatic().concat(surface.analogous()));
     const textPlaceholder = textInput.clone();
     const icon = pickReadable(sidebar, surface.monochromatic(), true);
     const triad2 = surface.triad();
@@ -1398,10 +1389,7 @@
     const accentBan = liftAccent(surface, triad2[2]);
     const statusOnline = liftAccent(sidebar, tinycolor("#3aa55c"));
     const statusSep = liftAccent(sidebar, tinycolor("#d08a1e"));
-    const textAway = pickReadable(
-      sidebar,
-      [textSidebar.clone().desaturate(60), textMuted.clone()]
-    );
+    const textAway = pickReadable(sidebar, [textSidebar.clone().desaturate(60), textMuted.clone()]);
     const surfaceHover = nudge(surface, STEP.hoverShift);
     const surfaceActive = nudge(surface, STEP.activeShift);
     const border = surface.clone().darken(STEP.borderDarken);
@@ -1550,7 +1538,6 @@
     return { newList, added, removed };
   }
   function overrideSetUinfo1() {
-    const upstream = unsafeWindow.set_uinfo1;
     unsafeWindow.set_uinfo1 = function() {
       const chaMy2 = unsafeWindow.cha_my ?? [];
       const { newList, added, removed } = processUserlist(chaMy2, prevList);
@@ -1798,8 +1785,6 @@
     }
     const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
     const sorted = sortUsers(users, pinnedCache);
-    let pinnedInserted = 0;
-    let regularInserted = 0;
     for (const user of sorted) {
       const isPinned = pinnedCache.has(user.name);
       const target = isPinned ? pinnedUl : regularUl;
@@ -1829,10 +1814,9 @@
         rowMap.set(user.name, row);
       }
       target.appendChild(row);
-      if (isPinned) pinnedInserted++;
-      else regularInserted++;
     }
-    if (scrollContainer) scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
+    if (scrollContainer)
+      scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
     refreshSectionVisibility();
     if (onlineCount) onlineCount.textContent = users.length + " online";
     lastUserlistEvent = users;
@@ -2301,7 +2285,9 @@
   }
   function buildAutoscrollBtn() {
     const btn = iconBtn("fa-angle-double-down", "Autoscroll ein/aus", () => {
-      const cb2 = document.querySelector('form[name="OF"] input[name="AS"]');
+      const cb2 = document.querySelector(
+        'form[name="OF"] input[name="AS"]'
+      );
       if (cb2) cb2.click();
       btn.classList.toggle("bcc-active", cb2?.checked ?? false);
     });
@@ -2338,7 +2324,13 @@
     return wrap;
   }
   function buildChatActionsPill() {
-    return pill(2, "bcc-chat-actions", buildAutoscrollBtn(), trackReloadButton(buildReloadBtn()), buildColorSwatch());
+    return pill(
+      2,
+      "bcc-chat-actions",
+      buildAutoscrollBtn(),
+      trackReloadButton(buildReloadBtn()),
+      buildColorSwatch()
+    );
   }
   function buildBetterccPill() {
     const help = iconBtn("fa-question", "Hilfe", () => printHelp());
@@ -2468,7 +2460,7 @@
   (function() {
     "use strict";
     cclog("Version: " + GM_info.script.version + " - " + window.location.href);
-    var bettercc = unsafeWindow.bettercc = {};
+    unsafeWindow.bettercc = {};
     if (/cpop.html/.test(window.location.href)) {
       window.onunload = null;
       window.onbeforeunload = null;

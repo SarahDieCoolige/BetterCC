@@ -54,7 +54,10 @@ function buildRow(user: User): HTMLLIElement {
   // ONLY sep vs present; away/guest are not dot states (away recolors the
   // name; guest shows a 'gast' chip).
   const dot = document.createElement("i");
-  dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " +
+  dot.className =
+    "bcc-status-dot fas " +
+    statusDotClass(user) +
+    " " +
     (user.sep ? "fa-circle-half-stroke" : "fa-circle");
   dot.setAttribute("aria-hidden", "true");
   li.appendChild(dot);
@@ -210,8 +213,6 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
   //    it (preserving listeners), so this re-orders without rebuilding.
   const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
   const sorted = sortUsers(users, pinnedCache);
-  let pinnedInserted = 0;
-  let regularInserted = 0;
 
   for (const user of sorted) {
     const isPinned = pinnedCache.has(user.name);
@@ -225,7 +226,10 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
       row.className = getStatusClasses(user);
       const dot = row.querySelector(".bcc-status-dot");
       if (dot) {
-        dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " +
+        dot.className =
+          "bcc-status-dot fas " +
+          statusDotClass(user) +
+          " " +
           (user.sep ? "fa-circle-half-stroke" : "fa-circle");
       }
       const nameSpan = row.querySelector(".bcc-userrow-name");
@@ -256,13 +260,12 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
     // changed (e.g. a new user "Alice" sorted to the front was appended to
     // the end instead). The DOM move is O(1); always placing is cheap.
     target.appendChild(row);
-    if (isPinned) pinnedInserted++;
-    else regularInserted++;
   }
 
   // 3) Preserve scroll — we patched, not rebuilt, so the offset is stable.
   //    Clamp in case the list shrank past the current offset.
-  if (scrollContainer) scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
+  if (scrollContainer)
+    scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
   refreshSectionVisibility();
   if (onlineCount) onlineCount.textContent = users.length + " online";
   lastUserlistEvent = users;

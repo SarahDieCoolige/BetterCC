@@ -12,12 +12,7 @@
 
 import { describe, it, expect } from "vitest";
 import { generateScheme } from "../src/scheme";
-import {
-  schemeToCssVars,
-  schemeToStorage,
-  matchesStoredBase,
-  BCC_CSS_VARS,
-} from "../src/v3/theme";
+import { schemeToCssVars, schemeToStorage, matchesStoredBase, BCC_CSS_VARS } from "../src/v3/theme";
 
 // ─── 1. The --bcc-* name mapping (spec §6.1) ──────────────────────────────
 
@@ -80,11 +75,23 @@ describe("schemeToStorage — cache shape", () => {
     const stored = schemeToStorage(scheme);
     // Every role is preserved verbatim (the cache is the applied scheme).
     for (const role of [
-      "surface", "text", "surfaceRaised", "textRaised",
-      "surfaceInput", "textInput", "surfaceFooter",
-      "surfaceSidebar", "textSidebar", "textMuted", "textPlaceholder",
-      "icon", "accentWhisper", "accentBan",
-      "border", "surfaceHover", "surfaceActive",
+      "surface",
+      "text",
+      "surfaceRaised",
+      "textRaised",
+      "surfaceInput",
+      "textInput",
+      "surfaceFooter",
+      "surfaceSidebar",
+      "textSidebar",
+      "textMuted",
+      "textPlaceholder",
+      "icon",
+      "accentWhisper",
+      "accentBan",
+      "border",
+      "surfaceHover",
+      "surfaceActive",
     ] as const) {
       expect(stored[role]).toBe(scheme[role]);
     }

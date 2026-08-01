@@ -15,14 +15,7 @@
 import { getUserKey } from "../utils";
 
 /** Every known GM key (key name; user-scoping prefix is applied by getUserKey). */
-export const KNOWN_KEYS = [
-  "color",
-  "colorscheme",
-  "ban",
-  "pinned",
-  "whisper",
-  "bcc_v3",
-] as const;
+export const KNOWN_KEYS = ["color", "colorscheme", "ban", "pinned", "whisper", "bcc_v3"] as const;
 export type ConfigKey = (typeof KNOWN_KEYS)[number];
 
 /** Documented defaults, returned by getConfig when nothing is stored. */
@@ -39,18 +32,12 @@ export const DEFAULTS: Record<ConfigKey, unknown> = {
  * Read a config value (user-scoped). Returns the documented default when
  * nothing is stored (or the caller's fallback, if given).
  */
-export async function getConfig<T = unknown>(
-  key: ConfigKey,
-  fallback?: T,
-): Promise<T> {
+export async function getConfig<T = unknown>(key: ConfigKey, fallback?: T): Promise<T> {
   const def = fallback ?? (DEFAULTS[key] as unknown as T);
   return (await GM.getValue(getUserKey(key), def)) as T;
 }
 
 /** Write a config value (user-scoped). */
-export async function setConfig<T = unknown>(
-  key: ConfigKey,
-  value: T,
-): Promise<void> {
+export async function setConfig<T = unknown>(key: ConfigKey, value: T): Promise<void> {
   await GM.setValue(getUserKey(key), value);
 }

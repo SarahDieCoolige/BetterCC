@@ -1,6 +1,6 @@
 // ─── WebSocket lifecycle hooks ───
 
-import { cclog, getChatDoc, getChatWin, applyThemeToIframe } from "./utils";
+import { cclog, getChatDoc, getChatWin } from "./utils";
 import { addAutoscrollBanner } from "./chat";
 
 export let chatframeReady: boolean = false;
@@ -70,7 +70,7 @@ export function injectIntoChatframe(): void {
   cclog("injectIntoChatframe: injection complete");
 }
 
-export function betterccOnWsMessage(ev: Event): void {
+export function betterccOnWsMessage(_ev: Event): void {
   if (!chatframeReady) {
     injectIntoChatframe();
   }
@@ -82,10 +82,7 @@ export function betterccOnWsClose(): void {
 
 export function attachWsListeners(): void {
   if (unsafeWindow.chatout_ws) {
-    unsafeWindow.chatout_ws.addEventListener(
-      "message",
-      betterccOnWsMessage
-    );
+    unsafeWindow.chatout_ws.addEventListener("message", betterccOnWsMessage);
     unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
   }
 }

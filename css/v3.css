@@ -81,7 +81,13 @@
    * Variable fall back to the generic humanist sans). No webfont shipped — the
    * rounded forms from the OS-native rounds give the cozy vibe; the generic
    * fallback keeps it clean where those aren't installed. */
-  font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-family:
+    "Segoe UI Variable",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    Roboto,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
@@ -134,7 +140,9 @@
   cursor: pointer;
   max-width: 160px; /* long channel names (e.g. "Fortysomething") shouldn't crowd the reload button */
 }
-.bcc-channel-select:hover { background: var(--bcc-surface-hover); }
+.bcc-channel-select:hover {
+  background: var(--bcc-surface-hover);
+}
 .bcc-channel-select:focus-visible {
   outline: 2px solid var(--bcc-accent-whisper);
   outline-offset: -2px;
@@ -151,8 +159,12 @@
   line-height: 1;
   cursor: pointer;
 }
-.bcc-reload:hover { background: var(--bcc-surface-hover); }
-.bcc-reload:active { background: var(--bcc-surface-active); }
+.bcc-reload:hover {
+  background: var(--bcc-surface-hover);
+}
+.bcc-reload:active {
+  background: var(--bcc-surface-active);
+}
 
 .bcc-sidebar {
   grid-area: sidebar;
@@ -187,29 +199,35 @@
  * Clean rewrite of the old #u_stats bar — no v2 code copied. */
 .bcc-stats {
   display: flex;
-  justify-content: center;   /* chips centered as a group above the userlist */
+  justify-content: center; /* chips centered as a group above the userlist */
   gap: 10px;
   padding: 4px 4px 10px;
   margin-bottom: 4px;
   border-bottom: 1px solid var(--bcc-border);
 }
 .bcc-stat {
-  position: relative;        /* anchor for the corner count badge */
+  position: relative; /* anchor for the corner count badge */
   display: inline-flex;
   align-items: center;
-  justify-content: center;   /* icon dead-center inside the chip */
+  justify-content: center; /* icon dead-center inside the chip */
   width: 38px;
   height: 38px;
   border-radius: 10px;
   color: var(--bcc-text-sidebar);
   text-decoration: none;
-  font-size: 17px;           /* the icon glyph */
+  font-size: 17px; /* the icon glyph */
   background: var(--bcc-surface-hover);
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.08s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.08s ease;
 }
-.bcc-stat:hover { background: var(--bcc-surface-active); }
-.bcc-stat:active { transform: scale(0.94); }
+.bcc-stat:hover {
+  background: var(--bcc-surface-active);
+}
+.bcc-stat:active {
+  transform: scale(0.94);
+}
 .bcc-stat:focus-visible {
   outline: 2px solid var(--bcc-accent-whisper);
   outline-offset: -2px;
@@ -298,8 +316,12 @@
   margin: 1px 2px;
   transition: background 0.12s ease;
 }
-.bcc-userrow:hover { background: var(--bcc-surface-hover); }
-.bcc-userrow:active { background: var(--bcc-surface-active); }
+.bcc-userrow:hover {
+  background: var(--bcc-surface-hover);
+}
+.bcc-userrow:active {
+  background: var(--bcc-surface-active);
+}
 /* R4: keyboard focus indicator for the role=button rows. */
 .bcc-userrow:focus-visible {
   outline: 2px solid var(--bcc-accent-whisper);
@@ -319,9 +341,14 @@
   text-align: center;
   color: var(--bcc-status-online);
 }
-.bcc-status-dot.bcc-dot-sep { color: var(--bcc-status-sep); }
+.bcc-status-dot.bcc-dot-sep {
+  color: var(--bcc-status-sep);
+}
 
-.bcc-userrow-name { user-select: none; font-weight: 600; }
+.bcc-userrow-name {
+  user-select: none;
+  font-weight: 600;
+}
 /* 'gast' chip — a small pill after the name marking guest tier. Uses the
  * sidebar text on a raised surface for guaranteed contrast (the old
  * surface-active/text-muted pair had no enforced AA between them). */
@@ -358,7 +385,7 @@
   grid-area: main;
   /* chatframe fills the main area; it's already width/height 100% upstream */
   display: flex;
-  min-height: 0;        /* allow the grid track to shrink, iframe to fill */
+  min-height: 0; /* allow the grid track to shrink, iframe to fill */
   min-width: 0;
 }
 .bcc-main > #chatframe {
@@ -451,8 +478,12 @@
 /* Bare .bcc-pill = single centered column (children stack vertically); the
    -N variants add N columns so children flow into rows of N (the last partial
    row centers via justify-items: center on the container). Mirrors v2. */
-.bcc-pill-2 { grid-template-columns: repeat(2, auto); }
-.bcc-pill-3 { grid-template-columns: repeat(3, auto); }
+.bcc-pill-2 {
+  grid-template-columns: repeat(2, auto);
+}
+.bcc-pill-3 {
+  grid-template-columns: repeat(3, auto);
+}
 
 /* Chat-actions pill: the local color picker spans the full width and centers
    below the autoscroll + reload row (v2 parity). */
@@ -481,7 +512,11 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.08s ease, opacity 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.08s ease,
+    opacity 0.15s ease,
+    color 0.15s ease;
 }
 .bcc-icon-btn:hover {
   background: rgba(255, 255, 255, 0.18);
@@ -517,14 +552,30 @@
   font-family: "Font Awesome 6 Free";
   font-weight: 900;
 }
-.bcc-icon-btn.b1::before  { content: "\f059"; } /* fa-question-circle: Hilfe */
-.bcc-icon-btn.b2::before  { content: "\e552"; } /* away */
-.bcc-icon-btn.b3::before  { content: "\e551"; } /* awayoff */
-.bcc-icon-btn.b5::before  { content: "\f0f3"; } /* fa-bell: sysmsg on */
-.bcc-icon-btn.b6::before  { content: "\f1f6"; } /* fa-bell-slash: sysmsg off */
-.bcc-icon-btn.b7::before  { content: "\f2f5"; } /* fa-sign-out-alt: exit */
-.bcc-icon-btn.b15::before { content: "\f086"; } /* fa-comments: forum */
-.bcc-icon-btn.b16::before { content: "\f2c2"; } /* fa-id-card: ID */
+.bcc-icon-btn.b1::before {
+  content: "\f059";
+} /* fa-question-circle: Hilfe */
+.bcc-icon-btn.b2::before {
+  content: "\e552";
+} /* away */
+.bcc-icon-btn.b3::before {
+  content: "\e551";
+} /* awayoff */
+.bcc-icon-btn.b5::before {
+  content: "\f0f3";
+} /* fa-bell: sysmsg on */
+.bcc-icon-btn.b6::before {
+  content: "\f1f6";
+} /* fa-bell-slash: sysmsg off */
+.bcc-icon-btn.b7::before {
+  content: "\f2f5";
+} /* fa-sign-out-alt: exit */
+.bcc-icon-btn.b15::before {
+  content: "\f086";
+} /* fa-comments: forum */
+.bcc-icon-btn.b16::before {
+  content: "\f2c2";
+} /* fa-id-card: ID */
 /* Hide the inner <i> when a bN glyph is defined above (avoid double icon). */
 .bcc-icon-btn.b1 > i,
 .bcc-icon-btn.b2 > i,
@@ -533,7 +584,9 @@
 .bcc-icon-btn.b6 > i,
 .bcc-icon-btn.b7 > i,
 .bcc-icon-btn.b15 > i,
-.bcc-icon-btn.b16 > i { display: none; }
+.bcc-icon-btn.b16 > i {
+  display: none;
+}
 
 /* ─── Color circle buttons (presets + picker wrap) ─── */
 .bcc-color-btn {
@@ -558,16 +611,32 @@
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.25);
 }
-.bcc-color-btn:hover { transform: scale(1.15); }
-.bcc-color-btn:active { transform: scale(0.92); }
+.bcc-color-btn:hover {
+  transform: scale(1.15);
+}
+.bcc-color-btn:active {
+  transform: scale(0.92);
+}
 
 /* Preset nick colors (upstream color_set — server-side nick color). */
-.bcc-color-btn.b8::after  { background-color: #AAAA00; }
-.bcc-color-btn.b10::after { background-color: #AA0000; }
-.bcc-color-btn.b11::after { background-color: #AA00AA; }
-.bcc-color-btn.b12::after { background-color: #00AAAA; }
-.bcc-color-btn.b13::after { background-color: #00AA00; }
-.bcc-color-btn.b14::after { background-color: #0000AA; }
+.bcc-color-btn.b8::after {
+  background-color: #aaaa00;
+}
+.bcc-color-btn.b10::after {
+  background-color: #aa0000;
+}
+.bcc-color-btn.b11::after {
+  background-color: #aa00aa;
+}
+.bcc-color-btn.b12::after {
+  background-color: #00aaaa;
+}
+.bcc-color-btn.b13::after {
+  background-color: #00aa00;
+}
+.bcc-color-btn.b14::after {
+  background-color: #0000aa;
+}
 
 /* Local-theme color picker — a color circle whose dot is the current theme
    color. The native <input type=color> is layered invisibly over the circle. */
@@ -651,7 +720,9 @@
       "main"
       "chatbar";
   }
-  .bcc-sidebar { display: none; }
+  .bcc-sidebar {
+    display: none;
+  }
 }
 
 /* ─── User popup (R1) ─── */
@@ -692,9 +763,15 @@
   text-align: center;
   color: var(--bcc-text-muted);
 }
-.bcc-popup-action:hover > i { color: var(--bcc-text-raised); }
-.bcc-popup-action:hover { background: var(--bcc-surface-hover); }
-.bcc-popup-action:active { background: var(--bcc-surface-active); }
+.bcc-popup-action:hover > i {
+  color: var(--bcc-text-raised);
+}
+.bcc-popup-action:hover {
+  background: var(--bcc-surface-hover);
+}
+.bcc-popup-action:active {
+  background: var(--bcc-surface-active);
+}
 .bcc-popup-action:focus-visible {
   outline: 2px solid var(--bcc-accent-whisper);
   outline-offset: -2px;

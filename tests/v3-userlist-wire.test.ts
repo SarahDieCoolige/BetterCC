@@ -7,7 +7,7 @@
 // here (no jsdom); verified manually per the task's Playwright verify step.
 
 import { describe, it, expect } from "vitest";
-import { parseUserlist, diffUserlists, type User } from "../src/v3/userlist";
+import { parseUserlist, type User } from "../src/v3/userlist";
 import { processUserlist } from "../src/v3/userlist-wire";
 
 describe("processUserlist — parse + diff, the set_uinfo1 core", () => {
@@ -32,10 +32,7 @@ describe("processUserlist — parse + diff, the set_uinfo1 core", () => {
 
   it("detects a join: new user appears (Alice leaves, Charlie joins)", () => {
     const first = parseUserlist(["Alice", "hR", "Bob", "hR", ""]);
-    const result = processUserlist(
-      ["Bob", "hR", "Charlie", "hR", ""],
-      first,
-    );
+    const result = processUserlist(["Bob", "hR", "Charlie", "hR", ""], first);
     expect(result.newList).toHaveLength(2);
     expect(result.added).toEqual(["Charlie"]);
     expect(result.removed).toEqual(["Alice"]);
@@ -43,19 +40,14 @@ describe("processUserlist — parse + diff, the set_uinfo1 core", () => {
 
   it("detects a leave: user is gone", () => {
     const prev = parseUserlist(["Alice", "hR", "Bob", "hR", "Charlie", "hR", ""]);
-    const result = processUserlist(
-      ["Alice", "hR", "Charlie", "hR", ""],
-      prev,
-    );
+    const result = processUserlist(["Alice", "hR", "Charlie", "hR", ""], prev);
     expect(result.newList).toHaveLength(2);
     expect(result.added).toEqual([]);
     expect(result.removed).toEqual(["Bob"]);
   });
 
   it("status change (away ↔ present) is NOT reported as add or remove", () => {
-    const online: User[] = [
-      { name: "X", registered: true, guest: false, sep: false, away: false },
-    ];
+    const online: User[] = [{ name: "X", registered: true, guest: false, sep: false, away: false }];
     const result = processUserlist(["X", "hRA", ""], online);
     // User "X" went away — diffUserlists keys by name, so no add/remove.
     expect(result.added).toEqual([]);

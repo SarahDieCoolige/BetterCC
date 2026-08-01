@@ -6,9 +6,7 @@ describe("patchAwayTimer (O1)", () => {
 
   it("adds the /w clause to the away-timer condition", () => {
     const src =
-      'function f(){var msg=document.hold.OUT1.value;' +
-      needle +
-      "resetAway();}else{}delout();}";
+      "function f(){var msg=document.hold.OUT1.value;" + needle + "resetAway();}else{}delout();}";
     const out = patchAwayTimer(src);
     expect(out).toContain('msg.indexOf("/w ")==0');
     // Original structure preserved — only the condition gains the || clause.

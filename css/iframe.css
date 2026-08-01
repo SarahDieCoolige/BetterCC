@@ -5,7 +5,10 @@
 }
 
 * {
-  transition: color 0.4s ease-out, background 0.4s ease-out, background-color 0.4s ease-out;
+  transition:
+    color 0.4s ease-out,
+    background 0.4s ease-out,
+    background-color 0.4s ease-out;
 }
 
 html {
@@ -19,7 +22,6 @@ font[color] {
 /* font[size="-1"] > font[color="#800000"] {
   color: var(--hightlightText) !important;
 } */
-
 
 ::-webkit-scrollbar {
   background-color: #171b1c;
@@ -52,7 +54,8 @@ table.helpTable {
 }
 
 table.helpTable td,
-table.helpTable th {}
+table.helpTable th {
+}
 
 table.helpTable tbody td {
   font-size: 0.7em;

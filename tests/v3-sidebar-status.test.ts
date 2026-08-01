@@ -80,8 +80,6 @@ describe("getStatusClasses — CSS class list for a user row", () => {
   });
 
   it("adds both modifiers when both flags are set (order: away then sep)", () => {
-    expect(getStatusClasses(user({ sep: true, away: true }))).toBe(
-      "bcc-userrow bcc-away bcc-sep",
-    );
+    expect(getStatusClasses(user({ sep: true, away: true }))).toBe("bcc-userrow bcc-away bcc-sep");
   });
 });

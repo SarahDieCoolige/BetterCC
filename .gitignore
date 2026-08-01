@@ -17,4 +17,9 @@
 !tests/
 !tests/**
 
+# Formatter / linter
+!.prettierrc
+!.prettierignore
+!eslint.config.mjs
+
 node_modules/

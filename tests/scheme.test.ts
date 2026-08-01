@@ -15,10 +15,7 @@ import { generateScheme, type BccColorScheme } from "../src/scheme";
 function contrastRatio(hexA: string, hexB: string): number {
   return tinycolorFactory(hexA).toRgbString() === ""
     ? -1
-    : (tinycolorFactory.readability(
-        tinycolorFactory(hexA),
-        tinycolorFactory(hexB),
-      ) as number);
+    : (tinycolorFactory.readability(tinycolorFactory(hexA), tinycolorFactory(hexB)) as number);
 }
 
 /** WCAG AA for body text is 4.5:1; large/icon text is 3:1. */
@@ -31,16 +28,23 @@ describe("generateScheme — output shape", () => {
   it("returns every --bcc-* role", () => {
     const s = generateScheme("6AAED8");
     const keys: (keyof BccColorScheme)[] = [
-      "surface", "text",
-      "surfaceRaised", "textRaised",
-      "surfaceInput", "textInput",
+      "surface",
+      "text",
+      "surfaceRaised",
+      "textRaised",
+      "surfaceInput",
+      "textInput",
       "surfaceFooter",
-      "surfaceSidebar", "textSidebar",
-      "textMuted", "textPlaceholder",
+      "surfaceSidebar",
+      "textSidebar",
+      "textMuted",
+      "textPlaceholder",
       "icon",
-      "accentWhisper", "accentBan",
+      "accentWhisper",
+      "accentBan",
       "border",
-      "surfaceHover", "surfaceActive",
+      "surfaceHover",
+      "surfaceActive",
       "bgHex",
     ];
     for (const k of keys) {
@@ -154,8 +158,13 @@ describe("generateScheme — userlist status colors", () => {
     // into green/amber sidebars; deriving via liftAccent(sidebar, …) fixes that.
     for (const base of ["6AAED8", "AA0000", "3A5FCD", "FFD700", "2E8B57"]) {
       const s = generateScheme(base);
-      expect(contrastRatio(s.surfaceSidebar, s.statusOnline), `online@${base}`).toBeGreaterThanOrEqual(AA_LARGE);
-      expect(contrastRatio(s.surfaceSidebar, s.statusSep), `sep@${base}`).toBeGreaterThanOrEqual(AA_LARGE);
+      expect(
+        contrastRatio(s.surfaceSidebar, s.statusOnline),
+        `online@${base}`,
+      ).toBeGreaterThanOrEqual(AA_LARGE);
+      expect(contrastRatio(s.surfaceSidebar, s.statusSep), `sep@${base}`).toBeGreaterThanOrEqual(
+        AA_LARGE,
+      );
     }
   });
 
@@ -164,7 +173,9 @@ describe("generateScheme — userlist status colors", () => {
     // surfaces. textAway is a derived real color guaranteed AA-readable.
     for (const base of ["6AAED8", "AA0000", "3A5FCD"]) {
       const s = generateScheme(base);
-      expect(contrastRatio(s.surfaceSidebar, s.textAway), `away@${base}`).toBeGreaterThanOrEqual(AA_TEXT);
+      expect(contrastRatio(s.surfaceSidebar, s.textAway), `away@${base}`).toBeGreaterThanOrEqual(
+        AA_TEXT,
+      );
     }
   });
 });

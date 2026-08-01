@@ -90,7 +90,10 @@ export function schemeToStorage(scheme: BccColorScheme): StoredScheme {
  * picker input may be lowercase). `null`/`undefined` (nothing cached yet, or
  * first run after a flag flip) → regenerate.
  */
-export function matchesStoredBase(stored: StoredScheme | null | undefined, baseHex: string): boolean {
+export function matchesStoredBase(
+  stored: StoredScheme | null | undefined,
+  baseHex: string,
+): boolean {
   if (!stored || typeof stored.bgHex !== "string") return false;
   return stored.bgHex.toUpperCase() === baseHex.toUpperCase();
 }

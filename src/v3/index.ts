@@ -33,7 +33,7 @@
 //     ws-hook.ts's injectIntoChatframe re-applies the --bcc-* scheme (not the
 //     old --chatX engine) on reconnect.
 
-  import { cclog, getUserKey } from "../utils";
+import { cclog, getUserKey } from "../utils";
 import { hookChatoutConnect } from "../ws-hook";
 import { buildShell, reloadChat } from "./shell";
 import { loadTheme, applyScheme } from "./theme";

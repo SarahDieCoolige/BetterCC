@@ -45,7 +45,12 @@ function onKeydown(e: KeyboardEvent): void {
 /** A popup action button: a theme-aware Font Awesome icon + a text label.
  *  The icon inherits the popup's text color (--bcc-text-raised), so it recolors
  *  with the theme — no fixed emoji that ignores the color scheme. */
-function actionBtn(iconClass: string, label: string, title: string, onClick: () => void): HTMLButtonElement {
+function actionBtn(
+  iconClass: string,
+  label: string,
+  title: string,
+  onClick: () => void,
+): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "bcc-popup-action";
@@ -79,7 +84,7 @@ export function openUserPopup(
   anchor: HTMLElement,
   user: User,
   isPinned: boolean,
-  onTogglePin: (user: User) => void
+  onTogglePin: (user: User) => void,
 ): void {
   closePopup(); // only one at a time
 
@@ -100,8 +105,10 @@ export function openUserPopup(
       isPinned ? "fa-thumbtack-slash" : "fa-thumbtack",
       isPinned ? "Angeheftet entfernen" : "Anheften",
       "Benutzer anheften",
-      () => { onTogglePin(user); },
-    )
+      () => {
+        onTogglePin(user);
+      },
+    ),
   );
 
   // Superwhisper (persistent) — toggles via the exposed API
@@ -109,7 +116,7 @@ export function openUserPopup(
     actionBtn("fa-comment-dots", "Superwhisper", "Dauerhaft an " + user.name + " flüstern", () => {
       const api = (unsafeWindow as any).bettercc;
       if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
-    })
+    }),
   );
 
   // One-shot whisper — prefill the textarea with "/w <nick> " and focus it.
@@ -119,21 +126,21 @@ export function openUserPopup(
     actionBtn("fa-paper-plane", "Flüstern (1×)", "Einmal an " + user.name + " flüstern", () => {
       const api = (unsafeWindow as any).bettercc;
       if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
-    })
+    }),
   );
 
   // Ignore (superban) — T12
   popup.appendChild(
     actionBtn("fa-ban", "Ignorieren", "Benutzer ignorieren (T12)", () => {
       cclog("user popup: ignore stubbed (T12) — " + user.name, "v3");
-    })
+    }),
   );
 
   // ID — T13
   popup.appendChild(
     actionBtn("fa-id-card", "ID", "ID von " + user.name + " anzeigen (T13)", () => {
       cclog("user popup: /id stubbed (T13) — " + user.name, "v3");
-    })
+    }),
   );
 
   // Mount inside .bcc-shell (NOT document.body) so the popup inherits the

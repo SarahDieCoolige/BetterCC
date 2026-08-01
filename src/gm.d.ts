@@ -15,7 +15,10 @@ declare namespace GM {
   function setValue(key: string, value: any): Promise<void>;
   function getValue(key: string, defaultValue?: any): Promise<any>;
   function listValues(): Promise<string[]>;
-  function addValueChangeListener(key: string, callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void): number;
+  function addValueChangeListener(
+    key: string,
+    callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void,
+  ): number;
 }
 
 declare function GM_setValue(key: string, value: any): void;
@@ -24,7 +27,10 @@ declare function GM_getResourceText(name: string): string | undefined;
 declare function GM_addStyle(css: string): void;
 declare function GM_addElement(tag: string, attributes: Record<string, string>): void;
 declare function GM_xmlhttpRequest(details: any): void;
-declare function GM_addValueChangeListener(key: string, callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void): number;
+declare function GM_addValueChangeListener(
+  key: string,
+  callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void,
+): number;
 
 declare var GM_info: {
   script: {

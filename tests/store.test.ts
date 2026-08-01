@@ -5,11 +5,7 @@
 // UI components subscribe() and re-render on emit(); this pins the bus contract.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  subscribe,
-  emit,
-  type BccEvent,
-} from "../src/v3/store";
+import { subscribe, emit, type BccEvent } from "../src/v3/store";
 
 // A couple of concrete event shapes the bus must carry (spec §2.2). The union
 // is open in the impl, but these are the ones the data layer emits.

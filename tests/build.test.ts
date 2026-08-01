@@ -38,12 +38,12 @@ describe("build output", () => {
     expect(content).not.toContain("showIdPopup");
 
     // ── Key feature string markers (string literals survive bundling) ───────
-    expect(content).toContain("autoscroll-banner");      // autoscroll banner element
-    expect(content).toContain("Superwhisper");            // superwhisper feature
-    expect(content).toContain("Du chattest mit allen");   // input placeholder
-    expect(content).toContain("chatout_connect");         // WebSocket hook
-    expect(content).toContain("injectIntoChatframe");     // function name in log strings
-    expect(content).toContain("chatout_auth_dead");       // upstream global usage
+    expect(content).toContain("autoscroll-banner"); // autoscroll banner element
+    expect(content).toContain("Superwhisper"); // superwhisper feature
+    expect(content).toContain("Du chattest mit allen"); // input placeholder
+    expect(content).toContain("chatout_connect"); // WebSocket hook
+    expect(content).toContain("injectIntoChatframe"); // function name in log strings
+    expect(content).toContain("chatout_auth_dead"); // upstream global usage
 
     // ── tinycolor2 is bundled, not @required ───────────────────────────────
     // The CDN @require was dropped; tinycolor arrives via the npm import in

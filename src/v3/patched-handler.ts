@@ -27,7 +27,7 @@ export function patchAwayTimer(onSubmitOrigStr: string): string {
     throw new Error(
       "patchAwayTimer: upstream onsubmit needle not found — the away-timer " +
         'condition changed upstream; "/w" messages will no longer reset the ' +
-        "away timer. Inspect the hold form's onsubmit and update AWAY_TIMER_NEEDLE."
+        "away timer. Inspect the hold form's onsubmit and update AWAY_TIMER_NEEDLE.",
     );
   }
   // String.replace(string, string) replaces the first occurrence — there is
@@ -43,7 +43,7 @@ export function patchAwayTimer(onSubmitOrigStr: string): string {
  * @param holdForm  the relocated <form name="hold"> (a <body> child under v3)
  */
 export function buildPatchedHandler(
-  holdForm: HTMLFormElement | null
+  holdForm: HTMLFormElement | null,
 ): ((...args: any[]) => any) | null {
   const raw = holdForm?.getAttribute("onsubmit") || "";
   if (!raw) return null;

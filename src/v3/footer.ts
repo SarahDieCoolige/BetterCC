@@ -102,7 +102,9 @@ function buildAccountPill(): HTMLElement {
 
 function buildAutoscrollBtn(): HTMLButtonElement {
   const btn = iconBtn("fa-angle-double-down", "Autoscroll ein/aus", () => {
-    const cb = document.querySelector('form[name="OF"] input[name="AS"]') as HTMLInputElement | null;
+    const cb = document.querySelector(
+      'form[name="OF"] input[name="AS"]',
+    ) as HTMLInputElement | null;
     if (cb) cb.click();
     btn.classList.toggle("bcc-active", cb?.checked ?? false);
   });
@@ -153,7 +155,13 @@ function buildColorSwatch(): HTMLElement {
 function buildChatActionsPill(): HTMLElement {
   // 2-column pill (autoscroll + reload on row 1); the color picker spans the
   // full width centered on row 2 via the .bcc-chat-actions rule in v3.css.
-  return pill(2, "bcc-chat-actions", buildAutoscrollBtn(), trackReloadButton(buildReloadBtn()), buildColorSwatch());
+  return pill(
+    2,
+    "bcc-chat-actions",
+    buildAutoscrollBtn(),
+    trackReloadButton(buildReloadBtn()),
+    buildColorSwatch(),
+  );
 }
 
 // ─── Group 3: BetterCC (help + settings) ───────────────────────────────────
@@ -268,7 +276,7 @@ export function mountFooter(): void {
     buildBetterccPill(),
     buildPresetColorPill(),
     buildLinksPill(),
-    buildExitBtn()
+    buildExitBtn(),
   );
 
   // R3: also track the header reload button so setstatus colors it too.

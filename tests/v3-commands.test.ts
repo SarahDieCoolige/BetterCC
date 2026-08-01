@@ -8,11 +8,7 @@
 // The onSubmit handler + DOM send contract are untestable here (no jsdom/globals).
 
 import { describe, it, expect } from "vitest";
-import {
-  classifyMessage,
-  rewriteForWhisper,
-  type CommandResult,
-} from "../src/v3/commands";
+import { classifyMessage, rewriteForWhisper } from "../src/v3/commands";
 
 // ─── classifyMessage: command dispatch ──────────────────────────────────────
 
@@ -33,22 +29,50 @@ describe("classifyMessage — command dispatch", () => {
   });
 
   it("/sw nick → handled as superwhisper with extracted nick", () => {
-    expect(classifyMessage("/sw Sariam")).toEqual({ handled: true, type: "superwhisper", nick: "Sariam" });
-    expect(classifyMessage("/superwhisper TestUser")).toEqual({ handled: true, type: "superwhisper", nick: "TestUser" });
+    expect(classifyMessage("/sw Sariam")).toEqual({
+      handled: true,
+      type: "superwhisper",
+      nick: "Sariam",
+    });
+    expect(classifyMessage("/superwhisper TestUser")).toEqual({
+      handled: true,
+      type: "superwhisper",
+      nick: "TestUser",
+    });
     // Only first word after /sw is the nick.
-    expect(classifyMessage("/sw Multi Word")).toEqual({ handled: true, type: "superwhisper", nick: "Multi" });
+    expect(classifyMessage("/sw Multi Word")).toEqual({
+      handled: true,
+      type: "superwhisper",
+      nick: "Multi",
+    });
   });
 
   it("/o msg → handled as open-msg with parsed message", () => {
-    expect(classifyMessage("/o Hello all")).toEqual({ handled: true, type: "open-msg", message: "Hello all" });
-    expect(classifyMessage("/open Hi there")).toEqual({ handled: true, type: "open-msg", message: "Hi there" });
+    expect(classifyMessage("/o Hello all")).toEqual({
+      handled: true,
+      type: "open-msg",
+      message: "Hello all",
+    });
+    expect(classifyMessage("/open Hi there")).toEqual({
+      handled: true,
+      type: "open-msg",
+      message: "Hi there",
+    });
   });
 
   it("/sb nick → handled as superban with extracted nick (stubbed — T12)", () => {
     // classifyMessage returns superban, but the caller (mountInput) is
     // responsible for wiring bettercc.superban() or stubbing it for T8.
-    expect(classifyMessage("/sb Wendigo")).toEqual({ handled: true, type: "superban", nick: "Wendigo" });
-    expect(classifyMessage("/superban Someone")).toEqual({ handled: true, type: "superban", nick: "Someone" });
+    expect(classifyMessage("/sb Wendigo")).toEqual({
+      handled: true,
+      type: "superban",
+      nick: "Wendigo",
+    });
+    expect(classifyMessage("/superban Someone")).toEqual({
+      handled: true,
+      type: "superban",
+      nick: "Someone",
+    });
   });
 
   it("/id → handled as id-popup (stubbed — T13)", () => {
@@ -72,7 +96,10 @@ describe("classifyMessage — command dispatch", () => {
 
   it("ignores /w and /me — pass-through to send contract", () => {
     // These are handled by the upstream send handler, not BetterCC.
-    expect(classifyMessage("/w TestUser hi")).toEqual({ handled: false, message: "/w TestUser hi" });
+    expect(classifyMessage("/w TestUser hi")).toEqual({
+      handled: false,
+      message: "/w TestUser hi",
+    });
     expect(classifyMessage("/me waves")).toEqual({ handled: false, message: "/me waves" });
   });
 });

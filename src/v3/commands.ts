@@ -50,7 +50,10 @@ export function classifyMessage(mymsg: string): CommandResult {
 
   // /id — stub in T8, real popup in T13
   if (idMsgCmdRegex.test(lower)) {
-    let name = mymsg.replace(idMsgArgRegex, "").replace(/^\/id$/i, "").trim();
+    let name = mymsg
+      .replace(idMsgArgRegex, "")
+      .replace(/^\/id$/i, "")
+      .trim();
     return { handled: true, type: "id", name };
   }
 

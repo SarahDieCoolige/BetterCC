@@ -10,12 +10,7 @@
 // (override set_uinfo1, emit) is a thin shim, not unit-tested here.
 
 import { describe, it, expect } from "vitest";
-import {
-  parseUserlist,
-  diffUserlists,
-  sortUsers,
-  type User,
-} from "../src/v3/userlist";
+import { parseUserlist, diffUserlists, sortUsers, type User } from "../src/v3/userlist";
 
 // ─── parseUserlist ─────────────────────────────────────────────────────────
 
@@ -50,7 +45,13 @@ describe("parseUserlist — cha_my flat array → User[]", () => {
     expect(users[0]).toMatchObject({ name: "Mod", registered: true, sep: true });
     expect(users[1]).toMatchObject({ name: "AwayOne", registered: true, away: true });
     // "hSA" has the guest tier "h" without registered "R" → guest; sep + away too.
-    expect(users[2]).toMatchObject({ name: "SepAway", guest: true, registered: false, sep: true, away: true });
+    expect(users[2]).toMatchObject({
+      name: "SepAway",
+      guest: true,
+      registered: false,
+      sep: true,
+      away: true,
+    });
   });
 
   it("returns [] for an empty or terminator-only array", () => {
@@ -99,7 +100,9 @@ describe("diffUserlists — {added, removed} by name", () => {
   });
 
   it("diffs by name regardless of status changes (status is re-rendered, not a diff key)", () => {
-    const oldList: User[] = [{ name: "X", registered: true, guest: false, sep: false, away: false }];
+    const oldList: User[] = [
+      { name: "X", registered: true, guest: false, sep: false, away: false },
+    ];
     const newList: User[] = [{ name: "X", registered: true, guest: false, sep: false, away: true }];
     const d = diffUserlists(oldList, newList);
     expect(d.added).toEqual([]);
@@ -111,7 +114,23 @@ describe("diffUserlists — {added, removed} by name", () => {
 
 describe("sortUsers — German-umlaut sort with pinned-to-top", () => {
   it("sorts names alphabetically with German locale (ä/ö/ü near their base vowel)", () => {
-    const users = parseUserlist(["Zebra", "hR", "Aaron", "hR", "Ägid", "hR", "Ober", "hR", "Öster", "hR", "Maus", "hR", "über", "hR", ""]);
+    const users = parseUserlist([
+      "Zebra",
+      "hR",
+      "Aaron",
+      "hR",
+      "Ägid",
+      "hR",
+      "Ober",
+      "hR",
+      "Öster",
+      "hR",
+      "Maus",
+      "hR",
+      "über",
+      "hR",
+      "",
+    ]);
     const sorted = sortUsers(users, new Set()).map((u) => u.name);
     // German DIN-style: ä≈a, ö≈o, ü≈u — Ägid follows Aaron, Öster follows Ober, über follows u-base.
     expect(sorted).toEqual(["Aaron", "Ägid", "Maus", "Ober", "Öster", "über", "Zebra"]);
@@ -119,7 +138,12 @@ describe("sortUsers — German-umlaut sort with pinned-to-top", () => {
 
   it("is case-insensitive", () => {
     const users = parseUserlist(["bob", "hR", "Alice", "hR", "charlie", "hR", "Beta", "hR", ""]);
-    expect(sortUsers(users, new Set()).map((u) => u.name)).toEqual(["Alice", "Beta", "bob", "charlie"]);
+    expect(sortUsers(users, new Set()).map((u) => u.name)).toEqual([
+      "Alice",
+      "Beta",
+      "bob",
+      "charlie",
+    ]);
   });
 
   it("pinned users sort to the very top, ahead of all unpinned", () => {
