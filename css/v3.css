@@ -71,7 +71,7 @@
     "main     sidebar"
     "chatbar  chatbar";
   height: 100vh;
-  width: 100%; /* not 100vw — that includes the scrollbar gutter and can overflow horizontally */
+  width: 100%;
   background: var(--bcc-surface);
   color: var(--bcc-text);
   /* Warmer humanist stack: rounded system fonts first (Nunito Sans / Segoe UI
@@ -156,7 +156,7 @@
   background: var(--bcc-surface-raised);
   color: var(--bcc-text-sidebar);
   border-left: 1px solid var(--bcc-border);
-  padding: 8px;
+  padding: 12px 8px 8px;
 }
 
 /* ─── Stats bar (Freunde Online / Anfragen / Nachrichten badges) ───────────
@@ -350,10 +350,10 @@
  * fading the whole row. */
 .bcc-main {
   grid-area: main;
-  /* chatframe fills the main area; it's already width/height 100% upstream */
   display: flex;
-  min-height: 0; /* allow the grid track to shrink, iframe to fill */
+  min-height: 0;
   min-width: 0;
+  padding-top: 12px;
 }
 .bcc-main > #chatframe {
   flex: 1 1 auto;
@@ -386,14 +386,13 @@
   border-top: 1px solid var(--bcc-border);
 }
 
-/* ─── Input area (whisper indicator left + textarea fills the rest) ─── */
+/* ─── Input area (textarea fills the rest) ─── */
 .bcc-input-area {
   flex: 1 1 200px;
   min-width: 0;
   align-self: stretch;
   display: flex;
-  flex-direction: row; /* indicator (left) + textarea (fills) */
-  gap: 6px;
+  flex-direction: column;
   overflow: hidden;
 }
 .bcc-input-area .bcc-input-field {
@@ -402,7 +401,7 @@
   min-height: 0;
   resize: none;
   box-sizing: border-box;
-  border: 1px solid var(--bcc-border);
+  border: 0;
   border-radius: 8px;
   padding: 8px 12px;
   background: var(--bcc-surface-input);
@@ -411,16 +410,8 @@
   font-family: inherit;
   outline: none;
 }
-.bcc-input-area .bcc-input-field:focus {
-  border-color: var(--bcc-accent-whisper);
-  box-shadow: 0 0 0 1px var(--bcc-accent-whisper);
-}
 .bcc-input-area .bcc-input-field::placeholder {
-  color: var(--bcc-text-placeholder);
   opacity: 0.6;
-}
-.bcc-input-area .bcc-superwhisper {
-  border-color: var(--bcc-accent-whisper);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -619,55 +610,6 @@
   cursor: pointer;
   border: 0;
   padding: 0;
-}
-
-/* Whisper indicator — a horizontal pill pinned to the LEFT edge of the input
- * area while superwhisper is armed. Reads left-to-right: icon, target nick,
- * × to exit. Theme-colored (raised surface + sidebar text + whisper accent
- * border) so it reads as part of the input area, not a foreign colored block.
- * display:none by default; JS sets display:flex when armed (so the inline
- * style overrides this stylesheet rule — clearing inline would re-hide it,
- * which was the "always hidden" bug). */
-.bcc-whisper-indicator {
-  display: none;
-  flex-direction: row;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  align-self: stretch;
-  margin: 4px 0;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid var(--bcc-accent-whisper);
-  background: var(--bcc-surface-raised);
-  color: var(--bcc-text-raised);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-.bcc-whisper-icon {
-  font-size: 13px;
-  color: var(--bcc-accent-whisper);
-}
-.bcc-whisper-nick {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.bcc-whisper-close {
-  padding: 3px 4px;
-  font-size: 11px;
-  line-height: 1;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--bcc-text-muted);
-  cursor: pointer;
-}
-.bcc-whisper-close:hover {
-  background: var(--bcc-surface-hover);
-  color: var(--bcc-accent-ban);
 }
 
 /* Placeholder labels for not-yet-built sections */

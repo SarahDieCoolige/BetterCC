@@ -12,7 +12,6 @@ import { buildPatchedHandler } from "./patched-handler";
 let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: ((...args: any[]) => any) | null = null;
 let currentWhisperNick = "";
-let whisperIndicator: HTMLElement | null = null;
 
 // Placeholder strings — shared trailing hint block (defined once so the
 // "no whisper" and "whispering to X" variants can't drift apart).
@@ -146,32 +145,13 @@ async function superwhisper(whispernick: string, toggle = true): Promise<void> {
       textarea.classList.remove("bcc-superwhisper");
       textarea.placeholder = PLACEHOLDER_ALL;
     }
-    updateWhisperIndicator(null);
   } else {
-    // Set whisper
     await setConfig("whisper", whispernick);
     currentWhisperNick = whispernick;
-
     if (textarea) {
       textarea.classList.add("bcc-superwhisper");
       textarea.placeholder = placeholderFor(whispernick);
     }
-    updateWhisperIndicator(whispernick);
-  }
-}
-
-/** Show/hide the whisper-target indicator on the left of the textarea (C2).
- *  Uses display:flex (not "") so it overrides the CSS default display:none —
- *  clearing the inline style would fall back to the stylesheet and re-hide it
- *  (the "always hidden" bug). */
-function updateWhisperIndicator(nick: string | null): void {
-  if (!whisperIndicator) return;
-  if (nick) {
-    const nickEl = whisperIndicator.querySelector(".bcc-whisper-nick");
-    if (nickEl) nickEl.textContent = nick;
-    whisperIndicator.style.display = "flex";
-  } else {
-    whisperIndicator.style.display = "none";
   }
 }
 
@@ -188,35 +168,6 @@ export function mountInput(): void {
   inputArea.className = "bcc-input-area";
   chatbar.innerHTML = "";
   chatbar.appendChild(inputArea);
-
-  // ── Whisper indicator (LEFT of the textarea) — C2 ────────────────────
-  // A vertical pill pinned to the input area's left edge while superwhisper is
-  // armed, so the user always knows their next message goes to one person (not
-  // just the placeholder text, which vanishes the moment they type). Includes
-  // a × button to exit superwhisper without opening the popup again. Icon is a
-  // theme-aware Font Awesome glyph (inherits --bcc-text-muted), not a fixed
-  // emoji — matches the popup/footer icon language.
-  whisperIndicator = document.createElement("div");
-  whisperIndicator.className = "bcc-whisper-indicator";
-  whisperIndicator.style.display = "none"; // shown by updateWhisperIndicator
-  const wiIcon = document.createElement("i");
-  wiIcon.className = "bcc-whisper-icon fas fa-comment-dots";
-  wiIcon.setAttribute("aria-hidden", "true");
-  whisperIndicator.appendChild(wiIcon);
-  const wiNick = document.createElement("span");
-  wiNick.className = "bcc-whisper-nick";
-  whisperIndicator.appendChild(wiNick);
-  const wiClose = document.createElement("button");
-  wiClose.type = "button";
-  wiClose.className = "bcc-whisper-close fas fa-times";
-  wiClose.title = "Superwhisper beenden";
-  wiClose.setAttribute("aria-label", "Superwhisper beenden");
-  wiClose.addEventListener("click", (e) => {
-    e.stopPropagation();
-    superwhisper("");  
-  });
-  whisperIndicator.appendChild(wiClose);
-  inputArea.appendChild(whisperIndicator);
 
   // ── Textarea — fills the bar's height ────────────────────────────────
   textarea = document.createElement("textarea");

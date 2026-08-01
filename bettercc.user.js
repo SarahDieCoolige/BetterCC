@@ -194,91 +194,6 @@
     }
   }
 
-  // src/v3/store.ts
-  var listeners = /* @__PURE__ */ new Set();
-  function subscribe(fn) {
-    listeners.add(fn);
-    return () => {
-      listeners.delete(fn);
-    };
-  }
-  function emit(e) {
-    for (const fn of listeners) fn(e);
-  }
-
-  // src/v3/channel-select.ts
-  function parseChannels(ccc, ccg) {
-    if (!Array.isArray(ccg) || !Array.isArray(ccc)) return [];
-    const groups = [];
-    const byId = /* @__PURE__ */ new Map();
-    for (let i = 0; i + 1 < ccg.length; i += 2) {
-      const id = Number(ccg[i]);
-      const label = String(ccg[i + 1] ?? "");
-      if (!Number.isFinite(id)) continue;
-      byId.set(id, groups.length);
-      groups.push({ id, label, channels: [] });
-    }
-    for (let i = 0; i + 3 < ccc.length; i += 4) {
-      const name = ccc[i];
-      const groupId = Number(ccc[i + 2]);
-      if (typeof name !== "string" || name.length === 0) continue;
-      const idx = byId.get(groupId);
-      if (idx === void 0) continue;
-      groups[idx].channels.push(name);
-    }
-    return groups;
-  }
-  function buildChannelSelect() {
-    const ccc = unsafeWindow.ccc;
-    const ccg = unsafeWindow.ccg;
-    const groups = parseChannels(ccc, ccg);
-    const active = String(unsafeWindow.chat_channel ?? "");
-    if (groups.length === 0) {
-      cclog("buildChannelSelect: ccc/ccg absent \u2014 falling back to static label", "v3");
-      const span = document.createElement("span");
-      span.className = "bcc-channel";
-      span.textContent = active || "Chatcity";
-      span.title = "Channel";
-      return span;
-    }
-    const select = document.createElement("select");
-    select.className = "bcc-channel-select";
-    select.title = "Channel wechseln";
-    select.setAttribute("aria-label", "Channel wechseln");
-    for (const group of groups) {
-      const optgroup = document.createElement("optgroup");
-      optgroup.label = group.label;
-      for (const name of group.channels) {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        if (name.toLowerCase() === active.toLowerCase()) option.selected = true;
-        optgroup.appendChild(option);
-      }
-      select.appendChild(optgroup);
-    }
-    select.addEventListener("change", () => {
-      const comSet = unsafeWindow.com_set;
-      if (typeof comSet !== "function") {
-        cclog("buildChannelSelect: com_set unavailable \u2014 channel switch dropped", "v3");
-        return;
-      }
-      comSet("/j " + select.value);
-    });
-    subscribe((e) => {
-      if (e.type === "session" && e.session.channel) {
-        const lower = e.session.channel.toLowerCase();
-        for (const opt of Array.from(select.options)) {
-          if (opt.value.toLowerCase() === lower) {
-            if (!opt.selected) opt.selected = true;
-            return;
-          }
-        }
-      }
-    });
-    return select;
-  }
-
   // src/v3/shell.ts
   function buildShell() {
     const chatframe = document.getElementById("chatframe");
@@ -300,10 +215,6 @@
     }
     const shell = document.createElement("div");
     shell.className = "bcc-shell";
-    const header = document.createElement("header");
-    header.className = "bcc-header";
-    header.appendChild(buildChannelSelect());
-    header.appendChild(buildReloadButton());
     const sidebar = document.createElement("aside");
     sidebar.className = "bcc-sidebar";
     sidebar.innerHTML = '<div class="bcc-sidebar-placeholder">Userlist (T7)</div>';
@@ -313,23 +224,11 @@
     const inputArea = document.createElement("div");
     inputArea.className = "bcc-chatbar";
     inputArea.innerHTML = '<div class="bcc-chatbar-placeholder">Chatbar (T8/T9)</div>';
-    shell.append(header, sidebar, main, inputArea);
+    shell.append(sidebar, main, inputArea);
     document.body.appendChild(shell);
     table.style.display = "none";
     cclog("v3 shell built \u2014 chatframe moved, table hidden", "v3");
     return true;
-  }
-  function buildReloadButton() {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-reload";
-    btn.title = "Chat neu laden (mimimi)";
-    btn.setAttribute("aria-label", "Chat neu laden");
-    btn.textContent = "\u21BB";
-    btn.addEventListener("click", () => {
-      unsafeWindow.bettercc.reloadChat();
-    });
-    return btn;
   }
   function reloadChat() {
     if (unsafeWindow.chatout_auth_dead) {
@@ -1530,6 +1429,18 @@
     });
   }
 
+  // src/v3/store.ts
+  var listeners = /* @__PURE__ */ new Set();
+  function subscribe(fn) {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  }
+  function emit(e) {
+    for (const fn of listeners) fn(e);
+  }
+
   // src/v3/userlist-wire.ts
   var prevList = [];
   function processUserlist(chaMy, prev) {
@@ -1665,6 +1576,79 @@
     document.addEventListener("click", onOutsideClick);
   }
 
+  // src/v3/channel-select.ts
+  function parseChannels(ccc, ccg) {
+    if (!Array.isArray(ccg) || !Array.isArray(ccc)) return [];
+    const groups = [];
+    const byId = /* @__PURE__ */ new Map();
+    for (let i = 0; i + 1 < ccg.length; i += 2) {
+      const id = Number(ccg[i]);
+      const label = String(ccg[i + 1] ?? "");
+      if (!Number.isFinite(id)) continue;
+      byId.set(id, groups.length);
+      groups.push({ id, label, channels: [] });
+    }
+    for (let i = 0; i + 3 < ccc.length; i += 4) {
+      const name = ccc[i];
+      const groupId = Number(ccc[i + 2]);
+      if (typeof name !== "string" || name.length === 0) continue;
+      const idx = byId.get(groupId);
+      if (idx === void 0) continue;
+      groups[idx].channels.push(name);
+    }
+    return groups;
+  }
+  function buildChannelSelect() {
+    const ccc = unsafeWindow.ccc;
+    const ccg = unsafeWindow.ccg;
+    const groups = parseChannels(ccc, ccg);
+    const active = String(unsafeWindow.chat_channel ?? "");
+    if (groups.length === 0) {
+      cclog("buildChannelSelect: ccc/ccg absent \u2014 falling back to static label", "v3");
+      const span = document.createElement("span");
+      span.className = "bcc-channel";
+      span.textContent = active || "Chatcity";
+      span.title = "Channel";
+      return span;
+    }
+    const select = document.createElement("select");
+    select.className = "bcc-channel-select";
+    select.title = "Channel wechseln";
+    select.setAttribute("aria-label", "Channel wechseln");
+    for (const group of groups) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.label;
+      for (const name of group.channels) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        if (name.toLowerCase() === active.toLowerCase()) option.selected = true;
+        optgroup.appendChild(option);
+      }
+      select.appendChild(optgroup);
+    }
+    select.addEventListener("change", () => {
+      const comSet = unsafeWindow.com_set;
+      if (typeof comSet !== "function") {
+        cclog("buildChannelSelect: com_set unavailable \u2014 channel switch dropped", "v3");
+        return;
+      }
+      comSet("/j " + select.value);
+    });
+    subscribe((e) => {
+      if (e.type === "session" && e.session.channel) {
+        const lower = e.session.channel.toLowerCase();
+        for (const opt of Array.from(select.options)) {
+          if (opt.value.toLowerCase() === lower) {
+            if (!opt.selected) opt.selected = true;
+            return;
+          }
+        }
+      }
+    });
+    return select;
+  }
+
   // src/v3/sidebar.ts
   function statusDotClass(user) {
     return user.sep ? "bcc-dot-sep" : "bcc-dot-online";
@@ -1748,12 +1732,16 @@
   function ensureContainers(sidebar) {
     if (pinnedUl && pinnedUl.isConnected) return;
     sidebar.innerHTML = "";
+    const onlineRow = document.createElement("div");
+    onlineRow.className = "bcc-online-row";
     onlineCount = document.createElement("div");
     onlineCount.className = "bcc-online-count";
     onlineCount.setAttribute("role", "status");
     onlineCount.setAttribute("aria-live", "polite");
     onlineCount.textContent = "0 online";
-    sidebar.appendChild(onlineCount);
+    onlineRow.appendChild(onlineCount);
+    onlineRow.appendChild(buildChannelSelect());
+    sidebar.appendChild(onlineRow);
     pinnedPanel = document.createElement("div");
     pinnedPanel.className = "bcc-pinned-panel";
     const pinnedHeader = document.createElement("div");
@@ -2077,7 +2065,6 @@
   var textarea = null;
   var onSubmitOrig = null;
   var currentWhisperNick = "";
-  var whisperIndicator = null;
   var HINTS_ALL = "Superwhisper: /sw Sariam  |  Ban: /sb Wendigo  |  Hilfe: /help";
   var HINTS_WHISPER = "Superwhisper aus: /open  |  /o Hi All :)  |  Hilfe: /help";
   var PLACEHOLDER_ALL = "Du chattest mit allen...\n\n" + HINTS_ALL;
@@ -2160,7 +2147,6 @@
         textarea.classList.remove("bcc-superwhisper");
         textarea.placeholder = PLACEHOLDER_ALL;
       }
-      updateWhisperIndicator(null);
     } else {
       await setConfig("whisper", whispernick);
       currentWhisperNick = whispernick;
@@ -2168,17 +2154,6 @@
         textarea.classList.add("bcc-superwhisper");
         textarea.placeholder = placeholderFor(whispernick);
       }
-      updateWhisperIndicator(whispernick);
-    }
-  }
-  function updateWhisperIndicator(nick) {
-    if (!whisperIndicator) return;
-    if (nick) {
-      const nickEl = whisperIndicator.querySelector(".bcc-whisper-nick");
-      if (nickEl) nickEl.textContent = nick;
-      whisperIndicator.style.display = "flex";
-    } else {
-      whisperIndicator.style.display = "none";
     }
   }
   function mountInput() {
@@ -2188,27 +2163,6 @@
     inputArea.className = "bcc-input-area";
     chatbar.innerHTML = "";
     chatbar.appendChild(inputArea);
-    whisperIndicator = document.createElement("div");
-    whisperIndicator.className = "bcc-whisper-indicator";
-    whisperIndicator.style.display = "none";
-    const wiIcon = document.createElement("i");
-    wiIcon.className = "bcc-whisper-icon fas fa-comment-dots";
-    wiIcon.setAttribute("aria-hidden", "true");
-    whisperIndicator.appendChild(wiIcon);
-    const wiNick = document.createElement("span");
-    wiNick.className = "bcc-whisper-nick";
-    whisperIndicator.appendChild(wiNick);
-    const wiClose = document.createElement("button");
-    wiClose.type = "button";
-    wiClose.className = "bcc-whisper-close fas fa-times";
-    wiClose.title = "Superwhisper beenden";
-    wiClose.setAttribute("aria-label", "Superwhisper beenden");
-    wiClose.addEventListener("click", (e) => {
-      e.stopPropagation();
-      superwhisper("");
-    });
-    whisperIndicator.appendChild(wiClose);
-    inputArea.appendChild(whisperIndicator);
     textarea = document.createElement("textarea");
     textarea.className = "bcc-input-field";
     textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
