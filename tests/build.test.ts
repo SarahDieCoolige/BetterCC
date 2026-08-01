@@ -53,6 +53,14 @@ describe("build output", () => {
     // ── main.css @resource removed with the v2 UI ──────────────────────────
     expect(content).not.toContain("@resource  main_css");
 
+    // ── Theme vars live on .bcc-shell, NOT :root (theme-reset bug guard) ────
+    // The live page periodically clears :root's inline style; when our --bcc-*
+    // vars lived there, the UI reset to the blue CSS defaults. applyScheme now
+    // writes to .bcc-shell. This asserts the bundle targets .bcc-shell for the
+    // theme write — if someone reverts it to documentElement, this fails.
+    expect(content).toContain(".bcc-shell");
+    expect(content).not.toContain("document.documentElement.style.setProperty");
+
     // ── jQuery removal regression guards (still hold under v3) ──────────────
     expect(content).not.toContain("GM_wrench");
     expect(content).not.toContain("jquery-3.5.1");

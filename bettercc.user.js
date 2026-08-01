@@ -63,7 +63,6 @@
       text: message,
       tag,
       timeout,
-      silent: true,
       onclick: () => {
         window.event?.preventDefault();
         cclog("Notification clicked.");
@@ -1398,7 +1397,8 @@
     return stored.bgHex.toUpperCase() === baseHex.toUpperCase();
   }
   function applyScheme(scheme) {
-    const root = document.documentElement;
+    const target = document.querySelector(".bcc-shell");
+    const root = target ?? document.documentElement;
     for (const [varName, value] of Object.entries(schemeToCssVars(scheme))) {
       root.style.setProperty(varName, value);
     }
@@ -1581,7 +1581,8 @@
         cclog("user popup: /id stubbed (T13) \u2014 " + user.name, "v3");
       })
     );
-    document.body.appendChild(popup);
+    const mount = document.querySelector(".bcc-shell") ?? document.body;
+    mount.appendChild(popup);
     const rect = anchor.getBoundingClientRect();
     popup.style.position = "fixed";
     popup.style.left = Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8) + "px";
@@ -2164,13 +2165,13 @@
     if (v3Css) GM_addStyle(v3Css);
     neuterResizeFix();
     initSession();
+    unsafeWindow.bettercc.reloadChat = reloadChat;
+    buildShell();
+    overrideSetUinfo1();
     const schemePromise = loadTheme(getUserKey("color"), getUserKey("colorscheme"));
     unsafeWindow.bettercc.setTheme = function setTheme() {
       schemePromise.then((scheme) => applyScheme(scheme));
     };
-    overrideSetUinfo1();
-    unsafeWindow.bettercc.reloadChat = reloadChat;
-    buildShell();
     hookChatoutConnect();
     mountSidebar();
     mountInput();
