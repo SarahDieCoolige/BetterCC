@@ -1,9 +1,8 @@
 // Tests for the pure color-scheme generator.
 //
-// Production code (src/scheme.ts) imports tinycolor2 directly (bundled into the
-// userscript — spec A8 superseded by the v3 Architecture Decisions). Tests use
-// the same real library, no mocks. Per spec §6.2 the function stays "pure,
-// zero mocks".
+// Production loads tinycolor2 via CDN @require (bare `tinycolor` global).
+// Tests get the same global via tests/setup.ts (assigns the npm package to
+// globalThis). Per spec §6.2 the function stays "pure, zero mocks".
 
 import { describe, it, expect } from "vitest";
 import tinycolorFactory from "tinycolor2";

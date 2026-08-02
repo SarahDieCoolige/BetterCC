@@ -1,6 +1,6 @@
 {
   "name": "bettercc",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "description": "BetterCC is better",
   "private": true,
   "type": "module",
@@ -14,22 +14,20 @@
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' 'css/**/*.css' '*.mjs' '*.json'",
     "lint": "eslint 'src/**/*.ts' 'tests/**/*.ts'"
   },
-  "dependencies": {
-    "@types/tinycolor2": "^1.4.6",
-    "tinycolor2": "^1.6.0"
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/tampermonkey": "^5.0.0",
+    "@types/tinycolor2": "^1.4.6",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.1",
     "eslint": "^10.8.0",
     "prettier": "^3.9.6",
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "tinycolor2": "^1.6.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
-    "esbuild@0.25.12": true
+    "esbuild@0.28.1": true
   }
 }

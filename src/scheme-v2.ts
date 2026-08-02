@@ -15,7 +15,9 @@
 // tier in the new scale so every existing consumer compiles and runs unchanged.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import tinycolor from "tinycolor2";
+// tinycolor2 is loaded via CDN @require (keeps the userscript small). The UMD
+// wrapper assigns the factory to window.tinycolor — we use the bare global.
+declare const tinycolor: any;
 
 // ─── Public interface ──────────────────────────────────────────────────────
 

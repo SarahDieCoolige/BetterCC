@@ -5,11 +5,12 @@
 // 130-line, DOM-mutating `theme.ts:setColors` with a function that has no
 // side effects — the big testability win (spec §6).
 //
-// tinycolor2 is imported directly and bundled into the userscript (v3
-// Architecture Decisions supersede spec A8). No CDN @require or global.
+// tinycolor2 is loaded via CDN @require (keeps the userscript small). The UMD
+// wrapper assigns the factory to window.tinycolor — we use the bare global.
+// Tests import the npm package directly (see tests/scheme.test.ts).
 // ═══════════════════════════════════════════════════════════════════════
 
-import tinycolor from "tinycolor2";
+declare const tinycolor: any;
 
 /** Every `--bcc-*` role produced from one base color (spec §6.1). */
 export interface BccColorScheme {

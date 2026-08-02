@@ -18,6 +18,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
+// @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
+//
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=${V}
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=${V}
 //
@@ -72,7 +74,7 @@ const buildConfig = {
   format: "iife",
   target: "es2020",
   platform: "browser",
-  // tinycolor2 is bundled (imported in src/scheme.ts); no CDN @require needed.
+  external: ["tinycolor2"], // CDN via @require, not bundled — keeps the userscript small
 };
 
 const isWatch = process.argv.includes("--watch");
