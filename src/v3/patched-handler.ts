@@ -40,6 +40,15 @@ export function patchAwayTimer(onSubmitOrigStr: string): string {
  * if there's no onsubmit source to build from (the caller then sends without
  * the normalization path — degenerate, but won't throw).
  *
+ * Always runs through `patchAwayTimer` — never falls back to the raw string.
+ * An earlier version gated the patch on `raw.includes(NEEDLE)` and used the
+ * raw source in the else branch, which silently swallowed the throw O1
+ * exists to surface: a changed upstream needle took the else branch, the
+ * throw never fired, and production ran the unpatched handler with no /w
+ * away-timer reset and no warning. The guard only fires through this entry
+ * point (input.ts calls buildPatchedHandler, not patchAwayTimer directly),
+ * so the integration test exercises the real path.
+ *
  * @param holdForm  the relocated <form name="hold"> (a <body> child under v3)
  */
 export function buildPatchedHandler(
@@ -47,7 +56,5 @@ export function buildPatchedHandler(
 ): ((...args: any[]) => any) | null {
   const raw = holdForm?.getAttribute("onsubmit") || "";
   if (!raw) return null;
-  return new Function(raw.includes(AWAY_TIMER_NEEDLE) ? patchAwayTimer(raw) : raw) as (
-    ...args: any[]
-  ) => any;
+  return new Function(patchAwayTimer(raw)) as (...args: any[]) => any;
 }
