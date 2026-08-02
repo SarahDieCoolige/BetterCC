@@ -17,6 +17,7 @@
 
 import { subscribe } from "./store";
 import { cclog } from "./utils";
+import { getChannel } from "./upstream";
 
 /** One channel group, with its upstream id, label, and member channels. */
 export interface ChannelGroup {
@@ -75,7 +76,7 @@ export function buildChannelSelect(): HTMLElement {
   const ccc = (unsafeWindow as any).ccc;
   const ccg = (unsafeWindow as any).ccg;
   const groups = parseChannels(ccc, ccg);
-  const active = String((unsafeWindow as any).chat_channel ?? "");
+  const active = getChannel();
 
   // Fallback: no channel data → read-only label (mirrors the old label UX).
   if (groups.length === 0) {

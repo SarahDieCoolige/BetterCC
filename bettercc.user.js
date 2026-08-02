@@ -206,6 +206,23 @@
     }
   }
 
+  // src/upstream.ts
+  function getChatNick() {
+    return String(unsafeWindow.chat_nick ?? "");
+  }
+  function getChannel() {
+    return String(unsafeWindow.chat_channel ?? "");
+  }
+  function isAuthDead() {
+    return !!unsafeWindow.chatout_auth_dead;
+  }
+  function getChatoutWs() {
+    return unsafeWindow.chatout_ws ?? null;
+  }
+  function getBettercc() {
+    return unsafeWindow.bettercc;
+  }
+
   // src/shell.ts
   function buildShell() {
     const chatframe = document.getElementById("chatframe");
@@ -243,12 +260,12 @@
     return true;
   }
   function reloadChat() {
-    if (unsafeWindow.chatout_auth_dead) {
+    if (isAuthDead()) {
       cclog("reloadChat: auth_dead, doing full page reload", "v3");
       location.reload();
       return;
     }
-    const ws = unsafeWindow.chatout_ws;
+    const ws = getChatoutWs();
     if (ws) {
       cclog("reloadChat: closing WS to trigger reconnect", "v3");
       ws.close();
@@ -752,13 +769,13 @@
     );
     popup.appendChild(
       actionBtn("fa-comment-dots", "Superwhisper", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
-        const api = unsafeWindow.bettercc;
+        const api = getBettercc();
         if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
       })
     );
     popup.appendChild(
       actionBtn("fa-paper-plane", "Fl\xFCstern (1\xD7)", "Einmal an " + user.name + " fl\xFCstern", () => {
-        const api = unsafeWindow.bettercc;
+        const api = getBettercc();
         if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
       })
     );
@@ -812,7 +829,7 @@
     const ccc = unsafeWindow.ccc;
     const ccg = unsafeWindow.ccg;
     const groups = parseChannels(ccc, ccg);
-    const active = String(unsafeWindow.chat_channel ?? "");
+    const active = getChannel();
     if (groups.length === 0) {
       cclog("buildChannelSelect: ccc/ccg absent \u2014 falling back to static label", "v3");
       const span = document.createElement("span");
@@ -1170,7 +1187,7 @@
   }
   function mountStatsBar(parent) {
     if (statsBar && statsBar.isConnected) return;
-    const nick = String(unsafeWindow.chat_nick ?? "");
+    const nick = getChatNick();
     parent.insertBefore(buildStatsBar(nick), parent.firstChild);
     pollOnce();
     pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
@@ -1186,20 +1203,20 @@
     if (timer) clearInterval(timer);
     const w = unsafeWindow;
     session = {
-      nick: String(w.chat_nick ?? ""),
+      nick: getChatNick(),
       registered: String(w.chat_ui ?? "").includes("R"),
       guest: String(w.chat_ui ?? "").includes("h") && !String(w.chat_ui ?? "").includes("R"),
       userId: String(w.chat_id ?? ""),
       sessionId: String(w.chat_sid ?? ""),
-      channel: String(w.chat_channel ?? ""),
-      authDead: !!w.chatout_auth_dead
+      channel: getChannel(),
+      authDead: isAuthDead()
     };
     emit({ type: "session", session: { ...session } });
     let prevChannel = session.channel;
     let prevAuthDead = session.authDead;
     timer = setInterval(() => {
-      const newChannel = String(unsafeWindow.chat_channel ?? "");
-      const newAuthDead = !!unsafeWindow.chatout_auth_dead;
+      const newChannel = getChannel();
+      const newAuthDead = isAuthDead();
       if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
         prevChannel = session.channel = newChannel;
         prevAuthDead = session.authDead = newAuthDead;
@@ -1557,7 +1574,7 @@
   }
   function buildLinksPill() {
     const id = iconBtn("b16", "Eigene ID", () => {
-      const nick = String(unsafeWindow.chat_nick ?? "");
+      const nick = getChatNick();
       if (nick) window.open("//www.chatcity.de/de/id/" + nick + ".html", "IDCARD");
     });
     const forum = iconBtn("b15", "Forum", () => {

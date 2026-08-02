@@ -10,6 +10,7 @@
 
 import { emit, type SessionState } from "./store";
 import { cclog } from "./utils";
+import { getChatNick, getChannel, isAuthDead } from "./upstream";
 
 let session: SessionState;
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -27,13 +28,13 @@ export function initSession(): void {
   const w = unsafeWindow as any;
 
   session = {
-    nick: String(w.chat_nick ?? ""),
+    nick: getChatNick(),
     registered: String(w.chat_ui ?? "").includes("R"),
     guest: String(w.chat_ui ?? "").includes("h") && !String(w.chat_ui ?? "").includes("R"),
     userId: String(w.chat_id ?? ""),
     sessionId: String(w.chat_sid ?? ""),
-    channel: String(w.chat_channel ?? ""),
-    authDead: !!w.chatout_auth_dead,
+    channel: getChannel(),
+    authDead: isAuthDead(),
   };
 
   // Seed all subscribers with the current state.
@@ -42,8 +43,8 @@ export function initSession(): void {
   let prevChannel = session.channel;
   let prevAuthDead = session.authDead;
   timer = setInterval(() => {
-    const newChannel = String((unsafeWindow as any).chat_channel ?? "");
-    const newAuthDead = !!(unsafeWindow as any).chatout_auth_dead;
+    const newChannel = getChannel();
+    const newAuthDead = isAuthDead();
     if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
       prevChannel = session.channel = newChannel;
       prevAuthDead = session.authDead = newAuthDead;

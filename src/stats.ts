@@ -11,6 +11,7 @@
 // are verified via the dev-server smoke (consistent with sidebar.ts / shell.ts).
 
 import { cclog } from "./utils";
+import { getChatNick } from "./upstream";
 
 /** The three counts parsed from the chat_info_friends_nc.html response. */
 export interface Stats {
@@ -221,7 +222,7 @@ function pollOnce(): void {
  */
 export function mountStatsBar(parent: HTMLElement): void {
   if (statsBar && statsBar.isConnected) return; // idempotent
-  const nick = String((unsafeWindow as any).chat_nick ?? "");
+  const nick = getChatNick();
   parent.insertBefore(buildStatsBar(nick), parent.firstChild);
 
   pollOnce(); // immediate first paint, then on the interval

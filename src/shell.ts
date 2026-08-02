@@ -17,6 +17,7 @@
 // reconnect, or full reload if auth_dead).
 
 import { cclog } from "./utils";
+import { isAuthDead, getChatoutWs } from "./upstream";
 
 /**
  * Build the v3 shell: Grid container, moved chatframe, hidden table, header
@@ -88,12 +89,12 @@ export function buildShell(): boolean {
  * deleted old reloadChat (theme.ts), v3-owned.
  */
 export function reloadChat(): void {
-  if ((unsafeWindow as any).chatout_auth_dead) {
+  if (isAuthDead()) {
     cclog("reloadChat: auth_dead, doing full page reload", "v3");
     location.reload();
     return;
   }
-  const ws = (unsafeWindow as any).chatout_ws;
+  const ws = getChatoutWs();
   if (ws) {
     cclog("reloadChat: closing WS to trigger reconnect", "v3");
     ws.close();

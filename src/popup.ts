@@ -16,6 +16,7 @@
 
 import { type User } from "./store";
 import { cclog } from "./utils";
+import { getBettercc } from "./upstream";
 
 let openPopup: HTMLElement | null = null;
 
@@ -114,7 +115,7 @@ export function openUserPopup(
   // Superwhisper (persistent) — toggles via the exposed API
   popup.appendChild(
     actionBtn("fa-comment-dots", "Superwhisper", "Dauerhaft an " + user.name + " flüstern", () => {
-      const api = (unsafeWindow as any).bettercc;
+      const api = getBettercc();
       if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
     }),
   );
@@ -124,7 +125,7 @@ export function openUserPopup(
   // prefilled message, then types normally again.
   popup.appendChild(
     actionBtn("fa-paper-plane", "Flüstern (1×)", "Einmal an " + user.name + " flüstern", () => {
-      const api = (unsafeWindow as any).bettercc;
+      const api = getBettercc();
       if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
     }),
   );

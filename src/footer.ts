@@ -19,6 +19,7 @@
 import { cclog, getUserKey, printHelp } from "./utils";
 import { saveColor, toggleSchemeVersion, getSchemeVersion } from "./theme";
 import { getConfig } from "./config";
+import { getChatNick } from "./upstream";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.
@@ -234,7 +235,7 @@ function buildPresetColorPill(): HTMLElement {
 
 function buildLinksPill(): HTMLElement {
   const id = iconBtn("b16", "Eigene ID", () => {
-    const nick = String((unsafeWindow as any).chat_nick ?? "");
+    const nick = getChatNick();
     if (nick) window.open("//www.chatcity.de/de/id/" + nick + ".html", "IDCARD");
   });
   const forum = iconBtn("b15", "Forum", () => {
