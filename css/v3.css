@@ -655,9 +655,10 @@
 .bcc-popup-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  padding: 4px 8px 6px;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 8px 10px 10px;
   border-bottom: 1px solid var(--bcc-border);
   margin-bottom: 4px;
 }
@@ -665,9 +666,9 @@
 /* ─── Thumbnail button in popup header (replaces Bild action button) ─── */
 .bcc-popup-thumb-btn {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   border: 1px solid var(--bcc-border);
   background: var(--bcc-surface-hover);
   color: var(--bcc-text-muted);
@@ -675,7 +676,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
   padding: 0;
   overflow: hidden;
   transition:
@@ -691,7 +692,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 5px;
+  border-radius: 7px;
 }
 
 /* ─── Username in popup header (click to copy) ─── */
@@ -719,8 +720,8 @@
 /* ─── ID icon button in popup header ─── */
 .bcc-popup-id-btn {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 4px;
   border: none;
   background: transparent;
@@ -729,7 +730,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 16px;
   padding: 0;
   transition:
     background 0.15s ease,

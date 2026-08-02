@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.0.11
+// @version      3.0.12
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -14,8 +14,8 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.11
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.11
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.12
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.12
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1006,9 +1006,28 @@
     mount.appendChild(previewImg);
     return previewImg;
   }
+  function clampPreviewPosition(clientX, clientY, imgW, imgH, viewW, viewH) {
+    let left = clientX + 16;
+    let top = clientY - 75;
+    const w = imgW || 320;
+    const h = imgH || 400;
+    if (left + w > viewW - 8) left = clientX - w - 16;
+    if (left < 8) left = 8;
+    if (top + h > viewH - 8) top = viewH - h - 8;
+    if (top < 8) top = 8;
+    return { left, top };
+  }
   function positionPreview(img, clientX, clientY) {
-    img.style.left = clientX + 16 + "px";
-    img.style.top = clientY - 75 + "px";
+    const pos = clampPreviewPosition(
+      clientX,
+      clientY,
+      img.offsetWidth,
+      img.offsetHeight,
+      window.innerWidth,
+      window.innerHeight
+    );
+    img.style.left = pos.left + "px";
+    img.style.top = pos.top + "px";
   }
   function buildThumbButton(userName) {
     const btn = document.createElement("button");
@@ -1021,7 +1040,7 @@
     btn.appendChild(placeholderIcon);
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      loadThumb(btn, userName, e.shiftKey);
+      if (e.shiftKey) loadThumb(btn, userName, true);
     });
     return btn;
   }
@@ -1139,7 +1158,8 @@
     popup.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
     const header = document.createElement("div");
     header.className = "bcc-popup-header";
-    header.appendChild(buildThumbButton(user.name));
+    const thumbBtn = buildThumbButton(user.name);
+    header.appendChild(thumbBtn);
     header.appendChild(buildUsernameSpan(user.name));
     header.appendChild(buildIdButton(user.name));
     popup.appendChild(header);
@@ -1172,6 +1192,7 @@
     );
     const mount = document.querySelector(".bcc-shell") ?? document.body;
     mount.appendChild(popup);
+    loadThumb(thumbBtn, user.name, false);
     const rect = anchor.getBoundingClientRect();
     popup.style.position = "fixed";
     popup.style.left = Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8) + "px";

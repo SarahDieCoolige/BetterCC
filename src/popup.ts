@@ -97,10 +97,45 @@ function ensurePreviewImg(): HTMLImageElement {
   return previewImg;
 }
 
-/** Position the preview image offset from the cursor. */
+/**
+ * Compute viewport-clamped position for the hover-preview image.
+ *
+ * @returns {{ left: number, top: number }} CSS-left and CSS-top in px.
+ */
+export function clampPreviewPosition(
+  clientX: number,
+  clientY: number,
+  imgW: number,
+  imgH: number,
+  viewW: number,
+  viewH: number,
+): { left: number; top: number } {
+  let left = clientX + 16;
+  let top = clientY - 75;
+
+  const w = imgW || 320;
+  const h = imgH || 400;
+
+  if (left + w > viewW - 8) left = clientX - w - 16;
+  if (left < 8) left = 8;
+  if (top + h > viewH - 8) top = viewH - h - 8;
+  if (top < 8) top = 8;
+
+  return { left, top };
+}
+
+/** Position the preview image offset from the cursor, clamped to viewport. */
 function positionPreview(img: HTMLImageElement, clientX: number, clientY: number): void {
-  img.style.left = (clientX + 16) + "px";
-  img.style.top = (clientY - 75) + "px";
+  const pos = clampPreviewPosition(
+    clientX,
+    clientY,
+    img.offsetWidth,
+    img.offsetHeight,
+    window.innerWidth,
+    window.innerHeight,
+  );
+  img.style.left = pos.left + "px";
+  img.style.top = pos.top + "px";
 }
 
 // ─── Thumbnail button (in header) ───────────────────────────────────────
@@ -126,8 +161,9 @@ function buildThumbButton(userName: string): HTMLButtonElement {
 
   btn.addEventListener("click", (e: MouseEvent) => {
     e.stopPropagation();
-    // Don't close the popup
-    loadThumb(btn, userName, e.shiftKey);
+    // Shift-click forces a cache refresh; plain click is a no-op (image
+    // auto-loads when the popup opens).
+    if (e.shiftKey) loadThumb(btn, userName, true);
   });
 
   return btn;
@@ -316,7 +352,8 @@ export function openUserPopup(
   // Header row: [thumb] [username] [id-icon]
   const header = document.createElement("div");
   header.className = "bcc-popup-header";
-  header.appendChild(buildThumbButton(user.name));
+  const thumbBtn = buildThumbButton(user.name);
+  header.appendChild(thumbBtn);
   header.appendChild(buildUsernameSpan(user.name));
   header.appendChild(buildIdButton(user.name));
   popup.appendChild(header);
@@ -367,6 +404,11 @@ export function openUserPopup(
   // shell isn't built yet (shouldn't happen — popups open after mount).
   const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
   mount.appendChild(popup);
+
+  // Auto-fetch the user image on popup open (cache-respecting; instant on
+  // repeat opens). Shift-click on the thumb forces a refresh.
+  loadThumb(thumbBtn, user.name, false);
+
   const rect = anchor.getBoundingClientRect();
   popup.style.position = "fixed";
   popup.style.left = Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8) + "px";
