@@ -257,6 +257,38 @@
     }
   }
 
+  // src/scheme-helpers.ts
+  function toHex6(color) {
+    return color.toHexString().slice(1).toUpperCase();
+  }
+  function pickReadable(bg, candidates, large = false) {
+    return tinycolor.mostReadable(bg, candidates, {
+      includeFallbackColors: true,
+      level: "AA",
+      size: large ? "large" : "small"
+    });
+  }
+  function nudge(color, amount) {
+    return color.isLight() ? color.clone().darken(amount) : color.clone().lighten(amount);
+  }
+  function liftAccent(bg, accent) {
+    const minContrast = 3;
+    if (tinycolor.readability(bg, accent) >= minContrast) return accent.clone();
+    const ops = [
+      (c) => c.lighten(20),
+      (c) => c.darken(20),
+      (c) => c.saturate(30).lighten(15),
+      (c) => c.saturate(30).darken(15),
+      (c) => c.lighten(40),
+      (c) => c.darken(40)
+    ];
+    for (const op of ops) {
+      const cand = op(accent.clone());
+      if (tinycolor.readability(bg, cand) >= minContrast) return cand;
+    }
+    return accent.clone();
+  }
+
   // src/scheme-v1.ts
   var STEP = {
     /** Footer/sidebar sit one tier below the main surface. */
@@ -281,37 +313,6 @@
     accentMinLight: 35,
     accentMaxLight: 65
   };
-  function toHex6(color) {
-    return color.toHexString().slice(1).toUpperCase();
-  }
-  function pickReadable(bg, candidates, large = false) {
-    const chosen = tinycolor.mostReadable(bg, candidates, {
-      includeFallbackColors: true,
-      level: "AA",
-      size: large ? "large" : "small"
-    });
-    return chosen;
-  }
-  function nudge(color, amount) {
-    return color.isLight() ? color.clone().darken(amount) : color.clone().lighten(amount);
-  }
-  function liftAccent(bg, accent) {
-    const minContrast = 3;
-    if (tinycolor.readability(bg, accent) >= minContrast) return accent.clone();
-    const ops = [
-      (c) => c.lighten(20),
-      (c) => c.darken(20),
-      (c) => c.saturate(30).lighten(15),
-      (c) => c.saturate(30).darken(15),
-      (c) => c.lighten(40),
-      (c) => c.darken(40)
-    ];
-    for (const op of ops) {
-      const cand = op(accent.clone());
-      if (tinycolor.readability(bg, cand) >= minContrast) return cand;
-    }
-    return accent.clone();
-  }
   function generateScheme(baseColor, options) {
     const surface = tinycolor(baseColor);
     const darkMode = options?.darkMode ?? !surface.isLight();
@@ -391,36 +392,6 @@
     hoverShift: 6,
     activeShift: 12
   };
-  function toHex62(color) {
-    return color.toHexString().slice(1).toUpperCase();
-  }
-  function pickReadable2(bg, candidates, large = false) {
-    return tinycolor.mostReadable(bg, candidates, {
-      includeFallbackColors: true,
-      level: "AA",
-      size: large ? "large" : "small"
-    });
-  }
-  function nudge2(color, amount) {
-    return color.isLight() ? color.clone().darken(amount) : color.clone().lighten(amount);
-  }
-  function liftAccent2(bg, accent) {
-    const minContrast = 3;
-    if (tinycolor.readability(bg, accent) >= minContrast) return accent.clone();
-    const ops = [
-      (c) => c.lighten(20),
-      (c) => c.darken(20),
-      (c) => c.saturate(30).lighten(15),
-      (c) => c.saturate(30).darken(15),
-      (c) => c.lighten(40),
-      (c) => c.darken(40)
-    ];
-    for (const op of ops) {
-      const cand = op(accent.clone());
-      if (tinycolor.readability(bg, cand) >= minContrast) return cand;
-    }
-    return accent.clone();
-  }
   function wcagLum(color) {
     return color.getLuminance();
   }
@@ -472,13 +443,13 @@
         }
       }
     }
-    const text0 = pickReadable2(s0, s0.monochromatic().concat(s0.analogous()));
-    const text1 = pickReadable2(
+    const text0 = pickReadable(s0, s0.monochromatic().concat(s0.analogous()));
+    const text1 = pickReadable(
       s1,
       s0.monochromatic().concat(s0.analogous())
     );
-    const textRaisedVal = pickReadable2(s2, s2.monochromatic(), true);
-    const textInputVal = pickReadable2(s3, s3.monochromatic());
+    const textRaisedVal = pickReadable(s2, s2.monochromatic(), true);
+    const textInputVal = pickReadable(s3, s3.monochromatic());
     const textSidebarVal = pickTinted(
       s1,
       s1.monochromatic().concat(s0.monochromatic()),
@@ -490,41 +461,41 @@
     const textMutedVal = text1;
     const textPlaceholderVal = text1;
     const iconVal = pickTinted(s1, s1.monochromatic(), 3.5, 3);
-    const border1 = nudge2(s1, STEP2.borderMediumShift);
-    const surfaceHoverVal = nudge2(s0, STEP2.hoverShift);
-    const surfaceActiveVal = nudge2(s0, STEP2.activeShift);
+    const border1 = nudge(s1, STEP2.borderMediumShift);
+    const surfaceHoverVal = nudge(s0, STEP2.hoverShift);
+    const surfaceActiveVal = nudge(s0, STEP2.activeShift);
     const triad = s0.triad();
-    const accentWhisperVal = liftAccent2(s0, triad[1]);
-    const accentBanVal = liftAccent2(s0, triad[2]);
-    const statusOnlineVal = liftAccent2(s1, tinycolor("#3aa55c"));
-    const statusSepVal = liftAccent2(s1, tinycolor("#d08a1e"));
-    const textAwayVal = pickReadable2(
+    const accentWhisperVal = liftAccent(s0, triad[1]);
+    const accentBanVal = liftAccent(s0, triad[2]);
+    const statusOnlineVal = liftAccent(s1, tinycolor("#3aa55c"));
+    const statusSepVal = liftAccent(s1, tinycolor("#d08a1e"));
+    const textAwayVal = pickReadable(
       s1,
       [textSidebarVal.clone().desaturate(60), textMutedVal.clone()]
     );
     return {
       // ── Old element-named fields (drop-in compat) ───────────────────
-      surface: toHex62(s0),
-      text: toHex62(text0),
-      surfaceRaised: toHex62(s2),
-      textRaised: toHex62(textRaisedVal),
-      surfaceInput: toHex62(s3),
-      textInput: toHex62(textInputVal),
-      surfaceFooter: toHex62(s1),
-      surfaceSidebar: toHex62(s1),
-      textSidebar: toHex62(textSidebarVal),
-      textMuted: toHex62(textMutedVal),
-      textPlaceholder: toHex62(textPlaceholderVal),
-      icon: toHex62(iconVal),
-      accentWhisper: toHex62(accentWhisperVal),
-      accentBan: toHex62(accentBanVal),
-      statusOnline: toHex62(statusOnlineVal),
-      statusSep: toHex62(statusSepVal),
-      textAway: toHex62(textAwayVal),
-      border: toHex62(border1),
-      surfaceHover: toHex62(surfaceHoverVal),
-      surfaceActive: toHex62(surfaceActiveVal),
-      bgHex: toHex62(raw)
+      surface: toHex6(s0),
+      text: toHex6(text0),
+      surfaceRaised: toHex6(s2),
+      textRaised: toHex6(textRaisedVal),
+      surfaceInput: toHex6(s3),
+      textInput: toHex6(textInputVal),
+      surfaceFooter: toHex6(s1),
+      surfaceSidebar: toHex6(s1),
+      textSidebar: toHex6(textSidebarVal),
+      textMuted: toHex6(textMutedVal),
+      textPlaceholder: toHex6(textPlaceholderVal),
+      icon: toHex6(iconVal),
+      accentWhisper: toHex6(accentWhisperVal),
+      accentBan: toHex6(accentBanVal),
+      statusOnline: toHex6(statusOnlineVal),
+      statusSep: toHex6(statusSepVal),
+      textAway: toHex6(textAwayVal),
+      border: toHex6(border1),
+      surfaceHover: toHex6(surfaceHoverVal),
+      surfaceActive: toHex6(surfaceActiveVal),
+      bgHex: toHex6(raw)
     };
   }
 

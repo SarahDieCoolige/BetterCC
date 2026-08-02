@@ -10,6 +10,8 @@
 // Tests import the npm package directly (see tests/scheme.test.ts).
 // ═══════════════════════════════════════════════════════════════════════
 
+import { toHex6, pickReadable, nudge, liftAccent } from "./scheme-helpers";
+
 declare const tinycolor: any;
 
 /** Every `--bcc-*` role produced from one base color (spec §6.1). */
@@ -76,60 +78,6 @@ const STEP = {
   accentMinLight: 35,
   accentMaxLight: 65,
 } as const;
-
-// ─── Helpers ───────────────────────────────────────────────────────────
-
-function toHex6(color: any): string {
-  // toHexString() always returns "#RRGGBB" for valid colors.
-  return color.toHexString().slice(1).toUpperCase();
-}
-
-/**
- * Pick the most readable of `candidates` against `bg`, guaranteeing AA.
- * `mostReadable` returns the bg itself as a fallback when nothing clears the
- * bar; we then force black/white as a final backstop so contrast always holds.
- */
-function pickReadable(bg: any, candidates: any[], large = false): any {
-  const chosen = tinycolor.mostReadable(bg, candidates, {
-    includeFallbackColors: true,
-    level: "AA",
-    size: large ? "large" : "small",
-  });
-  return chosen;
-}
-
-/** Darken if the surface is light, lighten if dark — keeps tiering readable. */
-function nudge(color: any, amount: number): any {
-  return color.isLight() ? color.clone().darken(amount) : color.clone().lighten(amount);
-}
-
-/**
- * Lift a triad-derived accent into a readable window against `bg`.
- *
- * Accents are decorative (whisper/ban labels), not body text: hue-identity and
- * distinctiveness matter more than strict AA. But the spec still wants 3:1
- * (large-text AA). For a mid-tone surface, raw triad members are near the base
- * in luminance and clear neither bar. So instead of discarding the triad hue
- * for a black/white fallback (which collapses whisper and ban to the same
- * color), we keep the hue and push its luminance until it clears 3:1.
- */
-function liftAccent(bg: any, accent: any): any {
-  const minContrast = 3.0; // large-text AA
-  if (tinycolor.readability(bg, accent) >= minContrast) return accent.clone();
-  const ops = [
-    (c: any) => c.lighten(20),
-    (c: any) => c.darken(20),
-    (c: any) => c.saturate(30).lighten(15),
-    (c: any) => c.saturate(30).darken(15),
-    (c: any) => c.lighten(40),
-    (c: any) => c.darken(40),
-  ];
-  for (const op of ops) {
-    const cand = op(accent.clone());
-    if (tinycolor.readability(bg, cand) >= minContrast) return cand;
-  }
-  return accent.clone(); // last resort: keep the hue as-is
-}
 
 // ─── Main ──────────────────────────────────────────────────────────────
 

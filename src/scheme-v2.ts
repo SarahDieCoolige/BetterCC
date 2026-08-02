@@ -18,6 +18,7 @@
 // tinycolor2 is loaded via CDN @require (keeps the userscript small). The UMD
 // wrapper assigns the factory to window.tinycolor — we use the bare global.
 import type { BccColorScheme, GenerateSchemeOptions } from "./scheme-v1";
+import { toHex6, pickReadable, nudge, liftAccent } from "./scheme-helpers";
 
 declare const tinycolor: any;
 
@@ -56,55 +57,6 @@ const STEP = {
   hoverShift: 6,
   activeShift: 12,
 } as const;
-
-// ─── Helpers (unchanged from v1 — they work) ───────────────────────────────
-
-/** TinyColor → 6-digit uppercase hex, no leading `#`. */
-function toHex6(color: any): string {
-  return color.toHexString().slice(1).toUpperCase();
-}
-
-/**
- * Pick the most readable candidate against `bg`, guaranteeing WCAG AA.
- * `mostReadable` uses `includeFallbackColors` which adds #000 / #fff as a
- * last-resort backstop, so contrast is always met.
- */
-function pickReadable(bg: any, candidates: any[], large = false): any {
-  return tinycolor.mostReadable(bg, candidates, {
-    includeFallbackColors: true,
-    level: "AA",
-    size: large ? "large" : "small",
-  });
-}
-
-/** Darken if light, lighten if dark — keeps tiering readable. */
-function nudge(color: any, amount: number): any {
-  return color.isLight()
-    ? color.clone().darken(amount)
-    : color.clone().lighten(amount);
-}
-
-/**
- * Lift a triad-derived (or seed) accent into a readable window against `bg`.
- * Accents are decorative, not body text — 3:1 (large-text AA) is sufficient.
- */
-function liftAccent(bg: any, accent: any): any {
-  const minContrast = 3.0;
-  if (tinycolor.readability(bg, accent) >= minContrast) return accent.clone();
-  const ops = [
-    (c: any) => c.lighten(20),
-    (c: any) => c.darken(20),
-    (c: any) => c.saturate(30).lighten(15),
-    (c: any) => c.saturate(30).darken(15),
-    (c: any) => c.lighten(40),
-    (c: any) => c.darken(40),
-  ];
-  for (const op of ops) {
-    const cand = op(accent.clone());
-    if (tinycolor.readability(bg, cand) >= minContrast) return cand;
-  }
-  return accent.clone(); // last resort: keep the hue as-is
-}
 
 /** WCAG relative luminance (0‑1).  Perceptually weighted — better than raw
  *  HSL lightness for measuring whether two surfaces "look different". */
