@@ -11,7 +11,7 @@
 
 import { parseUserlist, diffUserlists } from "./userlist";
 import { emit, type User } from "./store";
-import { cclog } from "../utils";
+import { cclog } from "./utils";
 
 let prevList: User[] = [];
 

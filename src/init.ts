@@ -32,12 +32,12 @@
 //     ws-hook.ts's injectIntoChatframe re-applies the --bcc-* scheme (not the
 //     old --chatX engine) on reconnect.
 
-import { cclog, getUserKey } from "../utils";
-import { hookChatoutConnect } from "../ws-hook";
+import { cclog, getUserKey } from "./utils";
+import { hookChatoutConnect } from "./ws-hook";
 import { buildShell, reloadChat } from "./shell";
 import { loadTheme, applyScheme } from "./theme";
-import type { BccColorScheme } from "../scheme";
-import { enableV2Scheme } from "../scheme";
+import type { BccColorScheme } from "./scheme";
+import { enableV2Scheme } from "./scheme";
 import { getConfig } from "./config";
 import { overrideSetUinfo1 } from "./userlist-wire";
 import { mountSidebar } from "./sidebar";

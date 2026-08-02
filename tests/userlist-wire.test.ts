@@ -7,8 +7,8 @@
 // here (no jsdom); verified manually per the task's Playwright verify step.
 
 import { describe, it, expect } from "vitest";
-import { parseUserlist, type User } from "../src/v3/userlist";
-import { processUserlist } from "../src/v3/userlist-wire";
+import { parseUserlist, type User } from "../src/userlist";
+import { processUserlist } from "../src/userlist-wire";
 
 describe("processUserlist — parse + diff, the set_uinfo1 core", () => {
   it("on first call (empty prevList), reports every user as added", () => {

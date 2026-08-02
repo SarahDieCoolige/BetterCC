@@ -15,7 +15,7 @@
 //   - ID (/id)          → stub (T13 id-popup; logs)
 
 import { type User } from "./store";
-import { cclog } from "../utils";
+import { cclog } from "./utils";
 
 let openPopup: HTMLElement | null = null;
 

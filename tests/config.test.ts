@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { setUserStore } from "../src/utils";
-import { getConfig, setConfig, KNOWN_KEYS, DEFAULTS } from "../src/v3/config";
+import { getConfig, setConfig, KNOWN_KEYS, DEFAULTS } from "../src/config";
 
 // ─── In-memory GM fake (per-test isolation) ────────────────────────────────
 

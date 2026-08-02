@@ -12,7 +12,7 @@
 //   - scheme.ts (pure color-scheme engine — used by v3/theme)
 
 import { cclog, setUserStore } from "./utils";
-import { initV3 } from "./v3";
+import { initV3 } from "./init";
 
 (function () {
   "use strict";

@@ -8,7 +8,7 @@
 // command consumed the message (with no send).
 
 import { describe, it, expect } from "vitest";
-import { prepareMessage } from "../src/v3/input";
+import { prepareMessage } from "../src/input";
 
 describe("prepareMessage — plain messages", () => {
   it("sends a non-command message as-is when no whisper is active", () => {

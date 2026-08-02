@@ -16,7 +16,7 @@
 // verified via the dev-server smoke (consistent with sidebar.ts / shell.ts).
 
 import { subscribe } from "./store";
-import { cclog } from "../utils";
+import { cclog } from "./utils";
 
 /** One channel group, with its upstream id, label, and member channels. */
 export interface ChannelGroup {

@@ -10,7 +10,7 @@
 // the text, not the dot.
 
 import { describe, it, expect } from "vitest";
-import { statusDotClass, isGuestTag, getStatusClasses, type User } from "../src/v3/sidebar";
+import { statusDotClass, isGuestTag, getStatusClasses, type User } from "../src/sidebar";
 
 function user(overrides: Partial<User> = {}): User {
   return {

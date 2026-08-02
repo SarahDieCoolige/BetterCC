@@ -10,7 +10,7 @@
 // (override set_uinfo1, emit) is a thin shim, not unit-tested here.
 
 import { describe, it, expect } from "vitest";
-import { parseUserlist, diffUserlists, sortUsers, type User } from "../src/v3/userlist";
+import { parseUserlist, diffUserlists, sortUsers, type User } from "../src/userlist";
 
 // ─── parseUserlist ─────────────────────────────────────────────────────────
 

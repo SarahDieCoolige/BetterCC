@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from "vitest";
 import { generateScheme } from "../src/scheme";
-import { schemeToCssVars, schemeToStorage, matchesStoredBase, BCC_CSS_VARS } from "../src/v3/theme";
+import { schemeToCssVars, schemeToStorage, matchesStoredBase, BCC_CSS_VARS } from "../src/theme";
 
 // ─── 1. The --bcc-* name mapping (spec §6.1) ──────────────────────────────
 

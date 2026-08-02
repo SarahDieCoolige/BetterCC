@@ -7,7 +7,7 @@
 // unit-testable against the real fixture values copied in below.
 
 import { describe, it, expect } from "vitest";
-import { parseChannels } from "../src/v3/channel-select";
+import { parseChannels } from "../src/channel-select";
 
 // Real upstream values, copied verbatim from
 // dev/fixture/ChatCity Chat_files/corder_kylr.js (so a change to the parser that

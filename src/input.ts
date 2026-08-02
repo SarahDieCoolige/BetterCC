@@ -4,7 +4,7 @@
 // through the reused upstream onsubmit handler for message normalization +
 // away-timer reset, and handles BetterCC commands + superwhisper.
 
-import { cclog, printHelp } from "../utils";
+import { cclog, printHelp } from "./utils";
 import { getConfig, setConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { buildPatchedHandler } from "./patched-handler";

@@ -14,7 +14,7 @@ import { subscribe, type BccEvent, type User } from "./store";
 import { sortUsers } from "./userlist";
 import { getConfig, setConfig } from "./config";
 import { openUserPopup } from "./popup";
-import { cclog } from "../utils";
+import { cclog } from "./utils";
 import { buildChannelSelect } from "./channel-select";
 
 // ─── Pure helpers (exported for testing) ────────────────────────────────────

@@ -8,7 +8,7 @@
 // The onSubmit handler + DOM send contract are untestable here (no jsdom/globals).
 
 import { describe, it, expect } from "vitest";
-import { classifyMessage, rewriteForWhisper } from "../src/v3/commands";
+import { classifyMessage, rewriteForWhisper } from "../src/commands";
 
 // ─── classifyMessage: command dispatch ──────────────────────────────────────
 

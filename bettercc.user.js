@@ -206,7 +206,7 @@
     }
   }
 
-  // src/v3/shell.ts
+  // src/shell.ts
   function buildShell() {
     const chatframe = document.getElementById("chatframe");
     const table = document.querySelector("table.c_tab");
@@ -541,7 +541,7 @@
   }
   var generateScheme3 = (base, opts) => _v2 ? generateScheme2(base, opts) : generateScheme(base, opts);
 
-  // src/v3/config.ts
+  // src/config.ts
   var DEFAULTS = {
     color: "6AAED8",
     colorscheme: null,
@@ -560,7 +560,7 @@
     await GM.setValue(getUserKey(key), value);
   }
 
-  // src/v3/theme.ts
+  // src/theme.ts
   var BCC_ROLE_VARS = [
     ["surface", "--bcc-surface"],
     ["text", "--bcc-text"],
@@ -642,7 +642,7 @@
     return isV2Scheme();
   }
 
-  // src/v3/userlist.ts
+  // src/userlist.ts
   function parseUserlist(chaMy) {
     const users = [];
     for (let i = 0; i + 1 < chaMy.length; i += 2) {
@@ -687,7 +687,7 @@
     });
   }
 
-  // src/v3/store.ts
+  // src/store.ts
   var listeners = /* @__PURE__ */ new Set();
   function subscribe(fn) {
     listeners.add(fn);
@@ -699,7 +699,7 @@
     for (const fn of listeners) fn(e);
   }
 
-  // src/v3/userlist-wire.ts
+  // src/userlist-wire.ts
   var prevList = [];
   function processUserlist(chaMy, prev) {
     const newList = parseUserlist(chaMy);
@@ -718,7 +718,7 @@
     if (chaMy.length > 0) unsafeWindow.set_uinfo1();
   }
 
-  // src/v3/popup.ts
+  // src/popup.ts
   var openPopup = null;
   var onOutsideClick = null;
   function closePopup() {
@@ -815,7 +815,7 @@
     document.addEventListener("click", onOutsideClick);
   }
 
-  // src/v3/channel-select.ts
+  // src/channel-select.ts
   function parseChannels(ccc, ccg) {
     if (!Array.isArray(ccg) || !Array.isArray(ccc)) return [];
     const groups = [];
@@ -889,7 +889,7 @@
     return select;
   }
 
-  // src/v3/sidebar.ts
+  // src/sidebar.ts
   function statusDotClass(user) {
     return user.sep ? "bcc-dot-sep" : "bcc-dot-online";
   }
@@ -1065,7 +1065,7 @@
     cclog("sidebar mounted \u2014 subscribed to userlist events", "v3");
   }
 
-  // src/v3/stats.ts
+  // src/stats.ts
   function parseStats(html) {
     const empty = { friendsOnline: 0, requests: 0, messages: 0 };
     if (typeof html !== "string" || html.length === 0) return empty;
@@ -1208,7 +1208,7 @@
     });
   }
 
-  // src/v3/session.ts
+  // src/session.ts
   var session;
   var timer = null;
   function initSession() {
@@ -1238,7 +1238,7 @@
     cclog("session: init done \u2014 nick=" + session.nick + " channel=" + session.channel, "v3");
   }
 
-  // src/v3/commands.ts
+  // src/commands.ts
   var openMsgCmdRegex = /^\/open\s|^\/o\s/;
   var openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
   var superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
@@ -1284,7 +1284,7 @@
     return "/w " + nick + " " + msg;
   }
 
-  // src/v3/patched-handler.ts
+  // src/patched-handler.ts
   var AWAY_TIMER_NEEDLE = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){';
   var AWAY_TIMER_REPLACEMENT = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){';
   function patchAwayTimer(onSubmitOrigStr) {
@@ -1301,7 +1301,7 @@
     return new Function(patchAwayTimer(raw));
   }
 
-  // src/v3/input.ts
+  // src/input.ts
   var textarea = null;
   var onSubmitOrig = null;
   var currentWhisperNick = "";
@@ -1431,7 +1431,7 @@
     cclog("input mounted \u2014 textarea + whisper indicator + send contract", "v3");
   }
 
-  // src/v3/footer.ts
+  // src/footer.ts
   var reloadButtons = [];
   function trackReloadButton(btn) {
     reloadButtons.push(btn);
@@ -1642,7 +1642,7 @@
     cclog("footer mounted \u2014 pill groups + FA + setstatus patch", "v3");
   }
 
-  // src/v3/index.ts
+  // src/init.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
       return true;

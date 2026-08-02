@@ -12,7 +12,7 @@
 // round-trip — is what's pinned. The actual GM calls are exercised against an
 // in-memory fake in tests/config.test.ts.
 
-import { getUserKey } from "../utils";
+import { getUserKey } from "./utils";
 
 /** Every known GM key (key name; user-scoping prefix is applied by getUserKey). */
 export const KNOWN_KEYS = ["color", "colorscheme", "ban", "pinned", "whisper", "scheme_v2"] as const;

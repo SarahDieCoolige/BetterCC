@@ -16,7 +16,7 @@
 // doColorStuff (deleted with theme.ts). v3 defines its own here (close WS to
 // reconnect, or full reload if auth_dead).
 
-import { cclog } from "../utils";
+import { cclog } from "./utils";
 
 /**
  * Build the v3 shell: Grid container, moved chatframe, hidden table, header

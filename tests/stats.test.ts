@@ -8,7 +8,7 @@
 // missing count hides its badge.
 
 import { describe, it, expect } from "vitest";
-import { parseStats, encodeChatLink } from "../src/v3/stats";
+import { parseStats, encodeChatLink } from "../src/stats";
 
 // The exact response the dev mock returns (dev/server.mjs chat_info_friends_nc
 // route): 3 friends online, 1 friend request, 0 messages (the messages value

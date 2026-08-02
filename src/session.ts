@@ -9,7 +9,7 @@
 // (T6 → T4b) subscribes to update on channel changes.
 
 import { emit, type SessionState } from "./store";
-import { cclog } from "../utils";
+import { cclog } from "./utils";
 
 let session: SessionState;
 let timer: ReturnType<typeof setInterval> | null = null;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { patchAwayTimer, buildPatchedHandler } from "../src/v3/patched-handler";
+import { patchAwayTimer, buildPatchedHandler } from "../src/patched-handler";
 
 // Minimal fake of <form name="hold"> — buildPatchedHandler only calls
 // getAttribute("onsubmit"), so a duck-typed stand-in exercises the real

@@ -16,7 +16,7 @@
 // The color picker (3) is the LOCAL theme (saveColor → --bcc-*); the preset
 // circles (4) set the SERVER-SIDE nick color via upstream color_set — distinct.
 
-import { cclog, getUserKey, printHelp } from "../utils";
+import { cclog, getUserKey, printHelp } from "./utils";
 import { saveColor, toggleSchemeVersion, getSchemeVersion } from "./theme";
 import { getConfig } from "./config";
 

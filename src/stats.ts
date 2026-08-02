@@ -10,7 +10,7 @@
 // Only the pure parser (parseStats) is unit-tested; the DOM builder + poller
 // are verified via the dev-server smoke (consistent with sidebar.ts / shell.ts).
 
-import { cclog } from "../utils";
+import { cclog } from "./utils";
 
 /** The three counts parsed from the chat_info_friends_nc.html response. */
 export interface Stats {
