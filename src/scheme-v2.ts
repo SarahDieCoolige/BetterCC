@@ -17,42 +17,9 @@
 
 // tinycolor2 is loaded via CDN @require (keeps the userscript small). The UMD
 // wrapper assigns the factory to window.tinycolor — we use the bare global.
+import type { BccColorScheme, GenerateSchemeOptions } from "./scheme-v1";
+
 declare const tinycolor: any;
-
-// ─── Public interface ──────────────────────────────────────────────────────
-
-export interface BccColorScheme {
-  // ── Existing fields (drop-in compat — mapped to the new scale below) ──
-  surface: string;
-  text: string;
-  surfaceRaised: string;
-  textRaised: string;
-  surfaceInput: string;
-  textInput: string;
-  surfaceFooter: string;
-  surfaceSidebar: string;
-  textSidebar: string;
-  textMuted: string;
-  textPlaceholder: string;
-  icon: string;
-  accentWhisper: string;
-  accentBan: string;
-  statusOnline: string;
-  statusSep: string;
-  textAway: string;
-  border: string;
-  surfaceHover: string;
-  surfaceActive: string;
-  bgHex: string;
-}
-
-export interface GenerateSchemeOptions {
-  /**
-   * Force dark-mode derivation regardless of the base colour's luminance.
-   * Default: derived from the base (`isLight()` → light, else dark).
-   */
-  darkMode?: boolean;
-}
 
 // ─── Tunable, named steps ──────────────────────────────────────────────────
 //
