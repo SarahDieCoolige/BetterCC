@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   parseIdSearch,
   decodeIdPath,
@@ -351,5 +351,201 @@ describe("encodeChatLink ↔ decodeIdPath round-trip", () => {
   it("decodes real ChatCity UTF-8 encoding for ä correctly", () => {
     // The real server encodes ä as UTF-8 bytes C3 A4 → :C3::A4:
     expect(decodeIdPath("test:C3::A4:user03")).toBe("testäuser03");
+  });
+});
+
+// ─── fetchUserImage (effectful: AJAX + cache) ──────────────────────────────
+//
+// Mock strategy: inject fake unsafeWindow.ajax + PAJAX before each test,
+// restore after. The mock ajax constructor calls onComplete synchronously with
+// a configurable responseText. GM_log is mocked to avoid Tampermonkey dep.
+
+import { fetchUserImage, clearImageCache } from "../src/user-image";
+
+// Production HTML fixture for a user with a photo (exact match for "testuser_01")
+const AJAX_PHOTO_RESPONSE = `<div class="obj_uimg wrapper"><div class="value"><a href="https://www.chatcity.de/de/id/testuser:5F:01.html" onclick="..." rel="nofollow" ><img src="userfiles/f/6/c/h/v/1xyOx5L0LG1PhtuOvL41Va_3.jpg"  title="testuser_01 " alt="testuser_01 "  /></a></div></div><div class="obj_uname wrapper"><div class="value"><a href="https://www.chatcity.de/de/id/testuser:5F:01.html" onclick="..." rel="nofollow" >testuser_01</a></div></div>`;
+
+// Production HTML fixture for a user NOT in the results (search returns other users)
+const AJAX_NOT_FOUND_RESPONSE = `<div class="obj_uimg wrapper"><div class="value"><a href="https://www.chatcity.de/de/id/testuser.html" onclick="..." rel="nofollow" ><img src="userfiles/a/b/c/d/aaa_3.jpg" title="testuser" alt="testuser" /></a><a href="https://www.chatcity.de/de/id/testuser.html" onclick="..." rel="nofollow" >testuser</a></div></div>`;
+
+/** Install mock ajax/PAJAX/GM_log onto the global scope. Returns a spy for ajax calls. */
+function installAjaxMock(responseText: string) {
+  const ajaxCalls: Array<{ url: string; opts: any; onComplete: (t: any) => void }> = [];
+  const w = {
+    ajax: function (_url: string, opts: any) {
+      ajaxCalls.push({ url: _url, opts, onComplete: opts.onComplete });
+    },
+    PAJAX: "https://www.chatcity.de/de/" as string,
+  };
+  (globalThis as any).unsafeWindow = w;
+  (globalThis as any).GM_log = () => {};
+  return {
+    ajaxCalls,
+    /** Simulate the AJAX completing with the configured responseText */
+    completeAll: () => {
+      for (const call of ajaxCalls) {
+        call.onComplete({ responseText });
+      }
+    },
+  };
+}
+
+function cleanupAjaxMock() {
+  delete (globalThis as any).unsafeWindow;
+  delete (globalThis as any).GM_log;
+}
+
+describe("fetchUserImage", () => {
+  afterEach(() => {
+    clearImageCache();
+    cleanupAjaxMock();
+  });
+
+  it("calls ajax with correct URL and params, then resolves with the user image", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+
+    const promise = fetchUserImage("testuser_01");
+    // The mock ajax stores the onComplete callback but doesn't call it yet.
+    // We call completeAll to simulate the AJAX response.
+    mock.completeAll();
+
+    const result = await promise;
+    expect(result.hasPhoto).toBe(true);
+    expect(result.thumbUrl).toBe("userfiles/f/6/c/h/v/1xyOx5L0LG1PhtuOvL41Va_3.jpg");
+    expect(result.fullUrl).toBe("userfiles/f/6/c/h/v/1xyOx5L0LG1PhtuOvL41Va.jpg");
+  });
+
+  it("calls ajax with PAJAX + obj_list.html and the correct params", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+
+    fetchUserImage("testuser_01");
+    mock.completeAll();
+
+    expect(mock.ajaxCalls).toHaveLength(1);
+    const call = mock.ajaxCalls[0];
+    expect(call.url).toBe("https://www.chatcity.de/de/obj_list.html");
+    // postBody should contain the key params
+    expect(call.opts.postBody).toContain("EXT=allbychar");
+    expect(call.opts.postBody).toContain("_KW_allbychar=testuser_01");
+    expect(call.opts.postBody).toContain("TYP=1");
+    expect(call.opts.postBody).toContain("CACHE=3600");
+  });
+
+  it("returns cache hit without calling ajax on second call for same nick", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+
+    // First call — populates cache
+    const p1 = fetchUserImage("testuser_01");
+    mock.completeAll();
+    await p1;
+
+    // Second call — should use cache
+    const p2 = fetchUserImage("testuser_01");
+    // p2 should already be resolved (cache hit), no need to completeAll again
+    const result2 = await p2;
+    expect(result2.hasPhoto).toBe(true);
+
+    // ajax should have been called only once (from the first call)
+    expect(mock.ajaxCalls).toHaveLength(1);
+  });
+
+  it("force:true bypasses cache and re-invokes ajax", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+
+    // First call
+    const p1 = fetchUserImage("testuser_01");
+    mock.completeAll();
+    await p1;
+
+    // Second call with force
+    const p2 = fetchUserImage("testuser_01", { force: true });
+    mock.completeAll();
+    await p2;
+
+    expect(mock.ajaxCalls).toHaveLength(2);
+  });
+
+  it("resolves with hasPhoto:false when findExactRow returns null (user not in results)", async () => {
+    // Response contains "testuser" but we search for "testuser_01" — exact match will fail
+    const mock = installAjaxMock(AJAX_NOT_FOUND_RESPONSE);
+
+    const promise = fetchUserImage("testuser_01");
+    mock.completeAll();
+
+    const result = await promise;
+    expect(result).toEqual({ thumbUrl: null, fullUrl: null, hasPhoto: false });
+  });
+
+  it("resolves with hasPhoto:false when ajax/PAJAX are unavailable (does not throw)", async () => {
+    // No ajax function, no PAJAX
+    (globalThis as any).unsafeWindow = {};
+    (globalThis as any).GM_log = () => {};
+
+    const result = await fetchUserImage("anyone");
+    expect(result).toEqual({ thumbUrl: null, fullUrl: null, hasPhoto: false });
+  });
+
+  it("rejects with timeout error if onComplete never fires within 8s", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+
+    // Use fake timers to fast-forward past the 8s timeout
+    vi.useFakeTimers();
+
+    const promise = fetchUserImage("testuser_01");
+
+    // Advance past the 8s timeout
+    vi.advanceTimersByTime(8100);
+
+    await expect(promise).rejects.toThrow("user-image: timeout");
+
+    vi.useRealTimers();
+  });
+
+  it("does not double-resolve if onComplete fires after timeout", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+
+    vi.useFakeTimers();
+
+    const promise = fetchUserImage("testuser_01");
+
+    // Advance past the 8s timeout — should reject
+    vi.advanceTimersByTime(8100);
+
+    // Now fire onComplete — should NOT resolve (already rejected)
+    mock.completeAll();
+
+    // The promise should still reject (not resolve)
+    await expect(promise).rejects.toThrow("user-image: timeout");
+
+    vi.useRealTimers();
+  });
+
+  it("caches result keyed by nick.toLowerCase()", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+
+    // First call with mixed case
+    const p1 = fetchUserImage("Testuser_01");
+    mock.completeAll();
+    await p1;
+
+    // Second call with different case — should hit cache
+    const p2 = fetchUserImage("testuser_01");
+    const result = await p2;
+    expect(result.hasPhoto).toBe(true);
+    expect(mock.ajaxCalls).toHaveLength(1);
+  });
+
+  it("stores result in cache even for not-found results", async () => {
+    const mock = installAjaxMock(AJAX_NOT_FOUND_RESPONSE);
+
+    const p1 = fetchUserImage("testuser_01");
+    mock.completeAll();
+    await p1;
+
+    // Second call should use cached not-found result
+    const p2 = fetchUserImage("testuser_01");
+    const result = await p2;
+    expect(result.hasPhoto).toBe(false);
+    expect(mock.ajaxCalls).toHaveLength(1);
   });
 });

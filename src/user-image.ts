@@ -6,6 +6,8 @@
 //
 // T13's future id-popup.ts will import parseIdSearch + decodeIdPath from here.
 
+import { cclog } from "./utils";
+
 // ─── Interfaces ────────────────────────────────────────────────────────────
 
 /** One row parsed from the /id/ search HTML response. */
@@ -300,4 +302,114 @@ export function deriveImageUrl(thumbUrl: string | null): UserImageResult {
     fullUrl,
     hasPhoto: !isDefault,
   };
+}
+
+// ─── fetchUserImage (effectful: AJAX + cache) ──────────────────────────────
+
+/** In-memory cache keyed by nick.toLowerCase(). Cleared each session. */
+const cache = new Map<string, UserImageResult>();
+
+/** Clear the image cache (test-only + manual refresh). */
+export function clearImageCache(): void {
+  cache.clear();
+}
+
+/** Fixed AJAX params for the ID-search endpoint (from modernize showIdPopup). */
+const AJAX_PARAMS = [
+  "TYP=1",
+  "_EN_OBJ_ORDER_SORT_SHOW=",
+  "ORD=0",
+  "SORT=1",
+  "START=0",
+  "_LIST_WRAPPER_ID=bccid",
+  "EXT=allbychar",
+  "_KW_allbychar=", // index 7 — the nick is appended to this param
+  "LOADDEF=3",
+  "LOADDEF_EXTRA_USER=",
+  "LOADDEF_EXTRA=",
+  "_LIST_LINK_ALL=",
+  "STYP=",
+  "LOADDEF_CUSTOM=allbychar",
+  "CACHE=3600",
+  "OPENW=1",
+  "ISCHAT=1",
+];
+const KW_PARAM_INDEX = 7;
+
+const TIMEOUT_MS = 8000;
+
+/** Empty result for no-photo / no-match / unavailable cases. */
+const EMPTY_RESULT: UserImageResult = { thumbUrl: null, fullUrl: null, hasPhoto: false };
+
+/**
+ * Fetch a user's profile image via the ChatCity ID-search AJAX.
+ *
+ * Wraps the pure parseIdSearch → findExactRow → deriveImageUrl pipeline with
+ * AJAX + in-memory cache. The popup (UI-3) calls this.
+ *
+ * - Cache hit (same nick, no force) → instant resolved promise.
+ * - Cache miss → POST obj_list.html, parse, filter, store, resolve.
+ * - Not found → resolves with `{hasPhoto:false}` (does NOT throw).
+ * - Timeout (8s) or ajax constructor throw → rejects.
+ */
+export function fetchUserImage(
+  nick: string,
+  opts?: { force?: boolean },
+): Promise<UserImageResult> {
+  const key = nick.toLowerCase();
+
+  // Cache hit (unless force)
+  if (!opts?.force && cache.has(key)) {
+    return Promise.resolve(cache.get(key)!);
+  }
+
+  return new Promise<UserImageResult>((resolve, reject) => {
+    try {
+      const w = unsafeWindow as any;
+      const ajax = w.ajax;
+      const pajax = w.PAJAX;
+
+      if (typeof ajax !== "function" || typeof pajax !== "string") {
+        cclog("user-image: upstream ajax/PAJAX unavailable — returning empty result", "user-image");
+        resolve(EMPTY_RESULT);
+        return;
+      }
+
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error("user-image: timeout"));
+        }
+      }, TIMEOUT_MS);
+
+      const params = AJAX_PARAMS.map((p, i) =>
+        i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p,
+      ).join("&");
+
+      new ajax(pajax + "obj_list.html", {
+        postBody: params,
+        onComplete: (transport: any) => {
+          if (settled) return; // timeout already fired
+          settled = true;
+          clearTimeout(timer);
+          try {
+            const html = transport?.responseText ?? "";
+            const rows = parseIdSearch(html);
+            const row = findExactRow(rows, nick);
+            const result = deriveImageUrl(row?.imgUrl ?? null);
+            cache.set(key, result);
+            resolve(result);
+          } catch (e) {
+            cclog("user-image: parse failed — " + (e as Error).message, "user-image");
+            cache.set(key, EMPTY_RESULT);
+            resolve(EMPTY_RESULT);
+          }
+        },
+      });
+    } catch (e) {
+      // The ajax constructor itself threw (e.g. invalid args)
+      reject(e);
+    }
+  });
 }
