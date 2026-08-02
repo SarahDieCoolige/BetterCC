@@ -653,10 +653,91 @@
   font-size: 13px;
 }
 .bcc-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
   padding: 4px 8px 6px;
   border-bottom: 1px solid var(--bcc-border);
   margin-bottom: 4px;
+}
+
+/* ─── Thumbnail button in popup header (replaces Bild action button) ─── */
+.bcc-popup-thumb-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--bcc-border);
+  background: var(--bcc-surface-hover);
+  color: var(--bcc-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  overflow: hidden;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.bcc-popup-thumb-btn:hover {
+  background: var(--bcc-surface-active);
+  border-color: var(--bcc-text-muted);
+}
+.bcc-popup-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 5px;
+}
+
+/* ─── Username in popup header (click to copy) ─── */
+.bcc-popup-username {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin: -1px -3px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.bcc-popup-username:hover {
+  background: var(--bcc-surface-hover);
+}
+.bcc-popup-username:active {
+  background: var(--bcc-surface-active);
+}
+
+/* ─── ID icon button in popup header ─── */
+.bcc-popup-id-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--bcc-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.bcc-popup-id-btn:hover {
+  background: var(--bcc-surface-hover);
+  color: var(--bcc-text-raised);
 }
 .bcc-popup-action {
   display: flex;
@@ -690,37 +771,6 @@
 .bcc-popup-action:focus-visible {
   outline: 2px solid var(--bcc-accent-whisper);
   outline-offset: -2px;
-}
-
-/* ─── Popup image area (Bild button result) ─────────────────────────────── */
-.bcc-popup-image {
-  padding: 6px 10px 4px;
-}
-.bcc-popup-image img.bcc-popup-thumb {
-  display: block;
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
-  border: 1px solid var(--bcc-border);
-  object-fit: cover;
-  cursor: pointer;
-}
-.bcc-popup-image--none {
-  color: var(--bcc-text-muted);
-  font-size: 12px;
-  font-style: italic;
-  padding: 4px 10px;
-}
-.bcc-popup-image--error {
-  color: var(--bcc-text-muted);
-  font-size: 12px;
-  font-style: italic;
-  padding: 4px 10px;
-}
-.bcc-popup-image--loading {
-  color: var(--bcc-text-muted);
-  font-size: 12px;
-  padding: 4px 10px;
 }
 
 /* ─── Hover preview (full-size image following cursor) ───────────────────── */

@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.0.10
+// @version      3.0.11
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -14,8 +14,8 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.10
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.10
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.11
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.11
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1006,21 +1006,62 @@
     mount.appendChild(previewImg);
     return previewImg;
   }
-  function renderImageResult(imageArea, result) {
-    imageArea.className = "bcc-popup-image";
-    imageArea.textContent = "";
+  function positionPreview(img, clientX, clientY) {
+    img.style.left = clientX + 16 + "px";
+    img.style.top = clientY - 75 + "px";
+  }
+  function buildThumbButton(userName) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-popup-thumb-btn";
+    btn.title = "Bild von " + userName + " laden (Umschalt+Klick = neu laden)";
+    btn.setAttribute("aria-label", btn.title);
+    const placeholderIcon = iconElement("fa-image");
+    placeholderIcon.style.pointerEvents = "none";
+    btn.appendChild(placeholderIcon);
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      loadThumb(btn, userName, e.shiftKey);
+    });
+    return btn;
+  }
+  function loadThumb(btn, userName, force) {
+    btn.textContent = "";
+    const spinner = document.createElement("i");
+    spinner.className = "fas fa-spinner fa-spin";
+    spinner.style.pointerEvents = "none";
+    spinner.setAttribute("aria-hidden", "true");
+    btn.appendChild(spinner);
+    fetchUserImage(userName, { force }).then((result) => {
+      if (!openPopup?.contains(btn)) return;
+      applyThumbResult(btn, result, userName);
+    }).catch(() => {
+      if (!openPopup?.contains(btn)) return;
+      restorePlaceholder(btn, "Bild nicht verf\xFCgbar");
+    });
+  }
+  function applyThumbResult(btn, result, userName) {
+    btn.textContent = "";
     if (!result.hasPhoto || !result.thumbUrl) {
-      imageArea.classList.add("bcc-popup-image--none");
-      imageArea.textContent = "Kein Bild";
+      const icon = iconElement("fa-image");
+      icon.style.pointerEvents = "none";
+      btn.appendChild(icon);
+      btn.title = "Kein Bild";
       return;
     }
     const thumb = document.createElement("img");
     thumb.src = result.thumbUrl;
     thumb.alt = "Benutzerbild";
-    thumb.className = "bcc-popup-thumb";
+    thumb.setAttribute("aria-hidden", "true");
     thumb.addEventListener("error", () => {
-      thumb.style.display = "none";
+      btn.textContent = "";
+      const icon = iconElement("fa-image");
+      icon.style.pointerEvents = "none";
+      btn.appendChild(icon);
+      btn.title = "Bild nicht verf\xFCgbar";
     });
+    btn.appendChild(thumb);
+    btn.title = "Bild von " + userName;
     if (result.fullUrl && result.fullUrl !== result.thumbUrl) {
       const showPreview = (e) => {
         const img = ensurePreviewImg();
@@ -1035,44 +1076,59 @@
       const hidePreview = () => {
         if (previewImg) previewImg.style.display = "none";
       };
-      thumb.addEventListener("mouseenter", showPreview);
-      thumb.addEventListener("mousemove", movePreview);
-      thumb.addEventListener("mouseleave", hidePreview);
+      btn.addEventListener("mouseenter", showPreview);
+      btn.addEventListener("mousemove", movePreview);
+      btn.addEventListener("mouseleave", hidePreview);
     }
-    imageArea.appendChild(thumb);
   }
-  function positionPreview(img, clientX, clientY) {
-    img.style.left = clientX + 16 + "px";
-    img.style.top = clientY - 75 + "px";
+  function restorePlaceholder(btn, title) {
+    btn.textContent = "";
+    const icon = iconElement("fa-image");
+    icon.style.pointerEvents = "none";
+    btn.appendChild(icon);
+    btn.title = title;
   }
-  function bildButton(userName, imageArea) {
+  function buildUsernameSpan(userName) {
+    const span = document.createElement("span");
+    span.className = "bcc-popup-username";
+    span.textContent = userName;
+    span.title = "Klicken zum Kopieren";
+    span.addEventListener("click", (e) => {
+      e.stopPropagation();
+      copyToClipboard(span, userName);
+    });
+    return span;
+  }
+  function copyToClipboard(el, text) {
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        showCopyFeedback(el);
+      }).catch(() => {
+      });
+    } catch {
+    }
+  }
+  function showCopyFeedback(el) {
+    const originalTitle = el.title;
+    el.title = "Kopiert!";
+    setTimeout(() => {
+      if (el.title === "Kopiert!") el.title = originalTitle;
+    }, 1500);
+  }
+  function buildIdButton(userName) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "bcc-popup-action";
-    btn.title = "Bild von " + userName + " anzeigen (Umschalt+Klick = neu laden)";
-    btn.setAttribute("aria-label", btn.title);
-    btn.appendChild(iconElement("fa-image"));
-    const label = document.createElement("span");
-    label.className = "bcc-popup-action-label";
-    label.textContent = "Bild";
-    btn.appendChild(label);
+    btn.className = "bcc-popup-id-btn";
+    const label = "ID von " + userName + " anzeigen";
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+    btn.appendChild(iconElement("fa-id-card"));
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      handleBildClick(userName, imageArea, e.shiftKey);
+      cclog("user popup: /id stubbed (T13) \u2014 " + userName, "v3");
+      closePopup();
     });
     return btn;
-  }
-  function handleBildClick(nick, imageArea, force) {
-    imageArea.className = "bcc-popup-image bcc-popup-image--loading";
-    imageArea.textContent = "L\xE4dt\u2026";
-    fetchUserImage(nick, { force }).then((result) => {
-      if (!openPopup?.contains(imageArea)) return;
-      renderImageResult(imageArea, result);
-    }).catch(() => {
-      if (!openPopup?.contains(imageArea)) return;
-      imageArea.className = "bcc-popup-image bcc-popup-image--error";
-      imageArea.textContent = "Bild nicht verf\xFCgbar";
-    });
   }
   function openUserPopup(anchor, user, isPinned, onTogglePin) {
     closePopup();
@@ -1083,7 +1139,9 @@
     popup.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
     const header = document.createElement("div");
     header.className = "bcc-popup-header";
-    header.textContent = user.name;
+    header.appendChild(buildThumbButton(user.name));
+    header.appendChild(buildUsernameSpan(user.name));
+    header.appendChild(buildIdButton(user.name));
     popup.appendChild(header);
     popup.appendChild(
       actionBtn(
@@ -1110,15 +1168,6 @@
     popup.appendChild(
       actionBtn("fa-ban", "Ignorieren", "Benutzer ignorieren (T12)", () => {
         cclog("user popup: ignore stubbed (T12) \u2014 " + user.name, "v3");
-      })
-    );
-    const imageArea = document.createElement("div");
-    imageArea.className = "bcc-popup-image";
-    popup.appendChild(bildButton(user.name, imageArea));
-    popup.appendChild(imageArea);
-    popup.appendChild(
-      actionBtn("fa-id-card", "ID", "ID von " + user.name + " anzeigen (T13)", () => {
-        cclog("user popup: /id stubbed (T13) \u2014 " + user.name, "v3");
       })
     );
     const mount = document.querySelector(".bcc-shell") ?? document.body;
