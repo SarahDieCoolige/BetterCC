@@ -42,9 +42,37 @@ export function getStatusClasses(user: User): string {
   return classes.join(" ");
 }
 
+/** Apply a user's state to an existing row's child elements (dot, name span,
+ *  gast chip). The row must already contain these elements; use after
+ *  buildRow or to patch an in-place status change. */
+function applyUserState(row: HTMLLIElement, user: User): void {
+  row.className = getStatusClasses(user);
+  const dot = row.querySelector(".bcc-status-dot");
+  if (dot) {
+    dot.className =
+      "bcc-status-dot fas " +
+      statusDotClass(user) +
+      " " +
+      (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+  }
+  const nameSpan = row.querySelector(".bcc-userrow-name");
+  if (nameSpan) {
+    nameSpan.classList.toggle("bcc-name-away", user.away);
+    nameSpan.textContent = user.name;
+  }
+  const existingChip = row.querySelector(".bcc-gast");
+  if (isGuestTag(user) && !existingChip) {
+    const gast = document.createElement("span");
+    gast.className = "bcc-user-tag bcc-gast";
+    gast.textContent = "gast";
+    row.appendChild(gast);
+  } else if (!isGuestTag(user) && existingChip) {
+    existingChip.remove();
+  }
+}
+
 function buildRow(user: User): HTMLLIElement {
   const li = document.createElement("li");
-  li.className = getStatusClasses(user);
   li.dataset.name = user.name;
   // tabindex + role so the list is keyboard-navigable (spec §4.5 / R4).
   li.tabIndex = 0;
@@ -55,11 +83,7 @@ function buildRow(user: User): HTMLLIElement {
   // ONLY sep vs present; away/guest are not dot states (away recolors the
   // name; guest shows a 'gast' chip).
   const dot = document.createElement("i");
-  dot.className =
-    "bcc-status-dot fas " +
-    statusDotClass(user) +
-    " " +
-    (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+  dot.className = "bcc-status-dot fas";
   dot.setAttribute("aria-hidden", "true");
   li.appendChild(dot);
   // Name — away dims the name (bcc-name-away) via opacity on the NAME span
@@ -67,17 +91,9 @@ function buildRow(user: User): HTMLLIElement {
   // dot + a dimmed name (not a uniformly faded row).
   const nameSpan = document.createElement("span");
   nameSpan.className = "bcc-userrow-name";
-  if (user.away) nameSpan.classList.add("bcc-name-away");
-  nameSpan.textContent = user.name;
   li.appendChild(nameSpan);
-  // Guest tier — a small 'gast' pill chip after the name (not name text, so
-  // it reads cleanly without bloating the name). Built/unbuilt per render.
-  if (isGuestTag(user)) {
-    const gast = document.createElement("span");
-    gast.className = "bcc-user-tag bcc-gast";
-    gast.textContent = "gast";
-    li.appendChild(gast);
-  }
+  // Apply user state to the row (classes, dot color, name text, gast chip).
+  applyUserState(li, user);
   // Open the popup on click OR Enter/Space (R1: discoverable; was silent log).
   // stopPropagation on click so the opening event doesn't bubble to the
   // popup's document-level outside-click listener (which would close the
@@ -225,33 +241,8 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
     let row = rowMap.get(user.name);
     if (row) {
       // Unchanged user — refresh status in place (a status flip like
-      // away↔present is NOT an add/remove; it reuses the node). Update the row
-      // classes, the status-dot color class, the name, and the gast chip.
-      row.className = getStatusClasses(user);
-      const dot = row.querySelector(".bcc-status-dot");
-      if (dot) {
-        dot.className =
-          "bcc-status-dot fas " +
-          statusDotClass(user) +
-          " " +
-          (user.sep ? "fa-circle-half-stroke" : "fa-circle");
-      }
-      const nameSpan = row.querySelector(".bcc-userrow-name");
-      if (nameSpan) {
-        nameSpan.classList.toggle("bcc-name-away", user.away);
-        nameSpan.textContent = user.name;
-      }
-      // Add/remove the gast chip to match the current guest flag (a row can
-      // flip guest↔registered only by re-registering, but handle it anyway).
-      const existingChip = row.querySelector(".bcc-gast");
-      if (isGuestTag(user) && !existingChip) {
-        const gast = document.createElement("span");
-        gast.className = "bcc-user-tag bcc-gast";
-        gast.textContent = "gast";
-        row.appendChild(gast);
-      } else if (!isGuestTag(user) && existingChip) {
-        existingChip.remove();
-      }
+      // away↔present is NOT an add/remove; it reuses the node).
+      applyUserState(row, user);
     } else {
       row = buildRow(user);
       rowMap.set(user.name, row);

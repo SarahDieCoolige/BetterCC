@@ -943,28 +943,41 @@
     if (user.sep) classes.push("bcc-sep");
     return classes.join(" ");
   }
+  function applyUserState(row, user) {
+    row.className = getStatusClasses(user);
+    const dot = row.querySelector(".bcc-status-dot");
+    if (dot) {
+      dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " + (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+    }
+    const nameSpan = row.querySelector(".bcc-userrow-name");
+    if (nameSpan) {
+      nameSpan.classList.toggle("bcc-name-away", user.away);
+      nameSpan.textContent = user.name;
+    }
+    const existingChip = row.querySelector(".bcc-gast");
+    if (isGuestTag(user) && !existingChip) {
+      const gast = document.createElement("span");
+      gast.className = "bcc-user-tag bcc-gast";
+      gast.textContent = "gast";
+      row.appendChild(gast);
+    } else if (!isGuestTag(user) && existingChip) {
+      existingChip.remove();
+    }
+  }
   function buildRow(user) {
     const li = document.createElement("li");
-    li.className = getStatusClasses(user);
     li.dataset.name = user.name;
     li.tabIndex = 0;
     li.setAttribute("role", "button");
     li.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
     const dot = document.createElement("i");
-    dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " + (user.sep ? "fa-circle-half-stroke" : "fa-circle");
+    dot.className = "bcc-status-dot fas";
     dot.setAttribute("aria-hidden", "true");
     li.appendChild(dot);
     const nameSpan = document.createElement("span");
     nameSpan.className = "bcc-userrow-name";
-    if (user.away) nameSpan.classList.add("bcc-name-away");
-    nameSpan.textContent = user.name;
     li.appendChild(nameSpan);
-    if (isGuestTag(user)) {
-      const gast = document.createElement("span");
-      gast.className = "bcc-user-tag bcc-gast";
-      gast.textContent = "gast";
-      li.appendChild(gast);
-    }
+    applyUserState(li, user);
     const open = (e) => {
       e?.stopPropagation();
       handleRowClick(user, li);
@@ -1059,25 +1072,7 @@
       const target = isPinned ? pinnedUl : regularUl;
       let row = rowMap.get(user.name);
       if (row) {
-        row.className = getStatusClasses(user);
-        const dot = row.querySelector(".bcc-status-dot");
-        if (dot) {
-          dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " + (user.sep ? "fa-circle-half-stroke" : "fa-circle");
-        }
-        const nameSpan = row.querySelector(".bcc-userrow-name");
-        if (nameSpan) {
-          nameSpan.classList.toggle("bcc-name-away", user.away);
-          nameSpan.textContent = user.name;
-        }
-        const existingChip = row.querySelector(".bcc-gast");
-        if (isGuestTag(user) && !existingChip) {
-          const gast = document.createElement("span");
-          gast.className = "bcc-user-tag bcc-gast";
-          gast.textContent = "gast";
-          row.appendChild(gast);
-        } else if (!isGuestTag(user) && existingChip) {
-          existingChip.remove();
-        }
+        applyUserState(row, user);
       } else {
         row = buildRow(user);
         rowMap.set(user.name, row);
