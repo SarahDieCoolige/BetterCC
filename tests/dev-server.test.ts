@@ -1,4 +1,5 @@
-// Tests for the dev-server bcc-injection resolver (T5).
+// Tests for the dev-server bcc-injection resolver (T5) and query-aware ID
+// fixture route (UI-5).
 //
 // The dev server injects BetterCC's userscript + v3.css into the fixture HTML
 // based on the ?bcc= param. v3 is the only code path now (the v2 UI + main.css
@@ -9,7 +10,9 @@
 // HTML string mutation + file reads stay in the server.
 
 import { describe, it, expect } from "vitest";
-import { resolveBccInjection } from "../dev/server.mjs";
+import { resolveBccInjection, buildIdFixtureResponse } from "../dev/server.mjs";
+
+// ─── bcc injection resolver ─────────────────────────────────────────────
 
 describe("resolveBccInjection — ?bcc= query value → injection plan", () => {
   it("no param → userscript NOT injected, no stylesheet (dev default = OFF)", () => {
@@ -32,5 +35,51 @@ describe("resolveBccInjection — ?bcc= query value → injection plan", () => {
     expect(resolveBccInjection("2")).toEqual({ injectScript: false, stylesheet: null });
     expect(resolveBccInjection("true")).toEqual({ injectScript: false, stylesheet: null });
     expect(resolveBccInjection("newish")).toEqual({ injectScript: false, stylesheet: null });
+  });
+});
+
+// ─── query-aware ID fixture route (UI-5) ─────────────────────────────────
+
+describe("buildIdFixtureResponse — query-aware ID search mock", () => {
+  // Synthetic nicks (NOT real users) — cover the 3 encoding cases:
+  // underscore→:5F:, plain ASCII, hyphen→:2D:.
+  const knownUsers = new Map<string, string>([
+    ["testascii", "testascii"],
+    ["testuser_one", "testuser:5F:one"],
+    ["test-hyphen", "test:2D:hyphen"],
+  ]);
+
+  it("returns HTML with userfiles img for a known user", () => {
+    const html = buildIdFixtureResponse("testuser_one", knownUsers);
+    expect(html).toContain('src="userfiles/');
+    expect(html).toContain("_3.jpg");
+    expect(html).toContain("testuser_one");
+    expect(html).toContain("testuser:5F:one");
+  });
+
+  it("returns HTML with /id/ link for a known user", () => {
+    const html = buildIdFixtureResponse("testascii", knownUsers);
+    expect(html).toContain("/id/testascii.html");
+  });
+
+  it("returns empty result (0 User gefunden) for unknown nick", () => {
+    const html = buildIdFixtureResponse("nonexistent_nobody", knownUsers);
+    expect(html).toContain("0");
+    expect(html).toContain("User gefunden.");
+    expect(html).not.toContain("userfiles/");
+    expect(html).not.toContain("/id/");
+  });
+
+  it("handles plain ASCII nick without encoding characters", () => {
+    const html = buildIdFixtureResponse("testascii", knownUsers);
+    expect(html).toContain("/id/testascii.html");
+    expect(html).toContain('title="testascii"');
+  });
+
+  it("is case-sensitive for nick matching", () => {
+    // "Testuser_one" (uppercase T) should not match "testuser_one" in the map
+    const html = buildIdFixtureResponse("Testuser_one", knownUsers);
+    expect(html).toContain("User gefunden.");
+    expect(html).not.toContain("userfiles/");
   });
 });
