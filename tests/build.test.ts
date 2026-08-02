@@ -73,6 +73,16 @@ describe("build output", () => {
     expect(content).not.toContain("GM_wrench");
     expect(content).not.toContain("jquery-3.5.1");
     expect(content).not.toContain("jquery-ui");
+
+    // ── user-image module ships its key exports (UI-1/UI-2) ────────────────
+    // parseIdSearch + decodeIdPath + findExactRow + fetchUserImage are the
+    // pure + effectful API of src/user-image.ts. If a future refactor drops or
+    // renames them, these guards fail loudly. (Tree-shaking may mangle
+    // internals, but exported function names survive in the IIFE bundle.)
+    expect(content).toContain("parseIdSearch");
+    expect(content).toContain("decodeIdPath");
+    expect(content).toContain("findExactRow");
+    expect(content).toContain("fetchUserImage");
   });
 
   // ── Sidebar sits to the RIGHT of the chatframe (layout-polish Task A) ─────
