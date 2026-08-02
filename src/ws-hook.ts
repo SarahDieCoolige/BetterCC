@@ -71,8 +71,19 @@ export function betterccOnWsMessage(ev: MessageEvent): void {
   // 1. Call upstream's handler first — preserves contentDocument.write(ev.data)
   //    (which renders the message + executes inline scripts) and the
   //    SHIM_AUTH_DEAD detection. We must NOT skip this.
+  //
+  //    Guarded so an upstream throw (a page bug — e.g. a ReferenceError in their
+  //    injected script) can't escape and skip the post-processing below. The
+  //    theme re-apply in step 3 is load-bearing ("THE FIX" for inline-script
+  //    style clobbers); it must run on every message regardless of upstream
+  //    health. The error is logged via cclog so it stays attributable rather
+  //    than silently swallowed.
   if (typeof upstreamOnMessage === "function") {
-    upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
+    try {
+      upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
+    } catch (e) {
+      cclog("betterccOnWsMessage: upstream onmessage threw — " + (e as Error).message, "ws-hook");
+    }
   }
 
   // 2. First-time injection (iframe.css + theme + autoscroll banner).

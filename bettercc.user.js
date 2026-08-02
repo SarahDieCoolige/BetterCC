@@ -172,7 +172,11 @@
   }
   function betterccOnWsMessage(ev) {
     if (typeof upstreamOnMessage === "function") {
-      upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
+      try {
+        upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
+      } catch (e) {
+        cclog("betterccOnWsMessage: upstream onmessage threw \u2014 " + e.message, "ws-hook");
+      }
     }
     if (!injected) {
       injectIntoChatframe();
