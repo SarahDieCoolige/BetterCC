@@ -363,6 +363,13 @@
   border: 0;
   z-index: 0; /* Upstream sets #chatframe { z-index: -1 } (behind popups).
                In our Grid the iframe owns the main area — override it. */
+  /* Cover the white flash while the iframe's internal document loads.
+     The iframe element shows this background until its own <body> paints
+     (which has a hardcoded white bg from cpop_kylr.html). --bcc-surface
+     resolves via the .bcc-shell fallback until the theme bridge applies
+     the real value, so the worst case is a brief fallback-colored flash
+     instead of white. */
+  background-color: var(--bcc-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

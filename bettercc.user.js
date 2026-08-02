@@ -131,12 +131,19 @@
   var upstreamChatoutConnect = null;
   var upstreamOnMessage = null;
   var injected = false;
+  var INJECTION_RETRY_MS = 50;
+  var MAX_INJECTION_RETRIES = 50;
+  var injectionRetries = 0;
   function injectIntoChatframe() {
     const doc = getChatDoc();
     const win = getChatWin();
-    if (!doc || !win) {
+    if (!doc || !win || !doc.body) {
+      if (injectionRetries++ < MAX_INJECTION_RETRIES) {
+        setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
+      }
       return;
     }
+    injectionRetries = 0;
     const iframeCss = GM_getResourceText("iframe_css");
     if (iframeCss) {
       const style = doc.createElement("style");
@@ -152,10 +159,8 @@
     if (typeof unsafeWindow.bettercc?.setTheme === "function") {
       unsafeWindow.bettercc.setTheme();
     }
-    if (doc.body) {
-      doc.body.style.setProperty("background-color", "var(--chatBackground)");
-      doc.body.style.setProperty("color", "var(--chatText)");
-    }
+    doc.body.style.setProperty("background-color", "var(--chatBackground)");
+    doc.body.style.setProperty("color", "var(--chatText)");
     addAutoscrollBanner(doc, win);
     cclog("injectIntoChatframe: injection complete");
   }
@@ -164,11 +169,8 @@
       upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
     }
     if (!injected) {
-      const doc2 = getChatDoc();
-      if (doc2 && doc2.body) {
-        injectIntoChatframe();
-        injected = true;
-      }
+      injectIntoChatframe();
+      injected = true;
     }
     const doc = getChatDoc();
     if (doc && doc.body) {
