@@ -44,17 +44,6 @@ export interface BccColorScheme {
   surfaceHover: string;
   surfaceActive: string;
   bgHex: string;
-
-  // ── New generic-purpose names (optional, for future CSS migration) ────
-  surface0?: string; // = surface          (primary background)
-  surface1?: string; // = footer / sidebar (subtle elevation)
-  surface2?: string; // = surfaceRaised    (overlay / popup)
-  surface3?: string; // = surfaceInput     (sunken / input field)
-  text0?: string;    // = text             (primary body text)
-  text1?: string;    // = muted / placeholder / away (secondary text)
-  border0?: string;  // subtle  — siblings in the same region
-  border1?: string;  // medium  — region separators (= border)
-  border2?: string;  // strong  — outlines, focus rings
 }
 
 export interface GenerateSchemeOptions {
@@ -281,9 +270,7 @@ export function generateScheme(
   // ── Step 6: borders (3-tier scale, derived from surface‑1) ───────────
   // All borders derive from the subtle tier (surface‑1) because most
   // borders live between surface‑1 regions (sidebar, footer, stats).
-  const border0 = nudge(s1, STEP.borderSubtleShift);
   const border1 = nudge(s1, STEP.borderMediumShift);
-  const border2 = nudge(s1, STEP.borderStrongShift);
 
   // ── Step 7: interaction layers ───────────────────────────────────────
   const surfaceHoverVal = nudge(s0, STEP.hoverShift);
@@ -330,16 +317,5 @@ export function generateScheme(
     surfaceHover: toHex6(surfaceHoverVal),
     surfaceActive: toHex6(surfaceActiveVal),
     bgHex: toHex6(raw),
-
-    // ── New generic-purpose names (for future CSS migration) ─────────
-    surface0: toHex6(s0),
-    surface1: toHex6(s1),
-    surface2: toHex6(s2),
-    surface3: toHex6(s3),
-    text0: toHex6(text0),
-    text1: toHex6(text1),
-    border0: toHex6(border0),
-    border1: toHex6(border1),
-    border2: toHex6(border2),
   };
 }

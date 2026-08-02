@@ -490,9 +490,7 @@
     const textMutedVal = text1;
     const textPlaceholderVal = text1;
     const iconVal = pickTinted(s1, s1.monochromatic(), 3.5, 3);
-    const border0 = nudge2(s1, STEP2.borderSubtleShift);
     const border1 = nudge2(s1, STEP2.borderMediumShift);
-    const border2 = nudge2(s1, STEP2.borderStrongShift);
     const surfaceHoverVal = nudge2(s0, STEP2.hoverShift);
     const surfaceActiveVal = nudge2(s0, STEP2.activeShift);
     const triad = s0.triad();
@@ -526,17 +524,7 @@
       border: toHex62(border1),
       surfaceHover: toHex62(surfaceHoverVal),
       surfaceActive: toHex62(surfaceActiveVal),
-      bgHex: toHex62(raw),
-      // ── New generic-purpose names (for future CSS migration) ─────────
-      surface0: toHex62(s0),
-      surface1: toHex62(s1),
-      surface2: toHex62(s2),
-      surface3: toHex62(s3),
-      text0: toHex62(text0),
-      text1: toHex62(text1),
-      border0: toHex62(border0),
-      border1: toHex62(border1),
-      border2: toHex62(border2)
+      bgHex: toHex62(raw)
     };
   }
 

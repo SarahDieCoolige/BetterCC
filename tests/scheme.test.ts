@@ -201,43 +201,9 @@ describe("generateScheme — surface tiers", () => {
 });
 
 describe("generateScheme — v2 improvements", () => {
-  it("new generic-purpose fields are present and valid hex", () => {
-    const s = generateSchemeV2("6AAED8") as any;
-    for (const key of ["surface0", "surface1", "surface2", "surface3", "text0", "text1", "border0", "border1", "border2"]) {
-      expect(s[key]).toMatch(/^#?[0-9a-fA-F]{6}$/);
-    }
-  });
-
-  it("surface-0 map matches old surface, surface-1 matches footer/sidebar", () => {
-    const s = generateSchemeV2("FF6600") as any;
-    expect(s.surface0).toBe(s.surface);
-    expect(s.surface1).toBe(s.surfaceFooter);
-    expect(s.surface1).toBe(s.surfaceSidebar);
-    expect(s.surface2).toBe(s.surfaceRaised);
-    expect(s.surface3).toBe(s.surfaceInput);
-  });
-
   it("sidebar and footer are the same tier (intentional merge)", () => {
     const s = generateSchemeV2("6AAED8");
     expect(s.surfaceSidebar).toBe(s.surfaceFooter);
-  });
-
-  it("text-0 equals text, text-1 equals muted/placeholder", () => {
-    const s = generateSchemeV2("3A5FCD") as any;
-    expect(s.text0).toBe(s.text);
-    expect(s.text1).toBe(s.textMuted);
-    expect(s.text1).toBe(s.textPlaceholder);
-  });
-
-  it("border-0, border-1, border-2 are three distinct values", () => {
-    const s = generateSchemeV2("6AAED8") as any;
-    const set = new Set([s.border0, s.border1, s.border2]);
-    expect(set.size).toBe(3);
-  });
-
-  it("border-1 maps to the old border field", () => {
-    const s = generateSchemeV2("C2185B") as any;
-    expect(s.border1).toBe(s.border);
   });
 
   it("saturated base (red) produces desaturated derived surfaces", () => {
