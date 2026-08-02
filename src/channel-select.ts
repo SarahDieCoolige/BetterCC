@@ -16,8 +16,8 @@
 // verified via the dev-server smoke (consistent with sidebar.ts / shell.ts).
 
 import { subscribe } from "./store";
+import { getSession } from "./session";
 import { cclog } from "./utils";
-import { getChannel } from "./upstream";
 
 /** One channel group, with its upstream id, label, and member channels. */
 export interface ChannelGroup {
@@ -76,7 +76,7 @@ export function buildChannelSelect(): HTMLElement {
   const ccc = (unsafeWindow as any).ccc;
   const ccg = (unsafeWindow as any).ccg;
   const groups = parseChannels(ccc, ccg);
-  const active = getChannel();
+  const active = getSession().channel;
 
   // Fallback: no channel data → read-only label (mirrors the old label UX).
   if (groups.length === 0) {

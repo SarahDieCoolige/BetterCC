@@ -803,6 +803,39 @@
     document.addEventListener("click", onOutsideClick);
   }
 
+  // src/session.ts
+  var session;
+  var timer = null;
+  function initSession() {
+    if (timer) clearInterval(timer);
+    const w = unsafeWindow;
+    session = {
+      nick: getChatNick(),
+      registered: String(w.chat_ui ?? "").includes("R"),
+      guest: String(w.chat_ui ?? "").includes("h") && !String(w.chat_ui ?? "").includes("R"),
+      userId: String(w.chat_id ?? ""),
+      sessionId: String(w.chat_sid ?? ""),
+      channel: getChannel(),
+      authDead: isAuthDead()
+    };
+    emit({ type: "session", session: { ...session } });
+    let prevChannel = session.channel;
+    let prevAuthDead = session.authDead;
+    timer = setInterval(() => {
+      const newChannel = getChannel();
+      const newAuthDead = isAuthDead();
+      if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
+        prevChannel = session.channel = newChannel;
+        prevAuthDead = session.authDead = newAuthDead;
+        emit({ type: "session", session: { ...session } });
+      }
+    }, 2e3);
+    cclog("session: init done \u2014 nick=" + session.nick + " channel=" + session.channel, "v3");
+  }
+  function getSession() {
+    return session;
+  }
+
   // src/channel-select.ts
   function parseChannels(ccc, ccg) {
     if (!Array.isArray(ccg) || !Array.isArray(ccc)) return [];
@@ -829,7 +862,7 @@
     const ccc = unsafeWindow.ccc;
     const ccg = unsafeWindow.ccg;
     const groups = parseChannels(ccc, ccg);
-    const active = getChannel();
+    const active = getSession().channel;
     if (groups.length === 0) {
       cclog("buildChannelSelect: ccc/ccg absent \u2014 falling back to static label", "v3");
       const span = document.createElement("span");
@@ -1194,36 +1227,6 @@
     window.addEventListener("beforeunload", () => {
       if (pollTimer !== null) window.clearInterval(pollTimer);
     });
-  }
-
-  // src/session.ts
-  var session;
-  var timer = null;
-  function initSession() {
-    if (timer) clearInterval(timer);
-    const w = unsafeWindow;
-    session = {
-      nick: getChatNick(),
-      registered: String(w.chat_ui ?? "").includes("R"),
-      guest: String(w.chat_ui ?? "").includes("h") && !String(w.chat_ui ?? "").includes("R"),
-      userId: String(w.chat_id ?? ""),
-      sessionId: String(w.chat_sid ?? ""),
-      channel: getChannel(),
-      authDead: isAuthDead()
-    };
-    emit({ type: "session", session: { ...session } });
-    let prevChannel = session.channel;
-    let prevAuthDead = session.authDead;
-    timer = setInterval(() => {
-      const newChannel = getChannel();
-      const newAuthDead = isAuthDead();
-      if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
-        prevChannel = session.channel = newChannel;
-        prevAuthDead = session.authDead = newAuthDead;
-        emit({ type: "session", session: { ...session } });
-      }
-    }, 2e3);
-    cclog("session: init done \u2014 nick=" + session.nick + " channel=" + session.channel, "v3");
   }
 
   // src/commands.ts
