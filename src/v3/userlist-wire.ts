@@ -1,9 +1,10 @@
 // ─── v3 set_uinfo1 override — feeds the store, not the #ul table (spec §2.4) ─
 //
-// Upstream calls set_uinfo1() on every ulist poll (~20s) and at startup.
-// The old betterUserList() (ui.ts:210) overrode this to inject pinned users.
-// v3 overrides it to parse + diff + emit a "userlist" store event — the sidebar
-// subscribes and renders from the store, and the #ul/#uinfo table stays hidden.
+// Upstream calls set_uinfo1() on every ulist poll (~20s) and at startup. The
+// old betterUserList() (deleted with ui.ts) overrode this to inject pinned
+// users. v3 overrides it to parse + diff + emit a "userlist" store event — the
+// sidebar subscribes and renders from the store, and the #ul/#uinfo table
+// stays hidden.
 //
 // This module does NOT call the upstream set_uinfo1; the hidden userlist table
 // is never updated. The sidebar replaces it.

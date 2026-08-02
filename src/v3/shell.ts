@@ -10,11 +10,11 @@
 // INSIDE the table. Both hold + OF are load-bearing for the send/autoscroll
 // path (delout() reads document.hold.OUT1; setmove() reads document.OF.AS), so
 // they must be relocated to <body> BEFORE the table is hidden, or the send
-// path breaks. They stay visually hidden — v3 builds its own input in T8.
+// path breaks. They stay visually hidden — v3 builds its own input.
 //
-// reloadChat is NOT inherited: the old path attaches it to bettercc inside
-// doColorStuff (theme.ts), which the v3 branch skips. v3 owns its own reload
-// here (close WS to reconnect, or full reload if auth_dead).
+// reloadChat is v3-owned: the old path attached it to bettercc inside
+// doColorStuff (deleted with theme.ts). v3 defines its own here (close WS to
+// reconnect, or full reload if auth_dead).
 
 import { cclog } from "../utils";
 
@@ -85,7 +85,7 @@ export function buildShell(): boolean {
 /**
  * Reload the chat: if the session is auth-dead (terminal), do a full page
  * reload; otherwise close the WebSocket to trigger a reconnect. Mirrors the
- * old reloadChat (theme.ts) but v3-owned (the old path doesn't run under v3).
+ * deleted old reloadChat (theme.ts), v3-owned.
  */
 export function reloadChat(): void {
   if ((unsafeWindow as any).chatout_auth_dead) {

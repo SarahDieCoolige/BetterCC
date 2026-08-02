@@ -13,9 +13,10 @@
 // GM keys are unchanged from the old theme.ts (spec §6.5: no data migration):
 //   color_{user}        — base hex string, the source of truth
 //   colorscheme_{user}  — cached BccColorScheme (regenerated if base changes)
-// Old and v3 paths never run together (flag-gated), so the cache-format
-// difference (v3 stores hex roles, old stored HSL strings) is harmless: each
-// path only trusts its own cache.
+// The v2 theme engine is deleted; v3 is the only path. The cache format
+// differs from the old HSL-string cache (v3 stores hex roles), so a user
+// upgrading from v2 will regenerate the cache once on first v3 load — by
+// design, since each path only trusts its own cache shape.
 
 import { generateScheme, enableV2Scheme, disableV2Scheme, isV2Scheme, type BccColorScheme } from "../scheme";
 import { applyThemeToIframe, getUserKey } from "../utils";
@@ -89,7 +90,7 @@ export function schemeToStorage(scheme: BccColorScheme): StoredScheme {
  * Cache-hit rule: a stored scheme is reusable iff it was built from the same
  * base the user currently has stored. Case-insensitive (storage is uppercased;
  * picker input may be lowercase). `null`/`undefined` (nothing cached yet, or
- * first run after a flag flip) → regenerate.
+ * first run / after the base color changed) → regenerate.
  */
 export function matchesStoredBase(
   stored: StoredScheme | null | undefined,
