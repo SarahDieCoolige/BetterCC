@@ -20,6 +20,7 @@ import { cclog, getUserKey, printHelp } from "./utils";
 import { saveColor, toggleSchemeVersion, getSchemeVersion } from "./theme";
 import { getConfig } from "./config";
 import { getChatNick } from "./upstream";
+import { actionButton } from "./dom";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.
@@ -43,17 +44,11 @@ function trackReloadButton(btn: HTMLElement): HTMLElement {
  * the empty <i> doesn't take up the cell).
  */
 function iconBtn(iconClass: string, title: string, onClick: () => void): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
+  const btn = actionButton({ iconClass, title, onClick });
   const isBnClass = /^b\d+$/.test(iconClass);
+  // bN classes need the class ON the button (glyph is a ::before in v3.css);
+  // the factory built the <i>, but for bN the icon is the button itself.
   btn.className = isBnClass ? "bcc-icon-btn " + iconClass : "bcc-icon-btn";
-  btn.title = title;
-  btn.setAttribute("aria-label", title);
-  btn.innerHTML = '<i class="fas ' + iconClass + '" aria-hidden="true"></i>';
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation(); // don't bubble to the popup's outside-click listener
-    onClick();
-  });
   return btn;
 }
 

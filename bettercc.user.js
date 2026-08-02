@@ -706,6 +706,32 @@
     if (chaMy.length > 0) unsafeWindow.set_uinfo1();
   }
 
+  // src/dom.ts
+  function iconElement(cls) {
+    const i = document.createElement("i");
+    i.className = "fas " + cls;
+    i.setAttribute("aria-hidden", "true");
+    return i;
+  }
+  function actionButton(opts) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.title = opts.title;
+    btn.setAttribute("aria-label", opts.title);
+    if (opts.iconClass) btn.appendChild(iconElement(opts.iconClass));
+    if (opts.label) {
+      const text = document.createElement("span");
+      text.className = "bcc-action-label";
+      text.textContent = opts.label;
+      btn.appendChild(text);
+    }
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      opts.onClick();
+    });
+    return btn;
+  }
+
   // src/popup.ts
   var openPopup = null;
   var onOutsideClick = null;
@@ -726,24 +752,18 @@
     }
   }
   function actionBtn(iconClass, label, title, onClick) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-popup-action";
-    btn.title = title;
-    btn.setAttribute("aria-label", title);
-    const icon = document.createElement("i");
-    icon.className = "fas " + iconClass;
-    icon.setAttribute("aria-hidden", "true");
-    btn.appendChild(icon);
-    const text = document.createElement("span");
-    text.className = "bcc-popup-action-label";
-    text.textContent = label;
-    btn.appendChild(text);
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onClick();
-      closePopup();
+    const btn = actionButton({
+      iconClass,
+      label,
+      title,
+      onClick: () => {
+        onClick();
+        closePopup();
+      }
     });
+    btn.className = "bcc-popup-action";
+    const labelSpan = btn.querySelector("span");
+    if (labelSpan) labelSpan.className = "bcc-popup-action-label";
     return btn;
   }
   function openUserPopup(anchor, user, isPinned, onTogglePin) {
@@ -1429,17 +1449,9 @@
     return btn;
   }
   function iconBtn(iconClass, title, onClick) {
-    const btn = document.createElement("button");
-    btn.type = "button";
+    const btn = actionButton({ iconClass, title, onClick });
     const isBnClass = /^b\d+$/.test(iconClass);
     btn.className = isBnClass ? "bcc-icon-btn " + iconClass : "bcc-icon-btn";
-    btn.title = title;
-    btn.setAttribute("aria-label", title);
-    btn.innerHTML = '<i class="fas ' + iconClass + '" aria-hidden="true"></i>';
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onClick();
-    });
     return btn;
   }
   function pill(columns, extraClass, ...children) {

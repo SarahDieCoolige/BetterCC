@@ -17,6 +17,7 @@
 import { type User } from "./store";
 import { cclog } from "./utils";
 import { getBettercc } from "./upstream";
+import { actionButton } from "./dom";
 
 let openPopup: HTMLElement | null = null;
 
@@ -52,24 +53,20 @@ function actionBtn(
   title: string,
   onClick: () => void,
 ): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "bcc-popup-action";
-  btn.title = title;
-  btn.setAttribute("aria-label", title);
-  const icon = document.createElement("i");
-  icon.className = "fas " + iconClass;
-  icon.setAttribute("aria-hidden", "true");
-  btn.appendChild(icon);
-  const text = document.createElement("span");
-  text.className = "bcc-popup-action-label";
-  text.textContent = label;
-  btn.appendChild(text);
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation(); // don't let the action click bubble to outside-click
-    onClick();
-    closePopup();
+  const btn = actionButton({
+    iconClass,
+    label,
+    title,
+    onClick: () => {
+      onClick();
+      closePopup();
+    },
   });
+  btn.className = "bcc-popup-action";
+  // Keep the popup-specific label class (matches existing code; no CSS rule
+  // targets it, but the class name is part of the public DOM contract).
+  const labelSpan = btn.querySelector("span");
+  if (labelSpan) labelSpan.className = "bcc-popup-action-label";
   return btn;
 }
 
