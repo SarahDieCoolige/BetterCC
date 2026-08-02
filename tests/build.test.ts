@@ -45,10 +45,18 @@ describe("build output", () => {
     expect(content).toContain("injectIntoChatframe"); // function name in log strings
     expect(content).toContain("chatout_auth_dead"); // upstream global usage
 
-    // ── tinycolor2 is bundled, not @required ───────────────────────────────
-    // The CDN @require was dropped; tinycolor arrives via the npm import in
-    // scheme.ts and is inlined into the bundle.
-    expect(content).not.toContain("@require  https://raw.githubusercontent.com/bgrins/TinyColor");
+    // ── tinycolor2 is loaded via CDN @require, NOT bundled ────────────────
+    // scheme-v1/v2 reference the bare `tinycolor` global (the CDN's UMD
+    // wrapper assigns it). esbuild has `external: ["tinycolor2"]`, so the
+    // npm package is NOT inlined — the userscript stays small. This guard
+    // pins that decision: a future change that bundles tinycolor (drops the
+    // @require, adds `import tinycolor from "tinycolor2"`) MUST update this
+    // assertion or the build fails loudly, not silently.
+    expect(content).toContain("@require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js");
+    // The bundled-factory marker must NOT appear — tinycolor2's internal UMD
+    // assignment line. Presence means the source got inlined despite the
+    // @require, which would double-load the library.
+    expect(content).not.toContain("tinycolor = factory");
 
     // ── main.css @resource removed with the v2 UI ──────────────────────────
     expect(content).not.toContain("@resource  main_css");
