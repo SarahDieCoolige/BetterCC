@@ -11,8 +11,10 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @version      ${V}
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
-// @match  https://www.chatcity.de/de/cpop.html?*RURL=*
-// @match  https://ccc.chatcity.de/de/cpop.html?*RURL=*
+// @match  https://www.chatcity.de/de/cpop.html
+// @match  https://www.chatcity.de/de/cpop.html?*
+// @match  https://ccc.chatcity.de/de/cpop.html
+// @match  https://ccc.chatcity.de/de/cpop.html?*
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //

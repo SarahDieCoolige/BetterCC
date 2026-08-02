@@ -2,16 +2,18 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.0.4
+// @version      3.0.5
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
-// @match  https://www.chatcity.de/de/cpop.html?*RURL=*
-// @match  https://ccc.chatcity.de/de/cpop.html?*RURL=*
+// @match  https://www.chatcity.de/de/cpop.html
+// @match  https://www.chatcity.de/de/cpop.html?*
+// @match  https://ccc.chatcity.de/de/cpop.html
+// @match  https://ccc.chatcity.de/de/cpop.html?*
 // @match  https://www.chatcity.de/de/nc/index.html
 // @match  https://images.chatcity.de/*
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.4
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.4
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.5
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.5
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
