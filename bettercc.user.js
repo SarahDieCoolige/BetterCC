@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.0.7
+// @version      3.0.8
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -14,8 +14,8 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.7
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.8
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.8
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1666,7 +1666,7 @@
   function initV3() {
     cclog("v3 init (parent-page rewrite, iteration 1)");
     const v3Css = GM_getResourceText("v3_css");
-    if (v3Css) GM.addStyle(v3Css);
+    if (v3Css) GM_addStyle(v3Css);
     neuterResizeFix();
     initSession();
     unsafeWindow.bettercc.reloadChat = reloadChat;

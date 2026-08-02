@@ -17,15 +17,9 @@ declare namespace GM {
     key: string,
     callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void,
   ): number;
-  function notification(details: {
-    title?: string;
-    text: string;
-    tag?: string;
-    timeout?: number;
-    onclick?: () => void;
-  }): void;
-  function addStyle(css: string): void;
 }
+
+declare function GM_addStyle(css: string): void;
 
 declare function GM_getResourceText(name: string): string | undefined;
 
