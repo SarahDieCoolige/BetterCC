@@ -3,33 +3,21 @@
 import { cclog, getChatDoc, getChatWin } from "./utils";
 import { addAutoscrollBanner } from "./chat";
 
-export let chatframeReady: boolean = false;
 export let upstreamChatoutConnect: any = null;
 
-// Bounded retry for the prefill race (see injectIntoChatframe bail branch).
-// The upstream onmessage handler calls contentDocument.write() synchronously
-// before this listener fires; <body> isn't parsed yet at that instant, so
-// getChatDoc() returns null. We retry on a short timer until the body exists.
-// 50 tries × 50ms = up to 2.5s, which is far longer than the parser ever takes
-// to build <body> after a write. Reset to 0 once injection succeeds, so a later
-// WS reconnect can re-inject if it ever needs to.
-const INJECTION_RETRY_MS = 50;
-const MAX_INJECTION_ATTEMPTS = 50;
-let injectionAttempts = 0;
+// Stored upstream onmessage — called first inside our handler to preserve
+// all upstream behavior (contentDocument.write + SHIM_AUTH_DEAD detection).
+let upstreamOnMessage: ((ev: MessageEvent) => void) | null = null;
+// Tracks one-time first injection (replaces the chatframeReady latch).
+let injected = false;
 
 // Runs ONCE after the first WebSocket message populates the iframe.
 export function injectIntoChatframe(): void {
   const doc = getChatDoc();
   const win = getChatWin();
   if (!doc || !win) {
-    cclog("injectIntoChatframe: iframe not ready, retrying");
-    chatframeReady = false;
-    if (injectionAttempts++ < MAX_INJECTION_ATTEMPTS) {
-      setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
-    }
-    return;
+    return; // body not ready — caller tries again on next message
   }
-  injectionAttempts = 0;
 
   // 1) Inject iframe.css
   const iframeCss = GM_getResourceText("iframe_css");
@@ -62,17 +50,37 @@ export function injectIntoChatframe(): void {
   // 3) Add autoscroll banner
   addAutoscrollBanner(doc, win);
 
-  // Latch ready so the WS message handler re-injects only once. Without this,
-  // betterccOnWsMessage re-runs on EVERY message — iframe.css <style> tags and
-  // autoscroll-banner divs accumulate with chat length (one per message).
-  chatframeReady = true;
-
   cclog("injectIntoChatframe: injection complete");
 }
 
-export function betterccOnWsMessage(_ev: Event): void {
-  if (!chatframeReady) {
-    injectIntoChatframe();
+export function betterccOnWsMessage(ev: MessageEvent): void {
+  // 1. Call upstream's handler first — preserves contentDocument.write(ev.data)
+  //    (which renders the message + executes inline scripts) and the
+  //    SHIM_AUTH_DEAD detection. We must NOT skip this.
+  if (typeof upstreamOnMessage === "function") {
+    upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
+  }
+
+  // 2. First-time injection (iframe.css + theme + autoscroll banner).
+  // If the body isn't parsed yet on the very first message, skip and try
+  // again on the next message (they arrive every 3-7s).
+  if (!injected) {
+    const doc = getChatDoc();
+    if (doc && doc.body) {
+      injectIntoChatframe();
+      injected = true;
+    }
+  }
+
+  // 3. Re-apply body styles — THE FIX. Every message, always.
+  // Upstream's write may have executed inline scripts (setbgcol on channel
+  // transitions, or the body-style-reset script in a re-streamed channel
+  // intro) that clobber our theme. Re-applying here, synchronously in the
+  // same task before the browser paints, guarantees no flash.
+  const doc = getChatDoc();
+  if (doc && doc.body) {
+    doc.body.style.setProperty("background-color", "var(--chatBackground)");
+    doc.body.style.setProperty("color", "var(--chatText)");
   }
 }
 
@@ -82,7 +90,11 @@ export function betterccOnWsClose(): void {
 
 export function attachWsListeners(): void {
   if (unsafeWindow.chatout_ws) {
-    unsafeWindow.chatout_ws.addEventListener("message", betterccOnWsMessage);
+    // Store upstream's onmessage, then replace with ours.
+    // We call upstream's handler first inside ours (preserves write +
+    // SHIM_AUTH_DEAD detection), then re-apply iframe theme.
+    upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
+    unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
     unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
   }
 }
