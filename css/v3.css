@@ -2,7 +2,7 @@
  * BetterCC v3 stylesheet (spec §1.4 / §6.1)
  *
  * Consumes ONLY --bcc-* custom properties (the v3 namespace; spec A9). The
- * theme bridge (src/v3/theme.ts, T3) populates them from generateScheme().
+ * theme bridge (src/theme.ts, T3) populates them from generateScheme().
  *
  * The fallback defaults live on .bcc-shell (NOT :root) for the same reason
  * applyScheme writes to .bcc-shell: the live ChatCity page periodically
