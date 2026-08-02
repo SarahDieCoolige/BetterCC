@@ -5,7 +5,7 @@
 //
 // classifyMessage() is the pure dispatch core (tested). The DOM-bound
 // onSubmit() wrapper (reads document.hold, calls the upstream handler) lives
-// in src/v3/input.ts.
+// in src/input.ts.
 
 const openMsgCmdRegex = /^\/open\s|^\/o\s/;
 const openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;

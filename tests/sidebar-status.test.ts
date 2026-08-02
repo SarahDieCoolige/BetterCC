@@ -1,4 +1,4 @@
-// Tests for the sidebar status helpers (pure functions in src/v3/sidebar.ts).
+// Tests for the sidebar status helpers (pure functions in src/sidebar.ts).
 //
 // Status is encoded across THREE orthogonal signals so each is glanceable:
 //   - DOT   → sep only. Sep = amber filled dot; everyone else = green dot.

@@ -9,7 +9,7 @@
 // message handling stay upstream-owned (rebuilt in later iterations).
 //
 // CONTRACT (spec §5.1):
-//   - Import only from ../utils, ../ws-hook, ../scheme, and ./v3/*. The old
+//   - Import only from ./utils, ./ws-hook, ./scheme, and ./ siblings. The old
 //     ui.ts/theme.ts/commands.ts/superban.ts are gone; v3 owns all parent-page
 //     concerns. ws-hook.ts is reused as-is (spec §3.3 requires its
 //     injectIntoChatframe to keep running under v3).

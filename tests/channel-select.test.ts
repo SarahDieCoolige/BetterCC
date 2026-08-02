@@ -1,4 +1,4 @@
-// Tests for the channel-selector pure parser (src/v3/channel-select.ts).
+// Tests for the channel-selector pure parser (src/channel-select.ts).
 //
 // parseChannels reads the upstream flat arrays (unsafeWindow.ccc / .ccg) and
 // returns grouped channels for the header <select>. ccc is a flat 4-tuple array

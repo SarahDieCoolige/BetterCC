@@ -1,4 +1,4 @@
-// Tests for the stats-bar pure parser (src/v3/stats.ts).
+// Tests for the stats-bar pure parser (src/stats.ts).
 //
 // parseStats reads the chat_info_friends_nc.html response (three <a> tags with
 // .uonl/.ufri/.unc classes, each holding a .value span with the count) and
