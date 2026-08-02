@@ -11,13 +11,29 @@ let upstreamOnMessage: ((ev: MessageEvent) => void) | null = null;
 // Tracks one-time first injection (replaces the chatframeReady latch).
 let injected = false;
 
+// ─── First injection ───────────────────────────────────────────────────
+// contentDocument.write() creates the body synchronously, but getChatDoc()
+// can't see it until the current task yields. We retry on a short timer
+// until the body exists. Triggered by the first WS message (via
+// betterccOnWsMessage) — NOT by a blind poll, to avoid injecting into a
+// body that a subsequent contentDocument.open() will wipe.
+const INJECTION_RETRY_MS = 50;
+const MAX_INJECTION_RETRIES = 50;
+let injectionRetries = 0;
+
 // Runs ONCE after the first WebSocket message populates the iframe.
 export function injectIntoChatframe(): void {
   const doc = getChatDoc();
   const win = getChatWin();
-  if (!doc || !win) {
-    return; // body not ready — caller tries again on next message
+  if (!doc || !win || !doc.body) {
+    // Body not parsed yet after upstream's contentDocument.write(). Retry
+    // on a short timer — the parser builds <body> within a few ms.
+    if (injectionRetries++ < MAX_INJECTION_RETRIES) {
+      setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
+    }
+    return;
   }
+  injectionRetries = 0;
 
   // 1) Inject iframe.css
   const iframeCss = GM_getResourceText("iframe_css");
@@ -42,10 +58,8 @@ export function injectIntoChatframe(): void {
   // Regardless of whether a user theme was loaded yet, override the upstream
   // inline white: the injected iframe.css already provides fallback
   // --chatBackground / --chatText on :root, so the body resolves those.
-  if (doc.body) {
-    doc.body.style.setProperty("background-color", "var(--chatBackground)");
-    doc.body.style.setProperty("color", "var(--chatText)");
-  }
+  doc.body.style.setProperty("background-color", "var(--chatBackground)");
+  doc.body.style.setProperty("color", "var(--chatText)");
 
   // 3) Add autoscroll banner
   addAutoscrollBanner(doc, win);
@@ -62,14 +76,10 @@ export function betterccOnWsMessage(ev: MessageEvent): void {
   }
 
   // 2. First-time injection (iframe.css + theme + autoscroll banner).
-  // If the body isn't parsed yet on the very first message, skip and try
-  // again on the next message (they arrive every 3-7s).
+  // injectIntoChatframe retries internally until the body is parsed.
   if (!injected) {
-    const doc = getChatDoc();
-    if (doc && doc.body) {
-      injectIntoChatframe();
-      injected = true;
-    }
+    injectIntoChatframe();
+    injected = true;
   }
 
   // 3. Re-apply body styles — THE FIX. Every message, always.
