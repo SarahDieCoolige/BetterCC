@@ -1,9 +1,10 @@
 // Tests for the v3 config module — typed GM-storage wrapper (spec §2.5).
 //
 // GM keys are unchanged for rollback safety (A6): color_{user}, ban_{user},
-// pinned_{user}, whisper_{user}, colorscheme_{user}, plus the flag bcc_v3_{user}
-// — all produced by getUserKey() in prefix format ({key}_{user}), matching the
-// old path's hand-rolled keys so existing saved data is read with no migration.
+// pinned_{user}, whisper_{user}, colorscheme_{user}, plus scheme_v2_{user}
+// (the v1/v2 scheme toggle) — all produced by getUserKey() in prefix format
+// ({key}_{user}), matching the old path's hand-rolled keys so existing saved
+// data is read with no migration.
 // The module is a typed read/write wrapper over GM.getValue/GM.setValue. Guests
 // use "gast" as the suffix.
 //

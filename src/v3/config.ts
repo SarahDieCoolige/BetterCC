@@ -5,7 +5,7 @@
 // {key}_gast for guests). Keys match the old path's hand-rolled keys
 // ("color_" + userStore, "ban_" + userStore, ...) so v3 reads existing users'
 // saved data with no migration (rollback safety, A6): color, colorscheme,
-// ban, pinned, whisper, plus the new flag bcc_v3.
+// ban, pinned, whisper, plus scheme_v2 (the v1/v2 scheme toggle).
 //
 // The GM boundary is a side-effecting seam (no jsdom in the test suite), so the
 // pure contract this module exposes — the known keys, their defaults, and the
@@ -15,7 +15,7 @@
 import { getUserKey } from "../utils";
 
 /** Every known GM key (key name; user-scoping prefix is applied by getUserKey). */
-export const KNOWN_KEYS = ["color", "colorscheme", "ban", "pinned", "whisper", "bcc_v3", "scheme_v2"] as const;
+export const KNOWN_KEYS = ["color", "colorscheme", "ban", "pinned", "whisper", "scheme_v2"] as const;
 export type ConfigKey = (typeof KNOWN_KEYS)[number];
 
 /** Documented defaults, returned by getConfig when nothing is stored. */
@@ -25,7 +25,6 @@ export const DEFAULTS: Record<ConfigKey, unknown> = {
   ban: [],
   pinned: [],
   whisper: "", // "" = no superwhisper target
-  bcc_v3: false,
   scheme_v2: false,
 };
 

@@ -17,7 +17,7 @@
 // circles (4) set the SERVER-SIDE nick color via upstream color_set — distinct.
 
 import { cclog, getUserKey, printHelp } from "../utils";
-import { saveColor } from "./theme";
+import { saveColor, toggleSchemeVersion, getSchemeVersion } from "./theme";
 import { getConfig } from "./config";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
@@ -80,8 +80,6 @@ function sendSlashCommand(cmd: string): void {
   const w = unsafeWindow as any;
   if (typeof w.delout === "function") w.delout();
 }
-
-import { toggleSchemeVersion, getSchemeVersion } from "./theme";
 
 // ─── Group 1: Account / status ─────────────────────────────────────────────
 // away / awayoff via hold.OUT1 + delout; sysmsg on/off via com_set.

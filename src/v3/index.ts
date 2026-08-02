@@ -1,22 +1,21 @@
-// ─── v3 entry (iteration 1: parent-page rewrite) ─────────────────────────
+// ─── v3 entry (parent-page rewrite) ──────────────────────────────────────
 //
-// This module is the parallel v3 init path. It runs INSTEAD of the old init
-// in src/index.ts when the v3 feature flag is on (see ./flag.ts).
+// This module is the v3 init path — the ONLY init path. The pre-v3 (v2)
+// parent-page code was deleted; src/index.ts calls initV3() directly with no
+// flag branching (the bcc_v3_{user} gate was abandoned when old code was
+// removed).
 //
 // Iteration 1 scope: parent-page UI only. The chat iframe and WebSocket
 // message handling stay upstream-owned (rebuilt in later iterations).
 //
 // CONTRACT (spec §5.1):
-//   - Import only from ../utils, ../ws-hook, and ./v3/* — NEVER from the old
-//     ui.ts/theme.ts/commands.ts/superban.ts. Those four are the "frozen behind
-//     the flag, then deleted" set; v3 must not couple to them or they can't be
-//     removed once v3 is verified. ws-hook.ts is in a DIFFERENT bucket —
-//     "untouched in iter 1, reused" (spec §3.3 requires its injectIntoChatframe
-//     to keep running under v3) — so importing it is correct.
+//   - Import only from ../utils, ../ws-hook, ../scheme, and ./v3/*. The old
+//     ui.ts/theme.ts/commands.ts/superban.ts are gone; v3 owns all parent-page
+//     concerns. ws-hook.ts is reused as-is (spec §3.3 requires its
+//     injectIntoChatframe to keep running under v3).
 //   - Keep the iframe + WS pipeline untouched.
 //
-// The early return in src/index.ts means v3 must re-wire the pieces of the old
-// init that are load-bearing AND in the reusable bucket:
+// initV3() re-wires the pieces the old init owned that are load-bearing:
 //   - hookChatoutConnect() (ws-hook.ts) — attaches the WS listener that injects
 //     iframe.css, the theme mirror, and the autoscroll banner on first message
 //     (spec §3.3). Without it the chat renders unstyled.
@@ -48,10 +47,10 @@ import { mountInput } from "./input";
 import { mountFooter } from "./footer";
 
 /**
- * Neuter the upstream resize_fix path. The old cleanup() (ui.ts) did this plus
- * table-DOM surgery; only this subset is load-bearing under v3 (the rest is
- * either cosmetic or targets the hidden table). Inlined here — not imported —
- * because ui.ts is in the "frozen then deleted" bucket (spec §5.1).
+ * Neuter the upstream resize_fix path. The old cleanup() (deleted with ui.ts)
+ * did this plus table-DOM surgery; only this subset is load-bearing under v3
+ * (the rest targeted the now-hidden table). Inlined here — there's no old
+ * module to import it from.
  */
 function neuterResizeFix(): void {
   (unsafeWindow as any).resize_fix = function resize_fix(): boolean {
@@ -88,8 +87,8 @@ export function initV3(): void {
   // header). Must exist before loadTheme() below — applyScheme writes --bcc-*
   // to .bcc-shell (not :root), so the shell has to be in the DOM or the first
   // theme apply would land on the wrong element. Expose reloadChat on the
-  // bettercc API here too — the old path's reloadChat (defined inside
-  // doColorStuff) never runs under v3, so v3 owns its own.
+  // bettercc API here too — v3 owns its own (the old path's was inside the
+  // deleted doColorStuff).
   (unsafeWindow.bettercc as any).reloadChat = reloadChat;
   buildShell();
 
@@ -98,24 +97,26 @@ export function initV3(): void {
   // emit "userlist" store events instead of writing to the hidden #ul.
   overrideSetUinfo1();
 
-  // Load the scheme-version preference (v1/v2) before the theme engine runs
-  // so the first generateScheme() call delegates to the correct generator.
-  getConfig("scheme_v2").then((v2) => {
-    if (v2) enableV2Scheme();
-  });
-
   // Apply the saved theme (tier-0 per spec §5.3): read color_{user}, regenerate
-  // or reuse the cached scheme, write --bcc-* to .bcc-shell. The old path did
-  // this inside doColorStuff (skipped under v3); v3 calls the pure theme bridge
-  // T3 built. Also expose a v3 setTheme so injectIntoChatframe's call to
-  // bettercc.setTheme() (ws-hook.ts) re-applies the --bcc-* scheme under v3
-  // instead of the old --chatX engine.
+  // or reuse the cached scheme, write --bcc-* to .bcc-shell. v3 calls the pure
+  // theme bridge (./theme) — the old path did this inside the deleted
+  // doColorStuff. Also expose a v3 setTheme so injectIntoChatframe's call to
+  // bettercc.setTheme() (ws-hook.ts) re-applies the --bcc-* scheme (not the
+  // old --chatX engine).
+  //
+  // Scheme-version preference (v1/v2) is awaited BEFORE loadTheme so the first
+  // generateScheme() delegates to the correct generator — otherwise a v2-
+  // preferring user gets a v1 first paint and it doesn't self-correct until
+  // they toggle (the scheme_v2 read resolved async after loadTheme ran).
   //
   // O4: hold the *promise*, not the resolved scheme, so a setTheme() call that
   // races the initial load (e.g. a fast WS reconnect firing
   // injectIntoChatframe → bettercc.setTheme before loadTheme resolves) awaits
   // the pending scheme instead of silently no-op'ing on a null ref.
-  const schemePromise = loadTheme(getUserKey("color"), getUserKey("colorscheme"));
+  const schemePromise = getConfig("scheme_v2").then((v2) => {
+    if (v2) enableV2Scheme();
+    return loadTheme(getUserKey("color"), getUserKey("colorscheme"));
+  });
   (unsafeWindow.bettercc as any).setTheme = function setTheme(): void {
     schemePromise.then((scheme: BccColorScheme) => applyScheme(scheme));
   };

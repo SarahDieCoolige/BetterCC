@@ -562,7 +562,6 @@
     pinned: [],
     whisper: "",
     // "" = no superwhisper target
-    bcc_v3: false,
     scheme_v2: false
   };
   async function getConfig(key, fallback) {
@@ -1311,7 +1310,7 @@
   function buildPatchedHandler(holdForm) {
     const raw = holdForm?.getAttribute("onsubmit") || "";
     if (!raw) return null;
-    return new Function(raw.includes(AWAY_TIMER_NEEDLE) ? patchAwayTimer(raw) : raw);
+    return new Function(patchAwayTimer(raw));
   }
 
   // src/v3/input.ts
@@ -1672,10 +1671,10 @@
     unsafeWindow.bettercc.reloadChat = reloadChat;
     buildShell();
     overrideSetUinfo1();
-    getConfig("scheme_v2").then((v2) => {
+    const schemePromise = getConfig("scheme_v2").then((v2) => {
       if (v2) enableV2Scheme();
+      return loadTheme(getUserKey("color"), getUserKey("colorscheme"));
     });
-    const schemePromise = loadTheme(getUserKey("color"), getUserKey("colorscheme"));
     unsafeWindow.bettercc.setTheme = function setTheme() {
       schemePromise.then((scheme) => applyScheme(scheme));
     };
