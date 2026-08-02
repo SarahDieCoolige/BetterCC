@@ -33,6 +33,7 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @grant  GM_getResourceText
 // @grant  GM_xmlhttpRequest
 // @grant  GM_log
+// @grant  GM.notification
 // @grant  GM_notification
 // @grant  GM_addElement
 //

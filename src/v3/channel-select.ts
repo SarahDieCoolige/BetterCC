@@ -88,6 +88,7 @@ export function buildChannelSelect(): HTMLElement {
   }
 
   const select = document.createElement("select");
+  select.name = "bcc-channel";
   select.className = "bcc-channel-select";
   select.title = "Channel wechseln";
   select.setAttribute("aria-label", "Channel wechseln");

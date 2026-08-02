@@ -133,6 +133,7 @@ function buildColorSwatch(): HTMLElement {
 
   const input = document.createElement("input");
   input.type = "color";
+  input.name = "bcc-color";
   input.className = "bcc-color-input";
   input.setAttribute("aria-label", "Thema-Farbe wählen");
   input.value = "#6aaed8"; // default until the stored color loads

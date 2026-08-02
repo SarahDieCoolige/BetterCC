@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.0.6
+// @version      3.0.7
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -14,8 +14,8 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.6
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.6
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.7
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.7
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -27,6 +27,7 @@
 // @grant  GM_getResourceText
 // @grant  GM_xmlhttpRequest
 // @grant  GM_log
+// @grant  GM.notification
 // @grant  GM_notification
 // @grant  GM_addElement
 //
@@ -62,7 +63,7 @@
     ccnotify(helptxtNotify, "Hilfe", "help");
   }
   function ccnotify(message, title = "", tag = "", timeout = 3e3) {
-    GM_notification({
+    const opts = {
       title: "BetterCC " + title,
       text: message,
       tag,
@@ -72,7 +73,8 @@
         cclog("Notification clicked.");
         window.focus();
       }
-    });
+    };
+    GM_notification(opts);
   }
   function getChatDoc() {
     const f = document.getElementById("chatframe");
@@ -862,6 +864,7 @@
       return span;
     }
     const select = document.createElement("select");
+    select.name = "bcc-channel";
     select.className = "bcc-channel-select";
     select.title = "Channel wechseln";
     select.setAttribute("aria-label", "Channel wechseln");
@@ -1213,7 +1216,7 @@
     parent.insertBefore(buildStatsBar(nick), parent.firstChild);
     pollOnce();
     pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
-    window.addEventListener("unload", () => {
+    window.addEventListener("beforeunload", () => {
       if (pollTimer !== null) window.clearInterval(pollTimer);
     });
   }
@@ -1414,6 +1417,7 @@
     chatbar.innerHTML = "";
     chatbar.appendChild(inputArea);
     textarea = document.createElement("textarea");
+    textarea.name = "bcc-chat";
     textarea.className = "bcc-input-field";
     textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
     textarea.placeholder = PLACEHOLDER_ALL;
@@ -1510,6 +1514,7 @@
     wrap.title = "Thema-Farbe w\xE4hlen";
     const input = document.createElement("input");
     input.type = "color";
+    input.name = "bcc-color";
     input.className = "bcc-color-input";
     input.setAttribute("aria-label", "Thema-Farbe w\xE4hlen");
     input.value = "#6aaed8";
@@ -1661,7 +1666,7 @@
   function initV3() {
     cclog("v3 init (parent-page rewrite, iteration 1)");
     const v3Css = GM_getResourceText("v3_css");
-    if (v3Css) GM_addStyle(v3Css);
+    if (v3Css) GM.addStyle(v3Css);
     neuterResizeFix();
     initSession();
     unsafeWindow.bettercc.reloadChat = reloadChat;

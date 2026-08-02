@@ -28,9 +28,10 @@ export function printHelp(): void {
   ccnotify(helptxtNotify, "Hilfe", "help");
 }
 
-/** Wrap GM_notification. */
+/** Wrap GM_notification. VM doesn't expose GM.notification as a callable
+ * function (only GM_notification works), so we use the legacy global. */
 export function ccnotify(message: string, title = "", tag = "", timeout = 3000): void {
-  GM_notification({
+  const opts = {
     title: "BetterCC " + title,
     text: message,
     tag: tag,
@@ -40,7 +41,9 @@ export function ccnotify(message: string, title = "", tag = "", timeout = 3000):
       cclog("Notification clicked.");
       window.focus();
     },
-  });
+  };
+
+  GM_notification(opts);
 }
 
 // ─── Iframe access ───

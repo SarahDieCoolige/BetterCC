@@ -171,6 +171,7 @@ export function mountInput(): void {
 
   // ── Textarea — fills the bar's height ────────────────────────────────
   textarea = document.createElement("textarea");
+  textarea.name = "bcc-chat";
   textarea.className = "bcc-input-field";
   textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
   textarea.placeholder = PLACEHOLDER_ALL;

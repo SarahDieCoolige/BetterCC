@@ -226,7 +226,7 @@ export function mountStatsBar(parent: HTMLElement): void {
 
   pollOnce(); // immediate first paint, then on the interval
   pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
-  window.addEventListener("unload", () => {
+  window.addEventListener("beforeunload", () => {
     if (pollTimer !== null) window.clearInterval(pollTimer);
   });
 }

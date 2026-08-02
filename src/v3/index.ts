@@ -74,7 +74,7 @@ export function initV3(): void {
   // start. Dev server already inlines it for ?bcc=new → GM_getResourceText
   // returns "" → no-op. Production fetches it via the @resource (spec §4.7).
   const v3Css = GM_getResourceText("v3_css");
-  if (v3Css) GM_addStyle(v3Css);
+  if (v3Css) GM.addStyle(v3Css);
 
   // Neuter resize_fix before anything triggers it (it throws upstream).
   neuterResizeFix();

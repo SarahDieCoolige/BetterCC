@@ -1,13 +1,11 @@
 // Type declarations for Greasemonkey/Tampermonkey GM_* APIs
 
 declare function GM_log(message: string): void;
-
 declare function GM_notification(details: {
   title?: string;
   text: string;
   tag?: string;
   timeout?: number;
-  silent?: boolean;
   onclick?: () => void;
 }): void;
 
@@ -19,18 +17,17 @@ declare namespace GM {
     key: string,
     callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void,
   ): number;
+  function notification(details: {
+    title?: string;
+    text: string;
+    tag?: string;
+    timeout?: number;
+    onclick?: () => void;
+  }): void;
+  function addStyle(css: string): void;
 }
 
-declare function GM_setValue(key: string, value: any): void;
-declare function GM_getValue(key: string, defaultValue?: any): any;
 declare function GM_getResourceText(name: string): string | undefined;
-declare function GM_addStyle(css: string): void;
-declare function GM_addElement(tag: string, attributes: Record<string, string>): void;
-declare function GM_xmlhttpRequest(details: any): void;
-declare function GM_addValueChangeListener(
-  key: string,
-  callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void,
-): number;
 
 declare var GM_info: {
   script: {
