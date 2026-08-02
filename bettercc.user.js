@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.0.9
+// @version      3.0.10
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -14,8 +14,8 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.9
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.9
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=3.0.10
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3.0.10
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -736,9 +736,231 @@
     return btn;
   }
 
+  // src/user-image.ts
+  function stripThumbnailSuffix(url) {
+    return url.replace(/_(\d+)\.jpg$/i, ".jpg");
+  }
+  function parseIdSearch(html) {
+    if (typeof html !== "string" || html.length < 30) return [];
+    const rows = [];
+    const valueDivs = html.match(/<div\s+class="value"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi);
+    if (!valueDivs) return [];
+    const skipIndices = /* @__PURE__ */ new Set();
+    for (let i = 0; i < valueDivs.length; i++) {
+      if (skipIndices.has(i)) continue;
+      const block = valueDivs[i];
+      const imgUrl = extractImgSrc(block);
+      const nameLink = extractNameLink(block);
+      const hasImg = imgUrl !== null;
+      const hasNameLink = nameLink !== null;
+      if (hasImg && !hasNameLink) {
+        let row = null;
+        if (i + 1 < valueDivs.length) {
+          const nextLink = extractNameLink(valueDivs[i + 1]);
+          if (nextLink) {
+            row = {
+              name: cleanLinkText(nextLink.text),
+              href: nextLink.href,
+              imgUrl
+            };
+            skipIndices.add(i + 1);
+          }
+        }
+        if (row) {
+          rows.push(row);
+        }
+      } else if (!hasImg && hasNameLink) {
+        rows.push({
+          name: cleanLinkText(nameLink.text),
+          href: nameLink.href,
+          imgUrl: null
+        });
+      } else if (hasImg && hasNameLink) {
+        rows.push({
+          name: cleanLinkText(nameLink.text),
+          href: nameLink.href,
+          imgUrl
+        });
+      }
+    }
+    return rows;
+  }
+  function extractImgSrc(block) {
+    const match = block.match(/<img\s[^>]*src="([^"]*userfiles\/[^"]*)"[^>]*\/?>/i);
+    return match ? match[1] : null;
+  }
+  function extractNameLink(block) {
+    const linkRe = /<a\s[^>]*href="([^"]*\/id\/[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+    while ((match = linkRe.exec(block)) !== null) {
+      const text = match[2];
+      if (/<img\s/i.test(text)) continue;
+      return { href: match[1], text };
+    }
+    return null;
+  }
+  function cleanLinkText(raw) {
+    return raw.replace(/^\s*»\s*/, "").trim();
+  }
+  function decodeIdPath(segment) {
+    const bytes = [];
+    const result = segment.replace(/:([0-9A-Fa-f]{2}):|(%[0-9A-Fa-f]{2})/g, (_, hexByte, pctByte) => {
+      if (hexByte !== void 0) {
+        bytes.push(parseInt(hexByte, 16));
+      }
+      if (pctByte !== void 0) {
+        bytes.push(parseInt(pctByte.substring(1), 16));
+      }
+      return "\0";
+    });
+    return rebuildWithBytes(result, bytes);
+  }
+  function rebuildWithBytes(skeleton, bytes) {
+    let byteIdx = 0;
+    let out = "";
+    for (let i = 0; i < skeleton.length; i++) {
+      if (skeleton.charCodeAt(i) === 0 && byteIdx < bytes.length) {
+        let count = 0;
+        while (i + count < skeleton.length && skeleton.charCodeAt(i + count) === 0) {
+          count++;
+        }
+        const group = bytes.slice(byteIdx, byteIdx + count);
+        byteIdx += count;
+        out += decodeByteGroup(group);
+        i += count - 1;
+      } else {
+        out += skeleton.charAt(i);
+      }
+    }
+    return out;
+  }
+  function decodeByteGroup(bytes) {
+    if (bytes.length === 0) return "";
+    try {
+      const decoded = UTF8_DECODER.decode(new Uint8Array(bytes));
+      if (decoded.includes("\uFFFD") && bytes.length === 1) {
+        return String.fromCharCode(bytes[0]);
+      }
+      return decoded;
+    } catch {
+      return bytes.map((b) => String.fromCharCode(b)).join("");
+    }
+  }
+  var UTF8_DECODER = new TextDecoder();
+  function findExactRow(rows, nick) {
+    const target = nick.toLowerCase();
+    for (const row of rows) {
+      const idSegment = extractIdSegment(row.href);
+      if (idSegment !== null) {
+        const decoded = decodeIdPath(idSegment);
+        if (decoded.toLowerCase() === target) {
+          return row;
+        }
+      }
+    }
+    for (const row of rows) {
+      if (row.name.toLowerCase() === target) {
+        return row;
+      }
+    }
+    return null;
+  }
+  function extractIdSegment(href) {
+    const match = href.match(/\/id\/([^]*?)\.html/i);
+    return match ? match[1] : null;
+  }
+  function deriveImageUrl(thumbUrl) {
+    if (thumbUrl === null) {
+      return { thumbUrl: null, fullUrl: null, hasPhoto: false };
+    }
+    const stripped = stripThumbnailSuffix(thumbUrl);
+    const isDefault = /default/i.test(stripped);
+    const fullUrl = !isDefault && stripped !== thumbUrl ? stripped : null;
+    return {
+      thumbUrl,
+      fullUrl,
+      hasPhoto: !isDefault
+    };
+  }
+  var cache = /* @__PURE__ */ new Map();
+  var AJAX_PARAMS = [
+    "TYP=1",
+    "_EN_OBJ_ORDER_SORT_SHOW=",
+    "ORD=0",
+    "SORT=1",
+    "START=0",
+    "_LIST_WRAPPER_ID=bccid",
+    "EXT=allbychar",
+    "_KW_allbychar=",
+    // index 7 — the nick is appended to this param
+    "LOADDEF=3",
+    "LOADDEF_EXTRA_USER=",
+    "LOADDEF_EXTRA=",
+    "_LIST_LINK_ALL=",
+    "STYP=",
+    "LOADDEF_CUSTOM=allbychar",
+    "CACHE=3600",
+    "OPENW=1",
+    "ISCHAT=1"
+  ];
+  var KW_PARAM_INDEX = 7;
+  var TIMEOUT_MS = 8e3;
+  var EMPTY_RESULT = { thumbUrl: null, fullUrl: null, hasPhoto: false };
+  function fetchUserImage(nick, opts) {
+    const key = nick.toLowerCase();
+    if (!opts?.force && cache.has(key)) {
+      return Promise.resolve(cache.get(key));
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        const w = unsafeWindow;
+        const ajax = w.ajax;
+        const pajax = w.PAJAX;
+        if (typeof ajax !== "function" || typeof pajax !== "string") {
+          cclog("user-image: upstream ajax/PAJAX unavailable \u2014 returning empty result", "user-image");
+          resolve(EMPTY_RESULT);
+          return;
+        }
+        let settled = false;
+        const timer2 = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            reject(new Error("user-image: timeout"));
+          }
+        }, TIMEOUT_MS);
+        const params = AJAX_PARAMS.map(
+          (p, i) => i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p
+        ).join("&");
+        new ajax(pajax + "obj_list.html", {
+          postBody: params,
+          onComplete: (transport) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer2);
+            try {
+              const html = transport?.responseText ?? "";
+              const rows = parseIdSearch(html);
+              const row = findExactRow(rows, nick);
+              const result = deriveImageUrl(row?.imgUrl ?? null);
+              cache.set(key, result);
+              resolve(result);
+            } catch (e) {
+              cclog("user-image: parse failed \u2014 " + e.message, "user-image");
+              cache.set(key, EMPTY_RESULT);
+              resolve(EMPTY_RESULT);
+            }
+          }
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
   // src/popup.ts
   var openPopup = null;
   var onOutsideClick = null;
+  var previewImg = null;
   function closePopup() {
     if (!openPopup) return;
     openPopup.remove();
@@ -748,6 +970,10 @@
       document.removeEventListener("click", onOutsideClick);
       onOutsideClick = null;
     }
+    if (previewImg) {
+      previewImg.remove();
+      previewImg = null;
+    }
   }
   function onKeydown(e) {
     if (e.key === "Escape") {
@@ -755,20 +981,98 @@
       closePopup();
     }
   }
-  function actionBtn(iconClass, label, title, onClick) {
+  function actionBtn(iconClass, label, title, onClick, keepOpen) {
     const btn = actionButton({
       iconClass,
       label,
       title,
       onClick: () => {
         onClick();
-        closePopup();
+        if (!keepOpen) closePopup();
       }
     });
     btn.className = "bcc-popup-action";
     const labelSpan = btn.querySelector("span");
     if (labelSpan) labelSpan.className = "bcc-popup-action-label";
     return btn;
+  }
+  function ensurePreviewImg() {
+    if (previewImg) return previewImg;
+    previewImg = document.createElement("img");
+    previewImg.className = "bcc-image-preview";
+    previewImg.setAttribute("alt", "");
+    previewImg.setAttribute("aria-hidden", "true");
+    const mount = document.querySelector(".bcc-shell") ?? document.body;
+    mount.appendChild(previewImg);
+    return previewImg;
+  }
+  function renderImageResult(imageArea, result) {
+    imageArea.className = "bcc-popup-image";
+    imageArea.textContent = "";
+    if (!result.hasPhoto || !result.thumbUrl) {
+      imageArea.classList.add("bcc-popup-image--none");
+      imageArea.textContent = "Kein Bild";
+      return;
+    }
+    const thumb = document.createElement("img");
+    thumb.src = result.thumbUrl;
+    thumb.alt = "Benutzerbild";
+    thumb.className = "bcc-popup-thumb";
+    thumb.addEventListener("error", () => {
+      thumb.style.display = "none";
+    });
+    if (result.fullUrl && result.fullUrl !== result.thumbUrl) {
+      const showPreview = (e) => {
+        const img = ensurePreviewImg();
+        img.src = result.fullUrl;
+        img.style.display = "block";
+        positionPreview(img, e.clientX, e.clientY);
+      };
+      const movePreview = (e) => {
+        const img = ensurePreviewImg();
+        positionPreview(img, e.clientX, e.clientY);
+      };
+      const hidePreview = () => {
+        if (previewImg) previewImg.style.display = "none";
+      };
+      thumb.addEventListener("mouseenter", showPreview);
+      thumb.addEventListener("mousemove", movePreview);
+      thumb.addEventListener("mouseleave", hidePreview);
+    }
+    imageArea.appendChild(thumb);
+  }
+  function positionPreview(img, clientX, clientY) {
+    img.style.left = clientX + 16 + "px";
+    img.style.top = clientY - 75 + "px";
+  }
+  function bildButton(userName, imageArea) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-popup-action";
+    btn.title = "Bild von " + userName + " anzeigen (Umschalt+Klick = neu laden)";
+    btn.setAttribute("aria-label", btn.title);
+    btn.appendChild(iconElement("fa-image"));
+    const label = document.createElement("span");
+    label.className = "bcc-popup-action-label";
+    label.textContent = "Bild";
+    btn.appendChild(label);
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handleBildClick(userName, imageArea, e.shiftKey);
+    });
+    return btn;
+  }
+  function handleBildClick(nick, imageArea, force) {
+    imageArea.className = "bcc-popup-image bcc-popup-image--loading";
+    imageArea.textContent = "L\xE4dt\u2026";
+    fetchUserImage(nick, { force }).then((result) => {
+      if (!openPopup?.contains(imageArea)) return;
+      renderImageResult(imageArea, result);
+    }).catch(() => {
+      if (!openPopup?.contains(imageArea)) return;
+      imageArea.className = "bcc-popup-image bcc-popup-image--error";
+      imageArea.textContent = "Bild nicht verf\xFCgbar";
+    });
   }
   function openUserPopup(anchor, user, isPinned, onTogglePin) {
     closePopup();
@@ -808,6 +1112,10 @@
         cclog("user popup: ignore stubbed (T12) \u2014 " + user.name, "v3");
       })
     );
+    const imageArea = document.createElement("div");
+    imageArea.className = "bcc-popup-image";
+    popup.appendChild(bildButton(user.name, imageArea));
+    popup.appendChild(imageArea);
     popup.appendChild(
       actionBtn("fa-id-card", "ID", "ID von " + user.name + " anzeigen (T13)", () => {
         cclog("user popup: /id stubbed (T13) \u2014 " + user.name, "v3");

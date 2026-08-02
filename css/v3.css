@@ -691,3 +691,47 @@
   outline: 2px solid var(--bcc-accent-whisper);
   outline-offset: -2px;
 }
+
+/* ─── Popup image area (Bild button result) ─────────────────────────────── */
+.bcc-popup-image {
+  padding: 6px 10px 4px;
+}
+.bcc-popup-image img.bcc-popup-thumb {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid var(--bcc-border);
+  object-fit: cover;
+  cursor: pointer;
+}
+.bcc-popup-image--none {
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 10px;
+}
+.bcc-popup-image--error {
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 10px;
+}
+.bcc-popup-image--loading {
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+/* ─── Hover preview (full-size image following cursor) ───────────────────── */
+.bcc-image-preview {
+  position: fixed;
+  max-width: 320px;
+  max-height: 400px;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 1001;
+  display: none;
+  object-fit: contain;
+}

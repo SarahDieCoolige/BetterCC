@@ -1,4 +1,4 @@
-// ─── User popup — whisper / superwhisper / pin / ignore / id (spec §4.3 / R1) ─
+// ─── User popup — whisper / superwhisper / pin / ignore / bild / id (spec §4.3 / R1) ─
 //
 // Replaces upstream open_utn(). Opens on userlist row click; closes on Esc,
 // outside-click, or any action. The popup is positioned below the row.
@@ -12,16 +12,21 @@
 //   - Superwhisper      → wired (bettercc.superwhisper, GM whisper_{user})
 //   - Flüstern (1×)     → wired (sets a one-shot whisper target via bettercc.superwhisper)
 //   - Ignorieren (/sb)  → stub (T12 superban; logs)
+//   - Bild              → wired (fetchUserImage + hover preview)
 //   - ID (/id)          → stub (T13 id-popup; logs)
 
 import { type User } from "./store";
 import { cclog } from "./utils";
 import { getBettercc } from "./upstream";
-import { actionButton } from "./dom";
+import { actionButton, iconElement } from "./dom";
+import { fetchUserImage, type UserImageResult } from "./user-image";
 
 let openPopup: HTMLElement | null = null;
 
 let onOutsideClick: ((e: MouseEvent) => void) | null = null;
+
+/** The hover-preview <img> element (one per popup-open, removed on close). */
+let previewImg: HTMLImageElement | null = null;
 
 function closePopup(): void {
   if (!openPopup) return;
@@ -35,6 +40,11 @@ function closePopup(): void {
     document.removeEventListener("click", onOutsideClick);
     onOutsideClick = null;
   }
+  // Lifecycle: remove the hover-preview element when the popup closes.
+  if (previewImg) {
+    previewImg.remove();
+    previewImg = null;
+  }
 }
 
 function onKeydown(e: KeyboardEvent): void {
@@ -46,12 +56,15 @@ function onKeydown(e: KeyboardEvent): void {
 
 /** A popup action button: a theme-aware Font Awesome icon + a text label.
  *  The icon inherits the popup's text color (--bcc-text-raised), so it recolors
- *  with the theme — no fixed emoji that ignores the color scheme. */
+ *  with the theme — no fixed emoji that ignores the color scheme.
+ *  When `keepOpen` is true, the popup stays open after the click (default
+ *  closes it — backward-compatible). */
 function actionBtn(
   iconClass: string,
   label: string,
   title: string,
   onClick: () => void,
+  keepOpen?: boolean,
 ): HTMLButtonElement {
   const btn = actionButton({
     iconClass,
@@ -59,7 +72,7 @@ function actionBtn(
     title,
     onClick: () => {
       onClick();
-      closePopup();
+      if (!keepOpen) closePopup();
     },
   });
   btn.className = "bcc-popup-action";
@@ -68,6 +81,131 @@ function actionBtn(
   const labelSpan = btn.querySelector("span");
   if (labelSpan) labelSpan.className = "bcc-popup-action-label";
   return btn;
+}
+
+// ─── Image area helpers ────────────────────────────────────────────────────
+
+/** Ensure the hover-preview <img> exists and is appended to .bcc-shell. */
+function ensurePreviewImg(): HTMLImageElement {
+  if (previewImg) return previewImg;
+  previewImg = document.createElement("img");
+  previewImg.className = "bcc-image-preview";
+  previewImg.setAttribute("alt", "");
+  previewImg.setAttribute("aria-hidden", "true");
+  const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
+  mount.appendChild(previewImg);
+  return previewImg;
+}
+
+/** Render the fetch result into the `.bcc-popup-image` area. */
+function renderImageResult(
+  imageArea: HTMLElement,
+  result: UserImageResult,
+): void {
+  imageArea.className = "bcc-popup-image";
+  imageArea.textContent = "";
+
+  if (!result.hasPhoto || !result.thumbUrl) {
+    // No photo state
+    imageArea.classList.add("bcc-popup-image--none");
+    imageArea.textContent = "Kein Bild";
+    return;
+  }
+
+  // Render thumbnail
+  const thumb = document.createElement("img");
+  thumb.src = result.thumbUrl;
+  thumb.alt = "Benutzerbild";
+  thumb.className = "bcc-popup-thumb";
+
+  // On error (broken image), hide the thumbnail
+  thumb.addEventListener("error", () => {
+    thumb.style.display = "none";
+  });
+
+  // Hover preview: show full-size image following cursor (only when fullUrl differs)
+  if (result.fullUrl && result.fullUrl !== result.thumbUrl) {
+    const showPreview = (e: MouseEvent) => {
+      const img = ensurePreviewImg();
+      img.src = result.fullUrl!;
+      img.style.display = "block";
+      positionPreview(img, e.clientX, e.clientY);
+    };
+    const movePreview = (e: MouseEvent) => {
+      const img = ensurePreviewImg();
+      positionPreview(img, e.clientX, e.clientY);
+    };
+    const hidePreview = () => {
+      if (previewImg) previewImg.style.display = "none";
+    };
+
+    thumb.addEventListener("mouseenter", showPreview);
+    thumb.addEventListener("mousemove", movePreview);
+    thumb.addEventListener("mouseleave", hidePreview);
+  }
+
+  imageArea.appendChild(thumb);
+}
+
+/** Position the preview image offset from the cursor. */
+function positionPreview(img: HTMLImageElement, clientX: number, clientY: number): void {
+  img.style.left = (clientX + 16) + "px";
+  img.style.top = (clientY - 75) + "px";
+}
+
+// ─── Bild button — built inline (not via actionBtn) to access click event's shiftKey ──
+
+/**
+ * Build the "Bild" action button with shift-click support.
+ * The button follows the same DOM pattern as actionBtn (button + icon + label +
+ * .bcc-popup-action class) but wires its own click listener to read e.shiftKey.
+ */
+function bildButton(
+  userName: string,
+  imageArea: HTMLElement,
+): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "bcc-popup-action";
+  btn.title = "Bild von " + userName + " anzeigen (Umschalt+Klick = neu laden)";
+  btn.setAttribute("aria-label", btn.title);
+
+  btn.appendChild(iconElement("fa-image"));
+
+  const label = document.createElement("span");
+  label.className = "bcc-popup-action-label";
+  label.textContent = "Bild";
+  btn.appendChild(label);
+
+  btn.addEventListener("click", (e: MouseEvent) => {
+    e.stopPropagation();
+    handleBildClick(userName, imageArea, e.shiftKey);
+  });
+
+  return btn;
+}
+
+/** Handle the "Bild" button click: fetch, render result into the image area. */
+function handleBildClick(
+  nick: string,
+  imageArea: HTMLElement,
+  force: boolean,
+): void {
+  // Show loading state
+  imageArea.className = "bcc-popup-image bcc-popup-image--loading";
+  imageArea.textContent = "Lädt\u2026";
+
+  fetchUserImage(nick, { force })
+    .then((result) => {
+      // Only render if the popup is still open (user may have closed it)
+      if (!openPopup?.contains(imageArea)) return;
+      renderImageResult(imageArea, result);
+    })
+    .catch(() => {
+      if (!openPopup?.contains(imageArea)) return;
+      imageArea.className = "bcc-popup-image bcc-popup-image--error";
+      imageArea.textContent = "Bild nicht verfügbar";
+    });
 }
 
 /**
@@ -133,6 +271,12 @@ export function openUserPopup(
       cclog("user popup: ignore stubbed (T12) — " + user.name, "v3");
     }),
   );
+
+  // Bild — image preview (between Ignorieren and ID)
+  const imageArea = document.createElement("div");
+  imageArea.className = "bcc-popup-image";
+  popup.appendChild(bildButton(user.name, imageArea));
+  popup.appendChild(imageArea);
 
   // ID — T13
   popup.appendChild(
