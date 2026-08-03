@@ -1261,7 +1261,7 @@
       if (e.type === "config" && e.key === "pinned") {
         getConfig("pinned", []).then((pinned) => {
           if (!openPopup) return;
-          const nowPinned = pinned.includes(user.name);
+          const nowPinned = pinned.some((n) => n.toLowerCase() === user.name.toLowerCase());
           updatePinButton(pinBtn, nowPinned);
         }).catch(() => {
         });
@@ -1561,23 +1561,24 @@
   var pinnedCache = /* @__PURE__ */ new Set();
   async function refreshPinned() {
     const list = await getConfig("pinned", []);
-    pinnedCache = new Set(list);
+    pinnedCache = new Set(list.map((n) => n.toLowerCase()));
   }
   async function togglePin(user) {
     const list = await getConfig("pinned", []);
-    const idx = list.indexOf(user.name);
+    const name = user.name.toLowerCase();
+    const idx = list.findIndex((n) => n.toLowerCase() === name);
     if (idx === -1) {
-      list.push(user.name);
+      list.push(name);
     } else {
       list.splice(idx, 1);
     }
     await setConfig("pinned", list);
     emit({ type: "config", key: "pinned" });
-    pinnedCache = new Set(list);
+    pinnedCache = new Set(list.map((n) => n.toLowerCase()));
     if (lastUserlistEvent) renderSidebar(lastUserlistEvent, [], []);
   }
   function handleRowClick(user, anchor) {
-    openUserPopup(anchor, user, pinnedCache.has(user.name), (u) => {
+    openUserPopup(anchor, user, pinnedCache.has(user.name.toLowerCase()), (u) => {
       togglePin(u).catch(() => {
         cclog("pin toggle failed for " + u.name, "v3");
       });
@@ -1628,7 +1629,7 @@
     const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
     const sorted = sortUsers(users, pinnedCache);
     for (const user of sorted) {
-      const isPinned = pinnedCache.has(user.name);
+      const isPinned = pinnedCache.has(user.name.toLowerCase());
       const target = isPinned ? pinnedUl : regularUl;
       let row = rowMap.get(user.name);
       if (row) {
