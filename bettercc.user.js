@@ -70,7 +70,12 @@
     if (!doc?.body) return;
     const div = doc.createElement("div");
     div.className = "bcc-chat-msg";
-    div.innerHTML = '<strong style="color:red">BetterCC:</strong> ' + message.replace(/\n/g, "<br>");
+    const hasNewline = message.includes("\n");
+    if (hasNewline) {
+      div.innerHTML = '<strong style="color:#ff5577">BetterCC:</strong><br>' + message.replace(/^/gm, "&emsp;").replace(/\n/g, "<br>");
+    } else {
+      div.innerHTML = '<strong style="color:#ff5577">BetterCC:</strong> ' + message;
+    }
     doc.body.appendChild(div);
     const win = getChatWin();
     if (win) win.scrollTo(0, doc.body.scrollHeight);
@@ -1915,9 +1920,19 @@
             );
             break;
           case "scheme-info":
-            getConfig("scheme_v2", false).then(
-              (v2) => printToChat("Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1"))
-            );
+            Promise.all([
+              getConfig("scheme_v2", false),
+              getConfig("colorscheme", null)
+            ]).then(([v2, scheme]) => {
+              const lines = [];
+              lines.push("Generator: " + (v2 ? "v2 (experimentell)" : "v1"));
+              if (scheme) {
+                for (const [k, v] of Object.entries(scheme)) {
+                  lines.push(k + ": " + v);
+                }
+              }
+              printToChat(lines.join("\n"));
+            });
             break;
           case "settings":
             Promise.all([

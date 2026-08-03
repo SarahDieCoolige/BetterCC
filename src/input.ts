@@ -112,9 +112,19 @@ async function doSubmit(whispernick?: string): Promise<void> {
           );
           break;
         case "scheme-info":
-          getConfig("scheme_v2", false).then((v2) =>
-            printToChat("Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1"))
-          );
+          Promise.all([
+            getConfig("scheme_v2", false),
+            getConfig("colorscheme", null),
+          ]).then(([v2, scheme]) => {
+            const lines: string[] = [];
+            lines.push("Generator: " + (v2 ? "v2 (experimentell)" : "v1"));
+            if (scheme) {
+              for (const [k, v] of Object.entries(scheme as Record<string, unknown>)) {
+                lines.push(k + ": " + v);
+              }
+            }
+            printToChat(lines.join("\n"));
+          });
           break;
         case "settings":
           Promise.all([

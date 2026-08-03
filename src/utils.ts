@@ -73,7 +73,14 @@ export function printToChat(message: string): void {
   if (!doc?.body) return;
   const div = doc.createElement("div");
   div.className = "bcc-chat-msg";
-  div.innerHTML = '<strong style="color:red">BetterCC:</strong> ' + message.replace(/\n/g, "<br>");
+  const hasNewline = message.includes("\n");
+  if (hasNewline) {
+    div.innerHTML =
+      '<strong style="color:#ff5577">BetterCC:</strong><br>' +
+      message.replace(/^/gm, "&emsp;").replace(/\n/g, "<br>");
+  } else {
+    div.innerHTML = '<strong style="color:#ff5577">BetterCC:</strong> ' + message;
+  }
   doc.body.appendChild(div);
   const win = getChatWin();
   if (win) win.scrollTo(0, doc.body.scrollHeight);

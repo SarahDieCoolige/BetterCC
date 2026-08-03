@@ -113,7 +113,7 @@ describe("printHelp", () => {
     // A chat message div must have been appended.
     const divs = fakeBody.querySelectorAll("div.bcc-chat-msg");
     expect(divs.length).toBe(1);
-    expect(divs[0].innerHTML).toContain("<strong style="color:red">BetterCC:</strong>");
+    expect(divs[0].innerHTML).toContain("<strong style="color:#ff5577">BetterCC:</strong>");
     // The help text should include known commands.
     expect(divs[0].innerHTML).toContain("/help");
     expect(divs[0].innerHTML).toContain("/settings");
@@ -201,12 +201,12 @@ describe("printToChat", () => {
     (globalThis as any).document = originalDocument;
   });
 
-  it('appends a div with "<strong style="color:red">BetterCC:</strong>" prefix and the message text', () => {
+  it('appends a div with "<strong style="color:#ff5577">BetterCC:</strong>" prefix and the message text', () => {
     printToChat("Hilfe");
 
     const divs = fakeBody.querySelectorAll("div.bcc-chat-msg");
     expect(divs.length).toBe(1);
-    expect(divs[0].innerHTML).toContain("<strong style="color:red">BetterCC:</strong> Hilfe");
+    expect(divs[0].innerHTML).toContain("<strong style="color:#ff5577">BetterCC:</strong> Hilfe");
   });
 
   it("converts newlines to <br> elements so multi-line messages render correctly", () => {
@@ -215,7 +215,7 @@ describe("printToChat", () => {
     const divs = fakeBody.querySelectorAll("div.bcc-chat-msg");
     expect(divs.length).toBe(1);
     expect(divs[0].innerHTML).toContain("Zeile 1<br>Zeile 2");
-    expect(divs[0].innerHTML).toContain("<strong style="color:red">BetterCC:</strong>");
+    expect(divs[0].innerHTML).toContain("<strong style="color:#ff5577">BetterCC:</strong>");
   });
 
   it("is a no-op when the iframe is not present (does not throw)", () => {
