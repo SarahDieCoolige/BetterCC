@@ -10,12 +10,14 @@ function hashCSS(p) {
   return createHash("sha256").update(readFileSync(p)).digest("hex").slice(0, 8);
 }
 
+const BASE = "https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3";
+
 const USERSCRIPT_HEADER = `// ==UserScript==
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
 // @version      ${V}
-// @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
+// @icon  ${BASE}/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
 // @match  https://www.chatcity.de/de/cpop.html?*
@@ -26,8 +28,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=${hashCSS("css/iframe.css")}
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=${hashCSS("css/v3.css")}
+// @resource  iframe_css  ${BASE}/css/iframe.css?r=${hashCSS("css/iframe.css")}
+// @resource  v3_css  ${BASE}/css/v3.css?r=${hashCSS("css/v3.css")}
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -46,8 +48,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @sandbox  JavaScript
 // @run-at document-idle
 //
-// @downloadURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/bettercc.user.js
-// @updateURL  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/bettercc.user.js
+// @downloadURL  ${BASE}/bettercc.user.js
+// @updateURL  ${BASE}/bettercc.user.js
 //
 // @supportURL  https://github.com/SarahDieCoolige/BetterCC/issues
 // @homepageURL  https://github.com/SarahDieCoolige/BetterCC
