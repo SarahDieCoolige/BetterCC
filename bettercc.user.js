@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.3.0
+// @version      3.4.0
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=6db12252
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=3817badb
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=c05b7108
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -960,6 +960,159 @@
     });
   }
 
+  // src/photo-preview.ts
+  var previewByUser = /* @__PURE__ */ new Map();
+  var previewSave = {};
+  try {
+    previewSave = JSON.parse(localStorage.getItem("bcc_previews") || "{}");
+  } catch {
+    previewSave = {};
+  }
+  function savePreviews() {
+    try {
+      localStorage.setItem("bcc_previews", JSON.stringify(previewSave));
+    } catch {
+    }
+  }
+  var hoverPreview = null;
+  var hoverUser = null;
+  function dismissHover() {
+    if (!hoverPreview) return;
+    let isPinned = false;
+    for (const el of previewByUser.values()) {
+      if (el === hoverPreview) {
+        isPinned = true;
+        break;
+      }
+    }
+    if (!isPinned) {
+      hoverPreview.remove();
+    }
+    hoverPreview = null;
+    hoverUser = null;
+  }
+  function dismissPreview(userName) {
+    const box = previewByUser.get(userName);
+    if (!box) return;
+    previewSave[userName] = {
+      left: parseFloat(box.style.left) || 0,
+      top: parseFloat(box.style.top) || 0,
+      boxW: box.offsetWidth,
+      boxH: box.offsetHeight
+    };
+    savePreviews();
+    box.remove();
+    previewByUser.delete(userName);
+  }
+  function dismissAllPreviews() {
+    dismissHover();
+    for (const name of previewByUser.keys()) dismissPreview(name);
+  }
+  function buildPreviewBox(fullUrl, userName) {
+    const mount = document.querySelector(".bcc-shell") ?? document.body;
+    const box = document.createElement("div");
+    box.className = "bcc-photo-preview";
+    const initialSize = Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.55);
+    let boxW = initialSize;
+    let boxH = initialSize;
+    const img = document.createElement("img");
+    img.className = "bcc-photo-preview-img";
+    img.src = fullUrl;
+    img.alt = "";
+    box.appendChild(img);
+    let cx = window.innerWidth / 2;
+    let cy = window.innerHeight / 2;
+    const saved = previewSave[userName];
+    if (saved) {
+      cx = saved.left || cx;
+      cy = saved.top || cy;
+      if (saved.boxW) {
+        boxW = saved.boxW;
+        boxH = saved.boxH;
+      }
+    }
+    const updateBox = () => {
+      box.style.left = cx + "px";
+      box.style.top = cy + "px";
+      box.style.width = boxW + "px";
+      box.style.height = boxH + "px";
+      box.style.transform = "translate(-50%, -50%)";
+    };
+    updateBox();
+    mount.appendChild(box);
+    let panning = false;
+    let panned = false;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panOrigCX = 0;
+    let panOrigCY = 0;
+    box.addEventListener("wheel", (e) => {
+      if (panning) return;
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1.1 : 0.9;
+      boxW = Math.round(boxW * delta);
+      boxH = Math.round(boxH * delta);
+      const max = Math.max(window.innerWidth, window.innerHeight) * 3;
+      boxW = Math.max(80, Math.min(max, boxW));
+      boxH = Math.max(80, Math.min(max, boxH));
+      updateBox();
+    }, { passive: false });
+    box.addEventListener("mousedown", (e) => {
+      panning = true;
+      panned = false;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panOrigCX = cx;
+      panOrigCY = cy;
+      box.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+    const onMove = (e) => {
+      if (!panning) return;
+      cx = panOrigCX + (e.clientX - panStartX);
+      cy = panOrigCY + (e.clientY - panStartY);
+      const margin = 60;
+      cx = Math.max(boxW / 2 - margin, Math.min(window.innerWidth - boxW / 2 + margin, cx));
+      cy = Math.max(boxH / 2 - margin, Math.min(window.innerHeight - boxH / 2 + margin, cy));
+      if (Math.abs(e.clientX - panStartX) > 2 || Math.abs(e.clientY - panStartY) > 2) panned = true;
+      updateBox();
+    };
+    const onUp = () => {
+      if (!panning) return;
+      panning = false;
+      box.style.cursor = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    box.addEventListener("click", (e) => {
+      if (panned) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    });
+    box.addEventListener("dblclick", () => {
+      cx = window.innerWidth / 2;
+      cy = window.innerHeight / 2;
+      updateBox();
+    });
+    hoverPreview = box;
+    hoverUser = userName;
+    return box;
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("click", (e) => {
+      const target = e.target;
+      const box = target.closest(".bcc-photo-preview");
+      if (!box) return;
+      for (const [name, el] of previewByUser) {
+        if (el === box) {
+          dismissPreview(name);
+          return;
+        }
+      }
+    });
+  }
+
   // src/popup.ts
   function nickToHue(nick) {
     let sum = 0;
@@ -987,12 +1140,12 @@
       unsubscribeStore();
       unsubscribeStore = null;
     }
-    dismissPhotoPreview();
   }
   function onKeydown(e) {
     if (e.key === "Escape") {
       e.stopPropagation();
       closePopup();
+      dismissAllPreviews();
     }
   }
   function onIframeInteraction() {
@@ -1043,19 +1196,6 @@
       }, { once: true });
     }).catch(() => {
     });
-  }
-  function dismissPhotoPreview() {
-    const preview = document.querySelector(".bcc-photo-preview");
-    if (preview) preview.remove();
-  }
-  function buildPhotoPreview(fullUrl) {
-    dismissPhotoPreview();
-    const mount = document.querySelector(".bcc-shell") ?? document.body;
-    const previewImg = document.createElement("img");
-    previewImg.className = "bcc-photo-preview";
-    previewImg.src = fullUrl;
-    previewImg.alt = "";
-    mount.appendChild(previewImg);
   }
   function buildPin(isPinned, onToggle) {
     const btn = document.createElement("button");
@@ -1214,13 +1354,28 @@
     popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
     popup.style.top = rect.bottom + 4 + "px";
     photoContainer.addEventListener("mouseenter", () => {
+      if (previewByUser.has(user.name)) return;
       const img = photoContainer.querySelector("img");
       if (img?.src && img.classList.contains("bcc-photo-loaded")) {
-        buildPhotoPreview(img.src);
+        dismissHover();
+        buildPreviewBox(img.src, user.name);
       }
     });
     photoContainer.addEventListener("mouseleave", () => {
-      dismissPhotoPreview();
+      dismissHover();
+    });
+    photoContainer.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (previewByUser.has(user.name)) {
+        dismissPreview(user.name);
+        return;
+      }
+      const img = photoContainer.querySelector("img");
+      if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+        dismissHover();
+        const box = buildPreviewBox(img.src, user.name);
+        previewByUser.set(user.name, box);
+      }
     });
     loadPhoto(photoContainer, user.name);
     openPopup = popup;

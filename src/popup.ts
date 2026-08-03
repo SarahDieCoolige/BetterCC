@@ -22,16 +22,17 @@
 //   - Pin / Unpin       → wired (GM pinned_{user}, persists)
 //   - Superwhisper      → wired (bettercc.superwhisper, GM whisper_{user})
 //   - Flüstern (1×)     → wired (sets a one-shot whisper target via bettercc.superwhisper)
-//   - Ignorieren (/sb)  → stub (T12 superban; logs)
-//   - Bild              → photo container in center (fetchUserImage + hover preview)
-//   - ID (/id)          → stub (T13 id-popup; icon-only in name row)
+//   - Ignorieren (/ig)  → wired (two-tap confirm, upstream com_set /ignore)
+//   - Bild              → photo container in center (fetchUserImage + hover/pin preview)
+//   - ID (/id)          → wired (opens ID page in new window)
 
 import { type User, subscribe, type BccEvent } from "./store";
-import { cclog, encodeChatLink } from "./utils";
+import { encodeChatLink } from "./utils";
 import { getBettercc } from "./upstream";
 import { iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
 import { getConfig } from "./config";
+import { dismissPreview, dismissAllPreviews, dismissHover, buildPreviewBox, previewByUser } from "./photo-preview";
 
 /**
  * Stabiler HSL-Farbton (0–359) aus einem Benutzernamen, für den
@@ -73,13 +74,13 @@ function closePopup(): void {
     unsubscribeStore();
     unsubscribeStore = null;
   }
-  dismissPhotoPreview();
 }
 
 function onKeydown(e: KeyboardEvent): void {
   if (e.key === "Escape") {
     e.stopPropagation();
     closePopup();
+    dismissAllPreviews();
   }
 }
 
@@ -167,30 +168,6 @@ function loadPhoto(container: HTMLElement, userName: string): void {
     });
 }
 
-// ─── Centered photo preview ────────────────────────────────────────────────
-
-/**
- * Remove any existing photo preview from the DOM.
- * Called by mouseleave, closePopup, and buildPhotoPreview (before creating a new one).
- */
-function dismissPhotoPreview(): void {
-  const preview = document.querySelector(".bcc-photo-preview");
-  if (preview) preview.remove();
-}
-
-/**
- * Show the full-size photo centered (no backdrop — hover-triggered preview).
- */
-function buildPhotoPreview(fullUrl: string): void {
-  dismissPhotoPreview(); // remove any existing
-  const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
-  const previewImg = document.createElement("img");
-  previewImg.className = "bcc-photo-preview";
-  previewImg.src = fullUrl;
-  previewImg.alt = "";
-  mount.appendChild(previewImg);
-}
-
 // ─── Pin toggle ────────────────────────────────────────────────────────────
 
 /**
@@ -205,11 +182,11 @@ function buildPin(isPinned: boolean, onToggle: () => void): HTMLButtonElement {
   btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
   btn.setAttribute("aria-label", btn.title);
 
-	  const icon = iconElement("fa-thumbtack");
-	  if (!isPinned) icon.style.transform = "rotate(45deg)";
-	  btn.appendChild(icon);
+  const icon = iconElement("fa-thumbtack");
+  if (!isPinned) icon.style.transform = "rotate(45deg)";
+  btn.appendChild(icon);
 
-	  if (isPinned) btn.classList.add("pinned");
+  if (isPinned) btn.classList.add("pinned");
 
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -416,15 +393,32 @@ export function openUserPopup(
   popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
   popup.style.top = rect.bottom + 4 + "px";
 
-  // Photo: hover = centered preview. Wire AFTER mount so dimensions are available.
+  // Photo: hover = centered preview, click = toggle pin (stays open on mouseleave).
+  // Hover: temporary preview. Click: pin/unpin.
   photoContainer.addEventListener("mouseenter", () => {
+    // Don't replace a pinned preview on hover
+    if (previewByUser.has(user.name)) return;
     const img = photoContainer.querySelector("img") as HTMLImageElement;
     if (img?.src && img.classList.contains("bcc-photo-loaded")) {
-      buildPhotoPreview(img.src);
+      dismissHover();
+      buildPreviewBox(img.src, user.name);
     }
   });
   photoContainer.addEventListener("mouseleave", () => {
-    dismissPhotoPreview();
+    dismissHover();
+  });
+  photoContainer.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (previewByUser.has(user.name)) {
+      dismissPreview(user.name);
+      return;
+    }
+    const img = photoContainer.querySelector("img") as HTMLImageElement;
+    if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+      dismissHover();
+      const box = buildPreviewBox(img.src, user.name);
+      previewByUser.set(user.name, box);
+    }
   });
 
   // Auto-fetch photo
