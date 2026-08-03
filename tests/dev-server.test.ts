@@ -62,14 +62,21 @@ describe("buildIdFixtureResponse — query-aware ID search mock", () => {
     expect(html).toContain("/id/testascii.html");
   });
 
-  it("returns photo row for unknown nick (enables popup testing with any user)", () => {
-    // Unknown nicks now get a synthetic photo row instead of "0 User gefunden"
-    // so the popup image + hover preview can be tested with any nick.
-    const html = buildIdFixtureResponse("nonexistent_nobody", knownUsers);
+  it("returns photo row for unknown nick with even hash sum", () => {
+    // "test" → t(116)+e(101)+s(115)+t(116)=448 — even → photo
+    const html = buildIdFixtureResponse("test", knownUsers);
     expect(html).toContain("userfiles/");
     expect(html).toContain("_3.jpg");
-    expect(html).toContain("nonexistent_nobody");
-    expect(html).toContain("/id/nonexistent_nobody.html");
+    expect(html).toContain("/id/test.html");
+  });
+
+  it("returns empty result for unknown nick with odd hash sum", () => {
+    // "user" → u(117)+s(115)+e(101)+r(114)=447 — odd → no photo
+    const html = buildIdFixtureResponse("user", knownUsers);
+    expect(html).toContain("0");
+    expect(html).toContain("User gefunden.");
+    expect(html).not.toContain("userfiles/");
+    expect(html).not.toContain("/id/");
   });
 
   it("returns empty result (0 User gefunden) for blank/empty nick", () => {
