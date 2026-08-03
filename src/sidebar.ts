@@ -145,7 +145,6 @@ let rowMap: Map<string, HTMLLIElement> = new Map();
 let pinnedUl: HTMLUListElement | null = null;
 let regularUl: HTMLUListElement | null = null;
 let pinnedLabel: HTMLElement | null = null;
-let pinnedDivider: HTMLElement | null = null;
 let scrollContainer: HTMLElement | null = null; // wraps the regular UL (scrolls)
 let onlineCount: HTMLElement | null = null;
 
@@ -166,24 +165,23 @@ function ensureContainers(sidebar: HTMLElement): void {
   onlineRow.appendChild(buildChannelSelect());
   sidebar.appendChild(onlineRow);
 
-  // Pinned section — thin label above a UL, separated from the regular list
-  // by a 1px divider. No bubble panel — pinned and regular rows share the same
-  // horizontal alignment (both are plain ULs with no extra wrapper padding).
+  // Pinned section separator — a pin icon between horizontal lines.
   pinnedLabel = document.createElement("div");
   pinnedLabel.className = "bcc-pinned-label";
-  pinnedLabel.textContent = "Angespinnt";
+  const pinnedIcon = document.createElement("i");
+  pinnedIcon.className = "fas fa-thumbtack bcc-pinned-label-icon";
+  pinnedIcon.setAttribute("aria-hidden", "true");
+  pinnedLabel.appendChild(pinnedIcon);
   pinnedUl = document.createElement("ul");
   pinnedUl.className = "bcc-userlist-pinned";
   pinnedUl.setAttribute("role", "list");
-  pinnedDivider = document.createElement("hr");
-  pinnedDivider.className = "bcc-pinned-divider";
   regularUl = document.createElement("ul");
   regularUl.className = "bcc-userlist-regular";
   regularUl.setAttribute("role", "list");
   scrollContainer = document.createElement("div");
   scrollContainer.className = "bcc-userlist-scroll";
   scrollContainer.appendChild(regularUl);
-  sidebar.append(pinnedLabel, pinnedUl, pinnedDivider, scrollContainer);
+  sidebar.append(pinnedLabel, pinnedUl, scrollContainer);
 }
 
 /** Show/hide the pinned panel depending on whether any pinned users exist.
@@ -192,7 +190,6 @@ function ensureContainers(sidebar: HTMLElement): void {
 function refreshSectionVisibility(): void {
   const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
   if (pinnedLabel) pinnedLabel.style.display = hasPinned ? "" : "none";
-  if (pinnedDivider) pinnedDivider.style.display = hasPinned ? "" : "none";
 }
 
 /** Patch the sidebar from a userlist store event (consumes the diff). */

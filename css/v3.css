@@ -248,20 +248,26 @@
   padding: 0;
 }
 
-/* Pinned section — thin label + divider above the pinned UL. No bubble panel —
- * pinned and regular rows share the same horizontal alignment. */
+/* Pinned section separator — a pin icon flanked by horizontal lines.
+ * Uses currentColor at low opacity so it works across all themes. */
 .bcc-pinned-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 6px;
   color: var(--bcc-text-muted);
-  padding: 4px 10px 2px;
+  opacity: 0.35;
 }
-.bcc-pinned-divider {
-  border: 0;
-  border-top: 1px solid var(--bcc-border);
-  margin: 2px 10px 6px;
+.bcc-pinned-label::before,
+.bcc-pinned-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+}
+.bcc-pinned-label-icon {
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
 .bcc-userrow {
