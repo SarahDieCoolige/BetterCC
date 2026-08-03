@@ -803,50 +803,28 @@
     return raw.replace(/^\s*»\s*/, "").trim();
   }
   function decodeIdPath(segment) {
-    const bytes = [];
-    const result = segment.replace(/:([0-9A-Fa-f]{2}):|(%[0-9A-Fa-f]{2})/g, (_, hexByte, pctByte) => {
-      if (hexByte !== void 0) {
-        bytes.push(parseInt(hexByte, 16));
+    const out = [];
+    let byteRun = [];
+    let i = 0;
+    function flushBytes() {
+      if (byteRun.length > 0) {
+        out.push(new TextDecoder().decode(new Uint8Array(byteRun)));
+        byteRun = [];
       }
-      if (pctByte !== void 0) {
-        bytes.push(parseInt(pctByte.substring(1), 16));
-      }
-      return "\0";
-    });
-    return rebuildWithBytes(result, bytes);
-  }
-  function rebuildWithBytes(skeleton, bytes) {
-    let byteIdx = 0;
-    let out = "";
-    for (let i = 0; i < skeleton.length; i++) {
-      if (skeleton.charCodeAt(i) === 0 && byteIdx < bytes.length) {
-        let count = 0;
-        while (i + count < skeleton.length && skeleton.charCodeAt(i + count) === 0) {
-          count++;
-        }
-        const group = bytes.slice(byteIdx, byteIdx + count);
-        byteIdx += count;
-        out += decodeByteGroup(group);
-        i += count - 1;
+    }
+    while (i < segment.length) {
+      if (segment[i] === ":" && /^:[0-9A-Fa-f]{2}:/.test(segment.slice(i))) {
+        byteRun.push(parseInt(segment.slice(i + 1, i + 3), 16));
+        i += 4;
       } else {
-        out += skeleton.charAt(i);
+        flushBytes();
+        out.push(segment[i]);
+        i++;
       }
     }
-    return out;
+    flushBytes();
+    return out.join("");
   }
-  function decodeByteGroup(bytes) {
-    if (bytes.length === 0) return "";
-    try {
-      const decoded = UTF8_DECODER.decode(new Uint8Array(bytes));
-      if (decoded.includes("\uFFFD") && bytes.length === 1) {
-        return String.fromCharCode(bytes[0]);
-      }
-      return decoded;
-    } catch {
-      return bytes.map((b) => String.fromCharCode(b)).join("");
-    }
-  }
-  var UTF8_DECODER = new TextDecoder();
   function findExactRow(rows, nick) {
     const target = nick.toLowerCase();
     for (const row of rows) {

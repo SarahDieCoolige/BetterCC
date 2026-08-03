@@ -156,81 +156,41 @@ function cleanLinkText(raw: string): string {
 // ─── decodeIdPath ─────────────────────────────────────────────────────────
 
 /**
- * Decode ChatCity's colon-hex URL encoding (the inverse of `encodeChatLink`
- * in `stats.ts`, but also handles the real server's UTF-8 multi-byte format).
+ * Decode ChatCity's colon-hex URL path encoding.
  *
- * Two encoding formats exist:
- * - `:XX:` (single hex byte, code <= 255) — produced by `encodeChatLink`
- * - `:%XX%YY:` (percent-encoded, code > 255) — produced by `encodeChatLink`
- *   via encodeURIComponent
- * - `:XX::YY:` (adjacent hex pairs, real server UTF-8) — produced by the
- *   actual ChatCity server for chars > 127 (e.g. ä → :C3::A4:)
+ * The ChatCity server encodes non-ASCII chars (and punctuation like `_` and
+ * `-`) as `:XX:` hex byte pairs. Multi-byte UTF-8 sequences appear as adjacent
+ * pairs (e.g. a -> `:C3::A4:`). Plain ASCII characters pass through unchanged.
  *
- * Algorithm: replace all hex byte patterns with a placeholder, collect the
- * bytes, then decode the byte sequence as UTF-8. Characters not in a hex
- * pattern pass through unchanged.
+ * Algorithm: walk the segment character by character. When a `:XX:` hex pair
+ * is detected, collect the byte; otherwise emit the character directly. At the
+ * end, accumulated bytes are decoded as a single UTF-8 sequence.
  */
 export function decodeIdPath(segment: string): string {
-  const bytes: number[] = [];
-  // Replace hex patterns with placeholders, collecting bytes.
-  // Match :XX: (raw hex) or :%XX%YY:...: (percent-encoded, encodeChatLink multi-byte).
-  // Also match bare :XX: patterns that are adjacent (:: boundary handled by consuming
-  // the closing : of one pair and the opening : of the next together as ::).
-  const result = segment.replace(/:([0-9A-Fa-f]{2}):|(%[0-9A-Fa-f]{2})/g, (_, hexByte, pctByte) => {
-    if (hexByte !== undefined) {
-      bytes.push(parseInt(hexByte, 16));
-    }
-    if (pctByte !== undefined) {
-      bytes.push(parseInt(pctByte.substring(1), 16));
-    }
-    return "\x00"; // placeholder for flushed byte
-  });
+  const out: string[] = [];
+  let byteRun: number[] = [];
+  let i = 0;
 
-  // Rebuild: walk the skeleton, replacing \x00 placeholders with decoded bytes.
-  return rebuildWithBytes(result, bytes);
-}
+  function flushBytes() {
+    if (byteRun.length > 0) {
+      out.push(new TextDecoder().decode(new Uint8Array(byteRun)));
+      byteRun = [];
+    }
+  }
 
-/** Rebuild a string by replacing \x00 placeholders with decoded bytes. */
-function rebuildWithBytes(skeleton: string, bytes: number[]): string {
-  let byteIdx = 0;
-  let out = "";
-  for (let i = 0; i < skeleton.length; i++) {
-    if (skeleton.charCodeAt(i) === 0 && byteIdx < bytes.length) {
-      // We can't output individual bytes yet — we need to batch consecutive
-      // byte placeholders and decode them as UTF-8 as a group.
-      // Count consecutive placeholders starting here.
-      let count = 0;
-      while (i + count < skeleton.length && skeleton.charCodeAt(i + count) === 0) {
-        count++;
-      }
-      const group = bytes.slice(byteIdx, byteIdx + count);
-      byteIdx += count;
-      out += decodeByteGroup(group);
-      i += count - 1; // -1 because the for loop will ++i
+  while (i < segment.length) {
+    if (segment[i] === ":" && /^:[0-9A-Fa-f]{2}:/.test(segment.slice(i))) {
+      byteRun.push(parseInt(segment.slice(i + 1, i + 3), 16));
+      i += 4;
     } else {
-      out += skeleton.charAt(i);
+      flushBytes();
+      out.push(segment[i]);
+      i++;
     }
   }
-  return out;
+  flushBytes();
+  return out.join("");
 }
-
-/** Decode a group of bytes as UTF-8, falling back to Latin-1 for invalid sequences. */
-function decodeByteGroup(bytes: number[]): string {
-  if (bytes.length === 0) return "";
-  try {
-    const decoded = UTF8_DECODER.decode(new Uint8Array(bytes));
-    // Single Latin-1 bytes (128-255) that aren't valid UTF-8 produce U+FFFD.
-    // Treat them as Latin-1 codepoints instead (matches encodeChatLink behavior).
-    if (decoded.includes("\uFFFD") && bytes.length === 1) {
-      return String.fromCharCode(bytes[0]);
-    }
-    return decoded;
-  } catch {
-    return bytes.map((b) => String.fromCharCode(b)).join("");
-  }
-}
-
-const UTF8_DECODER = new TextDecoder();
 
 // ─── findExactRow ─────────────────────────────────────────────────────────
 

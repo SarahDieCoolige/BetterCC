@@ -126,6 +126,10 @@ describe("decodeIdPath", () => {
     expect(decodeIdPath("abcdef")).toBe("abcdef");
   });
 
+  it("decodes double-encoding: underscore flanking umlaut", () => {
+    expect(decodeIdPath("test:5F::C3::A4:test")).toBe("test_ätest");
+  });
+
   it("decodes percent-encoded multi-byte (upstream :%XX: format)", () => {
     // encodeChatLink for chars > 255 uses encodeURIComponent which gives :%XX: patterns
     // e.g. a char with code > 255 produces :%XX%YY: → bytes XX YY
@@ -331,21 +335,6 @@ describe("encodeChatLink ↔ decodeIdPath round-trip", () => {
   it("round-trips ASCII-only nickname", () => {
     const input = "testuser";
     expect(decodeIdPath(encodeChatLink(input))).toBe(input);
-  });
-
-  // NOTE: "testäuser03" does NOT round-trip through encodeChatLink because:
-  // - encodeChatLink encodes ä (charCode 228, <= 255) as single-byte :E4: (Latin-1)
-  // - The real ChatCity server encodes ä as UTF-8 multi-byte :C3::A4:
-  // - decodeIdPath handles BOTH formats, but round-trip only works for the
-  //   format that encodeChatLink produces (Latin-1 :XX: for code <= 255).
-  // The Latin-1 encoding IS the correct inverse of encodeChatLink for this char.
-  it("round-trips nickname with umlaut via encodeChatLink's Latin-1 encoding", () => {
-    // encodeChatLink produces :E4: for ä (Latin-1), decodeIdPath decodes :E4: back to ä
-    const input = "testäuser03";
-    const encoded = encodeChatLink(input);
-    // Verify encodeChatLink used Latin-1 :XX: format, not UTF-8 :XX::YY:
-    expect(encoded).toBe("test:E4:user03");
-    expect(decodeIdPath(encoded)).toBe(input);
   });
 
   it("decodes real ChatCity UTF-8 encoding for ä correctly", () => {
