@@ -248,30 +248,20 @@
   padding: 0;
 }
 
-/* Pinned panel — a tinted, rounded container wrapping the 'Angespinnt' header
- * + the pinned-user list, so the pinned section reads as a distinct group
- * separate from the regular userlist below it. */
-.bcc-pinned-panel {
-  background: var(--bcc-surface-raised);
-  border: 1px solid var(--bcc-surface-hover);
-  border-radius: 10px;
-  padding: 4px 6px 6px;
-  margin: 6px 2px 10px;
-}
-/* Section header inside the panel — small uppercase label. */
-.bcc-userlist-section {
+/* Pinned section — thin label + divider above the pinned UL. No bubble panel —
+ * pinned and regular rows share the same horizontal alignment. */
+.bcc-pinned-label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--bcc-text-muted);
-  padding: 4px 6px 4px;
+  padding: 4px 10px 2px;
 }
-/* Pinned rows sit inside the panel — only spacing tweaks. Hover/active are
- * inherited from .bcc-userrow (same color as normal rows now that the panel
- * shares the sidebar's --bcc-surface-raised background). */
-.bcc-pinned-panel .bcc-userrow {
-  margin: 1px 0;
+.bcc-pinned-divider {
+  border: 0;
+  border-top: 1px solid var(--bcc-border);
+  margin: 2px 10px 6px;
 }
 
 .bcc-userrow {

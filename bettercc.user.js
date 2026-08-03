@@ -1394,7 +1394,8 @@
   var rowMap = /* @__PURE__ */ new Map();
   var pinnedUl = null;
   var regularUl = null;
-  var pinnedPanel = null;
+  var pinnedLabel = null;
+  var pinnedDivider = null;
   var scrollContainer = null;
   var onlineCount = null;
   function ensureContainers(sidebar) {
@@ -1410,26 +1411,26 @@
     onlineRow.appendChild(onlineCount);
     onlineRow.appendChild(buildChannelSelect());
     sidebar.appendChild(onlineRow);
-    pinnedPanel = document.createElement("div");
-    pinnedPanel.className = "bcc-pinned-panel";
-    const pinnedHeader = document.createElement("div");
-    pinnedHeader.className = "bcc-userlist-section";
-    pinnedHeader.textContent = "Angespinnt";
+    pinnedLabel = document.createElement("div");
+    pinnedLabel.className = "bcc-pinned-label";
+    pinnedLabel.textContent = "Angespinnt";
     pinnedUl = document.createElement("ul");
     pinnedUl.className = "bcc-userlist-pinned";
     pinnedUl.setAttribute("role", "list");
-    pinnedPanel.append(pinnedHeader, pinnedUl);
+    pinnedDivider = document.createElement("hr");
+    pinnedDivider.className = "bcc-pinned-divider";
     regularUl = document.createElement("ul");
     regularUl.className = "bcc-userlist-regular";
     regularUl.setAttribute("role", "list");
     scrollContainer = document.createElement("div");
     scrollContainer.className = "bcc-userlist-scroll";
     scrollContainer.appendChild(regularUl);
-    sidebar.append(pinnedPanel, scrollContainer);
+    sidebar.append(pinnedLabel, pinnedUl, pinnedDivider, scrollContainer);
   }
   function refreshSectionVisibility() {
     const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
-    if (pinnedPanel) pinnedPanel.style.display = hasPinned ? "" : "none";
+    if (pinnedLabel) pinnedLabel.style.display = hasPinned ? "" : "none";
+    if (pinnedDivider) pinnedDivider.style.display = hasPinned ? "" : "none";
   }
   function renderSidebar(users, added, removed) {
     const sidebar = document.querySelector(".bcc-sidebar");

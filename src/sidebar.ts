@@ -144,7 +144,8 @@ let lastUserlistEvent: User[] | null = null;
 let rowMap: Map<string, HTMLLIElement> = new Map();
 let pinnedUl: HTMLUListElement | null = null;
 let regularUl: HTMLUListElement | null = null;
-let pinnedPanel: HTMLElement | null = null; // wraps the pinned header + UL
+let pinnedLabel: HTMLElement | null = null;
+let pinnedDivider: HTMLElement | null = null;
 let scrollContainer: HTMLElement | null = null; // wraps the regular UL (scrolls)
 let onlineCount: HTMLElement | null = null;
 
@@ -165,29 +166,24 @@ function ensureContainers(sidebar: HTMLElement): void {
   onlineRow.appendChild(buildChannelSelect());
   sidebar.appendChild(onlineRow);
 
-  // Pinned panel — a tinted, rounded container wrapping the header + pinned
-  // list so the pinned section reads as a distinct visual group, not a bare
-  // label above an undifferentiated column (refreshSectionVisibility toggles
-  // the whole panel when there are no pinned users).
-  pinnedPanel = document.createElement("div");
-  pinnedPanel.className = "bcc-pinned-panel";
-  const pinnedHeader = document.createElement("div");
-  pinnedHeader.className = "bcc-userlist-section";
-  pinnedHeader.textContent = "Angespinnt";
+  // Pinned section — thin label above a UL, separated from the regular list
+  // by a 1px divider. No bubble panel — pinned and regular rows share the same
+  // horizontal alignment (both are plain ULs with no extra wrapper padding).
+  pinnedLabel = document.createElement("div");
+  pinnedLabel.className = "bcc-pinned-label";
+  pinnedLabel.textContent = "Angespinnt";
   pinnedUl = document.createElement("ul");
   pinnedUl.className = "bcc-userlist-pinned";
   pinnedUl.setAttribute("role", "list");
-  pinnedPanel.append(pinnedHeader, pinnedUl);
+  pinnedDivider = document.createElement("hr");
+  pinnedDivider.className = "bcc-pinned-divider";
   regularUl = document.createElement("ul");
   regularUl.className = "bcc-userlist-regular";
   regularUl.setAttribute("role", "list");
-  // Scroll container — wraps ONLY the regular UL so the header area (stats +
-  // online count + pinned panel) stays fixed at the top. .bcc-sidebar is a
-  // flex column; this container fills the remaining space and scrolls.
   scrollContainer = document.createElement("div");
   scrollContainer.className = "bcc-userlist-scroll";
   scrollContainer.appendChild(regularUl);
-  sidebar.append(pinnedPanel, scrollContainer);
+  sidebar.append(pinnedLabel, pinnedUl, pinnedDivider, scrollContainer);
 }
 
 /** Show/hide the pinned panel depending on whether any pinned users exist.
@@ -195,7 +191,8 @@ function ensureContainers(sidebar: HTMLElement): void {
  *  shows/hidden as one — independent of the regular list. */
 function refreshSectionVisibility(): void {
   const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
-  if (pinnedPanel) pinnedPanel.style.display = hasPinned ? "" : "none";
+  if (pinnedLabel) pinnedLabel.style.display = hasPinned ? "" : "none";
+  if (pinnedDivider) pinnedDivider.style.display = hasPinned ? "" : "none";
 }
 
 /** Patch the sidebar from a userlist store event (consumes the diff). */
