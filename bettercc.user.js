@@ -946,6 +946,7 @@
   var openPopup = null;
   var onOutsideClick = null;
   var currentUser = null;
+  var unsubscribeStore = null;
   function closePopup() {
     if (!openPopup) return;
     openPopup.remove();
@@ -955,6 +956,10 @@
     if (onOutsideClick) {
       document.removeEventListener("click", onOutsideClick);
       onOutsideClick = null;
+    }
+    if (unsubscribeStore) {
+      unsubscribeStore();
+      unsubscribeStore = null;
     }
     dismissPhotoPreview();
   }
@@ -1038,6 +1043,19 @@
     });
     return btn;
   }
+  function updatePinButton(btn, isPinned) {
+    const icon = btn.querySelector("i");
+    if (icon) {
+      if (isPinned) {
+        icon.classList.remove("fa-rotate-45");
+      } else {
+        icon.classList.add("fa-rotate-45");
+      }
+    }
+    btn.classList.toggle("pinned", isPinned);
+    btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
+    btn.setAttribute("aria-label", btn.title);
+  }
   function buildToolbarCell(iconClass, shortcut, title, onClick) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -1070,7 +1088,18 @@
     popup.setAttribute("role", "dialog");
     popup.setAttribute("aria-modal", "false");
     popup.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
-    popup.appendChild(buildPin(isPinned, () => onTogglePin(user)));
+    const pinBtn = buildPin(isPinned, () => onTogglePin(user));
+    popup.appendChild(pinBtn);
+    unsubscribeStore = subscribe((e) => {
+      if (e.type === "config" && e.key === "pinned") {
+        getConfig("pinned", []).then((pinned) => {
+          if (!openPopup) return;
+          const nowPinned = pinned.includes(user.name);
+          updatePinButton(pinBtn, nowPinned);
+        }).catch(() => {
+        });
+      }
+    });
     const photoContainer = buildPhotoContainer(user.name);
     popup.appendChild(photoContainer);
     const nameRow = document.createElement("div");
@@ -1321,6 +1350,7 @@
       list.splice(idx, 1);
     }
     await setConfig("pinned", list);
+    emit({ type: "config", key: "pinned" });
     pinnedCache = new Set(list);
     if (lastUserlistEvent) renderSidebar(lastUserlistEvent, [], []);
   }

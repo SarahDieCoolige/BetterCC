@@ -27,10 +27,12 @@
 //   - ID (/id)          → stub (T13 id-popup; icon-only in name row)
 
 import { type User } from "./store";
+import { subscribe, type BccEvent } from "./store";
 import { cclog } from "./utils";
 import { getBettercc } from "./upstream";
 import { iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
+import { getConfig } from "./config";
 
 /**
  * Stabiler HSL-Farbton (0–359) aus einem Benutzernamen, für den
@@ -55,6 +57,8 @@ let onOutsideClick: ((e: MouseEvent) => void) | null = null;
 
 let currentUser: string | null = null;
 
+let unsubscribeStore: (() => void) | null = null;
+
 function closePopup(): void {
   if (!openPopup) return;
   openPopup.remove();
@@ -64,6 +68,10 @@ function closePopup(): void {
   if (onOutsideClick) {
     document.removeEventListener("click", onOutsideClick);
     onOutsideClick = null;
+  }
+  if (unsubscribeStore) {
+    unsubscribeStore();
+    unsubscribeStore = null;
   }
   dismissPhotoPreview();
 }
@@ -206,6 +214,24 @@ function buildPin(isPinned: boolean, onToggle: () => void): HTMLButtonElement {
   return btn;
 }
 
+/**
+ * Update the pin button's DOM to reflect current pin state.
+ * Syncs the icon rotation, .pinned class, title, and aria-label.
+ */
+function updatePinButton(btn: HTMLButtonElement, isPinned: boolean): void {
+  const icon = btn.querySelector("i");
+  if (icon) {
+    if (isPinned) {
+      icon.classList.remove("fa-rotate-45");
+    } else {
+      icon.classList.add("fa-rotate-45");
+    }
+  }
+  btn.classList.toggle("pinned", isPinned);
+  btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
+  btn.setAttribute("aria-label", btn.title);
+}
+
 // ─── Toolbar cell ──────────────────────────────────────────────────────────
 
 /**
@@ -273,7 +299,21 @@ export function openUserPopup(
   popup.setAttribute("aria-label", "Aktionen für " + user.name);
 
   // Pin (top-right, absolute)
-  popup.appendChild(buildPin(isPinned, () => onTogglePin(user)));
+  const pinBtn = buildPin(isPinned, () => onTogglePin(user));
+  popup.appendChild(pinBtn);
+
+  // Subscribe to store so the pin button stays in sync when
+  // togglePin in sidebar writes to GM (which emits "config").
+  unsubscribeStore = subscribe((e: BccEvent) => {
+    if (e.type === "config" && e.key === "pinned") {
+      // Re-read pinned list from source of truth and update pin button
+      getConfig("pinned", []).then((pinned: string[]) => {
+        if (!openPopup) return;
+        const nowPinned = pinned.includes(user.name);
+        updatePinButton(pinBtn, nowPinned);
+      }).catch(() => {});
+    }
+  });
 
   // Photo container (centered, 56×56)
   const photoContainer = buildPhotoContainer(user.name);

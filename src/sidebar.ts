@@ -10,7 +10,7 @@
 // Status indicators: [S] for sep, [A] for away, with opacity ported from
 // main.css (u_away / u_sep: opacity 0.5; u_sep: font-style italic).
 
-import { subscribe, type BccEvent, type User } from "./store";
+import { subscribe, emit, type BccEvent, type User } from "./store";
 import { sortUsers } from "./userlist";
 import { getConfig, setConfig } from "./config";
 import { openUserPopup } from "./popup";
@@ -132,6 +132,7 @@ async function togglePin(user: User): Promise<void> {
     list.splice(idx, 1);
   }
   await setConfig("pinned", list);
+  emit({ type: "config", key: "pinned" }); // notify subscribers
   pinnedCache = new Set(list);
   // Re-render from the last known userlist with a trivial diff (everything is
   // "unchanged" — sortUsers + section placement handle the move between
