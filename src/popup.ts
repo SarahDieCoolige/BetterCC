@@ -21,6 +21,21 @@ import { getBettercc } from "./upstream";
 import { actionButton, iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
 
+/**
+ * Stabiler HSL-Farbton (0–359) aus einem Benutzernamen, für den
+ * Initial-Buchstaben-Avatar im User-Popup.
+ *
+ * Algorithm: sum of all charCodeAt(i) values, then mod 360.
+ * Deterministic — same input always returns the same output.
+ */
+export function nickToHue(nick: string): number {
+  let sum = 0;
+  for (let i = 0; i < nick.length; i++) {
+    sum += nick.charCodeAt(i);
+  }
+  return sum % 360;
+}
+
 let openPopup: HTMLElement | null = null;
 
 let onOutsideClick: ((e: MouseEvent) => void) | null = null;
