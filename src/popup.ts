@@ -1,24 +1,35 @@
-// ─── User popup — whisper / superwhisper / pin / ignore (spec §4.3 / R1) ──
+// ─── User popup — identity-card layout (popup-redesign spec) ──────────────
 //
 // Replaces upstream open_utn(). Opens on userlist row click; closes on Esc,
 // outside-click, or any action. The popup is positioned below the row.
 //
-// Tier-0 wiring (R1 from the mid-impl review): the previous code only logged
-// to console and silently toggled pin with no visible feedback. This makes
-// the row click discoverable and gives every action a button.
+// Layout:
+//   ┌─────────────────────────────┐
+//   │                          📌 │  pin toggle, top-right
+//   │        ┌───────────┐         │
+//   │        │  photo /  │         │  56×56, rounded
+//   │        │  avatar   │         │  initial: letter avatar
+//   │        └───────────┘         │
+//   │                              │
+//   │        username          🪪  │  name (click→copy) + ID icon
+//   │                              │
+//   │     ✈️      💬      🚫       │
+//   │    /w      /sw     /ig       │  3-icon toolbar + shortcuts
+//   │                              │
+//   └─────────────────────────────┘
 //
 // Action maturity:
 //   - Pin / Unpin       → wired (GM pinned_{user}, persists)
 //   - Superwhisper      → wired (bettercc.superwhisper, GM whisper_{user})
 //   - Flüstern (1×)     → wired (sets a one-shot whisper target via bettercc.superwhisper)
 //   - Ignorieren (/sb)  → stub (T12 superban; logs)
-//   - Bild              → thumbnail button in header (fetchUserImage + hover preview)
-//   - ID (/id)          → stub (T13 id-popup; icon-only in header)
+//   - Bild              → photo container in center (fetchUserImage + centered preview)
+//   - ID (/id)          → stub (T13 id-popup; icon-only in name row)
 
 import { type User } from "./store";
 import { cclog } from "./utils";
 import { getBettercc } from "./upstream";
-import { actionButton, iconElement } from "./dom";
+import { iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
 
 /**
@@ -36,30 +47,26 @@ export function nickToHue(nick: string): number {
   return sum % 360;
 }
 
+// ─── Popup state ───────────────────────────────────────────────────────────
+
 let openPopup: HTMLElement | null = null;
 
 let onOutsideClick: ((e: MouseEvent) => void) | null = null;
-
-/** The hover-preview <img> element (one per popup-open, removed on close). */
-let previewImg: HTMLImageElement | null = null;
 
 function closePopup(): void {
   if (!openPopup) return;
   openPopup.remove();
   openPopup = null;
   document.removeEventListener("keydown", onKeydown, true);
-  // Remove the outside-click listener explicitly — a {once:true} listener
-  // would linger after a no-op close (popup already null) and swallow the
-  // NEXT row click, producing the "click twice then stuck" bug.
   if (onOutsideClick) {
     document.removeEventListener("click", onOutsideClick);
     onOutsideClick = null;
   }
-  // Lifecycle: remove the hover-preview element when the popup closes.
-  if (previewImg) {
-    previewImg.remove();
-    previewImg = null;
-  }
+  // Remove any photo preview elements
+  const backdrop = document.querySelector(".bcc-photo-preview-backdrop");
+  if (backdrop) backdrop.remove();
+  const preview = document.querySelector(".bcc-photo-preview");
+  if (preview) preview.remove();
 }
 
 function onKeydown(e: KeyboardEvent): void {
@@ -69,232 +76,7 @@ function onKeydown(e: KeyboardEvent): void {
   }
 }
 
-/** A popup action button: a theme-aware Font Awesome icon + a text label.
- *  The icon inherits the popup's text color (--bcc-text-raised), so it recolors
- *  with the theme — no fixed emoji that ignores the color scheme.
- *  When `keepOpen` is true, the popup stays open after the click (default
- *  closes it — backward-compatible). */
-function actionBtn(
-  iconClass: string,
-  label: string,
-  title: string,
-  onClick: () => void,
-  keepOpen?: boolean,
-): HTMLButtonElement {
-  const btn = actionButton({
-    iconClass,
-    label,
-    title,
-    onClick: () => {
-      onClick();
-      if (!keepOpen) closePopup();
-    },
-  });
-  btn.className = "bcc-popup-action";
-  // Keep the popup-specific label class (matches existing code; no CSS rule
-  // targets it, but the class name is part of the public DOM contract).
-  const labelSpan = btn.querySelector("span");
-  if (labelSpan) labelSpan.className = "bcc-popup-action-label";
-  return btn;
-}
-
-// ─── Hover-preview helpers ──────────────────────────────────────────────
-
-/** Ensure the hover-preview <img> exists and is appended to .bcc-shell. */
-function ensurePreviewImg(): HTMLImageElement {
-  if (previewImg) return previewImg;
-  previewImg = document.createElement("img");
-  previewImg.className = "bcc-image-preview";
-  previewImg.setAttribute("alt", "");
-  previewImg.setAttribute("aria-hidden", "true");
-  const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
-  mount.appendChild(previewImg);
-  return previewImg;
-}
-
-/**
- * Compute viewport-clamped position for the hover-preview image.
- *
- * @returns {{ left: number, top: number }} CSS-left and CSS-top in px.
- */
-export function clampPreviewPosition(
-  clientX: number,
-  clientY: number,
-  imgW: number,
-  imgH: number,
-  viewW: number,
-  viewH: number,
-): { left: number; top: number } {
-  let left = clientX + 16;
-  let top = clientY - 75;
-
-  const w = imgW || 320;
-  const h = imgH || 400;
-
-  if (left + w > viewW - 8) left = clientX - w - 16;
-  if (left < 8) left = 8;
-  if (top + h > viewH - 8) top = viewH - h - 8;
-  if (top < 8) top = 8;
-
-  return { left, top };
-}
-
-/** Position the preview image offset from the cursor, clamped to viewport. */
-function positionPreview(img: HTMLImageElement, clientX: number, clientY: number): void {
-  const pos = clampPreviewPosition(
-    clientX,
-    clientY,
-    img.offsetWidth,
-    img.offsetHeight,
-    window.innerWidth,
-    window.innerHeight,
-  );
-  img.style.left = pos.left + "px";
-  img.style.top = pos.top + "px";
-}
-
-// ─── Thumbnail button (in header) ───────────────────────────────────────
-
-/**
- * Build the thumbnail button that sits in the popup header.
- * Initial state: placeholder icon (fa-image). On click: fetches the user
- * image; on success with a photo, shows the thumbnail. Hover on a loaded
- * thumbnail shows the full-size cursor-following preview.
- * Shift-click forces a cache refresh.
- */
-function buildThumbButton(userName: string): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "bcc-popup-thumb-btn";
-  btn.title = "Bild von " + userName + " laden (Umschalt+Klick = neu laden)";
-  btn.setAttribute("aria-label", btn.title);
-
-  // Placeholder icon (shown before any fetch)
-  const placeholderIcon = iconElement("fa-image");
-  placeholderIcon.style.pointerEvents = "none";
-  btn.appendChild(placeholderIcon);
-
-  btn.addEventListener("click", (e: MouseEvent) => {
-    e.stopPropagation();
-    // Shift-click forces a cache refresh; plain click is a no-op (image
-    // auto-loads when the popup opens).
-    if (e.shiftKey) loadThumb(btn, userName, true);
-  });
-
-  return btn;
-}
-
-/** Load the user image into the thumb button. */
-function loadThumb(
-  btn: HTMLButtonElement,
-  userName: string,
-  force: boolean,
-): void {
-  // Show a loading indicator: replace icon with a spinner character
-  btn.textContent = "";
-  const spinner = document.createElement("i");
-  spinner.className = "fas fa-spinner fa-spin";
-  spinner.style.pointerEvents = "none";
-  spinner.setAttribute("aria-hidden", "true");
-  btn.appendChild(spinner);
-
-  fetchUserImage(userName, { force })
-    .then((result) => {
-      // Only update if the popup is still open
-      if (!openPopup?.contains(btn)) return;
-      applyThumbResult(btn, result, userName);
-    })
-    .catch(() => {
-      if (!openPopup?.contains(btn)) return;
-      restorePlaceholder(btn, "Bild nicht verfügbar");
-    });
-}
-
-/** Apply the fetch result to the thumb button. */
-function applyThumbResult(
-  btn: HTMLButtonElement,
-  result: UserImageResult,
-  userName: string,
-): void {
-  btn.textContent = "";
-
-  if (!result.hasPhoto || !result.thumbUrl) {
-    // No photo — restore placeholder with hint
-    const icon = iconElement("fa-image");
-    icon.style.pointerEvents = "none";
-    btn.appendChild(icon);
-    btn.title = "Kein Bild";
-    return;
-  }
-
-  // Has photo — show thumbnail image
-  const thumb = document.createElement("img");
-  thumb.src = result.thumbUrl;
-  thumb.alt = "Benutzerbild";
-  thumb.setAttribute("aria-hidden", "true");
-
-  // On broken image, fall back to placeholder
-  thumb.addEventListener("error", () => {
-    btn.textContent = "";
-    const icon = iconElement("fa-image");
-    icon.style.pointerEvents = "none";
-    btn.appendChild(icon);
-    btn.title = "Bild nicht verfügbar";
-  });
-
-  btn.appendChild(thumb);
-  btn.title = "Bild von " + userName;
-
-  // Hover preview: show full-size image following cursor
-  if (result.fullUrl && result.fullUrl !== result.thumbUrl) {
-    const showPreview = (e: MouseEvent) => {
-      const img = ensurePreviewImg();
-      img.src = result.fullUrl!;
-      img.style.display = "block";
-      positionPreview(img, e.clientX, e.clientY);
-    };
-    const movePreview = (e: MouseEvent) => {
-      const img = ensurePreviewImg();
-      positionPreview(img, e.clientX, e.clientY);
-    };
-    const hidePreview = () => {
-      if (previewImg) previewImg.style.display = "none";
-    };
-
-    btn.addEventListener("mouseenter", showPreview);
-    btn.addEventListener("mousemove", movePreview);
-    btn.addEventListener("mouseleave", hidePreview);
-  }
-}
-
-/** Restore the placeholder icon and set a title. */
-function restorePlaceholder(btn: HTMLButtonElement, title: string): void {
-  btn.textContent = "";
-  const icon = iconElement("fa-image");
-  icon.style.pointerEvents = "none";
-  btn.appendChild(icon);
-  btn.title = title;
-}
-
-// ─── Click-to-copy username ──────────────────────────────────────────────
-
-/**
- * Build the clickable username span. Clicking copies the name to clipboard
- * and briefly shows "Kopiert!" feedback.
- */
-function buildUsernameSpan(userName: string): HTMLSpanElement {
-  const span = document.createElement("span");
-  span.className = "bcc-popup-username";
-  span.textContent = userName;
-  span.title = "Klicken zum Kopieren";
-
-  span.addEventListener("click", (e: MouseEvent) => {
-    e.stopPropagation();
-    copyToClipboard(span, userName);
-  });
-
-  return span;
-}
+// ─── Click-to-copy username ────────────────────────────────────────────────
 
 /** Copy text to clipboard, with brief visual feedback on the element. */
 function copyToClipboard(el: HTMLElement, text: string): void {
@@ -318,29 +100,165 @@ function showCopyFeedback(el: HTMLElement): void {
   }, 1500);
 }
 
-// ─── ID icon button (in header) ──────────────────────────────────────────
+// ─── Photo container (identity-card center) ────────────────────────────────
 
 /**
- * Build the icon-only ID button that sits at the end of the popup header.
- * Stub behavior: logs to console (T13).
+ * Build the photo/avatar container for the identity card.
+ *
+ * Returns the container div.bcc-popup-photo. Caller can access the avatar div
+ * and img element via querySelector on the returned container.
  */
-function buildIdButton(userName: string): HTMLButtonElement {
+function buildPhotoContainer(userName: string): HTMLElement {
+  const container = document.createElement("div");
+  container.className = "bcc-popup-photo";
+
+  // Avatar: initial letter with a deterministic background hue
+  const avatar = document.createElement("div");
+  avatar.className = "bcc-popup-avatar";
+  avatar.textContent = userName[0]?.toUpperCase() ?? "?";
+  avatar.style.background = "hsl(" + nickToHue(userName) + ", 45%, 55%)";
+  container.appendChild(avatar);
+
+  // Hidden img (revealed when photo loads)
+  const img = document.createElement("img");
+  img.alt = "";
+  // opacity: 0 initially; .bcc-photo-loaded sets opacity: 1
+  container.appendChild(img);
+
+  return container;
+}
+
+/**
+ * Fetch the user's photo and, on success, reveal it in the container.
+ *
+ * On success with a photo: sets img.src; when onload fires, adds
+ * bcc-photo-loaded class to the img and hides the avatar div.
+ * On img error or fetch failure: leaves the avatar visible (no-op).
+ */
+function loadPhoto(container: HTMLElement, userName: string): void {
+  const img = container.querySelector("img") as HTMLImageElement | null;
+  const avatar = container.querySelector(".bcc-popup-avatar") as HTMLElement | null;
+  if (!img || !avatar) return;
+
+  fetchUserImage(userName)
+    .then((result: UserImageResult) => {
+      if (!result.hasPhoto || !result.thumbUrl) return; // avatar stays
+      // Only update if the popup is still open
+      if (!openPopup?.contains(container)) return;
+
+      img.src = result.thumbUrl;
+      img.addEventListener("load", () => {
+        img.classList.add("bcc-photo-loaded");
+        avatar.style.display = "none";
+      }, { once: true });
+      img.addEventListener("error", () => {
+        // Leave avatar visible — photo failed to load
+      }, { once: true });
+    })
+    .catch(() => {
+      // Fetch failed — avatar stays (no-op)
+    });
+}
+
+// ─── Centered photo preview ────────────────────────────────────────────────
+
+/**
+ * Show the full-size photo in a centered modal overlay.
+ * Click on backdrop or image dismisses; Escape key also dismisses (via onKeydown).
+ */
+function buildPhotoPreview(fullUrl: string): void {
+  // Remove any existing preview first
+  const existingBackdrop = document.querySelector(".bcc-photo-preview-backdrop");
+  if (existingBackdrop) existingBackdrop.remove();
+  const existingPreview = document.querySelector(".bcc-photo-preview");
+  if (existingPreview) existingPreview.remove();
+
+  const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "bcc-photo-preview-backdrop";
+
+  const previewImg = document.createElement("img");
+  previewImg.className = "bcc-photo-preview";
+  previewImg.src = fullUrl;
+  previewImg.alt = "";
+
+  const dismiss = () => {
+    backdrop.remove();
+    previewImg.remove();
+  };
+
+  backdrop.addEventListener("click", dismiss);
+  previewImg.addEventListener("click", dismiss);
+
+  mount.appendChild(backdrop);
+  mount.appendChild(previewImg);
+}
+
+// ─── Pin toggle ────────────────────────────────────────────────────────────
+
+/**
+ * Build the pin toggle button (top-right of the identity card).
+ * Pinned → .pinned class (CSS boosts color) + straight thumbtack.
+ * Not pinned → rotated thumbtack, no .pinned.
+ */
+function buildPin(isPinned: boolean, onToggle: () => void): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "bcc-popup-id-btn";
-  const label = "ID von " + userName + " anzeigen";
-  btn.title = label;
-  btn.setAttribute("aria-label", label);
-  btn.appendChild(iconElement("fa-id-card"));
+  btn.className = "bcc-popup-pin";
+  btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
+  btn.setAttribute("aria-label", btn.title);
 
-  btn.addEventListener("click", (e: MouseEvent) => {
+  const icon = iconElement(isPinned ? "fa-thumbtack" : "fa-thumbtack fa-rotate-45");
+  btn.appendChild(icon);
+
+  if (isPinned) btn.classList.add("pinned");
+
+  btn.addEventListener("click", (e) => {
     e.stopPropagation();
-    cclog("user popup: /id stubbed (T13) — " + userName, "v3");
-    closePopup();
+    onToggle();
   });
 
   return btn;
 }
+
+// ─── Toolbar cell ──────────────────────────────────────────────────────────
+
+/**
+ * Build a single toolbar cell: icon above shortcut label, with title + aria-label.
+ * Click calls onClick after stopPropagation.
+ */
+function buildToolbarCell(
+  iconClass: string,
+  shortcut: string,
+  title: string,
+  onClick: () => void,
+): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "bcc-popup-toolbar-cell";
+  btn.title = title;
+  btn.setAttribute("aria-label", title);
+
+  const icon = document.createElement("i");
+  icon.className = "fas " + iconClass + " bcc-toolbar-icon";
+  icon.setAttribute("aria-hidden", "true");
+  btn.appendChild(icon);
+
+  const label = document.createElement("span");
+  label.className = "bcc-toolbar-shortcut";
+  label.textContent = shortcut;
+  btn.appendChild(label);
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+
+  return btn;
+}
+
+// ─── Public entry point ────────────────────────────────────────────────────
 
 /**
  * Open the user popup anchored below the row for `user`.
@@ -364,70 +282,100 @@ export function openUserPopup(
   popup.setAttribute("aria-modal", "false");
   popup.setAttribute("aria-label", "Aktionen für " + user.name);
 
-  // Header row: [thumb] [username] [id-icon]
-  const header = document.createElement("div");
-  header.className = "bcc-popup-header";
-  const thumbBtn = buildThumbButton(user.name);
-  header.appendChild(thumbBtn);
-  header.appendChild(buildUsernameSpan(user.name));
-  header.appendChild(buildIdButton(user.name));
-  popup.appendChild(header);
+  // Pin (top-right, absolute)
+  popup.appendChild(buildPin(isPinned, () => onTogglePin(user)));
 
-  // Pin / Unpin
-  popup.appendChild(
-    actionBtn(
-      isPinned ? "fa-thumbtack-slash" : "fa-thumbtack",
-      isPinned ? "Angeheftet entfernen" : "Anheften",
-      "Benutzer anheften",
-      () => {
-        onTogglePin(user);
-      },
-    ),
-  );
+  // Photo container (centered, 56×56)
+  const photoContainer = buildPhotoContainer(user.name);
+  popup.appendChild(photoContainer);
 
-  // Superwhisper (persistent) — toggles via the exposed API
-  popup.appendChild(
-    actionBtn("fa-comment-dots", "Superwhisper", "Dauerhaft an " + user.name + " flüstern", () => {
-      const api = getBettercc();
-      if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
-    }),
-  );
+  // Name row: username + ID icon
+  const nameRow = document.createElement("div");
+  nameRow.className = "bcc-popup-name-row";
 
-  // One-shot whisper — prefill the textarea with "/w <nick> " and focus it.
-  // Does NOT arm superwhisper (no persistent rewrite); the user sends the one
-  // prefilled message, then types normally again.
-  popup.appendChild(
-    actionBtn("fa-paper-plane", "Flüstern (1×)", "Einmal an " + user.name + " flüstern", () => {
-      const api = getBettercc();
-      if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
-    }),
-  );
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "bcc-popup-username";
+  nameSpan.textContent = user.name;
+  nameSpan.title = "Klicken zum Kopieren";
+  nameSpan.addEventListener("click", (e) => {
+    e.stopPropagation();
+    copyToClipboard(nameSpan, user.name);
+  });
+  nameRow.appendChild(nameSpan);
 
-  // Ignore (superban) — T12
-  popup.appendChild(
-    actionBtn("fa-ban", "Ignorieren", "Benutzer ignorieren (T12)", () => {
-      cclog("user popup: ignore stubbed (T12) — " + user.name, "v3");
-    }),
-  );
+  // ID button (stub, T13)
+  const idBtn = document.createElement("button");
+  idBtn.type = "button";
+  idBtn.className = "bcc-popup-id-btn";
+  idBtn.title = "ID von " + user.name + " anzeigen";
+  idBtn.setAttribute("aria-label", idBtn.title);
+  idBtn.appendChild(iconElement("fa-id-card"));
+  idBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    cclog("user popup: /id stubbed (T13) — " + user.name, "v3");
+    closePopup();
+  });
+  nameRow.appendChild(idBtn);
+  popup.appendChild(nameRow);
+
+  // Toolbar (3 cells)
+  const toolbar = document.createElement("div");
+  toolbar.className = "bcc-popup-toolbar";
+
+  toolbar.appendChild(buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " flüstern", () => {
+    const api = getBettercc();
+    if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
+    closePopup();
+  }));
+
+  toolbar.appendChild(buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " flüstern", () => {
+    const api = getBettercc();
+    if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
+    closePopup();
+  }));
+
+  toolbar.appendChild(buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
+    cclog("user popup: ignore stubbed (T12) — " + user.name, "v3");
+    closePopup();
+  }));
+
+  popup.appendChild(toolbar);
 
   // Mount inside .bcc-shell (NOT document.body) so the popup inherits the
   // --bcc-* theme vars, which now live on .bcc-shell rather than :root (see
-  // theme.ts applyScheme). The popup is position:fixed, so it's taken out of
-  // flow and doesn't disturb the shell's grid layout, and its viewport-relative
-  // coords are unaffected by the parent (no transform/filter/perspective on
-  // .bcc-shell or its ancestors). Falls back to body defensively in case the
-  // shell isn't built yet (shouldn't happen — popups open after mount).
+  // theme.ts applyScheme).
   const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
   mount.appendChild(popup);
 
-  // Auto-fetch the user image on popup open (cache-respecting; instant on
-  // repeat opens). Shift-click on the thumb forces a refresh.
-  loadThumb(thumbBtn, user.name, false);
-
+  // Position below anchor
   const rect = anchor.getBoundingClientRect();
   popup.style.position = "fixed";
-  popup.style.left = Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8) + "px";
+  popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
   popup.style.top = rect.bottom + 4 + "px";
+
+  // Photo: click = centered preview. Wire AFTER mount so dimensions are available.
+  const photoImg = photoContainer.querySelector("img") as HTMLImageElement;
+  if (photoImg) {
+    photoImg.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
+        buildPhotoPreview(photoImg.src);
+      }
+    });
+    // Also allow clicking the avatar to preview (for when photo is loaded)
+    const avatarDiv = photoContainer.querySelector(".bcc-popup-avatar") as HTMLElement;
+    if (avatarDiv) {
+      avatarDiv.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
+          buildPhotoPreview(photoImg.src);
+        }
+      });
+    }
+  }
+
+  // Auto-fetch photo
+  loadPhoto(photoContainer, user.name);
 
   openPopup = popup;
   document.addEventListener("keydown", onKeydown, true);
@@ -435,9 +383,6 @@ export function openUserPopup(
   // Outside-click closes the popup. Managed explicitly (not {once:true}) so
   // closePopup() can remove it — a once-listener would linger after a no-op
   // close and swallow the next row click (the "click twice then stuck" bug).
-  // The opening row's click handler calls stopPropagation, so this listener is
-  // only armed AFTER the opening click has finished dispatching — it never
-  // sees its own opening event.
   onOutsideClick = (e: MouseEvent) => {
     if (openPopup && !openPopup.contains(e.target as Node)) closePopup();
   };

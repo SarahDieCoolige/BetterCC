@@ -640,60 +640,6 @@
   }
 }
 
-/* ─── User popup (R1) ─── */
-.bcc-user-popup {
-  z-index: 1000;
-  min-width: 180px;
-  background: var(--bcc-surface-raised);
-  color: var(--bcc-text-raised);
-  border: 1px solid var(--bcc-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  padding: 4px;
-  font-size: 13px;
-}
-.bcc-popup-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 8px 10px 10px;
-  border-bottom: 1px solid var(--bcc-border);
-  margin-bottom: 4px;
-}
-
-/* ─── Thumbnail button in popup header (replaces Bild action button) ─── */
-.bcc-popup-thumb-btn {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid var(--bcc-border);
-  background: var(--bcc-surface-hover);
-  color: var(--bcc-text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 18px;
-  padding: 0;
-  overflow: hidden;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-.bcc-popup-thumb-btn:hover {
-  background: var(--bcc-surface-active);
-  border-color: var(--bcc-text-muted);
-}
-.bcc-popup-thumb-btn img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  border-radius: 7px;
-}
 
 /* ─── Username in popup header (click to copy) ─── */
 .bcc-popup-username {
@@ -739,52 +685,6 @@
 .bcc-popup-id-btn:hover {
   background: var(--bcc-surface-hover);
   color: var(--bcc-text-raised);
-}
-.bcc-popup-action {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  color: var(--bcc-text-raised);
-  border: 0;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.bcc-popup-action > i {
-  flex-shrink: 0;
-  width: 14px;
-  text-align: center;
-  color: var(--bcc-text-muted);
-}
-.bcc-popup-action:hover > i {
-  color: var(--bcc-text-raised);
-}
-.bcc-popup-action:hover {
-  background: var(--bcc-surface-hover);
-}
-.bcc-popup-action:active {
-  background: var(--bcc-surface-active);
-}
-.bcc-popup-action:focus-visible {
-  outline: 2px solid var(--bcc-accent-whisper);
-  outline-offset: -2px;
-}
-
-/* ─── Hover preview (full-size image following cursor) ───────────────────── */
-.bcc-image-preview {
-  position: fixed;
-  max-width: 320px;
-  max-height: 400px;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
-  z-index: 1001;
-  display: none;
-  object-fit: contain;
 }
 
 /* ─── Identity-card popup (popup-redesign spec) ─── */

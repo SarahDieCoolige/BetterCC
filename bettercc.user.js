@@ -936,9 +936,15 @@
   }
 
   // src/popup.ts
+  function nickToHue(nick) {
+    let sum = 0;
+    for (let i = 0; i < nick.length; i++) {
+      sum += nick.charCodeAt(i);
+    }
+    return sum % 360;
+  }
   var openPopup = null;
   var onOutsideClick = null;
-  var previewImg = null;
   function closePopup() {
     if (!openPopup) return;
     openPopup.remove();
@@ -948,153 +954,16 @@
       document.removeEventListener("click", onOutsideClick);
       onOutsideClick = null;
     }
-    if (previewImg) {
-      previewImg.remove();
-      previewImg = null;
-    }
+    const backdrop = document.querySelector(".bcc-photo-preview-backdrop");
+    if (backdrop) backdrop.remove();
+    const preview = document.querySelector(".bcc-photo-preview");
+    if (preview) preview.remove();
   }
   function onKeydown(e) {
     if (e.key === "Escape") {
       e.stopPropagation();
       closePopup();
     }
-  }
-  function actionBtn(iconClass, label, title, onClick, keepOpen) {
-    const btn = actionButton({
-      iconClass,
-      label,
-      title,
-      onClick: () => {
-        onClick();
-        if (!keepOpen) closePopup();
-      }
-    });
-    btn.className = "bcc-popup-action";
-    const labelSpan = btn.querySelector("span");
-    if (labelSpan) labelSpan.className = "bcc-popup-action-label";
-    return btn;
-  }
-  function ensurePreviewImg() {
-    if (previewImg) return previewImg;
-    previewImg = document.createElement("img");
-    previewImg.className = "bcc-image-preview";
-    previewImg.setAttribute("alt", "");
-    previewImg.setAttribute("aria-hidden", "true");
-    const mount = document.querySelector(".bcc-shell") ?? document.body;
-    mount.appendChild(previewImg);
-    return previewImg;
-  }
-  function clampPreviewPosition(clientX, clientY, imgW, imgH, viewW, viewH) {
-    let left = clientX + 16;
-    let top = clientY - 75;
-    const w = imgW || 320;
-    const h = imgH || 400;
-    if (left + w > viewW - 8) left = clientX - w - 16;
-    if (left < 8) left = 8;
-    if (top + h > viewH - 8) top = viewH - h - 8;
-    if (top < 8) top = 8;
-    return { left, top };
-  }
-  function positionPreview(img, clientX, clientY) {
-    const pos = clampPreviewPosition(
-      clientX,
-      clientY,
-      img.offsetWidth,
-      img.offsetHeight,
-      window.innerWidth,
-      window.innerHeight
-    );
-    img.style.left = pos.left + "px";
-    img.style.top = pos.top + "px";
-  }
-  function buildThumbButton(userName) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-popup-thumb-btn";
-    btn.title = "Bild von " + userName + " laden (Umschalt+Klick = neu laden)";
-    btn.setAttribute("aria-label", btn.title);
-    const placeholderIcon = iconElement("fa-image");
-    placeholderIcon.style.pointerEvents = "none";
-    btn.appendChild(placeholderIcon);
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (e.shiftKey) loadThumb(btn, userName, true);
-    });
-    return btn;
-  }
-  function loadThumb(btn, userName, force) {
-    btn.textContent = "";
-    const spinner = document.createElement("i");
-    spinner.className = "fas fa-spinner fa-spin";
-    spinner.style.pointerEvents = "none";
-    spinner.setAttribute("aria-hidden", "true");
-    btn.appendChild(spinner);
-    fetchUserImage(userName, { force }).then((result) => {
-      if (!openPopup?.contains(btn)) return;
-      applyThumbResult(btn, result, userName);
-    }).catch(() => {
-      if (!openPopup?.contains(btn)) return;
-      restorePlaceholder(btn, "Bild nicht verf\xFCgbar");
-    });
-  }
-  function applyThumbResult(btn, result, userName) {
-    btn.textContent = "";
-    if (!result.hasPhoto || !result.thumbUrl) {
-      const icon = iconElement("fa-image");
-      icon.style.pointerEvents = "none";
-      btn.appendChild(icon);
-      btn.title = "Kein Bild";
-      return;
-    }
-    const thumb = document.createElement("img");
-    thumb.src = result.thumbUrl;
-    thumb.alt = "Benutzerbild";
-    thumb.setAttribute("aria-hidden", "true");
-    thumb.addEventListener("error", () => {
-      btn.textContent = "";
-      const icon = iconElement("fa-image");
-      icon.style.pointerEvents = "none";
-      btn.appendChild(icon);
-      btn.title = "Bild nicht verf\xFCgbar";
-    });
-    btn.appendChild(thumb);
-    btn.title = "Bild von " + userName;
-    if (result.fullUrl && result.fullUrl !== result.thumbUrl) {
-      const showPreview = (e) => {
-        const img = ensurePreviewImg();
-        img.src = result.fullUrl;
-        img.style.display = "block";
-        positionPreview(img, e.clientX, e.clientY);
-      };
-      const movePreview = (e) => {
-        const img = ensurePreviewImg();
-        positionPreview(img, e.clientX, e.clientY);
-      };
-      const hidePreview = () => {
-        if (previewImg) previewImg.style.display = "none";
-      };
-      btn.addEventListener("mouseenter", showPreview);
-      btn.addEventListener("mousemove", movePreview);
-      btn.addEventListener("mouseleave", hidePreview);
-    }
-  }
-  function restorePlaceholder(btn, title) {
-    btn.textContent = "";
-    const icon = iconElement("fa-image");
-    icon.style.pointerEvents = "none";
-    btn.appendChild(icon);
-    btn.title = title;
-  }
-  function buildUsernameSpan(userName) {
-    const span = document.createElement("span");
-    span.className = "bcc-popup-username";
-    span.textContent = userName;
-    span.title = "Klicken zum Kopieren";
-    span.addEventListener("click", (e) => {
-      e.stopPropagation();
-      copyToClipboard(span, userName);
-    });
-    return span;
   }
   function copyToClipboard(el, text) {
     try {
@@ -1112,18 +981,89 @@
       if (el.title === "Kopiert!") el.title = originalTitle;
     }, 1500);
   }
-  function buildIdButton(userName) {
+  function buildPhotoContainer(userName) {
+    const container = document.createElement("div");
+    container.className = "bcc-popup-photo";
+    const avatar = document.createElement("div");
+    avatar.className = "bcc-popup-avatar";
+    avatar.textContent = userName[0]?.toUpperCase() ?? "?";
+    avatar.style.background = "hsl(" + nickToHue(userName) + ", 45%, 55%)";
+    container.appendChild(avatar);
+    const img = document.createElement("img");
+    img.alt = "";
+    container.appendChild(img);
+    return container;
+  }
+  function loadPhoto(container, userName) {
+    const img = container.querySelector("img");
+    const avatar = container.querySelector(".bcc-popup-avatar");
+    if (!img || !avatar) return;
+    fetchUserImage(userName).then((result) => {
+      if (!result.hasPhoto || !result.thumbUrl) return;
+      if (!openPopup?.contains(container)) return;
+      img.src = result.thumbUrl;
+      img.addEventListener("load", () => {
+        img.classList.add("bcc-photo-loaded");
+        avatar.style.display = "none";
+      }, { once: true });
+      img.addEventListener("error", () => {
+      }, { once: true });
+    }).catch(() => {
+    });
+  }
+  function buildPhotoPreview(fullUrl) {
+    const existingBackdrop = document.querySelector(".bcc-photo-preview-backdrop");
+    if (existingBackdrop) existingBackdrop.remove();
+    const existingPreview = document.querySelector(".bcc-photo-preview");
+    if (existingPreview) existingPreview.remove();
+    const mount = document.querySelector(".bcc-shell") ?? document.body;
+    const backdrop = document.createElement("div");
+    backdrop.className = "bcc-photo-preview-backdrop";
+    const previewImg = document.createElement("img");
+    previewImg.className = "bcc-photo-preview";
+    previewImg.src = fullUrl;
+    previewImg.alt = "";
+    const dismiss = () => {
+      backdrop.remove();
+      previewImg.remove();
+    };
+    backdrop.addEventListener("click", dismiss);
+    previewImg.addEventListener("click", dismiss);
+    mount.appendChild(backdrop);
+    mount.appendChild(previewImg);
+  }
+  function buildPin(isPinned, onToggle) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "bcc-popup-id-btn";
-    const label = "ID von " + userName + " anzeigen";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-    btn.appendChild(iconElement("fa-id-card"));
+    btn.className = "bcc-popup-pin";
+    btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
+    btn.setAttribute("aria-label", btn.title);
+    const icon = iconElement(isPinned ? "fa-thumbtack" : "fa-thumbtack fa-rotate-45");
+    btn.appendChild(icon);
+    if (isPinned) btn.classList.add("pinned");
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      cclog("user popup: /id stubbed (T13) \u2014 " + userName, "v3");
-      closePopup();
+      onToggle();
+    });
+    return btn;
+  }
+  function buildToolbarCell(iconClass, shortcut, title, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-popup-toolbar-cell";
+    btn.title = title;
+    btn.setAttribute("aria-label", title);
+    const icon = document.createElement("i");
+    icon.className = "fas " + iconClass + " bcc-toolbar-icon";
+    icon.setAttribute("aria-hidden", "true");
+    btn.appendChild(icon);
+    const label = document.createElement("span");
+    label.className = "bcc-toolbar-shortcut";
+    label.textContent = shortcut;
+    btn.appendChild(label);
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick();
     });
     return btn;
   }
@@ -1134,47 +1074,75 @@
     popup.setAttribute("role", "dialog");
     popup.setAttribute("aria-modal", "false");
     popup.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
-    const header = document.createElement("div");
-    header.className = "bcc-popup-header";
-    const thumbBtn = buildThumbButton(user.name);
-    header.appendChild(thumbBtn);
-    header.appendChild(buildUsernameSpan(user.name));
-    header.appendChild(buildIdButton(user.name));
-    popup.appendChild(header);
-    popup.appendChild(
-      actionBtn(
-        isPinned ? "fa-thumbtack-slash" : "fa-thumbtack",
-        isPinned ? "Angeheftet entfernen" : "Anheften",
-        "Benutzer anheften",
-        () => {
-          onTogglePin(user);
-        }
-      )
-    );
-    popup.appendChild(
-      actionBtn("fa-comment-dots", "Superwhisper", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
-        const api = getBettercc();
-        if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
-      })
-    );
-    popup.appendChild(
-      actionBtn("fa-paper-plane", "Fl\xFCstern (1\xD7)", "Einmal an " + user.name + " fl\xFCstern", () => {
-        const api = getBettercc();
-        if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
-      })
-    );
-    popup.appendChild(
-      actionBtn("fa-ban", "Ignorieren", "Benutzer ignorieren (T12)", () => {
-        cclog("user popup: ignore stubbed (T12) \u2014 " + user.name, "v3");
-      })
-    );
+    popup.appendChild(buildPin(isPinned, () => onTogglePin(user)));
+    const photoContainer = buildPhotoContainer(user.name);
+    popup.appendChild(photoContainer);
+    const nameRow = document.createElement("div");
+    nameRow.className = "bcc-popup-name-row";
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "bcc-popup-username";
+    nameSpan.textContent = user.name;
+    nameSpan.title = "Klicken zum Kopieren";
+    nameSpan.addEventListener("click", (e) => {
+      e.stopPropagation();
+      copyToClipboard(nameSpan, user.name);
+    });
+    nameRow.appendChild(nameSpan);
+    const idBtn = document.createElement("button");
+    idBtn.type = "button";
+    idBtn.className = "bcc-popup-id-btn";
+    idBtn.title = "ID von " + user.name + " anzeigen";
+    idBtn.setAttribute("aria-label", idBtn.title);
+    idBtn.appendChild(iconElement("fa-id-card"));
+    idBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      cclog("user popup: /id stubbed (T13) \u2014 " + user.name, "v3");
+      closePopup();
+    });
+    nameRow.appendChild(idBtn);
+    popup.appendChild(nameRow);
+    const toolbar = document.createElement("div");
+    toolbar.className = "bcc-popup-toolbar";
+    toolbar.appendChild(buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " fl\xFCstern", () => {
+      const api = getBettercc();
+      if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
+      closePopup();
+    }));
+    toolbar.appendChild(buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
+      const api = getBettercc();
+      if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
+      closePopup();
+    }));
+    toolbar.appendChild(buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
+      cclog("user popup: ignore stubbed (T12) \u2014 " + user.name, "v3");
+      closePopup();
+    }));
+    popup.appendChild(toolbar);
     const mount = document.querySelector(".bcc-shell") ?? document.body;
     mount.appendChild(popup);
-    loadThumb(thumbBtn, user.name, false);
     const rect = anchor.getBoundingClientRect();
     popup.style.position = "fixed";
-    popup.style.left = Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8) + "px";
+    popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
     popup.style.top = rect.bottom + 4 + "px";
+    const photoImg = photoContainer.querySelector("img");
+    if (photoImg) {
+      photoImg.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
+          buildPhotoPreview(photoImg.src);
+        }
+      });
+      const avatarDiv = photoContainer.querySelector(".bcc-popup-avatar");
+      if (avatarDiv) {
+        avatarDiv.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
+            buildPhotoPreview(photoImg.src);
+          }
+        });
+      }
+    }
+    loadPhoto(photoContainer, user.name);
     openPopup = popup;
     document.addEventListener("keydown", onKeydown, true);
     onOutsideClick = (e) => {
