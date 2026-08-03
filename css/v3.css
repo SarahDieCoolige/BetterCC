@@ -778,6 +778,21 @@
 .bcc-popup-toolbar-cell:active {
   filter: brightness(0.85);
 }
+/* Separator before the ignore button + confirm state highlight. */
+.bcc-popup-toolbar-cell:nth-child(3) {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--bcc-border);
+}
+.bcc-popup-toolbar-cell.bcc-confirm {
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
+}
+.bcc-popup-toolbar-cell.bcc-confirmed {
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
+  pointer-events: none;
+}
 .bcc-toolbar-icon {
   font-size: 16px;
   line-height: 1;

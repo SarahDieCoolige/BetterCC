@@ -1166,8 +1166,45 @@
       closePopup();
     }));
     toolbar.appendChild(buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
-      cclog("user popup: ignore stubbed (T12) \u2014 " + user.name, "v3");
-      closePopup();
+      const btn = toolbar.lastElementChild;
+      if (!btn) return;
+      if (btn.classList.contains("bcc-confirm")) {
+        unsafeWindow.com_set?.("/ignore " + user.name);
+        btn.classList.remove("bcc-confirm");
+        btn.classList.add("bcc-confirmed");
+        const icon = btn.querySelector("i");
+        if (icon) {
+          icon.className = "fas fa-check-double bcc-toolbar-icon";
+        }
+        const label = btn.querySelector(".bcc-toolbar-shortcut");
+        if (label) label.textContent = "ignoriert";
+        setTimeout(() => {
+          btn.classList.remove("bcc-confirmed");
+          if (icon) {
+            icon.className = "fas fa-ban bcc-toolbar-icon";
+          }
+          if (label) label.textContent = "/ig";
+        }, 1200);
+      } else if (!btn.classList.contains("bcc-confirmed")) {
+        btn.classList.add("bcc-confirm");
+        const icon = btn.querySelector("i");
+        if (icon) {
+          icon.className = "fas fa-check bcc-toolbar-icon";
+        }
+        const label = btn.querySelector(".bcc-toolbar-shortcut");
+        if (label) label.textContent = "sicher?";
+        const reset = (e) => {
+          if (!btn.contains(e.target)) {
+            btn.classList.remove("bcc-confirm");
+            if (icon) {
+              icon.className = "fas fa-ban bcc-toolbar-icon";
+            }
+            if (label) label.textContent = "/ig";
+            document.removeEventListener("click", reset);
+          }
+        };
+        setTimeout(() => document.addEventListener("click", reset), 0);
+      }
     }));
     popup.appendChild(toolbar);
     const mount = document.querySelector(".bcc-shell") ?? document.body;

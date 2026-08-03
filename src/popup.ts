@@ -367,8 +367,39 @@ export function openUserPopup(
   }));
 
   toolbar.appendChild(buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
-    cclog("user popup: ignore stubbed (T12) — " + user.name, "v3");
-    closePopup();
+    const btn = toolbar.lastElementChild as HTMLButtonElement;
+    if (!btn) return;
+    if (btn.classList.contains("bcc-confirm")) {
+      // Second click — execute ignore, show confirmed state
+      unsafeWindow.com_set?.("/ignore " + user.name);
+      btn.classList.remove("bcc-confirm");
+      btn.classList.add("bcc-confirmed");
+      const icon = btn.querySelector("i");
+      if (icon) { icon.className = "fas fa-check-double bcc-toolbar-icon"; }
+      const label = btn.querySelector(".bcc-toolbar-shortcut");
+      if (label) label.textContent = "ignoriert";
+      setTimeout(() => {
+        btn.classList.remove("bcc-confirmed");
+        if (icon) { icon.className = "fas fa-ban bcc-toolbar-icon"; }
+        if (label) label.textContent = "/ig";
+      }, 1200);
+    } else if (!btn.classList.contains("bcc-confirmed")) {
+      // First click — ask for confirmation
+      btn.classList.add("bcc-confirm");
+      const icon = btn.querySelector("i");
+      if (icon) { icon.className = "fas fa-check bcc-toolbar-icon"; }
+      const label = btn.querySelector(".bcc-toolbar-shortcut");
+      if (label) label.textContent = "sicher?";
+      const reset = (e: MouseEvent) => {
+        if (!btn.contains(e.target as Node)) {
+          btn.classList.remove("bcc-confirm");
+          if (icon) { icon.className = "fas fa-ban bcc-toolbar-icon"; }
+          if (label) label.textContent = "/ig";
+          document.removeEventListener("click", reset);
+        }
+      };
+      setTimeout(() => document.addEventListener("click", reset), 0);
+    }
   }));
 
   popup.appendChild(toolbar);
