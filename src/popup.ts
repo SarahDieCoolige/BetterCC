@@ -206,10 +206,11 @@ function buildPin(isPinned: boolean, onToggle: () => void): HTMLButtonElement {
   btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
   btn.setAttribute("aria-label", btn.title);
 
-  const icon = iconElement(isPinned ? "fa-thumbtack" : "fa-thumbtack fa-rotate-45");
-  btn.appendChild(icon);
+	  const icon = iconElement("fa-thumbtack");
+	  if (!isPinned) icon.style.transform = "rotate(45deg)";
+	  btn.appendChild(icon);
 
-  if (isPinned) btn.classList.add("pinned");
+	  if (isPinned) btn.classList.add("pinned");
 
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -226,11 +227,7 @@ function buildPin(isPinned: boolean, onToggle: () => void): HTMLButtonElement {
 function updatePinButton(btn: HTMLButtonElement, isPinned: boolean): void {
   const icon = btn.querySelector("i");
   if (icon) {
-    if (isPinned) {
-      icon.classList.remove("fa-rotate-45");
-    } else {
-      icon.classList.add("fa-rotate-45");
-    }
+    icon.style.transform = isPinned ? "" : "rotate(45deg)";
   }
   btn.classList.toggle("pinned", isPinned);
   btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";

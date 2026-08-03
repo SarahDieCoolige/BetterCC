@@ -1044,7 +1044,8 @@
     btn.className = "bcc-popup-pin";
     btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
     btn.setAttribute("aria-label", btn.title);
-    const icon = iconElement(isPinned ? "fa-thumbtack" : "fa-thumbtack fa-rotate-45");
+    const icon = iconElement("fa-thumbtack");
+    if (!isPinned) icon.style.transform = "rotate(45deg)";
     btn.appendChild(icon);
     if (isPinned) btn.classList.add("pinned");
     btn.addEventListener("click", (e) => {
@@ -1056,11 +1057,7 @@
   function updatePinButton(btn, isPinned) {
     const icon = btn.querySelector("i");
     if (icon) {
-      if (isPinned) {
-        icon.classList.remove("fa-rotate-45");
-      } else {
-        icon.classList.add("fa-rotate-45");
-      }
+      icon.style.transform = isPinned ? "" : "rotate(45deg)";
     }
     btn.classList.toggle("pinned", isPinned);
     btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
