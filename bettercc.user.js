@@ -53,28 +53,15 @@
     "/sw sariam - sw an",
     "/o hi all :) - ins open",
     "/open - sw aus",
-    "/sb wendigo - superignore an/aus",
-    "/superban - banliste",
+    "/pinned - nutzer anpinnen",
+    "/color - farbe anpassen",
+    "/scheme - design wechseln",
     "/reload - chat neu laden",
     "/settings - einstellungen",
     "/help - hilfe"
   ].join("\n");
   function printHelp() {
-    ccnotify(helptxtNotify, "Hilfe", "help");
-  }
-  function ccnotify(message, title = "", tag = "", timeout = 3e3) {
-    const opts = {
-      title: "BetterCC " + title,
-      text: message,
-      tag,
-      timeout,
-      onclick: () => {
-        window.event?.preventDefault();
-        cclog("Notification clicked.");
-        window.focus();
-      }
-    };
-    GM_notification(opts);
+    printToChat(helptxtNotify);
   }
   function getChatDoc() {
     const f = document.getElementById("chatframe");
@@ -86,6 +73,16 @@
   function getChatWin() {
     const f = document.getElementById("chatframe");
     return f ? f.contentWindow : null;
+  }
+  function printToChat(message) {
+    const doc = getChatDoc();
+    if (!doc?.body) return;
+    const div = doc.createElement("div");
+    div.className = "bcc-chat-msg";
+    div.innerHTML = "BetterCC: " + message.replace(/\n/g, "<br>");
+    doc.body.appendChild(div);
+    const win = getChatWin();
+    if (win) win.scrollTo(0, doc.body.scrollHeight);
   }
   function applyThemeToIframe(bgColor, fgColor) {
     const doc = getChatDoc();

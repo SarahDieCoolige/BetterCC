@@ -16,16 +16,17 @@ export const helptxtNotify: string = [
   "/sw sariam" + " - " + "sw an",
   "/o hi all :)" + " - " + "ins open",
   "/open" + " - " + "sw aus",
-  "/sb wendigo" + " - " + "superignore an/aus",
-  "/superban" + " - " + "banliste",
+  "/pinned" + " - " + "nutzer anpinnen",
+  "/color" + " - " + "farbe anpassen",
+  "/scheme" + " - " + "design wechseln",
   "/reload" + " - " + "chat neu laden",
   "/settings" + " - " + "einstellungen",
   "/help" + " - " + "hilfe",
 ].join("\n");
 
-/** Show the help notification (called by /help, /bettercc, the footer help btn). */
+/** Show the help text in chat (called by /help, /bettercc, the footer help btn). */
 export function printHelp(): void {
-  ccnotify(helptxtNotify, "Hilfe", "help");
+  printToChat(helptxtNotify);
 }
 
 /** Wrap GM_notification. VM doesn't expose GM.notification as a callable

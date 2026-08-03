@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { getUserKey, setUserStore, printToChat } from "../src/utils";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { getUserKey, setUserStore, printToChat, helptxtNotify, printHelp } from "../src/utils";
 
 describe("getUserKey", () => {
   beforeEach(() => {
@@ -31,6 +31,106 @@ describe("setUserStore", () => {
   it("stores 'gast' for guest users regardless of nick", () => {
     setUserStore("Guest123", true);
     expect(getUserKey("color")).toBe("color_gast");
+  });
+});
+
+describe("helptxtNotify", () => {
+  it("does not mention /sb or /superban (not implemented)", () => {
+    expect(helptxtNotify).not.toMatch(/\/sb\b/);
+    expect(helptxtNotify).not.toMatch(/\/superban\b/);
+  });
+
+  it("lists /pinned, /color, /scheme, and /settings", () => {
+    expect(helptxtNotify).toMatch(/\/pinned\b/);
+    expect(helptxtNotify).toMatch(/\/color\b/);
+    expect(helptxtNotify).toMatch(/\/scheme\b/);
+    expect(helptxtNotify).toMatch(/\/settings\b/);
+  });
+});
+
+describe("printHelp", () => {
+  // printHelp must route through printToChat (in-chat), not desktop
+  // notifications (ccnotify/GM_notification). We set up a minimal fake
+  // document with a chatframe so printToChat can append to it, then verify
+  // the help text appears in the chat body — and that GM_notification is
+  // NOT called.
+
+  let fakeBody: any;
+  const originalDocument = globalThis.document;
+  let gmNotifySpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    gmNotifySpy = vi.fn();
+    (globalThis as any).GM_notification = gmNotifySpy;
+
+    fakeBody = {
+      _children: [] as any[],
+      appendChild(el: any) {
+        this._children.push(el);
+      },
+      querySelectorAll(_sel: string) {
+        return this._children.filter(
+          (c: any) => c._className === "bcc-chat-msg",
+        );
+      },
+      scrollHeight: 500,
+      style: {} as Record<string, string>,
+    };
+
+    const fakeDoc = {
+      body: fakeBody,
+      createElement(_tag: string) {
+        return {
+          _className: "",
+          _innerHTML: "",
+          set className(v: string) {
+            this._className = v;
+          },
+          get className() {
+            return this._className;
+          },
+          set innerHTML(v: string) {
+            this._innerHTML = v;
+          },
+          get innerHTML() {
+            return this._innerHTML;
+          },
+        };
+      },
+      get documentElement() {
+        return { style: {} as any };
+      },
+    };
+
+    const fakeWin = {
+      scrollTo(_x: number, _y: number) {},
+    };
+
+    (globalThis as any).document = {
+      getElementById(id: string) {
+        if (id === "chatframe") return { contentDocument: fakeDoc, contentWindow: fakeWin };
+        return null;
+      },
+    };
+  });
+
+  afterEach(() => {
+    (globalThis as any).document = originalDocument;
+  });
+
+  it("routes help output to chat (printToChat) instead of a desktop notification", () => {
+    printHelp();
+
+    // Desktop notification must NOT fire.
+    expect(gmNotifySpy).not.toHaveBeenCalled();
+
+    // A chat message div must have been appended.
+    const divs = fakeBody.querySelectorAll("div.bcc-chat-msg");
+    expect(divs.length).toBe(1);
+    expect(divs[0].innerHTML).toContain("BetterCC: ");
+    // The help text should include known commands.
+    expect(divs[0].innerHTML).toContain("/help");
+    expect(divs[0].innerHTML).toContain("/settings");
   });
 });
 
