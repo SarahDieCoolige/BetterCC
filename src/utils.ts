@@ -11,22 +11,23 @@ export function cclog(str: string, tag = "BetterCC"): void {
   GM_log(tag + " - " + str);
 }
 
-/** Help text shown by printHelp() (/help, /bettercc). German feature list. */
-export const helptxtNotify: string = [
-  "/sw sariam" + " - " + "sw an",
-  "/o hi all :)" + " - " + "ins open",
-  "/open" + " - " + "sw aus",
-  "/pinned" + " - " + "nutzer anpinnen",
-  "/color" + " - " + "farbe anpassen",
-  "/scheme" + " - " + "design wechseln",
-  "/reload" + " - " + "chat neu laden",
-  "/settings" + " - " + "einstellungen",
-  "/help" + " - " + "hilfe",
-].join("\n");
+// ─── Help ──────────────────────────────────────────────────────────────────
 
-/** Show the help text in chat (called by /help, /bettercc, the footer help btn). */
+/** Print the command reference directly into the chat iframe. */
 export function printHelp(): void {
-  printToChat(helptxtNotify);
+  printToChat(
+    "/w Nick" + "        – " + "einmalig flüstern\n" +
+    "/sw Nick" + "       – " + "dauerhaft flüstern\n" +
+    "/open" + "          – " + "superwhisper beenden\n" +
+    "/ignore Nick" + "    – " + "benutzer ignorieren\n" +
+    "/id Nick" + "        – " + "ID-Karte öffnen\n" +
+    "/pinned" + "         – " + "angeheftete Benutzer anzeigen\n" +
+    "/color" + "          – " + "Thema-Farbe anzeigen\n" +
+    "/scheme" + "         – " + "Scheme-Version anzeigen\n" +
+    "/settings" + "       – " + "alle Einstellungen anzeigen\n" +
+    "/reload" + "         – " + "Chat neu laden\n" +
+    "/help" + "           – " + "diese Hilfe",
+  );
 }
 
 /** Wrap GM_notification. VM doesn't expose GM.notification as a callable
@@ -72,7 +73,7 @@ export function printToChat(message: string): void {
   if (!doc?.body) return;
   const div = doc.createElement("div");
   div.className = "bcc-chat-msg";
-  div.innerHTML = "BetterCC: " + message.replace(/\n/g, "<br>");
+  div.innerHTML = '<strong style="color:red">BetterCC:</strong> ' + message.replace(/\n/g, "<br>");
   doc.body.appendChild(div);
   const win = getChatWin();
   if (win) win.scrollTo(0, doc.body.scrollHeight);

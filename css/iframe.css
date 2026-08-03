@@ -83,8 +83,13 @@ table.helpTable tr td:first-child {
 
 .bcc-chat-msg {
   color: var(--chatText);
-  opacity: 0.7;
   font-size: 12px;
-  margin: 4px 0;
-  font-style: italic;
+  line-height: 1.5;
+  margin: 6px 0;
+  padding: 4px 0;
+  opacity: 0.65;
+}
+.bcc-chat-msg strong {
+  font-weight: 700;
+  opacity: 1;
 }

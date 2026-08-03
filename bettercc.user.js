@@ -14,7 +14,7 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=14add667
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=b3fe6986
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=c05b7108
 //
 // @grant  GM_addStyle
@@ -49,19 +49,10 @@
   function cclog(str, tag = "BetterCC") {
     GM_log(tag + " - " + str);
   }
-  var helptxtNotify = [
-    "/sw sariam - sw an",
-    "/o hi all :) - ins open",
-    "/open - sw aus",
-    "/pinned - nutzer anpinnen",
-    "/color - farbe anpassen",
-    "/scheme - design wechseln",
-    "/reload - chat neu laden",
-    "/settings - einstellungen",
-    "/help - hilfe"
-  ].join("\n");
   function printHelp() {
-    printToChat(helptxtNotify);
+    printToChat(
+      "/w Nick        \u2013 einmalig fl\xFCstern\n/sw Nick       \u2013 dauerhaft fl\xFCstern\n/open          \u2013 superwhisper beenden\n/ignore Nick    \u2013 benutzer ignorieren\n/id Nick        \u2013 ID-Karte \xF6ffnen\n/pinned         \u2013 angeheftete Benutzer anzeigen\n/color          \u2013 Thema-Farbe anzeigen\n/scheme         \u2013 Scheme-Version anzeigen\n/settings       \u2013 alle Einstellungen anzeigen\n/reload         \u2013 Chat neu laden\n/help           \u2013 diese Hilfe"
+    );
   }
   function getChatDoc() {
     const f = document.getElementById("chatframe");
@@ -79,7 +70,7 @@
     if (!doc?.body) return;
     const div = doc.createElement("div");
     div.className = "bcc-chat-msg";
-    div.innerHTML = "BetterCC: " + message.replace(/\n/g, "<br>");
+    div.innerHTML = '<strong style="color:red">BetterCC:</strong> ' + message.replace(/\n/g, "<br>");
     doc.body.appendChild(div);
     const win = getChatWin();
     if (win) win.scrollTo(0, doc.body.scrollHeight);
