@@ -1188,6 +1188,7 @@
       if (!result.hasPhoto || !result.thumbUrl) return;
       if (!openPopup?.contains(container)) return;
       img.src = result.thumbUrl;
+      img.dataset.fullUrl = result.fullUrl || result.thumbUrl;
       img.addEventListener("load", () => {
         img.classList.add("bcc-photo-loaded");
         avatar.style.display = "none";
@@ -1356,9 +1357,9 @@
     photoContainer.addEventListener("mouseenter", () => {
       if (previewByUser.has(user.name)) return;
       const img = photoContainer.querySelector("img");
-      if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+      if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
         dismissHover();
-        buildPreviewBox(img.src, user.name);
+        buildPreviewBox(img.dataset.fullUrl, user.name);
       }
     });
     photoContainer.addEventListener("mouseleave", () => {
@@ -1371,9 +1372,9 @@
         return;
       }
       const img = photoContainer.querySelector("img");
-      if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+      if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
         dismissHover();
-        const box = buildPreviewBox(img.src, user.name);
+        const box = buildPreviewBox(img.dataset.fullUrl, user.name);
         previewByUser.set(user.name, box);
       }
     });

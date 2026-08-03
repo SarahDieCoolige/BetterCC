@@ -154,7 +154,9 @@ function loadPhoto(container: HTMLElement, userName: string): void {
       // Only update if the popup is still open
       if (!openPopup?.contains(container)) return;
 
-      img.src = result.thumbUrl;
+	      img.src = result.thumbUrl;
+	      // Store full-size URL for the preview — fall back to thumb if no fullUrl
+	      img.dataset.fullUrl = result.fullUrl || result.thumbUrl;
       img.addEventListener("load", () => {
         img.classList.add("bcc-photo-loaded");
         avatar.style.display = "none";
@@ -396,12 +398,11 @@ export function openUserPopup(
   // Photo: hover = centered preview, click = toggle pin (stays open on mouseleave).
   // Hover: temporary preview. Click: pin/unpin.
   photoContainer.addEventListener("mouseenter", () => {
-    // Don't replace a pinned preview on hover
     if (previewByUser.has(user.name)) return;
     const img = photoContainer.querySelector("img") as HTMLImageElement;
-    if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+    if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
       dismissHover();
-      buildPreviewBox(img.src, user.name);
+      buildPreviewBox(img.dataset.fullUrl, user.name);
     }
   });
   photoContainer.addEventListener("mouseleave", () => {
@@ -414,9 +415,9 @@ export function openUserPopup(
       return;
     }
     const img = photoContainer.querySelector("img") as HTMLImageElement;
-    if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+    if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
       dismissHover();
-      const box = buildPreviewBox(img.src, user.name);
+      const box = buildPreviewBox(img.dataset.fullUrl, user.name);
       previewByUser.set(user.name, box);
     }
   });
