@@ -1,8 +1,14 @@
 import * as esbuild from "esbuild";
 import { readFileSync } from "fs";
+import { createHash } from "crypto";
 
 const PKG = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8"));
 const V = PKG.version;
+
+/** First 8 hex chars of a file's SHA-256 — only busts when content changes. */
+function hashCSS(p) {
+  return createHash("sha256").update(readFileSync(p)).digest("hex").slice(0, 8);
+}
 
 const USERSCRIPT_HEADER = `// ==UserScript==
 // @name  BetterCC (alpha)
@@ -20,8 +26,8 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=${V}
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=${V}
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=${hashCSS("css/iframe.css")}
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=${hashCSS("css/v3.css")}
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
