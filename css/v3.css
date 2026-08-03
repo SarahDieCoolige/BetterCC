@@ -142,9 +142,12 @@
   margin-left: auto;
   text-align-last: center;
   max-width: 100px;
+  filter: brightness(0.95);
+  transition: filter 0.2s ease-out, text-shadow 0.2s ease-out;
 }
 .bcc-online-row .bcc-channel-select:hover {
-  background: var(--bcc-surface-hover);
+  filter: brightness(1);
+  text-shadow: 0 0 10px currentColor;
 }
 .bcc-online-row .bcc-channel-select:focus-visible {
   outline: 2px solid var(--bcc-accent-whisper);
@@ -185,18 +188,17 @@
   border-radius: 10px;
   color: var(--bcc-text-sidebar);
   text-decoration: none;
-  font-size: 17px; /* the icon glyph */
-  background: var(--bcc-surface-hover);
+  font-size: 17px;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.08s ease;
+  filter: brightness(0.95);
+  transition: filter 0.2s ease-out, text-shadow 0.2s ease-out;
 }
 .bcc-stat:hover {
-  background: var(--bcc-surface-active);
+  filter: brightness(1);
+  text-shadow: 0 0 10px currentColor;
 }
 .bcc-stat:active {
-  transform: scale(0.94);
+  filter: brightness(0.9);
 }
 .bcc-stat:focus-visible {
   outline: 2px solid var(--bcc-accent-whisper);
@@ -262,19 +264,19 @@
   line-height: 1.35;
   border-radius: 8px;
   margin: 1px 2px;
-  opacity: 0.8;
-  transition: opacity 0.18s ease-out;
+  filter: brightness(0.95);
+  transition: filter 0.2s ease-out;
 }
 
 .bcc-userrow:hover {
-  opacity: 1;
+  filter: brightness(1);
 }
 .bcc-userrow:hover .bcc-userrow-name,
 .bcc-userrow.bcc-name-away:hover .bcc-userrow-name {
   font-weight: 700;
 }
 .bcc-userrow:active {
-  opacity: 0.6;
+  filter: brightness(0.9);
 }
 /* R4: keyboard focus indicator for the role=button rows. */
 .bcc-userrow:focus-visible {
@@ -438,18 +440,16 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.08s ease,
-    opacity 0.15s ease,
-    color 0.15s ease;
+  filter: brightness(0.95);
+  transition: filter 0.15s ease-out, text-shadow 0.15s ease-out;
 }
 .bcc-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
 }
 .bcc-icon-btn:active {
-  transform: scale(0.88);
-  background: rgba(255, 255, 255, 0.28);
+  filter: brightness(0.85);
+}
 }
 .bcc-icon-btn.bcc-active {
   color: var(--bcc-icon);
@@ -461,7 +461,8 @@
   color: #e84848;
 }
 .bcc-icon-btn.bcc-danger:hover {
-  background: rgba(232, 72, 72, 0.18);
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
 }
 
 /* FontAwesome glyphs for the upstream-style buttons (b1..b16). The element
@@ -613,15 +614,15 @@
   border-radius: 3px;
   padding: 1px 3px;
   margin: -1px -3px;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  filter: brightness(0.95);
+  transition: filter 0.2s ease-out, text-shadow 0.2s ease-out;
 }
 .bcc-popup-username:hover {
-  background: var(--bcc-surface-hover);
+  filter: brightness(1);
+  text-shadow: 0 0 10px currentColor;
 }
 .bcc-popup-username:active {
-  background: var(--bcc-surface-active);
+  filter: brightness(0.9);
 }
 
 /* ─── ID icon button in popup header ─── */
@@ -639,13 +640,12 @@
   cursor: pointer;
   font-size: 16px;
   padding: 0;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  filter: brightness(0.95);
+  transition: filter 0.15s ease-out, text-shadow 0.15s ease-out;
 }
 .bcc-popup-id-btn:hover {
-  background: var(--bcc-surface-hover);
-  color: var(--bcc-text-raised);
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
 }
 
 /* ─── Identity-card popup (popup-redesign spec) ─── */
@@ -721,13 +721,12 @@
   font-size: 16px;
   padding: 0;
   border-radius: 4px;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  filter: brightness(0.95);
+  transition: filter 0.15s ease-out, text-shadow 0.15s ease-out;
 }
 .bcc-popup-pin:hover {
-  background: var(--bcc-surface-hover);
-  color: var(--bcc-text-raised);
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
 }
 .bcc-popup-pin.pinned {
   color: var(--bcc-text-raised);
@@ -767,16 +766,15 @@
   gap: 2px;
   padding: 0;
   border-radius: 8px;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  filter: brightness(0.95);
+  transition: filter 0.15s ease-out, text-shadow 0.15s ease-out;
 }
 .bcc-popup-toolbar-cell:hover {
-  background: var(--bcc-surface-hover);
-  color: var(--bcc-text-raised);
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
 }
 .bcc-popup-toolbar-cell:active {
-  background: var(--bcc-surface-active);
+  filter: brightness(0.85);
 }
 .bcc-toolbar-icon {
   font-size: 16px;
