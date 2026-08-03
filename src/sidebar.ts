@@ -19,22 +19,6 @@ import { buildChannelSelect } from "./channel-select";
 
 // ─── Pure helpers (exported for testing) ────────────────────────────────────
 
-/** Status-dot color class for a user row. The dot encodes ONLY sep — amber for
- *  sep, green for everyone else. Away and guest are NOT in the dot: away dims
- *  the NAME (bcc-name-away), guest adds a " [G]" SUFFIX via userNameText. This
- *  keeps the three signals orthogonal so sep and away never compete for the
- *  dot. */
-export function statusDotClass(user: User): string {
-  return user.sep ? "bcc-dot-sep" : "bcc-dot-online";
-}
-
-/** Whether the row should render a 'gast' chip after the name. Guest tier is
- *  shown as a small pill element (not name text) so it reads cleanly without
- *  adding reading load to the name. */
-export function isGuestTag(user: User): boolean {
-  return user.guest;
-}
-
 export function getStatusClasses(user: User): string {
   const classes = ["bcc-userrow"];
   if (user.sep) classes.push("bcc-sep");

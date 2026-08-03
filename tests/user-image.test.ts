@@ -9,7 +9,7 @@ import {
   extractFirstImageUrl,
 } from "../src/user-image";
 import type { IdSearchRow, UserImageResult } from "../src/user-image";
-import { encodeChatLink } from "../src/stats";
+import { encodeChatLink } from "../src/utils";
 
 // ─── Real production HTML fixtures ────────────────────────────────────────
 

@@ -10,7 +10,7 @@
 // the text, not the dot.
 
 import { describe, it, expect } from "vitest";
-import { statusDotClass, isGuestTag, getStatusClasses, type User } from "../src/sidebar";
+import { getStatusClasses, type User } from "../src/sidebar";
 
 function user(overrides: Partial<User> = {}): User {
   return {
@@ -23,63 +23,22 @@ function user(overrides: Partial<User> = {}): User {
   };
 }
 
-// ─── statusDotClass (dot = sep only) ───────────────────────────────────────
-
-describe("statusDotClass — dot reflects ONLY sep", () => {
-  it("returns the online class for a present non-sep user", () => {
-    expect(statusDotClass(user())).toBe("bcc-dot-online");
-  });
-
-  it("returns the sep class for a sep user", () => {
-    expect(statusDotClass(user({ sep: true }))).toBe("bcc-dot-sep");
-  });
-
-  it("returns the online class for an AWAY user (away is in the name, not the dot)", () => {
-    expect(statusDotClass(user({ away: true }))).toBe("bcc-dot-online");
-  });
-
-  it("returns the online class for a GUEST (guest is a [G] tag, not the dot)", () => {
-    expect(statusDotClass(user({ guest: true }))).toBe("bcc-dot-online");
-  });
-
-  it("returns the sep class for a sep+away user (sep wins the dot; away still dims the name)", () => {
-    expect(statusDotClass(user({ sep: true, away: true }))).toBe("bcc-dot-sep");
-  });
-});
-
-// ─── isGuest (drives the separate 'gast' chip element, not name text) ──────
-
-describe("isGuestTag — whether the row should show a 'gast' chip", () => {
-  it("returns false for a registered user (no chip)", () => {
-    expect(isGuestTag(user())).toBe(false);
-  });
-
-  it("returns true for a guest (chip renders)", () => {
-    expect(isGuestTag(user({ guest: true }))).toBe(true);
-  });
-
-  it("returns true for a guest even when away/sep (tier is independent)", () => {
-    expect(isGuestTag(user({ guest: true, away: true }))).toBe(true);
-    expect(isGuestTag(user({ guest: true, sep: true }))).toBe(true);
-  });
-});
-
-// ─── getStatusClasses (row-level: away/sep opacity+italic) ─────────────────
+// ─── getStatusClasses (row-level: sep/away styling) ────────────────────────
 
 describe("getStatusClasses — CSS class list for a user row", () => {
   it("returns only the base class for a present user", () => {
     expect(getStatusClasses(user())).toBe("bcc-userrow");
   });
 
-  it("adds bcc-away for an away user", () => {
-    expect(getStatusClasses(user({ away: true }))).toBe("bcc-userrow bcc-away");
+  it("returns only the base class for an away user (away dims the name, not the row)", () => {
+    expect(getStatusClasses(user({ away: true }))).toBe("bcc-userrow");
   });
 
   it("adds bcc-sep for a sep user", () => {
     expect(getStatusClasses(user({ sep: true }))).toBe("bcc-userrow bcc-sep");
   });
 
-  it("adds both modifiers when both flags are set (order: away then sep)", () => {
-    expect(getStatusClasses(user({ sep: true, away: true }))).toBe("bcc-userrow bcc-away bcc-sep");
+  it("adds bcc-sep for a sep+away user (sep drives the row class; away is name-only)", () => {
+    expect(getStatusClasses(user({ sep: true, away: true }))).toBe("bcc-userrow bcc-sep");
   });
 });
