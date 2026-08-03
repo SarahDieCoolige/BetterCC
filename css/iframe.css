@@ -80,3 +80,11 @@ table.helpTable tr td:first-child {
   z-index: 1001;
   opacity: 0.9;
 }
+
+.bcc-chat-msg {
+  color: var(--chatText);
+  opacity: 0.7;
+  font-size: 12px;
+  margin: 4px 0;
+  font-style: italic;
+}

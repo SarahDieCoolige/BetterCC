@@ -63,6 +63,20 @@ export function getChatWin(): Window | null {
   return f ? f.contentWindow : null;
 }
 
+/** Append a styled message to the chat iframe body.
+ *  Splits on \n → <br>, prefixes with "BetterCC: ", and scrolls to bottom.
+ *  If the iframe isn't ready this is a silent no-op. */
+export function printToChat(message: string): void {
+  const doc = getChatDoc();
+  if (!doc?.body) return;
+  const div = doc.createElement("div");
+  div.className = "bcc-chat-msg";
+  div.innerHTML = "BetterCC: " + message.replace(/\n/g, "<br>");
+  doc.body.appendChild(div);
+  const win = getChatWin();
+  if (win) win.scrollTo(0, doc.body.scrollHeight);
+}
+
 /** Mirror bg/fg into the chat iframe under its own --chat* var names. */
 export function applyThemeToIframe(bgColor: string, fgColor: string): void {
   const doc = getChatDoc();
