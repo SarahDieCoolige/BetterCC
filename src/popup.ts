@@ -27,11 +27,10 @@
 //   - ID (/id)          → stub (T13 id-popup; icon-only in name row)
 
 import { type User, subscribe, type BccEvent } from "./store";
-import { cclog } from "./utils";
+import { cclog, encodeChatLink } from "./utils";
 import { getBettercc } from "./upstream";
 import { iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
-import { encodeChatLink } from "./stats";
 import { getConfig } from "./config";
 
 /**

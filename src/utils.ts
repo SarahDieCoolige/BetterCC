@@ -74,6 +74,39 @@ export function applyThemeToIframe(bgColor: string, fgColor: string): void {
   doc.body.style.color = "var(--chatText)";
 }
 
+// ─── Nick-URL encoding ──────────────────────────────────────────────────
+
+/**
+ * Encode a nick for a ChatCity URL path, replicating the upstream Encode_Link
+ * (dev/fixture/.../utils_kylr.js:38). Safe characters (A-Za-z0-9) pass through,
+ * space → '-', unsafe ASCII → `:XX:` hex, Unicode → `:%XX:` escaped.
+ */
+export function encodeChatLink(name: string): string {
+  const SAFE = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const HEX = "0123456789ABCDEF";
+  let encoded = "";
+  for (let i = 0; i < name.length; i++) {
+    const ch = name.charAt(i);
+    if (ch === " ") {
+      encoded += "-";
+    } else if (SAFE.indexOf(ch) !== -1) {
+      encoded += ch;
+    } else {
+      const code = ch.charCodeAt(0);
+      if (code > 255) {
+        const escaped = encodeURIComponent(ch);
+        encoded += ":" + escaped.substring(1, 99) + ":";
+      } else {
+        encoded += ":";
+        encoded += HEX.charAt((code >> 4) & 0xf);
+        encoded += HEX.charAt(code & 0xf);
+        encoded += ":";
+      }
+    }
+  }
+  return encoded;
+}
+
 // ─── Storage key helper ───
 
 let userStore: string = ""; // set during init

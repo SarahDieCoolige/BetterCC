@@ -12,6 +12,7 @@
 
 import { cclog } from "./utils";
 import { getChatNick } from "./upstream";
+import { encodeChatLink } from "./utils";
 
 /** The three counts parsed from the chat_info_friends_nc.html response. */
 export interface Stats {
@@ -63,35 +64,8 @@ export function parseStats(html: string): Stats {
 }
 
 /**
- * Encode a nick for a ChatCity URL path, replicating the upstream Encode_Link
- * (dev/fixture/.../utils_kylr.js:38). Safe characters (A-Za-z0-9) pass through,
- * space → '-', unsafe ASCII → `:XX:` hex, Unicode → `:%XX:` escaped.
+ * Encode a nick for a ChatCity URL path — see utils.ts.
  */
-export function encodeChatLink(name: string): string {
-  const SAFE = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  const HEX = "0123456789ABCDEF";
-  let encoded = "";
-  for (let i = 0; i < name.length; i++) {
-    const ch = name.charAt(i);
-    if (ch === " ") {
-      encoded += "-";
-    } else if (SAFE.indexOf(ch) !== -1) {
-      encoded += ch;
-    } else {
-      const code = ch.charCodeAt(0);
-      if (code > 255) {
-        const escaped = encodeURIComponent(ch);
-        encoded += ":" + escaped.substring(1, 99) + ":";
-      } else {
-        encoded += ":";
-        encoded += HEX.charAt((code >> 4) & 0xf);
-        encoded += HEX.charAt(code & 0xf);
-        encoded += ":";
-      }
-    }
-  }
-  return encoded;
-}
 
 /** The three badge specs: CSS class, Font Awesome icon, and popup URL target. */
 interface BadgeSpec {
