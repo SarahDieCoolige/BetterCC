@@ -528,7 +528,7 @@
   font-size: 0;
   background: transparent;
   position: relative;
-  transition: transform 0.12s ease;
+  transition: transform 0.12s ease, filter 0.15s ease-out;
 }
 .bcc-color-btn::after {
   content: "";
@@ -540,9 +540,11 @@
 }
 .bcc-color-btn:hover {
   transform: scale(1.15);
+  filter: brightness(1.12) drop-shadow(0 0 4px currentColor);
 }
 .bcc-color-btn:active {
   transform: scale(0.92);
+  filter: brightness(0.9);
 }
 
 /* Preset nick colors (upstream color_set — server-side nick color). */
