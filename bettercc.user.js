@@ -945,19 +945,18 @@
   }
   var openPopup = null;
   var onOutsideClick = null;
+  var currentUser = null;
   function closePopup() {
     if (!openPopup) return;
     openPopup.remove();
     openPopup = null;
+    currentUser = null;
     document.removeEventListener("keydown", onKeydown, true);
     if (onOutsideClick) {
       document.removeEventListener("click", onOutsideClick);
       onOutsideClick = null;
     }
-    const backdrop = document.querySelector(".bcc-photo-preview-backdrop");
-    if (backdrop) backdrop.remove();
-    const preview = document.querySelector(".bcc-photo-preview");
-    if (preview) preview.remove();
+    dismissPhotoPreview();
   }
   function onKeydown(e) {
     if (e.key === "Escape") {
@@ -966,19 +965,19 @@
     }
   }
   function copyToClipboard(el, text) {
+    const originalText = el.textContent ?? text;
     try {
       navigator.clipboard.writeText(text).then(() => {
-        showCopyFeedback(el);
+        showCopyFeedback(el, originalText);
       }).catch(() => {
       });
     } catch {
     }
   }
-  function showCopyFeedback(el) {
-    const originalTitle = el.title;
-    el.title = "Kopiert!";
+  function showCopyFeedback(el, originalText) {
+    el.textContent = "\u2713 Kopiert!";
     setTimeout(() => {
-      if (el.title === "Kopiert!") el.title = originalTitle;
+      if (el.textContent === "\u2713 Kopiert!") el.textContent = originalText;
     }, 1500);
   }
   function buildPhotoContainer(userName) {
@@ -1011,25 +1010,17 @@
     }).catch(() => {
     });
   }
+  function dismissPhotoPreview() {
+    const preview = document.querySelector(".bcc-photo-preview");
+    if (preview) preview.remove();
+  }
   function buildPhotoPreview(fullUrl) {
-    const existingBackdrop = document.querySelector(".bcc-photo-preview-backdrop");
-    if (existingBackdrop) existingBackdrop.remove();
-    const existingPreview = document.querySelector(".bcc-photo-preview");
-    if (existingPreview) existingPreview.remove();
+    dismissPhotoPreview();
     const mount = document.querySelector(".bcc-shell") ?? document.body;
-    const backdrop = document.createElement("div");
-    backdrop.className = "bcc-photo-preview-backdrop";
     const previewImg = document.createElement("img");
     previewImg.className = "bcc-photo-preview";
     previewImg.src = fullUrl;
     previewImg.alt = "";
-    const dismiss = () => {
-      backdrop.remove();
-      previewImg.remove();
-    };
-    backdrop.addEventListener("click", dismiss);
-    previewImg.addEventListener("click", dismiss);
-    mount.appendChild(backdrop);
     mount.appendChild(previewImg);
   }
   function buildPin(isPinned, onToggle) {
@@ -1068,7 +1059,12 @@
     return btn;
   }
   function openUserPopup(anchor, user, isPinned, onTogglePin) {
+    if (currentUser === user.name) {
+      closePopup();
+      return;
+    }
     closePopup();
+    currentUser = user.name;
     const popup = document.createElement("div");
     popup.className = "bcc-user-popup";
     popup.setAttribute("role", "dialog");
@@ -1124,24 +1120,15 @@
     popup.style.position = "fixed";
     popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
     popup.style.top = rect.bottom + 4 + "px";
-    const photoImg = photoContainer.querySelector("img");
-    if (photoImg) {
-      photoImg.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
-          buildPhotoPreview(photoImg.src);
-        }
-      });
-      const avatarDiv = photoContainer.querySelector(".bcc-popup-avatar");
-      if (avatarDiv) {
-        avatarDiv.addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
-            buildPhotoPreview(photoImg.src);
-          }
-        });
+    photoContainer.addEventListener("mouseenter", () => {
+      const img = photoContainer.querySelector("img");
+      if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+        buildPhotoPreview(img.src);
       }
-    }
+    });
+    photoContainer.addEventListener("mouseleave", () => {
+      dismissPhotoPreview();
+    });
     loadPhoto(photoContainer, user.name);
     openPopup = popup;
     document.addEventListener("keydown", onKeydown, true);

@@ -23,7 +23,7 @@
 //   - Superwhisper      → wired (bettercc.superwhisper, GM whisper_{user})
 //   - Flüstern (1×)     → wired (sets a one-shot whisper target via bettercc.superwhisper)
 //   - Ignorieren (/sb)  → stub (T12 superban; logs)
-//   - Bild              → photo container in center (fetchUserImage + centered preview)
+//   - Bild              → photo container in center (fetchUserImage + hover preview)
 //   - ID (/id)          → stub (T13 id-popup; icon-only in name row)
 
 import { type User } from "./store";
@@ -53,20 +53,19 @@ let openPopup: HTMLElement | null = null;
 
 let onOutsideClick: ((e: MouseEvent) => void) | null = null;
 
+let currentUser: string | null = null;
+
 function closePopup(): void {
   if (!openPopup) return;
   openPopup.remove();
   openPopup = null;
+  currentUser = null;
   document.removeEventListener("keydown", onKeydown, true);
   if (onOutsideClick) {
     document.removeEventListener("click", onOutsideClick);
     onOutsideClick = null;
   }
-  // Remove any photo preview elements
-  const backdrop = document.querySelector(".bcc-photo-preview-backdrop");
-  if (backdrop) backdrop.remove();
-  const preview = document.querySelector(".bcc-photo-preview");
-  if (preview) preview.remove();
+  dismissPhotoPreview();
 }
 
 function onKeydown(e: KeyboardEvent): void {
@@ -80,23 +79,19 @@ function onKeydown(e: KeyboardEvent): void {
 
 /** Copy text to clipboard, with brief visual feedback on the element. */
 function copyToClipboard(el: HTMLElement, text: string): void {
+  const originalText = el.textContent ?? text;
   try {
     navigator.clipboard.writeText(text).then(() => {
-      showCopyFeedback(el);
-    }).catch(() => {
-      // Clipboard API denied — fail silently
-    });
-  } catch {
-    // Clipboard API unavailable — fail silently
-  }
+      showCopyFeedback(el, originalText);
+    }).catch(() => {});
+  } catch {}
 }
 
-/** Show brief "Kopiert!" feedback, then restore the original title. */
-function showCopyFeedback(el: HTMLElement): void {
-  const originalTitle = el.title;
-  el.title = "Kopiert!";
+/** Show brief "✓ Kopiert!" feedback by swapping textContent, then restore. */
+function showCopyFeedback(el: HTMLElement, originalText: string): void {
+  el.textContent = "✓ Kopiert!";
   setTimeout(() => {
-    if (el.title === "Kopiert!") el.title = originalTitle;
+    if (el.textContent === "✓ Kopiert!") el.textContent = originalText;
   }, 1500);
 }
 
@@ -163,35 +158,24 @@ function loadPhoto(container: HTMLElement, userName: string): void {
 // ─── Centered photo preview ────────────────────────────────────────────────
 
 /**
- * Show the full-size photo in a centered modal overlay.
- * Click on backdrop or image dismisses; Escape key also dismisses (via onKeydown).
+ * Remove any existing photo preview from the DOM.
+ * Called by mouseleave, closePopup, and buildPhotoPreview (before creating a new one).
+ */
+function dismissPhotoPreview(): void {
+  const preview = document.querySelector(".bcc-photo-preview");
+  if (preview) preview.remove();
+}
+
+/**
+ * Show the full-size photo centered (no backdrop — hover-triggered preview).
  */
 function buildPhotoPreview(fullUrl: string): void {
-  // Remove any existing preview first
-  const existingBackdrop = document.querySelector(".bcc-photo-preview-backdrop");
-  if (existingBackdrop) existingBackdrop.remove();
-  const existingPreview = document.querySelector(".bcc-photo-preview");
-  if (existingPreview) existingPreview.remove();
-
+  dismissPhotoPreview(); // remove any existing
   const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
-
-  const backdrop = document.createElement("div");
-  backdrop.className = "bcc-photo-preview-backdrop";
-
   const previewImg = document.createElement("img");
   previewImg.className = "bcc-photo-preview";
   previewImg.src = fullUrl;
   previewImg.alt = "";
-
-  const dismiss = () => {
-    backdrop.remove();
-    previewImg.remove();
-  };
-
-  backdrop.addEventListener("click", dismiss);
-  previewImg.addEventListener("click", dismiss);
-
-  mount.appendChild(backdrop);
   mount.appendChild(previewImg);
 }
 
@@ -274,7 +258,13 @@ export function openUserPopup(
   isPinned: boolean,
   onTogglePin: (user: User) => void,
 ): void {
+  // Toggle: if the same user's popup is already open, close it instead
+  if (currentUser === user.name) {
+    closePopup();
+    return;
+  }
   closePopup(); // only one at a time
+  currentUser = user.name;
 
   const popup = document.createElement("div");
   popup.className = "bcc-user-popup";
@@ -353,26 +343,16 @@ export function openUserPopup(
   popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
   popup.style.top = rect.bottom + 4 + "px";
 
-  // Photo: click = centered preview. Wire AFTER mount so dimensions are available.
-  const photoImg = photoContainer.querySelector("img") as HTMLImageElement;
-  if (photoImg) {
-    photoImg.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
-        buildPhotoPreview(photoImg.src);
-      }
-    });
-    // Also allow clicking the avatar to preview (for when photo is loaded)
-    const avatarDiv = photoContainer.querySelector(".bcc-popup-avatar") as HTMLElement;
-    if (avatarDiv) {
-      avatarDiv.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (photoImg.src && photoImg.classList.contains("bcc-photo-loaded")) {
-          buildPhotoPreview(photoImg.src);
-        }
-      });
+  // Photo: hover = centered preview. Wire AFTER mount so dimensions are available.
+  photoContainer.addEventListener("mouseenter", () => {
+    const img = photoContainer.querySelector("img") as HTMLImageElement;
+    if (img?.src && img.classList.contains("bcc-photo-loaded")) {
+      buildPhotoPreview(img.src);
     }
-  }
+  });
+  photoContainer.addEventListener("mouseleave", () => {
+    dismissPhotoPreview();
+  });
 
   // Auto-fetch photo
   loadPhoto(photoContainer, user.name);
