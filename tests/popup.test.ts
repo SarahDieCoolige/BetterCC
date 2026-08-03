@@ -138,7 +138,6 @@ describe("nickToHue (regression)", () => {
 // ─── Fix 2: showCopyFeedback uses textContent (not title) ────────────────────
 
 describe("Fix 2 — showCopyFeedback textContent swap", () => {
-
   beforeEach(() => {
     vi.useFakeTimers();
     mockDocument();
@@ -197,7 +196,6 @@ describe("Fix 2 — showCopyFeedback textContent swap", () => {
 // ─── Fix 3: dismissPhotoPreview and hover preview ────────────────────────────
 
 describe("Fix 3 — Photo preview (no backdrop, dismiss helper)", () => {
-
   beforeEach(() => {
     mockDocument();
   });

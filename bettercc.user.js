@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.4.2
+// @version      3.4.3
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -14,7 +14,7 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=b3fe6986
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=9f6aa41b
 //
 // @grant  GM_addStyle
@@ -68,15 +68,14 @@
   function printToChat(message) {
     const doc = getChatDoc();
     if (!doc?.body) return;
-    const div = doc.createElement("div");
-    div.className = "bcc-chat-msg";
     const hasNewline = message.includes("\n");
+    let html;
     if (hasNewline) {
-      div.innerHTML = '<strong style="color:#ff5577">BetterCC:</strong><br>' + message.replace(/^/gm, "&emsp;").replace(/\n/g, "<br>");
+      html = '<div class="bcc-chat-msg"><strong style="color:#ff5577">BetterCC:</strong><br>' + message.replace(/^/gm, "&emsp;").replace(/\n/g, "<br>") + "</div>";
     } else {
-      div.innerHTML = '<strong style="color:#ff5577">BetterCC:</strong> ' + message;
+      html = '<div class="bcc-chat-msg"><strong style="color:#ff5577">BetterCC:</strong> ' + message + "</div>";
     }
-    doc.body.appendChild(div);
+    doc.writeln(html);
     const win = getChatWin();
     if (win) win.scrollTo(0, doc.body.scrollHeight);
   }

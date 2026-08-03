@@ -1,6 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { getUserKey, setUserStore, printToChat, printHelp } from "../src/utils";
 
+/** Parse a .bcc-chat-msg div from its HTML string into a fake element. */
+function parseMsgDiv(html: string): any {
+  const innerMatch = html.match(/^<div class="bcc-chat-msg">(.+)<\/div>$/s);
+  const innerHTML = innerMatch ? innerMatch[1] : "";
+  return {
+    _className: "bcc-chat-msg",
+    _innerHTML: innerHTML,
+    get className() {
+      return this._className;
+    },
+    get innerHTML() {
+      return this._innerHTML;
+    },
+  };
+}
+
 describe("getUserKey", () => {
   beforeEach(() => {
     setUserStore("testuser", false);
@@ -63,23 +79,8 @@ describe("printHelp", () => {
 
     const fakeDoc = {
       body: fakeBody,
-      createElement(_tag: string) {
-        return {
-          _className: "",
-          _innerHTML: "",
-          set className(v: string) {
-            this._className = v;
-          },
-          get className() {
-            return this._className;
-          },
-          set innerHTML(v: string) {
-            this._innerHTML = v;
-          },
-          get innerHTML() {
-            return this._innerHTML;
-          },
-        };
+      writeln(html: string) {
+        fakeBody._children.push(parseMsgDiv(html));
       },
       get documentElement() {
         return { style: {} as any };
@@ -147,26 +148,10 @@ describe("printToChat", () => {
 
     fakeDoc = {
       body: fakeBody,
-      createElement(_tag: string) {
-        return {
-          _className: "",
-          _innerHTML: "",
-          set className(v: string) {
-            this._className = v;
-          },
-          get className() {
-            return this._className;
-          },
-          set innerHTML(v: string) {
-            this._innerHTML = v;
-          },
-          get innerHTML() {
-            return this._innerHTML;
-          },
-          get textContent() {
-            return this._innerHTML.replace(/<br>/g, "");
-          },
-        };
+      // doc.writeln writes HTML into the document stream — simulate by
+      // creating elements from the written HTML and appending to the body.
+      writeln(html: string) {
+        fakeBody._children.push(parseMsgDiv(html));
       },
     };
 
