@@ -1808,6 +1808,18 @@
     if (lower === "/reload") {
       return { handled: true, type: "reload" };
     }
+    if (lower === "/pinned") {
+      return { handled: true, type: "pinned-list" };
+    }
+    if (lower === "/color") {
+      return { handled: true, type: "color-info" };
+    }
+    if (lower === "/scheme") {
+      return { handled: true, type: "scheme-info" };
+    }
+    if (lower === "/settings") {
+      return { handled: true, type: "settings" };
+    }
     if (superwhisperMsgCmdRegex.test(lower)) {
       const nick = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
       return { handled: true, type: "superwhisper", nick };
@@ -1860,6 +1872,10 @@
         case "superwhisper":
         case "superban":
         case "id":
+        case "pinned-list":
+        case "color-info":
+        case "scheme-info":
+        case "settings":
           return { action: "handled", clear: true };
         case "open-msg":
           return { action: "send", message: cmd.message };
@@ -1894,6 +1910,35 @@
           // Stub for T12.
           case "id":
             cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
+            break;
+          case "pinned-list":
+            getConfig("pinned", []).then(
+              (list) => printToChat(
+                list.length ? "Angepinnt: " + list.join(", ") : "Keine angepinnten Benutzer."
+              )
+            );
+            break;
+          case "color-info":
+            getConfig("color", "").then(
+              (c) => printToChat("Thema-Farbe: " + c)
+            );
+            break;
+          case "scheme-info":
+            getConfig("scheme_v2", false).then(
+              (v2) => printToChat("Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1"))
+            );
+            break;
+          case "settings":
+            Promise.all([
+              getConfig("pinned", []),
+              getConfig("color", ""),
+              getConfig("scheme_v2", false)
+            ]).then(([pinned, color, v2]) => {
+              const pinnedLine = pinned.length ? "Angepinnt: " + pinned.join(", ") : "Keine angepinnten Benutzer.";
+              const colorLine = "Thema-Farbe: " + color;
+              const schemeLine = "Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1");
+              printToChat(pinnedLine + "\n" + colorLine + "\n" + schemeLine);
+            });
             break;
         }
       }

@@ -24,7 +24,11 @@ export type CommandResult =
   | { handled: true; type: "superwhisper"; nick: string }
   | { handled: true; type: "open-msg"; message: string }
   | { handled: true; type: "superban"; nick: string }
-  | { handled: true; type: "id"; name: string };
+  | { handled: true; type: "id"; name: string }
+  | { handled: true; type: "pinned-list" }
+  | { handled: true; type: "color-info" }
+  | { handled: true; type: "scheme-info" }
+  | { handled: true; type: "settings" };
 
 /**
  * Classify a chat message: is it a BetterCC command, or a regular message?
@@ -65,6 +69,26 @@ export function classifyMessage(mymsg: string): CommandResult {
   // /reload
   if (lower === "/reload") {
     return { handled: true, type: "reload" };
+  }
+
+  // /pinned — list pinned users
+  if (lower === "/pinned") {
+    return { handled: true, type: "pinned-list" };
+  }
+
+  // /color — print theme color
+  if (lower === "/color") {
+    return { handled: true, type: "color-info" };
+  }
+
+  // /scheme — print scheme generator version
+  if (lower === "/scheme") {
+    return { handled: true, type: "scheme-info" };
+  }
+
+  // /settings — print all config
+  if (lower === "/settings") {
+    return { handled: true, type: "settings" };
   }
 
   // /sw nick or /superwhisper nick

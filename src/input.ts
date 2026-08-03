@@ -4,7 +4,7 @@
 // through the reused upstream onsubmit handler for message normalization +
 // away-timer reset, and handles BetterCC commands + superwhisper.
 
-import { cclog, printHelp } from "./utils";
+import { cclog, printHelp, printToChat } from "./utils";
 import { getConfig, setConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { buildPatchedHandler } from "./patched-handler";
@@ -42,6 +42,10 @@ export function prepareMessage(rawMsg: string, whisperNick: string): SendDecisio
       case "superwhisper":
       case "superban":
       case "id":
+      case "pinned-list":
+      case "color-info":
+      case "scheme-info":
+      case "settings":
         // These commands consume the message — the caller runs their side
         // effects (printHelp, reloadChat, superwhisper toggle, …) and clears
         // the input. Nothing is sent.
@@ -92,6 +96,39 @@ async function doSubmit(whispernick?: string): Promise<void> {
           break; // Stub for T12.
         case "id":
           cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
+          break;
+        case "pinned-list":
+          getConfig("pinned", []).then((list) =>
+            printToChat(
+              (list as string[]).length
+                ? "Angepinnt: " + (list as string[]).join(", ")
+                : "Keine angepinnten Benutzer."
+            )
+          );
+          break;
+        case "color-info":
+          getConfig("color", "").then((c) =>
+            printToChat("Thema-Farbe: " + c)
+          );
+          break;
+        case "scheme-info":
+          getConfig("scheme_v2", false).then((v2) =>
+            printToChat("Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1"))
+          );
+          break;
+        case "settings":
+          Promise.all([
+            getConfig("pinned", []),
+            getConfig("color", ""),
+            getConfig("scheme_v2", false),
+          ]).then(([pinned, color, v2]) => {
+            const pinnedLine = (pinned as string[]).length
+              ? "Angepinnt: " + (pinned as string[]).join(", ")
+              : "Keine angepinnten Benutzer.";
+            const colorLine = "Thema-Farbe: " + color;
+            const schemeLine = "Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1");
+            printToChat(pinnedLine + "\n" + colorLine + "\n" + schemeLine);
+          });
           break;
       }
     }

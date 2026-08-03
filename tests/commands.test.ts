@@ -82,6 +82,26 @@ describe("classifyMessage — command dispatch", () => {
     expect(classifyMessage("/id")).not.toEqual({ handled: true, type: "id", name: "/id" });
   });
 
+  it("/pinned → handled as pinned-list (bare word, no args)", () => {
+    expect(classifyMessage("/pinned")).toEqual({ handled: true, type: "pinned-list" });
+    expect(classifyMessage("/PINNED")).toEqual({ handled: true, type: "pinned-list" });
+  });
+
+  it("/color → handled as color-info (bare word, no args)", () => {
+    expect(classifyMessage("/color")).toEqual({ handled: true, type: "color-info" });
+    expect(classifyMessage("/COLOR")).toEqual({ handled: true, type: "color-info" });
+  });
+
+  it("/scheme → handled as scheme-info (bare word, no args)", () => {
+    expect(classifyMessage("/scheme")).toEqual({ handled: true, type: "scheme-info" });
+    expect(classifyMessage("/SCHEME")).toEqual({ handled: true, type: "scheme-info" });
+  });
+
+  it("/settings → handled as settings (bare word, no args)", () => {
+    expect(classifyMessage("/settings")).toEqual({ handled: true, type: "settings" });
+    expect(classifyMessage("/SETTINGS")).toEqual({ handled: true, type: "settings" });
+  });
+
   it("non-command messages are not handled", () => {
     expect(classifyMessage("Hello world")).toEqual({ handled: false, message: "Hello world" });
     expect(classifyMessage("Just chatting")).toEqual({ handled: false, message: "Just chatting" });
