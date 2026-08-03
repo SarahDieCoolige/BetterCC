@@ -786,3 +786,167 @@
   display: none;
   object-fit: contain;
 }
+
+/* ─── Identity-card popup (popup-redesign spec) ─── */
+.bcc-user-popup {
+  z-index: 1000;
+  min-width: 200px;
+  background: var(--bcc-surface-raised);
+  color: var(--bcc-text-raised);
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  padding: 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.bcc-popup-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+.bcc-popup-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.bcc-popup-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--bcc-text-raised);
+  user-select: none;
+}
+
+.bcc-popup-photo img.bcc-photo-loaded {
+  opacity: 1;
+}
+.bcc-popup-photo img {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.bcc-popup-pin {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--bcc-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  padding: 0;
+  border-radius: 4px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.bcc-popup-pin:hover {
+  background: var(--bcc-surface-hover);
+  color: var(--bcc-text-raised);
+}
+.bcc-popup-pin.pinned {
+  color: var(--bcc-text-raised);
+}
+.bcc-popup-pin i {
+  transition: transform 150ms ease;
+}
+
+.bcc-popup-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  width: 100%;
+}
+.bcc-popup-name-row .bcc-popup-username {
+  flex: 1;
+}
+
+.bcc-popup-toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.bcc-popup-toolbar-cell {
+  width: 42px;
+  height: 42px;
+  border: none;
+  background: transparent;
+  color: var(--bcc-text-muted);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  border-radius: 8px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.bcc-popup-toolbar-cell:hover {
+  background: var(--bcc-surface-hover);
+  color: var(--bcc-text-raised);
+}
+.bcc-popup-toolbar-cell:active {
+  background: var(--bcc-surface-active);
+}
+.bcc-toolbar-icon {
+  font-size: 16px;
+  line-height: 1;
+  color: inherit;
+}
+.bcc-toolbar-shortcut {
+  font-size: 9px;
+  line-height: 1;
+  font-family: monospace;
+  color: var(--bcc-text-muted);
+  opacity: 0.7;
+}
+
+.bcc-photo-preview {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  cursor: pointer;
+}
+
+.bcc-photo-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
