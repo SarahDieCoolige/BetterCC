@@ -278,7 +278,7 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 0;
   padding: 2px 10px;
   font-size: 14px;
   line-height: 1.35;
@@ -304,10 +304,15 @@
 }
 /* Status tag — short [A]/[S] suffix after the name for away/sep users. */
 .bcc-user-tag {
+  margin-left: 3px;
   font-size: 10px;
   font-weight: 400;
   opacity: 0.6;
   color: inherit;
+}
+/* Consecutive tags ([A] [S]) are tighter together than name→tag. */
+.bcc-user-tag + .bcc-user-tag {
+  margin-left: 1px;
 }
 /* Away and sep both dim the name (400 weight, muted color, 0.5 opacity). */
 .bcc-userrow-name.bcc-name-away {
