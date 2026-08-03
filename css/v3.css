@@ -36,8 +36,6 @@
   /* Userlist status accents — overridden by the theme bridge at runtime (scheme-
      derived, large-text AA against the sidebar). Fallbacks only; the live values
      come from generateScheme so the indicators stay readable on any theme. */
-  --bcc-status-online: #3aa55c;
-  --bcc-status-sep: #d08a1e;
   --bcc-text-away: #6b7780;
 }
 

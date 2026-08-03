@@ -390,8 +390,6 @@
     const triad = surface.triad();
     const accentWhisper = liftAccent(surface, triad[1]);
     const accentBan = liftAccent(surface, triad[2]);
-    const statusOnline = liftAccent(sidebar, tinycolor("#3aa55c"));
-    const statusSep = liftAccent(sidebar, tinycolor("#d08a1e"));
     const textAway = pickReadable(sidebar, [textSidebar.clone().desaturate(60), textMuted.clone()]);
     const surfaceHover = nudge(surface, STEP.hoverShift);
     const surfaceActive = nudge(surface, STEP.activeShift);
@@ -411,8 +409,6 @@
       icon: toHex6(icon),
       accentWhisper: toHex6(accentWhisper),
       accentBan: toHex6(accentBan),
-      statusOnline: toHex6(statusOnline),
-      statusSep: toHex6(statusSep),
       textAway: toHex6(textAway),
       border: toHex6(border),
       surfaceHover: toHex6(surfaceHover),
@@ -523,8 +519,6 @@
     const triad = s0.triad();
     const accentWhisperVal = liftAccent(s0, triad[1]);
     const accentBanVal = liftAccent(s0, triad[2]);
-    const statusOnlineVal = liftAccent(s1, tinycolor("#3aa55c"));
-    const statusSepVal = liftAccent(s1, tinycolor("#d08a1e"));
     const textAwayVal = pickReadable(
       s1,
       [textSidebarVal.clone().desaturate(60), textMutedVal.clone()]
@@ -545,8 +539,6 @@
       icon: toHex6(iconVal),
       accentWhisper: toHex6(accentWhisperVal),
       accentBan: toHex6(accentBanVal),
-      statusOnline: toHex6(statusOnlineVal),
-      statusSep: toHex6(statusSepVal),
       textAway: toHex6(textAwayVal),
       border: toHex6(border1),
       surfaceHover: toHex6(surfaceHoverVal),
@@ -603,8 +595,6 @@
     ["icon", "--bcc-icon"],
     ["accentWhisper", "--bcc-accent-whisper"],
     ["accentBan", "--bcc-accent-ban"],
-    ["statusOnline", "--bcc-status-online"],
-    ["statusSep", "--bcc-status-sep"],
     ["textAway", "--bcc-text-away"],
     ["border", "--bcc-border"],
     ["surfaceHover", "--bcc-surface-hover"],

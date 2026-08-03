@@ -34,8 +34,6 @@ export interface BccColorScheme {
    *  sidebar). Online = a green hue (present), sep = an amber hue (separated).
    *  Derived, not fixed hex, so they stay readable on any theme — the old
    *  fixed #3aa55c/#d08a1e vanished on green/amber sidebars. */
-  statusOnline: string;
-  statusSep: string;
   /** Away/sep text color — the sidebar text nudged to lower contrast but still
    *  guaranteed AA-readable. Replaces raw opacity:.5 on away names, which fell
    *  below AA on some surfaces (the readable fix instead of the blend-in fix). */
@@ -129,13 +127,6 @@ export function generateScheme(baseColor: string, options?: GenerateSchemeOption
   const accentWhisper = liftAccent(surface, triad[1]);
   const accentBan = liftAccent(surface, triad[2]);
 
-  // ── Userlist status accents (against the SIDEBAR, not surface) ─────
-  // Online = a green hue, sep = an amber hue — both lifted to ≥3:1 against
-  // the sidebar tier so the indicators never blend into it. Built from
-  // explicit green/amber seeds (not triad) so the semantic hue is stable
-  // across themes (online reads "green = present" regardless of base color).
-  const statusOnline = liftAccent(sidebar, tinycolor("#3aa55c"));
-  const statusSep = liftAccent(sidebar, tinycolor("#d08a1e"));
   // Away text = sidebar text desaturated and pushed toward the muted tier,
   // but kept AA-readable against the sidebar (a real color, not opacity —
   // opacity:.5 dropped below AA on low-contrast surfaces).
@@ -163,8 +154,6 @@ export function generateScheme(baseColor: string, options?: GenerateSchemeOption
     icon: toHex6(icon),
     accentWhisper: toHex6(accentWhisper),
     accentBan: toHex6(accentBan),
-    statusOnline: toHex6(statusOnline),
-    statusSep: toHex6(statusSep),
     textAway: toHex6(textAway),
     border: toHex6(border),
     surfaceHover: toHex6(surfaceHover),

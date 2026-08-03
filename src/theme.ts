@@ -44,8 +44,6 @@ const BCC_ROLE_VARS: ReadonlyArray<readonly [keyof BccColorScheme, string]> = [
   ["icon", "--bcc-icon"],
   ["accentWhisper", "--bcc-accent-whisper"],
   ["accentBan", "--bcc-accent-ban"],
-  ["statusOnline", "--bcc-status-online"],
-  ["statusSep", "--bcc-status-sep"],
   ["textAway", "--bcc-text-away"],
   ["border", "--bcc-border"],
   ["surfaceHover", "--bcc-surface-hover"],

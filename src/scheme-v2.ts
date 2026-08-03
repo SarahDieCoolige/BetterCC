@@ -201,11 +201,6 @@ export function generateScheme(
   const accentWhisperVal = liftAccent(s0, triad[1]);
   const accentBanVal = liftAccent(s0, triad[2]);
 
-  // Status dots: fixed semantic seeds (green=present, amber=separated),
-  // lifted to 3:1 against the sidebar tier so they stay visible.
-  const statusOnlineVal = liftAccent(s1, tinycolor("#3aa55c"));
-  const statusSepVal = liftAccent(s1, tinycolor("#d08a1e"));
-
   // Away text: a desaturated alternative still AA‑readable against s1.
   const textAwayVal = pickReadable(
     s1,
@@ -229,8 +224,6 @@ export function generateScheme(
     icon: toHex6(iconVal),
     accentWhisper: toHex6(accentWhisperVal),
     accentBan: toHex6(accentBanVal),
-    statusOnline: toHex6(statusOnlineVal),
-    statusSep: toHex6(statusSepVal),
     textAway: toHex6(textAwayVal),
     border: toHex6(border1),
     surfaceHover: toHex6(surfaceHoverVal),
