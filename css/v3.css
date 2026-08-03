@@ -99,6 +99,10 @@
     border-color 0.45s ease,
     box-shadow 0.45s ease;
 }
+/* Userlist rows are interactive — hover must be instant, not animated. */
+.bcc-userrow {
+  transition: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .bcc-shell,
   .bcc-shell *,
@@ -274,7 +278,7 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 3px;
   padding: 2px 10px;
   font-size: 14px;
   line-height: 1.35;
@@ -300,7 +304,6 @@
 }
 /* Status tag — short [A]/[S] suffix after the name for away/sep users. */
 .bcc-user-tag {
-  margin-left: 4px;
   font-size: 10px;
   font-weight: 400;
   opacity: 0.6;
