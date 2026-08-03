@@ -62,8 +62,18 @@ describe("buildIdFixtureResponse — query-aware ID search mock", () => {
     expect(html).toContain("/id/testascii.html");
   });
 
-  it("returns empty result (0 User gefunden) for unknown nick", () => {
+  it("returns photo row for unknown nick (enables popup testing with any user)", () => {
+    // Unknown nicks now get a synthetic photo row instead of "0 User gefunden"
+    // so the popup image + hover preview can be tested with any nick.
     const html = buildIdFixtureResponse("nonexistent_nobody", knownUsers);
+    expect(html).toContain("userfiles/");
+    expect(html).toContain("_3.jpg");
+    expect(html).toContain("nonexistent_nobody");
+    expect(html).toContain("/id/nonexistent_nobody.html");
+  });
+
+  it("returns empty result (0 User gefunden) for blank/empty nick", () => {
+    const html = buildIdFixtureResponse("", knownUsers);
     expect(html).toContain("0");
     expect(html).toContain("User gefunden.");
     expect(html).not.toContain("userfiles/");
@@ -76,10 +86,12 @@ describe("buildIdFixtureResponse — query-aware ID search mock", () => {
     expect(html).toContain('title="testascii"');
   });
 
-  it("is case-sensitive for nick matching", () => {
-    // "Testuser_one" (uppercase T) should not match "testuser_one" in the map
+  it("uses raw nick as encoded form when not in the knownUsers map", () => {
+    // "Testuser_one" (uppercase T) is not in the map (only "testuser_one" is).
+    // It falls through to the raw nick and still gets a photo row.
     const html = buildIdFixtureResponse("Testuser_one", knownUsers);
-    expect(html).toContain("User gefunden.");
-    expect(html).not.toContain("userfiles/");
+    expect(html).toContain("Testuser_one");
+    expect(html).toContain("userfiles/");
+    expect(html).not.toContain("testuser_one"); // did NOT use the knownUsers entry
   });
 });
