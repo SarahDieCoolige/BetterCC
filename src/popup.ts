@@ -32,7 +32,13 @@ import { getBettercc } from "./upstream";
 import { iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
 import { getConfig } from "./config";
-import { dismissPreview, dismissAllPreviews, dismissHover, buildPreviewBox, previewByUser } from "./photo-preview";
+import {
+  dismissPreview,
+  dismissAllPreviews,
+  dismissHover,
+  buildPreviewBox,
+  previewByUser,
+} from "./photo-preview";
 
 /**
  * Stabiler HSL-Farbton (0–359) aus einem Benutzernamen, für den
@@ -94,10 +100,15 @@ function onIframeInteraction(): void {
 function copyToClipboard(el: HTMLElement, text: string): void {
   const originalText = el.textContent ?? text;
   try {
-    navigator.clipboard.writeText(text).then(() => {
-      showCopyFeedback(el, originalText);
-    }).catch(() => {});
-  } catch {}
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        showCopyFeedback(el, originalText);
+      })
+      .catch(() => {});
+  } catch {
+    /* clipboard write failed — silently ignore */
+  }
 }
 
 /** Show brief "✓ Kopiert!" feedback by swapping textContent, then restore. */
@@ -154,16 +165,24 @@ function loadPhoto(container: HTMLElement, userName: string): void {
       // Only update if the popup is still open
       if (!openPopup?.contains(container)) return;
 
-	      img.src = result.thumbUrl;
-	      // Store full-size URL for the preview — fall back to thumb if no fullUrl
-	      img.dataset.fullUrl = result.fullUrl || result.thumbUrl;
-      img.addEventListener("load", () => {
-        img.classList.add("bcc-photo-loaded");
-        avatar.style.display = "none";
-      }, { once: true });
-      img.addEventListener("error", () => {
-        // Leave avatar visible — photo failed to load
-      }, { once: true });
+      img.src = result.thumbUrl;
+      // Store full-size URL for the preview — fall back to thumb if no fullUrl
+      img.dataset.fullUrl = result.fullUrl || result.thumbUrl;
+      img.addEventListener(
+        "load",
+        () => {
+          img.classList.add("bcc-photo-loaded");
+          avatar.style.display = "none";
+        },
+        { once: true },
+      );
+      img.addEventListener(
+        "error",
+        () => {
+          // Leave avatar visible — photo failed to load
+        },
+        { once: true },
+      );
     })
     .catch(() => {
       // Fetch failed — avatar stays (no-op)
@@ -287,11 +306,13 @@ export function openUserPopup(
   unsubscribeStore = subscribe((e: BccEvent) => {
     if (e.type === "config" && e.key === "pinned") {
       // Re-read pinned list from source of truth and update pin button
-      getConfig("pinned", []).then((pinned: string[]) => {
-        if (!openPopup) return;
-        const nowPinned = pinned.includes(user.key);
-        updatePinButton(pinBtn, nowPinned);
-      }).catch(() => {});
+      getConfig("pinned", [])
+        .then((pinned: string[]) => {
+          if (!openPopup) return;
+          const nowPinned = pinned.includes(user.key);
+          updatePinButton(pinBtn, nowPinned);
+        })
+        .catch(() => {});
     }
   });
 
@@ -333,53 +354,67 @@ export function openUserPopup(
   const toolbar = document.createElement("div");
   toolbar.className = "bcc-popup-toolbar";
 
-  toolbar.appendChild(buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " flüstern", () => {
-    const api = getBettercc();
-    if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
-    closePopup();
-  }));
+  toolbar.appendChild(
+    buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " flüstern", () => {
+      const api = getBettercc();
+      if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
+      closePopup();
+    }),
+  );
 
-  toolbar.appendChild(buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " flüstern", () => {
-    const api = getBettercc();
-    if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
-    closePopup();
-  }));
+  toolbar.appendChild(
+    buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " flüstern", () => {
+      const api = getBettercc();
+      if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
+      closePopup();
+    }),
+  );
 
-  toolbar.appendChild(buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
-    const btn = toolbar.lastElementChild as HTMLButtonElement;
-    if (!btn) return;
-    if (btn.classList.contains("bcc-confirm")) {
-      // Second click — execute ignore, show confirmed state
-      unsafeWindow.com_set?.("/ignore " + user.name);
-      btn.classList.remove("bcc-confirm");
-      btn.classList.add("bcc-confirmed");
-      const icon = btn.querySelector("i");
-      if (icon) { icon.className = "fas fa-check-double bcc-toolbar-icon"; }
-      const label = btn.querySelector(".bcc-toolbar-shortcut");
-      if (label) label.textContent = "ignoriert";
-      setTimeout(() => {
-        btn.classList.remove("bcc-confirmed");
-        if (icon) { icon.className = "fas fa-ban bcc-toolbar-icon"; }
-        if (label) label.textContent = "/ig";
-      }, 1200);
-    } else if (!btn.classList.contains("bcc-confirmed")) {
-      // First click — ask for confirmation
-      btn.classList.add("bcc-confirm");
-      const icon = btn.querySelector("i");
-      if (icon) { icon.className = "fas fa-check bcc-toolbar-icon"; }
-      const label = btn.querySelector(".bcc-toolbar-shortcut");
-      if (label) label.textContent = "sicher?";
-      const reset = (e: MouseEvent) => {
-        if (!btn.contains(e.target as Node)) {
-          btn.classList.remove("bcc-confirm");
-          if (icon) { icon.className = "fas fa-ban bcc-toolbar-icon"; }
-          if (label) label.textContent = "/ig";
-          document.removeEventListener("click", reset);
+  toolbar.appendChild(
+    buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
+      const btn = toolbar.lastElementChild as HTMLButtonElement;
+      if (!btn) return;
+      if (btn.classList.contains("bcc-confirm")) {
+        // Second click — execute ignore, show confirmed state
+        unsafeWindow.com_set?.("/ignore " + user.name);
+        btn.classList.remove("bcc-confirm");
+        btn.classList.add("bcc-confirmed");
+        const icon = btn.querySelector("i");
+        if (icon) {
+          icon.className = "fas fa-check-double bcc-toolbar-icon";
         }
-      };
-      setTimeout(() => document.addEventListener("click", reset), 0);
-    }
-  }));
+        const label = btn.querySelector(".bcc-toolbar-shortcut");
+        if (label) label.textContent = "ignoriert";
+        setTimeout(() => {
+          btn.classList.remove("bcc-confirmed");
+          if (icon) {
+            icon.className = "fas fa-ban bcc-toolbar-icon";
+          }
+          if (label) label.textContent = "/ig";
+        }, 1200);
+      } else if (!btn.classList.contains("bcc-confirmed")) {
+        // First click — ask for confirmation
+        btn.classList.add("bcc-confirm");
+        const icon = btn.querySelector("i");
+        if (icon) {
+          icon.className = "fas fa-check bcc-toolbar-icon";
+        }
+        const label = btn.querySelector(".bcc-toolbar-shortcut");
+        if (label) label.textContent = "sicher?";
+        const reset = (e: MouseEvent) => {
+          if (!btn.contains(e.target as Node)) {
+            btn.classList.remove("bcc-confirm");
+            if (icon) {
+              icon.className = "fas fa-ban bcc-toolbar-icon";
+            }
+            if (label) label.textContent = "/ig";
+            document.removeEventListener("click", reset);
+          }
+        };
+        setTimeout(() => document.addEventListener("click", reset), 0);
+      }
+    }),
+  );
 
   popup.appendChild(toolbar);
 

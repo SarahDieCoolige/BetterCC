@@ -159,7 +159,8 @@ function buildChatActionsPill(): HTMLElement {
     const v2 = getSchemeVersion();
     schemeToggle.title = v2 ? "Scheme v2 — klick für v1" : "Scheme v1 — klick für v2";
     schemeToggle.setAttribute("aria-label", schemeToggle.title);
-    schemeToggle.innerHTML = '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
+    schemeToggle.innerHTML =
+      '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
   };
   updateToggle();
   schemeToggle.addEventListener("click", async (e) => {

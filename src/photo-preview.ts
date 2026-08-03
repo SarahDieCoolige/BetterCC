@@ -19,16 +19,21 @@ let previewSave: Record<string, { left: number; top: number; boxW: number; boxH:
 
 try {
   previewSave = JSON.parse(localStorage.getItem("bcc_previews") || "{}");
-} catch { previewSave = {}; }
+} catch {
+  previewSave = {};
+}
 
 function savePreviews(): void {
-  try { localStorage.setItem("bcc_previews", JSON.stringify(previewSave)); } catch { /* quota */ }
+  try {
+    localStorage.setItem("bcc_previews", JSON.stringify(previewSave));
+  } catch {
+    /* quota */
+  }
 }
 
 // ─── Hover state ──────────────────────────────────────────────────────────
 
 let hoverPreview: HTMLElement | null = null;
-let hoverUser: string | null = null;
 
 export function dismissHover(): void {
   if (!hoverPreview) return;
@@ -38,13 +43,15 @@ export function dismissHover(): void {
   // dismissHover() must not remove a pinned box.
   let isPinned = false;
   for (const el of previewByUser.values()) {
-    if (el === hoverPreview) { isPinned = true; break; }
+    if (el === hoverPreview) {
+      isPinned = true;
+      break;
+    }
   }
   if (!isPinned) {
     hoverPreview.remove();
   }
   hoverPreview = null;
-  hoverUser = null;
 }
 
 export function dismissPreview(userName: string): void {
@@ -89,7 +96,10 @@ export function buildPreviewBox(fullUrl: string, userName: string): HTMLElement 
   if (saved) {
     cx = saved.left || cx;
     cy = saved.top || cy;
-    if (saved.boxW) { boxW = saved.boxW; boxH = saved.boxH; }
+    if (saved.boxW) {
+      boxW = saved.boxW;
+      boxH = saved.boxH;
+    }
   }
 
   const updateBox = () => {
@@ -109,17 +119,21 @@ export function buildPreviewBox(fullUrl: string, userName: string): HTMLElement 
   let panOrigCX = 0;
   let panOrigCY = 0;
 
-  box.addEventListener("wheel", (e) => {
-    if (panning) return;
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 1.1 : 0.9;
-    boxW = Math.round(boxW * delta);
-    boxH = Math.round(boxH * delta);
-    const max = Math.max(window.innerWidth, window.innerHeight) * 3;
-    boxW = Math.max(80, Math.min(max, boxW));
-    boxH = Math.max(80, Math.min(max, boxH));
-    updateBox();
-  }, { passive: false });
+  box.addEventListener(
+    "wheel",
+    (e) => {
+      if (panning) return;
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1.1 : 0.9;
+      boxW = Math.round(boxW * delta);
+      boxH = Math.round(boxH * delta);
+      const max = Math.max(window.innerWidth, window.innerHeight) * 3;
+      boxW = Math.max(80, Math.min(max, boxW));
+      boxH = Math.max(80, Math.min(max, boxH));
+      updateBox();
+    },
+    { passive: false },
+  );
 
   box.addEventListener("mousedown", (e) => {
     panning = true;
@@ -149,7 +163,10 @@ export function buildPreviewBox(fullUrl: string, userName: string): HTMLElement 
   window.addEventListener("mousemove", onMove);
   window.addEventListener("mouseup", onUp);
   box.addEventListener("click", (e) => {
-    if (panned) { e.stopPropagation(); e.preventDefault(); }
+    if (panned) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
   });
   box.addEventListener("dblclick", () => {
     cx = window.innerWidth / 2;
@@ -160,7 +177,6 @@ export function buildPreviewBox(fullUrl: string, userName: string): HTMLElement 
   // Track as hover preview — dismissHover() will skip removal if the box is
   // also pinned (added to previewByUser before the next mouseleave fires).
   hoverPreview = box;
-  hoverUser = userName;
 
   return box;
 }
@@ -173,7 +189,10 @@ if (typeof document !== "undefined") {
     if (!box) return;
     // Find which user this box belongs to
     for (const [name, el] of previewByUser) {
-      if (el === box) { dismissPreview(name); return; }
+      if (el === box) {
+        dismissPreview(name);
+        return;
+      }
     }
   });
 }

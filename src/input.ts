@@ -102,34 +102,54 @@ async function doSubmit(whispernick?: string): Promise<void> {
             printToChat(
               (list as string[]).length
                 ? "Angepinnt: " + (list as string[]).join(", ")
-                : "Keine angepinnten Benutzer."
-            )
+                : "Keine angepinnten Benutzer.",
+            ),
           );
           break;
         case "color-info":
           getConfig("color", "").then((c) => {
             const hex = String(c).replace(/^#/, "");
-            const swatch = '<span style="display:inline-block;width:10px;height:10px;background:#' + hex + ';margin:0 4px 0 2px;border-radius:2px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>';
+            const swatch =
+              '<span style="display:inline-block;width:24px;height:24px;background:#' +
+              hex +
+              ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
             printToChat("Thema-Farbe: " + swatch + "#" + hex);
           });
           break;
         case "scheme-info":
-          Promise.all([
-            getConfig("scheme_v2", false),
-            getConfig("colorscheme", null),
-          ]).then(([v2, scheme]) => {
-            const lines: string[] = [];
-            lines.push("Generator: " + (v2 ? "v2 (experimentell)" : "v1"));
-            if (scheme) {
-              for (const [k, v] of Object.entries(scheme as Record<string, unknown>)) {
-                const hex = String(v);
-                const hexDisplay = "#" + hex.replace(/^#/, "");
-                const swatch = '<span style="display:inline-block;width:10px;height:10px;background:#' + hex.replace(/^#/, "") + ';margin:0 4px 0 2px;border-radius:2px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>';
-                lines.push(k + ": " + swatch + hexDisplay);
+          Promise.all([getConfig("scheme_v2", false), getConfig("colorscheme", null)]).then(
+            ([v2, scheme]) => {
+              const rows: string[] = [];
+              if (scheme) {
+                for (const [k, v] of Object.entries(scheme as Record<string, unknown>)) {
+                  const hex = String(v).replace(/^#/, "");
+                  const swatch =
+                    '<span style="display:inline-block;width:24px;height:24px;background:#' +
+                    hex +
+                    ';border-radius:4px;vertical-align:middle;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+                  rows.push(
+                    '<tr><td style="padding:2px 8px 2px 0">' +
+                      swatch +
+                      '</td><td style="padding-right:6px">' +
+                      k +
+                      "</td><td>#" +
+                      hex +
+                      "</td></tr>",
+                  );
+                }
               }
-            }
-            printToChat(lines.join("\n"));
-          });
+              rows.push(
+                '<tr><td colspan="3" style="padding-top:6px;opacity:0.6">Generator: ' +
+                  (v2 ? "v2 (experimentell)" : "v1") +
+                  "</td></tr>",
+              );
+              printToChat(
+                '<table style="border-collapse:collapse;font:inherit;color:inherit">' +
+                  rows.join("") +
+                  "</table>",
+              );
+            },
+          );
           break;
         case "settings":
           Promise.all([
@@ -140,7 +160,12 @@ async function doSubmit(whispernick?: string): Promise<void> {
             const pinnedLine = (pinned as string[]).length
               ? "Angepinnt: " + (pinned as string[]).join(", ")
               : "Keine angepinnten Benutzer.";
-            const colorLine = "Thema-Farbe: " + color;
+            const cHex = String(color).replace(/^#/, "");
+            const swatch =
+              '<span style="display:inline-block;width:24px;height:24px;background:#' +
+              cHex +
+              ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+            const colorLine = "Thema-Farbe: " + swatch + "#" + cHex;
             const schemeLine = "Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1");
             printToChat(pinnedLine + "\n" + colorLine + "\n" + schemeLine);
           });
@@ -230,7 +255,7 @@ export function mountInput(): void {
   textarea.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      doSubmit();  
+      doSubmit();
     }
   });
   inputArea.appendChild(textarea);

@@ -75,7 +75,14 @@ describe("parseUserlist — cha_my flat array → User[]", () => {
 
 describe("diffUserlists — {added, removed} by name", () => {
   const mk = (names: string[]): User[] =>
-    names.map((n) => ({ name: n, key: n.toLowerCase(), registered: true, guest: false, sep: false, away: false }));
+    names.map((n) => ({
+      name: n,
+      key: n.toLowerCase(),
+      registered: true,
+      guest: false,
+      sep: false,
+      away: false,
+    }));
 
   it("reports users present in new but not old as added", () => {
     const d = diffUserlists(mk(["A", "B"]), mk(["A", "B", "C"]));
@@ -105,7 +112,9 @@ describe("diffUserlists — {added, removed} by name", () => {
     const oldList: User[] = [
       { name: "X", key: "x", registered: true, guest: false, sep: false, away: false },
     ];
-    const newList: User[] = [{ name: "X", key: "x", registered: true, guest: false, sep: false, away: true }];
+    const newList: User[] = [
+      { name: "X", key: "x", registered: true, guest: false, sep: false, away: true },
+    ];
     const d = diffUserlists(oldList, newList);
     expect(d.added).toEqual([]);
     expect(d.removed).toEqual([]);

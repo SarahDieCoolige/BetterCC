@@ -8,7 +8,7 @@ import {
   hasUserfilesImage,
   extractFirstImageUrl,
 } from "../src/user-image";
-import type { IdSearchRow, UserImageResult } from "../src/user-image";
+import type { IdSearchRow } from "../src/user-image";
 import { encodeChatLink } from "../src/utils";
 
 // ─── Real production HTML fixtures ────────────────────────────────────────
@@ -45,9 +45,11 @@ describe("parseIdSearch", () => {
   });
 
   it("returns empty array for HTML with no .value divs", () => {
-    expect(parseIdSearch("<div class=\"obj\">no values here at all and definitely more than 30 chars</div>")).toEqual(
-      [],
-    );
+    expect(
+      parseIdSearch(
+        '<div class="obj">no values here at all and definitely more than 30 chars</div>',
+      ),
+    ).toEqual([]);
   });
 
   it("parses img+link-wrapped case (img and link in same .value div)", () => {
@@ -143,7 +145,11 @@ describe("decodeIdPath", () => {
 
 describe("findExactRow", () => {
   const rows: IdSearchRow[] = [
-    { name: "testuser", href: "https://www.chatcity.de/de/id/testuser.html", imgUrl: "userfiles/a/b/c/d/aaa_3.jpg" },
+    {
+      name: "testuser",
+      href: "https://www.chatcity.de/de/id/testuser.html",
+      imgUrl: "userfiles/a/b/c/d/aaa_3.jpg",
+    },
     {
       name: "testuser-02",
       href: "https://www.chatcity.de/de/id/testuser:2D:02.html",
@@ -475,7 +481,7 @@ describe("fetchUserImage", () => {
   });
 
   it("rejects with timeout error if onComplete never fires within 8s", async () => {
-    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    installAjaxMock(AJAX_PHOTO_RESPONSE);
 
     // Use fake timers to fast-forward past the 8s timeout
     vi.useFakeTimers();

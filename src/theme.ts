@@ -18,7 +18,13 @@
 // upgrading from v2 will regenerate the cache once on first v3 load — by
 // design, since each path only trusts its own cache shape.
 
-import { generateScheme, enableV2Scheme, disableV2Scheme, isV2Scheme, type BccColorScheme } from "./scheme";
+import {
+  generateScheme,
+  enableV2Scheme,
+  disableV2Scheme,
+  isV2Scheme,
+  type BccColorScheme,
+} from "./scheme";
 import { applyThemeToIframe, getUserKey } from "./utils";
 import { getConfig, setConfig } from "./config";
 

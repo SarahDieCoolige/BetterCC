@@ -47,7 +47,9 @@ describe("processUserlist — parse + diff, the set_uinfo1 core", () => {
   });
 
   it("status change (away ↔ present) is NOT reported as add or remove", () => {
-    const online: User[] = [{ name: "X", key: "x", registered: true, guest: false, sep: false, away: false }];
+    const online: User[] = [
+      { name: "X", key: "x", registered: true, guest: false, sep: false, away: false },
+    ];
     const result = processUserlist(["X", "hRA", ""], online);
     // User "X" went away — diffUserlists keys by name, so no add/remove.
     expect(result.added).toEqual([]);

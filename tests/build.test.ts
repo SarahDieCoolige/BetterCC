@@ -52,7 +52,9 @@ describe("build output", () => {
     // pins that decision: a future change that bundles tinycolor (drops the
     // @require, adds `import tinycolor from "tinycolor2"`) MUST update this
     // assertion or the build fails loudly, not silently.
-    expect(content).toContain("@require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js");
+    expect(content).toContain(
+      "@require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js",
+    );
     // The bundled-factory marker must NOT appear — tinycolor2's internal UMD
     // assignment line. Presence means the source got inlined despite the
     // @require, which would double-load the library.

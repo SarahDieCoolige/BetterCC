@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=b3fe6986
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=c05b7108
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=9f6aa41b
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -466,7 +466,11 @@
     const s2 = tierStep(s0, STEP2.surface2Step, darkMode);
     const s3 = tierStep(s0, STEP2.surface3Step, !darkMode);
     const baseSat = base.toHsl().s;
-    for (const [surf, tier] of [[s1, 1], [s2, 2], [s3, 1]]) {
+    for (const [surf, tier] of [
+      [s1, 1],
+      [s2, 2],
+      [s3, 1]
+    ]) {
       if (baseSat > 0.4) {
         const desatAmount = Math.round(baseSat * STEP2.desatFactor * tier * 100);
         if (desatAmount > 0) surf.desaturate(desatAmount);
@@ -489,10 +493,7 @@
       }
     }
     const text0 = pickReadable(s0, s0.monochromatic().concat(s0.analogous()));
-    const text1 = pickReadable(
-      s1,
-      s0.monochromatic().concat(s0.analogous())
-    );
+    const text1 = pickReadable(s1, s0.monochromatic().concat(s0.analogous()));
     const textRaisedVal = pickReadable(s2, s2.monochromatic(), true);
     const textInputVal = pickReadable(s3, s3.monochromatic());
     const textSidebarVal = pickTinted(
@@ -512,10 +513,10 @@
     const triad = s0.triad();
     const accentWhisperVal = liftAccent(s0, triad[1]);
     const accentBanVal = liftAccent(s0, triad[2]);
-    const textAwayVal = pickReadable(
-      s1,
-      [textSidebarVal.clone().desaturate(60), textMutedVal.clone()]
-    );
+    const textAwayVal = pickReadable(s1, [
+      textSidebarVal.clone().desaturate(60),
+      textMutedVal.clone()
+    ]);
     return {
       // ── Old element-named fields (drop-in compat) ───────────────────
       surface: toHex6(s0),
@@ -969,7 +970,6 @@
     }
   }
   var hoverPreview = null;
-  var hoverUser = null;
   function dismissHover() {
     if (!hoverPreview) return;
     let isPinned = false;
@@ -983,7 +983,6 @@
       hoverPreview.remove();
     }
     hoverPreview = null;
-    hoverUser = null;
   }
   function dismissPreview(userName) {
     const box = previewByUser.get(userName);
@@ -1040,17 +1039,21 @@
     let panStartY = 0;
     let panOrigCX = 0;
     let panOrigCY = 0;
-    box.addEventListener("wheel", (e) => {
-      if (panning) return;
-      e.preventDefault();
-      const delta = e.deltaY < 0 ? 1.1 : 0.9;
-      boxW = Math.round(boxW * delta);
-      boxH = Math.round(boxH * delta);
-      const max = Math.max(window.innerWidth, window.innerHeight) * 3;
-      boxW = Math.max(80, Math.min(max, boxW));
-      boxH = Math.max(80, Math.min(max, boxH));
-      updateBox();
-    }, { passive: false });
+    box.addEventListener(
+      "wheel",
+      (e) => {
+        if (panning) return;
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 1.1 : 0.9;
+        boxW = Math.round(boxW * delta);
+        boxH = Math.round(boxH * delta);
+        const max = Math.max(window.innerWidth, window.innerHeight) * 3;
+        boxW = Math.max(80, Math.min(max, boxW));
+        boxH = Math.max(80, Math.min(max, boxH));
+        updateBox();
+      },
+      { passive: false }
+    );
     box.addEventListener("mousedown", (e) => {
       panning = true;
       panned = false;
@@ -1090,7 +1093,6 @@
       updateBox();
     });
     hoverPreview = box;
-    hoverUser = userName;
     return box;
   }
   if (typeof document !== "undefined") {
@@ -1183,12 +1185,20 @@
       if (!openPopup?.contains(container)) return;
       img.src = result.thumbUrl;
       img.dataset.fullUrl = result.fullUrl || result.thumbUrl;
-      img.addEventListener("load", () => {
-        img.classList.add("bcc-photo-loaded");
-        avatar.style.display = "none";
-      }, { once: true });
-      img.addEventListener("error", () => {
-      }, { once: true });
+      img.addEventListener(
+        "load",
+        () => {
+          img.classList.add("bcc-photo-loaded");
+          avatar.style.display = "none";
+        },
+        { once: true }
+      );
+      img.addEventListener(
+        "error",
+        () => {
+        },
+        { once: true }
+      );
     }).catch(() => {
     });
   }
@@ -1290,57 +1300,63 @@
     popup.appendChild(nameRow);
     const toolbar = document.createElement("div");
     toolbar.className = "bcc-popup-toolbar";
-    toolbar.appendChild(buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " fl\xFCstern", () => {
-      const api = getBettercc();
-      if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
-      closePopup();
-    }));
-    toolbar.appendChild(buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
-      const api = getBettercc();
-      if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
-      closePopup();
-    }));
-    toolbar.appendChild(buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
-      const btn = toolbar.lastElementChild;
-      if (!btn) return;
-      if (btn.classList.contains("bcc-confirm")) {
-        unsafeWindow.com_set?.("/ignore " + user.name);
-        btn.classList.remove("bcc-confirm");
-        btn.classList.add("bcc-confirmed");
-        const icon = btn.querySelector("i");
-        if (icon) {
-          icon.className = "fas fa-check-double bcc-toolbar-icon";
-        }
-        const label = btn.querySelector(".bcc-toolbar-shortcut");
-        if (label) label.textContent = "ignoriert";
-        setTimeout(() => {
-          btn.classList.remove("bcc-confirmed");
+    toolbar.appendChild(
+      buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " fl\xFCstern", () => {
+        const api = getBettercc();
+        if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
+        closePopup();
+      })
+    );
+    toolbar.appendChild(
+      buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
+        const api = getBettercc();
+        if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
+        closePopup();
+      })
+    );
+    toolbar.appendChild(
+      buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
+        const btn = toolbar.lastElementChild;
+        if (!btn) return;
+        if (btn.classList.contains("bcc-confirm")) {
+          unsafeWindow.com_set?.("/ignore " + user.name);
+          btn.classList.remove("bcc-confirm");
+          btn.classList.add("bcc-confirmed");
+          const icon = btn.querySelector("i");
           if (icon) {
-            icon.className = "fas fa-ban bcc-toolbar-icon";
+            icon.className = "fas fa-check-double bcc-toolbar-icon";
           }
-          if (label) label.textContent = "/ig";
-        }, 1200);
-      } else if (!btn.classList.contains("bcc-confirmed")) {
-        btn.classList.add("bcc-confirm");
-        const icon = btn.querySelector("i");
-        if (icon) {
-          icon.className = "fas fa-check bcc-toolbar-icon";
-        }
-        const label = btn.querySelector(".bcc-toolbar-shortcut");
-        if (label) label.textContent = "sicher?";
-        const reset = (e) => {
-          if (!btn.contains(e.target)) {
-            btn.classList.remove("bcc-confirm");
+          const label = btn.querySelector(".bcc-toolbar-shortcut");
+          if (label) label.textContent = "ignoriert";
+          setTimeout(() => {
+            btn.classList.remove("bcc-confirmed");
             if (icon) {
               icon.className = "fas fa-ban bcc-toolbar-icon";
             }
             if (label) label.textContent = "/ig";
-            document.removeEventListener("click", reset);
+          }, 1200);
+        } else if (!btn.classList.contains("bcc-confirmed")) {
+          btn.classList.add("bcc-confirm");
+          const icon = btn.querySelector("i");
+          if (icon) {
+            icon.className = "fas fa-check bcc-toolbar-icon";
           }
-        };
-        setTimeout(() => document.addEventListener("click", reset), 0);
-      }
-    }));
+          const label = btn.querySelector(".bcc-toolbar-shortcut");
+          if (label) label.textContent = "sicher?";
+          const reset = (e) => {
+            if (!btn.contains(e.target)) {
+              btn.classList.remove("bcc-confirm");
+              if (icon) {
+                icon.className = "fas fa-ban bcc-toolbar-icon";
+              }
+              if (label) label.textContent = "/ig";
+              document.removeEventListener("click", reset);
+            }
+          };
+          setTimeout(() => document.addEventListener("click", reset), 0);
+        }
+      })
+    );
     popup.appendChild(toolbar);
     const mount = document.querySelector(".bcc-shell") ?? document.body;
     mount.appendChild(popup);
@@ -1917,27 +1933,31 @@
           case "color-info":
             getConfig("color", "").then((c) => {
               const hex = String(c).replace(/^#/, "");
-              const swatch = '<span style="display:inline-block;width:10px;height:10px;background:#' + hex + ';margin:0 4px 0 2px;border-radius:2px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>';
+              const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + hex + ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
               printToChat("Thema-Farbe: " + swatch + "#" + hex);
             });
             break;
           case "scheme-info":
-            Promise.all([
-              getConfig("scheme_v2", false),
-              getConfig("colorscheme", null)
-            ]).then(([v2, scheme]) => {
-              const lines = [];
-              lines.push("Generator: " + (v2 ? "v2 (experimentell)" : "v1"));
-              if (scheme) {
-                for (const [k, v] of Object.entries(scheme)) {
-                  const hex = String(v);
-                  const hexDisplay = "#" + hex.replace(/^#/, "");
-                  const swatch = '<span style="display:inline-block;width:10px;height:10px;background:#' + hex.replace(/^#/, "") + ';margin:0 4px 0 2px;border-radius:2px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>';
-                  lines.push(k + ": " + swatch + hexDisplay);
+            Promise.all([getConfig("scheme_v2", false), getConfig("colorscheme", null)]).then(
+              ([v2, scheme]) => {
+                const rows = [];
+                if (scheme) {
+                  for (const [k, v] of Object.entries(scheme)) {
+                    const hex = String(v).replace(/^#/, "");
+                    const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + hex + ';border-radius:4px;vertical-align:middle;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+                    rows.push(
+                      '<tr><td style="padding:2px 8px 2px 0">' + swatch + '</td><td style="padding-right:6px">' + k + "</td><td>#" + hex + "</td></tr>"
+                    );
+                  }
                 }
+                rows.push(
+                  '<tr><td colspan="3" style="padding-top:6px;opacity:0.6">Generator: ' + (v2 ? "v2 (experimentell)" : "v1") + "</td></tr>"
+                );
+                printToChat(
+                  '<table style="border-collapse:collapse;font:inherit;color:inherit">' + rows.join("") + "</table>"
+                );
               }
-              printToChat(lines.join("\n"));
-            });
+            );
             break;
           case "settings":
             Promise.all([
@@ -1946,7 +1966,9 @@
               getConfig("scheme_v2", false)
             ]).then(([pinned, color, v2]) => {
               const pinnedLine = pinned.length ? "Angepinnt: " + pinned.join(", ") : "Keine angepinnten Benutzer.";
-              const colorLine = "Thema-Farbe: " + color;
+              const cHex = String(color).replace(/^#/, "");
+              const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + cHex + ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+              const colorLine = "Thema-Farbe: " + swatch + "#" + cHex;
               const schemeLine = "Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1");
               printToChat(pinnedLine + "\n" + colorLine + "\n" + schemeLine);
             });

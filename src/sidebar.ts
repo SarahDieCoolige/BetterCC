@@ -35,7 +35,7 @@ function applyUserState(row: HTMLLIElement, user: User): void {
     nameSpan.textContent = user.name;
   }
   // Remove old tags, rebuild
-  row.querySelectorAll(".bcc-user-tag").forEach(t => t.remove());
+  row.querySelectorAll(".bcc-user-tag").forEach((t) => t.remove());
   if (user.away) {
     const tag = document.createElement("span");
     tag.className = "bcc-user-tag";

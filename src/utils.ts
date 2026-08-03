@@ -16,17 +16,39 @@ export function cclog(str: string, tag = "BetterCC"): void {
 /** Print the command reference directly into the chat iframe. */
 export function printHelp(): void {
   printToChat(
-    "/w Nick" + "        – " + "einmalig flüstern\n" +
-    "/sw Nick" + "       – " + "dauerhaft flüstern\n" +
-    "/open" + "          – " + "superwhisper beenden\n" +
-    "/ignore Nick" + "    – " + "benutzer ignorieren\n" +
-    "/id Nick" + "        – " + "ID-Karte öffnen\n" +
-    "/pinned" + "         – " + "angeheftete Benutzer anzeigen\n" +
-    "/color" + "          – " + "Thema-Farbe anzeigen\n" +
-    "/scheme" + "         – " + "Scheme-Version anzeigen\n" +
-    "/settings" + "       – " + "alle Einstellungen anzeigen\n" +
-    "/reload" + "         – " + "Chat neu laden\n" +
-    "/help" + "           – " + "diese Hilfe",
+    "/w Nick" +
+      "        – " +
+      "einmalig flüstern\n" +
+      "/sw Nick" +
+      "       – " +
+      "dauerhaft flüstern\n" +
+      "/open" +
+      "          – " +
+      "superwhisper beenden\n" +
+      "/ignore Nick" +
+      "    – " +
+      "benutzer ignorieren\n" +
+      "/id Nick" +
+      "        – " +
+      "ID-Karte öffnen\n" +
+      "/pinned" +
+      "         – " +
+      "angeheftete Benutzer anzeigen\n" +
+      "/color" +
+      "          – " +
+      "Thema-Farbe anzeigen\n" +
+      "/scheme" +
+      "         – " +
+      "Scheme-Version anzeigen\n" +
+      "/settings" +
+      "       – " +
+      "alle Einstellungen anzeigen\n" +
+      "/reload" +
+      "         – " +
+      "Chat neu laden\n" +
+      "/help" +
+      "           – " +
+      "diese Hilfe",
   );
 }
 

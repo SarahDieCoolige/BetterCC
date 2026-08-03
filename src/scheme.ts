@@ -9,9 +9,7 @@
 import { generateScheme as v1 } from "./scheme-v1";
 import { generateScheme as v2 } from "./scheme-v2";
 
-let _v2 =
-  typeof location !== "undefined" &&
-  new URLSearchParams(location.search).has("schemev2");
+let _v2 = typeof location !== "undefined" && new URLSearchParams(location.search).has("schemev2");
 
 /** Call once at init (after reading the GM-stored flag) to enable v2. */
 export function enableV2Scheme(): void {

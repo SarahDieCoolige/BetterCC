@@ -24,7 +24,14 @@ type MockNode = {
   _children: Map<string, MockNode[]>;
 };
 
-function createMockElement(tagName: string): MockNode & { classList: { contains: (c: string) => boolean; add: (c: string) => void; }; style: Record<string, string>; addEventListener: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn>; appendChild: ReturnType<typeof vi.fn>; setAttribute: ReturnType<typeof vi.fn>; } {
+function createMockElement(tagName: string): MockNode & {
+  classList: { contains: (c: string) => boolean; add: (c: string) => void };
+  style: Record<string, string>;
+  addEventListener: ReturnType<typeof vi.fn>;
+  remove: ReturnType<typeof vi.fn>;
+  appendChild: ReturnType<typeof vi.fn>;
+  setAttribute: ReturnType<typeof vi.fn>;
+} {
   const el: any = {
     nodeType: 1,
     tagName: tagName.toUpperCase(),
@@ -37,13 +44,22 @@ function createMockElement(tagName: string): MockNode & { classList: { contains:
     _children: new Map(),
     classList: {
       _classes: new Set<string>(),
-      contains(c: string) { return this._classes.has(c); },
-      add(c: string) { this._classes.add(c); },
+      contains(c: string) {
+        return this._classes.has(c);
+      },
+      add(c: string) {
+        this._classes.add(c);
+      },
     },
     style: {},
     addEventListener: vi.fn(),
-    remove: vi.fn(function(this: any) { this.removed = true; }),
-    appendChild: vi.fn(function(this: any, child: any) { child.parentNode = this; this.childNodes.push(child); }),
+    remove: vi.fn(function (this: any) {
+      this.removed = true;
+    }),
+    appendChild: vi.fn(function (this: any, child: any) {
+      child.parentNode = this;
+      this.childNodes.push(child);
+    }),
     setAttribute: vi.fn(),
     querySelector(selector: string) {
       // naive: return first matching child by class
@@ -53,7 +69,16 @@ function createMockElement(tagName: string): MockNode & { classList: { contains:
       return null;
     },
     getBoundingClientRect() {
-      return { left: 100, right: 300, bottom: 200, top: 150, width: 200, height: 50, x: 100, y: 150 };
+      return {
+        left: 100,
+        right: 300,
+        bottom: 200,
+        top: 150,
+        width: 200,
+        height: 50,
+        x: 100,
+        y: 150,
+      };
     },
     contains(node: any) {
       let p = node;
@@ -113,13 +138,11 @@ describe("nickToHue (regression)", () => {
 // ─── Fix 2: showCopyFeedback uses textContent (not title) ────────────────────
 
 describe("Fix 2 — showCopyFeedback textContent swap", () => {
-  let _doc: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    _doc = mockDocument();
+    mockDocument();
   });
-
   afterEach(() => {
     vi.useRealTimers();
     clearDocument();
@@ -174,10 +197,9 @@ describe("Fix 2 — showCopyFeedback textContent swap", () => {
 // ─── Fix 3: dismissPhotoPreview and hover preview ────────────────────────────
 
 describe("Fix 3 — Photo preview (no backdrop, dismiss helper)", () => {
-  let _doc: any;
 
   beforeEach(() => {
-    _doc = mockDocument();
+    mockDocument();
   });
 
   afterEach(() => {

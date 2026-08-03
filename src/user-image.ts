@@ -312,10 +312,7 @@ const EMPTY_RESULT: UserImageResult = { thumbUrl: null, fullUrl: null, hasPhoto:
  * - Not found → resolves with `{hasPhoto:false}` (does NOT throw).
  * - Timeout (8s) or ajax constructor throw → rejects.
  */
-export function fetchUserImage(
-  nick: string,
-  opts?: { force?: boolean },
-): Promise<UserImageResult> {
+export function fetchUserImage(nick: string, opts?: { force?: boolean }): Promise<UserImageResult> {
   const key = nick.toLowerCase();
 
   // Cache hit (unless force)

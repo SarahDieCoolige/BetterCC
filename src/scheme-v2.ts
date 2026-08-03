@@ -70,12 +70,7 @@ function wcagLum(color: any): number {
  * picks maximum contrast (→ black/white), this keeps the hue visible — ideal
  * for icons that should read as "coloured", not just "dark".
  */
-function pickTinted(
-  bg: any,
-  candidates: any[],
-  targetContrast = 4.5,
-  minContrast = 3.0,
-): any {
+function pickTinted(bg: any, candidates: any[], targetContrast = 4.5, minContrast = 3.0): any {
   let best = candidates[0];
   let bestDiff = Infinity;
   for (const c of candidates) {
@@ -96,17 +91,12 @@ function pickTinted(
  * Dark mode → step lighter.
  */
 function tierStep(color: any, amount: number, darkMode: boolean): any {
-  return darkMode
-    ? color.clone().lighten(amount)
-    : color.clone().darken(amount);
+  return darkMode ? color.clone().lighten(amount) : color.clone().darken(amount);
 }
 
 // ─── Main generator ────────────────────────────────────────────────────────
 
-export function generateScheme(
-  baseColor: string,
-  options?: GenerateSchemeOptions,
-): BccColorScheme {
+export function generateScheme(baseColor: string, options?: GenerateSchemeOptions): BccColorScheme {
   const raw = tinycolor(baseColor);
   const darkMode = options?.darkMode ?? !raw.isLight();
 
@@ -132,7 +122,11 @@ export function generateScheme(
   // A saturated neon base (e.g. #FF0000) shouldn't produce saturated neon
   // footers.  Strip saturation proportionally to base saturation × tier.
   const baseSat = base.toHsl().s; // 0–1
-  for (const [surf, tier] of [[s1, 1], [s2, 2], [s3, 1]] as const) {
+  for (const [surf, tier] of [
+    [s1, 1],
+    [s2, 2],
+    [s3, 1],
+  ] as const) {
     if (baseSat > 0.4) {
       const desatAmount = Math.round(baseSat * STEP.desatFactor * tier * 100);
       if (desatAmount > 0) (surf as any).desaturate(desatAmount);
@@ -168,10 +162,7 @@ export function generateScheme(
 
   // Secondary text — used for muted, placeholder, away.  Drawn from the
   // surface‑0 monochromatic ramp so it stays readable against all tiers.
-  const text1 = pickReadable(
-    s1,
-    s0.monochromatic().concat(s0.analogous()),
-  );
+  const text1 = pickReadable(s1, s0.monochromatic().concat(s0.analogous()));
 
   // Per-tier text (each AA against its own surface)
   const textRaisedVal = pickReadable(s2, s2.monochromatic(), true);
@@ -202,10 +193,10 @@ export function generateScheme(
   const accentBanVal = liftAccent(s0, triad[2]);
 
   // Away text: a desaturated alternative still AA‑readable against s1.
-  const textAwayVal = pickReadable(
-    s1,
-    [textSidebarVal.clone().desaturate(60), textMutedVal.clone()],
-  );
+  const textAwayVal = pickReadable(s1, [
+    textSidebarVal.clone().desaturate(60),
+    textMutedVal.clone(),
+  ]);
 
   // ── Step 9: assemble ─────────────────────────────────────────────────
   return {
