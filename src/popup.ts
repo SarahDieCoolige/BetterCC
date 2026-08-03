@@ -26,12 +26,12 @@
 //   - Bild              → photo container in center (fetchUserImage + hover preview)
 //   - ID (/id)          → stub (T13 id-popup; icon-only in name row)
 
-import { type User } from "./store";
-import { subscribe, type BccEvent } from "./store";
+import { type User, subscribe, type BccEvent } from "./store";
 import { cclog } from "./utils";
 import { getBettercc } from "./upstream";
 import { iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
+import { encodeChatLink } from "./stats";
 import { getConfig } from "./config";
 
 /**
@@ -344,7 +344,8 @@ export function openUserPopup(
   idBtn.appendChild(iconElement("fa-id-card"));
   idBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    cclog("user popup: /id stubbed (T13) — " + user.name, "v3");
+    const url = "//www.chatcity.de/de/id/" + encodeChatLink(user.name) + ".html";
+    window.open(url, "IDCARD", "width=810,height=800,scrollbars=yes");
     closePopup();
   });
   nameRow.appendChild(idBtn);

@@ -941,6 +941,149 @@
     });
   }
 
+  // src/stats.ts
+  function parseStats(html) {
+    const empty = { friendsOnline: 0, requests: 0, messages: 0 };
+    if (typeof html !== "string" || html.length === 0) return empty;
+    const read = (cls) => {
+      const anchorRe = new RegExp('class="[^"]*\\b' + cls + '\\b[^"]*"[^]*?</a>', "i");
+      const anchorMatch = html.match(anchorRe);
+      if (!anchorMatch) return 0;
+      const block = anchorMatch[0];
+      const valueRe = /<span\s+class="value(?:\s+[^"]*)?"\s*>\s*(\d+)\s*<\/span>/i;
+      const valueMatch = block.match(valueRe);
+      const n = valueMatch ? Number(valueMatch[1]) : 0;
+      return Number.isFinite(n) ? n : 0;
+    };
+    return {
+      friendsOnline: read("uonl"),
+      requests: read("ufri"),
+      messages: read("unc")
+    };
+  }
+  function encodeChatLink(name) {
+    const SAFE = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const HEX = "0123456789ABCDEF";
+    let encoded = "";
+    for (let i = 0; i < name.length; i++) {
+      const ch = name.charAt(i);
+      if (ch === " ") {
+        encoded += "-";
+      } else if (SAFE.indexOf(ch) !== -1) {
+        encoded += ch;
+      } else {
+        const code = ch.charCodeAt(0);
+        if (code > 255) {
+          const escaped = encodeURIComponent(ch);
+          encoded += ":" + escaped.substring(1, 99) + ":";
+        } else {
+          encoded += ":";
+          encoded += HEX.charAt(code >> 4 & 15);
+          encoded += HEX.charAt(code & 15);
+          encoded += ":";
+        }
+      }
+    }
+    return encoded;
+  }
+  var BADGES = [
+    {
+      statKey: "friendsOnline",
+      iconClass: "fa-users",
+      title: "Freunde Online",
+      // ID card: PPATH + 'id/' + Encode_Link(name) + '.html' (chat_pop_kylr.js:193)
+      url: (encNick) => "//www.chatcity.de/de/id/" + encNick + ".html"
+    },
+    {
+      statKey: "requests",
+      iconClass: "fa-user-plus",
+      title: "Neue Freundesanfragen",
+      // Upstream: /de/friends/<id-card-url> (e.g. /de/friends/https://.../id/username01:5F:.html)
+      url: (encNick) => "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encNick + ".html"
+    },
+    {
+      statKey: "messages",
+      iconClass: "fa-envelope",
+      title: "Neue Nachrichten",
+      url: () => "//www.chatcity.de/de/nc/index.html"
+    }
+  ];
+  var POLL_INTERVAL_MS = 1e4;
+  var statsBar = null;
+  var pollTimer = null;
+  function buildStatsBar(nick) {
+    const bar = document.createElement("div");
+    bar.className = "bcc-stats";
+    const encNick = encodeChatLink(nick);
+    for (const spec of BADGES) {
+      const link = document.createElement("a");
+      link.className = "bcc-stat bcc-stat-" + spec.statKey;
+      link.href = "#";
+      link.title = spec.title;
+      link.setAttribute("role", "button");
+      link.setAttribute("aria-label", spec.title);
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        window.open(spec.url(encNick), "IDCARD", "width=810,height=800,scrollbars=yes");
+      });
+      const icon = document.createElement("i");
+      icon.className = "fas " + spec.iconClass;
+      icon.setAttribute("aria-hidden", "true");
+      link.appendChild(icon);
+      const count = document.createElement("span");
+      count.className = "bcc-stat-count bcc-stat-no";
+      count.textContent = "0";
+      link.appendChild(count);
+      bar.appendChild(link);
+    }
+    statsBar = bar;
+    return bar;
+  }
+  function renderStats(stats) {
+    if (!statsBar) return;
+    for (const spec of BADGES) {
+      const link = statsBar.querySelector(".bcc-stat-" + spec.statKey);
+      if (!link) continue;
+      const count = link.querySelector(".bcc-stat-count");
+      if (!count) continue;
+      const value = stats[spec.statKey];
+      count.textContent = String(value);
+      count.classList.toggle("bcc-stat-no", value < 1);
+    }
+  }
+  function pollOnce() {
+    try {
+      const w = unsafeWindow;
+      const ajax = w.ajax;
+      const pajax = w.PAJAX;
+      if (typeof ajax !== "function" || typeof pajax !== "string") {
+        cclog("stats: upstream ajax/PAJAX unavailable \u2014 skipping poll", "v3");
+        return;
+      }
+      new ajax(pajax + "chat_info_friends_nc.html", {
+        onComplete: (transport) => {
+          try {
+            renderStats(parseStats(transport?.responseText ?? ""));
+          } catch (e) {
+            cclog("stats: parse failed \u2014 " + e.message, "v3");
+          }
+        }
+      });
+    } catch (e) {
+      cclog("stats: poll error \u2014 " + e.message, "v3");
+    }
+  }
+  function mountStatsBar(parent) {
+    if (statsBar && statsBar.isConnected) return;
+    const nick = getChatNick();
+    parent.insertBefore(buildStatsBar(nick), parent.firstChild);
+    pollOnce();
+    pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
+    window.addEventListener("beforeunload", () => {
+      if (pollTimer !== null) window.clearInterval(pollTimer);
+    });
+  }
+
   // src/popup.ts
   function nickToHue(nick) {
     let sum = 0;
@@ -1128,7 +1271,8 @@
     idBtn.appendChild(iconElement("fa-id-card"));
     idBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      cclog("user popup: /id stubbed (T13) \u2014 " + user.name, "v3");
+      const url = "//www.chatcity.de/de/id/" + encodeChatLink(user.name) + ".html";
+      window.open(url, "IDCARD", "width=810,height=800,scrollbars=yes");
       closePopup();
     });
     nameRow.appendChild(idBtn);
@@ -1452,149 +1596,6 @@
       }
     });
     cclog("sidebar mounted \u2014 subscribed to userlist events", "v3");
-  }
-
-  // src/stats.ts
-  function parseStats(html) {
-    const empty = { friendsOnline: 0, requests: 0, messages: 0 };
-    if (typeof html !== "string" || html.length === 0) return empty;
-    const read = (cls) => {
-      const anchorRe = new RegExp('class="[^"]*\\b' + cls + '\\b[^"]*"[^]*?</a>', "i");
-      const anchorMatch = html.match(anchorRe);
-      if (!anchorMatch) return 0;
-      const block = anchorMatch[0];
-      const valueRe = /<span\s+class="value(?:\s+[^"]*)?"\s*>\s*(\d+)\s*<\/span>/i;
-      const valueMatch = block.match(valueRe);
-      const n = valueMatch ? Number(valueMatch[1]) : 0;
-      return Number.isFinite(n) ? n : 0;
-    };
-    return {
-      friendsOnline: read("uonl"),
-      requests: read("ufri"),
-      messages: read("unc")
-    };
-  }
-  function encodeChatLink(name) {
-    const SAFE = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    const HEX = "0123456789ABCDEF";
-    let encoded = "";
-    for (let i = 0; i < name.length; i++) {
-      const ch = name.charAt(i);
-      if (ch === " ") {
-        encoded += "-";
-      } else if (SAFE.indexOf(ch) !== -1) {
-        encoded += ch;
-      } else {
-        const code = ch.charCodeAt(0);
-        if (code > 255) {
-          const escaped = encodeURIComponent(ch);
-          encoded += ":" + escaped.substring(1, 99) + ":";
-        } else {
-          encoded += ":";
-          encoded += HEX.charAt(code >> 4 & 15);
-          encoded += HEX.charAt(code & 15);
-          encoded += ":";
-        }
-      }
-    }
-    return encoded;
-  }
-  var BADGES = [
-    {
-      statKey: "friendsOnline",
-      iconClass: "fa-users",
-      title: "Freunde Online",
-      // ID card: PPATH + 'id/' + Encode_Link(name) + '.html' (chat_pop_kylr.js:193)
-      url: (encNick) => "//www.chatcity.de/de/id/" + encNick + ".html"
-    },
-    {
-      statKey: "requests",
-      iconClass: "fa-user-plus",
-      title: "Neue Freundesanfragen",
-      // Upstream: /de/friends/<id-card-url> (e.g. /de/friends/https://.../id/username01:5F:.html)
-      url: (encNick) => "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encNick + ".html"
-    },
-    {
-      statKey: "messages",
-      iconClass: "fa-envelope",
-      title: "Neue Nachrichten",
-      url: () => "//www.chatcity.de/de/nc/index.html"
-    }
-  ];
-  var POLL_INTERVAL_MS = 1e4;
-  var statsBar = null;
-  var pollTimer = null;
-  function buildStatsBar(nick) {
-    const bar = document.createElement("div");
-    bar.className = "bcc-stats";
-    const encNick = encodeChatLink(nick);
-    for (const spec of BADGES) {
-      const link = document.createElement("a");
-      link.className = "bcc-stat bcc-stat-" + spec.statKey;
-      link.href = "#";
-      link.title = spec.title;
-      link.setAttribute("role", "button");
-      link.setAttribute("aria-label", spec.title);
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        window.open(spec.url(encNick), "IDCARD", "width=810,height=800,scrollbars=yes");
-      });
-      const icon = document.createElement("i");
-      icon.className = "fas " + spec.iconClass;
-      icon.setAttribute("aria-hidden", "true");
-      link.appendChild(icon);
-      const count = document.createElement("span");
-      count.className = "bcc-stat-count bcc-stat-no";
-      count.textContent = "0";
-      link.appendChild(count);
-      bar.appendChild(link);
-    }
-    statsBar = bar;
-    return bar;
-  }
-  function renderStats(stats) {
-    if (!statsBar) return;
-    for (const spec of BADGES) {
-      const link = statsBar.querySelector(".bcc-stat-" + spec.statKey);
-      if (!link) continue;
-      const count = link.querySelector(".bcc-stat-count");
-      if (!count) continue;
-      const value = stats[spec.statKey];
-      count.textContent = String(value);
-      count.classList.toggle("bcc-stat-no", value < 1);
-    }
-  }
-  function pollOnce() {
-    try {
-      const w = unsafeWindow;
-      const ajax = w.ajax;
-      const pajax = w.PAJAX;
-      if (typeof ajax !== "function" || typeof pajax !== "string") {
-        cclog("stats: upstream ajax/PAJAX unavailable \u2014 skipping poll", "v3");
-        return;
-      }
-      new ajax(pajax + "chat_info_friends_nc.html", {
-        onComplete: (transport) => {
-          try {
-            renderStats(parseStats(transport?.responseText ?? ""));
-          } catch (e) {
-            cclog("stats: parse failed \u2014 " + e.message, "v3");
-          }
-        }
-      });
-    } catch (e) {
-      cclog("stats: poll error \u2014 " + e.message, "v3");
-    }
-  }
-  function mountStatsBar(parent) {
-    if (statsBar && statsBar.isConnected) return;
-    const nick = getChatNick();
-    parent.insertBefore(buildStatsBar(nick), parent.firstChild);
-    pollOnce();
-    pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
-    window.addEventListener("beforeunload", () => {
-      if (pollTimer !== null) window.clearInterval(pollTimer);
-    });
   }
 
   // src/commands.ts
