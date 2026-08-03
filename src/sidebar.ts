@@ -144,7 +144,6 @@ let lastUserlistEvent: User[] | null = null;
 let rowMap: Map<string, HTMLLIElement> = new Map();
 let pinnedUl: HTMLUListElement | null = null;
 let regularUl: HTMLUListElement | null = null;
-let pinnedLabel: HTMLElement | null = null;
 let scrollContainer: HTMLElement | null = null; // wraps the regular UL (scrolls)
 let onlineCount: HTMLElement | null = null;
 
@@ -165,13 +164,6 @@ function ensureContainers(sidebar: HTMLElement): void {
   onlineRow.appendChild(buildChannelSelect());
   sidebar.appendChild(onlineRow);
 
-  // Pinned section separator — a pin icon between horizontal lines.
-  pinnedLabel = document.createElement("div");
-  pinnedLabel.className = "bcc-pinned-label";
-  const pinnedIcon = document.createElement("i");
-  pinnedIcon.className = "fas fa-thumbtack bcc-pinned-label-icon";
-  pinnedIcon.setAttribute("aria-hidden", "true");
-  pinnedLabel.appendChild(pinnedIcon);
   pinnedUl = document.createElement("ul");
   pinnedUl.className = "bcc-userlist-pinned";
   pinnedUl.setAttribute("role", "list");
@@ -181,18 +173,14 @@ function ensureContainers(sidebar: HTMLElement): void {
   scrollContainer = document.createElement("div");
   scrollContainer.className = "bcc-userlist-scroll";
   scrollContainer.appendChild(regularUl);
-  sidebar.append(pinnedLabel, pinnedUl, scrollContainer);
+  sidebar.append(pinnedUl, scrollContainer);
 }
 
-/** Show/hide the pinned panel depending on whether any pinned users exist.
- *  The whole panel (header + list) is the pinned section's visual unit, so it
- *  shows/hidden as one — independent of the regular list. */
 function refreshSectionVisibility(): void {
   const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
-  if (pinnedLabel) pinnedLabel.style.display = hasPinned ? "" : "none";
+  if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
 }
 
-/** Patch the sidebar from a userlist store event (consumes the diff). */
 function renderSidebar(users: User[], added: string[], removed: string[]): void {
   const sidebar = document.querySelector(".bcc-sidebar");
   if (!sidebar || !pinnedUl || !regularUl) return;

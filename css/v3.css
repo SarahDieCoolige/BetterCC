@@ -248,26 +248,8 @@
   padding: 0;
 }
 
-/* Pinned section separator — a pin icon flanked by horizontal lines.
- * Uses currentColor at low opacity so it works across all themes. */
-.bcc-pinned-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px 6px;
-  color: var(--bcc-text-muted);
-  opacity: 0.35;
-}
-.bcc-pinned-label::before,
-.bcc-pinned-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: currentColor;
-}
-.bcc-pinned-label-icon {
-  font-size: 12px;
-  flex-shrink: 0;
+.bcc-userlist-pinned {
+  margin-bottom: 12px;
 }
 
 .bcc-userrow {

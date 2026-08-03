@@ -1394,7 +1394,6 @@
   var rowMap = /* @__PURE__ */ new Map();
   var pinnedUl = null;
   var regularUl = null;
-  var pinnedLabel = null;
   var scrollContainer = null;
   var onlineCount = null;
   function ensureContainers(sidebar) {
@@ -1410,12 +1409,6 @@
     onlineRow.appendChild(onlineCount);
     onlineRow.appendChild(buildChannelSelect());
     sidebar.appendChild(onlineRow);
-    pinnedLabel = document.createElement("div");
-    pinnedLabel.className = "bcc-pinned-label";
-    const pinnedIcon = document.createElement("i");
-    pinnedIcon.className = "fas fa-thumbtack bcc-pinned-label-icon";
-    pinnedIcon.setAttribute("aria-hidden", "true");
-    pinnedLabel.appendChild(pinnedIcon);
     pinnedUl = document.createElement("ul");
     pinnedUl.className = "bcc-userlist-pinned";
     pinnedUl.setAttribute("role", "list");
@@ -1425,11 +1418,11 @@
     scrollContainer = document.createElement("div");
     scrollContainer.className = "bcc-userlist-scroll";
     scrollContainer.appendChild(regularUl);
-    sidebar.append(pinnedLabel, pinnedUl, scrollContainer);
+    sidebar.append(pinnedUl, scrollContainer);
   }
   function refreshSectionVisibility() {
     const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
-    if (pinnedLabel) pinnedLabel.style.display = hasPinned ? "" : "none";
+    if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
   }
   function renderSidebar(users, added, removed) {
     const sidebar = document.querySelector(".bcc-sidebar");
