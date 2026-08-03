@@ -140,6 +140,7 @@
   var INJECTION_RETRY_MS = 50;
   var MAX_INJECTION_RETRIES = 50;
   var injectionRetries = 0;
+  var _iframeMousedownBody = null;
   function injectIntoChatframe() {
     const doc = getChatDoc();
     const win = getChatWin();
@@ -168,12 +169,15 @@
     doc.body.style.setProperty("background-color", "var(--chatBackground)");
     doc.body.style.setProperty("color", "var(--chatText)");
     addAutoscrollBanner(doc, win);
-    doc.body.addEventListener("mousedown", () => {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-      window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
-    });
+    if (doc.body !== _iframeMousedownBody) {
+      _iframeMousedownBody = doc.body;
+      doc.body.addEventListener("mousedown", () => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
+      });
+    }
     cclog("injectIntoChatframe: injection complete");
   }
   function betterccOnWsMessage(ev) {

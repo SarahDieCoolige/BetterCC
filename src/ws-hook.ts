@@ -21,6 +21,12 @@ const INJECTION_RETRY_MS = 50;
 const MAX_INJECTION_RETRIES = 50;
 let injectionRetries = 0;
 
+// Guard against duplicate mousedown listeners: track the last body element
+// we wired. On the same channel, doc.body is the same reference → skip.
+// On a channel transition, contentDocument.write() creates a new body →
+// the old listener dies with the old DOM, and we re-inject on the new one.
+let _iframeMousedownBody: HTMLElement | null = null;
+
 // Runs ONCE after the first WebSocket message populates the iframe.
 export function injectIntoChatframe(): void {
   const doc = getChatDoc();
@@ -65,13 +71,18 @@ export function injectIntoChatframe(): void {
   addAutoscrollBanner(doc, win);
 
   // 4) Inject iframe-interaction listener so parent-page UI (popup, input)
-  //    can react to clicks inside the chatframe.
-  doc.body.addEventListener("mousedown", () => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
-  });
+  //    can react to clicks inside the chatframe. Guarded by body reference:
+  //    same body → skip (prevents stacking on every WS message); new body
+  //    (channel transition) → old listener died with old DOM, re-inject.
+  if (doc.body !== _iframeMousedownBody) {
+    _iframeMousedownBody = doc.body;
+    doc.body.addEventListener("mousedown", () => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
+    });
+  }
 
   cclog("injectIntoChatframe: injection complete");
 }
