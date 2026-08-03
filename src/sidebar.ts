@@ -29,9 +29,9 @@ export function getStatusClasses(user: User): string {
  *  Use after buildRow or to patch an in-place status change. */
 function applyUserState(row: HTMLLIElement, user: User): void {
   row.className = getStatusClasses(user);
+  row.classList.toggle("bcc-name-away", user.away || user.sep);
   const nameSpan = row.querySelector(".bcc-userrow-name");
   if (nameSpan) {
-    nameSpan.classList.toggle("bcc-name-away", user.away || user.sep);
     nameSpan.textContent = user.name;
   }
   // Remove old tags, rebuild

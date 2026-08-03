@@ -262,13 +262,19 @@
   line-height: 1.35;
   border-radius: 8px;
   margin: 1px 2px;
+  opacity: 0.8;
+  transition: opacity 0.18s ease-out;
 }
 
 .bcc-userrow:hover {
-  background: var(--bcc-surface-hover);
+  opacity: 1;
+}
+.bcc-userrow:hover .bcc-userrow-name,
+.bcc-userrow.bcc-name-away:hover .bcc-userrow-name {
+  font-weight: 700;
 }
 .bcc-userrow:active {
-  background: var(--bcc-surface-active);
+  opacity: 0.6;
 }
 /* R4: keyboard focus indicator for the role=button rows. */
 .bcc-userrow:focus-visible {
@@ -279,26 +285,28 @@
 .bcc-userrow-name {
   user-select: none;
   font-weight: 600;
+  color: var(--bcc-text-sidebar);
 }
 /* Status tag — short [A]/[S] suffix after the name for away/sep users. */
 .bcc-user-tag {
   margin-left: 3px;
   font-size: 10px;
-  font-weight: 400;
-  opacity: 0.6;
   color: inherit;
 }
 /* Consecutive tags ([A] [S]) are tighter together than name→tag. */
 .bcc-user-tag + .bcc-user-tag {
   margin-left: 1px;
 }
-/* Away and sep both dim the name (400 weight, muted color, 0.5 opacity). */
-.bcc-userrow-name.bcc-name-away {
+/* Away/sep: name dims (550 weight, muted, 0.5 opacity). Tags match the name. */
+.bcc-userrow.bcc-name-away .bcc-userrow-name,
+.bcc-userrow.bcc-name-away .bcc-user-tag {
+  font-weight: 550;
   color: var(--bcc-text-away);
   opacity: 0.5;
 }
-/* Sep italicizes the name (status tag [S] is the primary signal). */
-.bcc-userrow.bcc-sep .bcc-userrow-name {
+/* Sep italicizes the name AND tags. */
+.bcc-userrow.bcc-sep .bcc-userrow-name,
+.bcc-userrow.bcc-sep .bcc-user-tag {
   font-style: italic;
 }
 

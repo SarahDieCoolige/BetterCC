@@ -1310,9 +1310,9 @@
   }
   function applyUserState(row, user) {
     row.className = getStatusClasses(user);
+    row.classList.toggle("bcc-name-away", user.away || user.sep);
     const nameSpan = row.querySelector(".bcc-userrow-name");
     if (nameSpan) {
-      nameSpan.classList.toggle("bcc-name-away", user.away || user.sep);
       nameSpan.textContent = user.name;
     }
     row.querySelectorAll(".bcc-user-tag").forEach((t) => t.remove());
