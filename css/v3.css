@@ -296,59 +296,28 @@
   outline-offset: -2px;
 }
 
-/* Status icon — a Font Awesome glyph (fa-circle present / fa-circle-half-stroke
- * sep) inheriting the scheme-derived --bcc-status-* color. A glyph scales with
- * the font and recolors per-theme, so the indicator never blends into the
- * sidebar the way fixed-hex filled circles did. Away/guest are NOT dot states
- * (away recolors the name; guest gets a 'gast' chip). */
-.bcc-status-dot {
-  flex-shrink: 0;
-  font-size: 9px;
-  line-height: 1;
-  width: 9px;
-  text-align: center;
-  color: var(--bcc-status-online);
-}
-.bcc-status-dot.bcc-dot-sep {
-  color: var(--bcc-status-sep);
-}
-
 .bcc-userrow-name {
   user-select: none;
   font-weight: 600;
 }
-/* 'gast' chip — a small pill after the name marking guest tier. Uses the
- * sidebar text on a raised surface for guaranteed contrast (the old
- * surface-active/text-muted pair had no enforced AA between them). */
-.bcc-user-tag.bcc-gast {
-  margin-left: 6px;
-  padding: 1px 6px;
+/* Status tag — short [A]/[S] suffix after the name for away/sep users. */
+.bcc-user-tag {
+  margin-left: 4px;
   font-size: 10px;
-  font-weight: 600;
-  line-height: 1.4;
-  border-radius: 6px;
-  background: var(--bcc-surface-raised);
-  color: var(--bcc-text-raised);
-  text-transform: lowercase;
-  letter-spacing: 0.02em;
+  font-weight: 400;
+  opacity: 0.6;
+  color: inherit;
 }
-/* Away recolors the NAME to a derived muted tone (--bcc-text-away, scheme-AA
- * against the sidebar) instead of raw opacity, which fell below AA on some
- * surfaces. Sep+away still shows both signals: the sep-colored icon + the
- * away-colored name. */
+/* Away and sep both dim the name (400 weight, muted color, 0.5 opacity). */
 .bcc-userrow-name.bcc-name-away {
   color: var(--bcc-text-away);
   opacity: 0.5;
 }
-/* Sep italicizes the name (the dot already carries the amber color). */
+/* Sep italicizes the name (status tag [S] is the primary signal). */
 .bcc-userrow.bcc-sep .bcc-userrow-name {
   font-style: italic;
 }
 
-/* Row-level status markers (bcc-away / bcc-sep) carry no styling themselves —
- * the visual signals live on the dot (sep color) and the name (away dim,
- * sep italic) so sep+away shows both signals distinctly instead of uniformly
- * fading the whole row. */
 .bcc-main {
   grid-area: main;
   display: flex;

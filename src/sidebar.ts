@@ -37,37 +37,32 @@ export function isGuestTag(user: User): boolean {
 
 export function getStatusClasses(user: User): string {
   const classes = ["bcc-userrow"];
-  if (user.away) classes.push("bcc-away");
   if (user.sep) classes.push("bcc-sep");
   return classes.join(" ");
 }
 
-/** Apply a user's state to an existing row's child elements (dot, name span,
- *  gast chip). The row must already contain these elements; use after
- *  buildRow or to patch an in-place status change. */
+/** Apply a user's state to an existing row's child elements (name span, tags).
+ *  Use after buildRow or to patch an in-place status change. */
 function applyUserState(row: HTMLLIElement, user: User): void {
   row.className = getStatusClasses(user);
-  const dot = row.querySelector(".bcc-status-dot");
-  if (dot) {
-    dot.className =
-      "bcc-status-dot fas " +
-      statusDotClass(user) +
-      " " +
-      (user.sep ? "fa-circle-half-stroke" : "fa-circle");
-  }
   const nameSpan = row.querySelector(".bcc-userrow-name");
   if (nameSpan) {
-    nameSpan.classList.toggle("bcc-name-away", user.away);
+    nameSpan.classList.toggle("bcc-name-away", user.away || user.sep);
     nameSpan.textContent = user.name;
   }
-  const existingChip = row.querySelector(".bcc-gast");
-  if (isGuestTag(user) && !existingChip) {
-    const gast = document.createElement("span");
-    gast.className = "bcc-user-tag bcc-gast";
-    gast.textContent = "gast";
-    row.appendChild(gast);
-  } else if (!isGuestTag(user) && existingChip) {
-    existingChip.remove();
+  // Remove old tags, rebuild
+  row.querySelectorAll(".bcc-user-tag").forEach(t => t.remove());
+  if (user.away) {
+    const tag = document.createElement("span");
+    tag.className = "bcc-user-tag";
+    tag.textContent = "[A]";
+    row.appendChild(tag);
+  }
+  if (user.sep) {
+    const tag = document.createElement("span");
+    tag.className = "bcc-user-tag";
+    tag.textContent = "[S]";
+    row.appendChild(tag);
   }
 }
 
@@ -78,21 +73,24 @@ function buildRow(user: User): HTMLLIElement {
   li.tabIndex = 0;
   li.setAttribute("role", "button");
   li.setAttribute("aria-label", "Aktionen für " + user.name);
-  // Status icon — a Font Awesome glyph (fa-circle present / fa-circle-half-
-  // stroke sep) colored via the scheme-derived --bcc-status-* var. Encodes
-  // ONLY sep vs present; away/guest are not dot states (away recolors the
-  // name; guest shows a 'gast' chip).
-  const dot = document.createElement("i");
-  dot.className = "bcc-status-dot fas";
-  dot.setAttribute("aria-hidden", "true");
-  li.appendChild(dot);
-  // Name — away dims the name (bcc-name-away) via opacity on the NAME span
-  // (not the whole row), so sep+away still reads as a full-brightness amber
-  // dot + a dimmed name (not a uniformly faded row).
+  // Name — away/sep dim the name (bcc-name-away) via opacity on the NAME span
+  // (not the whole row), so away+sep shows a dimmed name + both [A] and [S] tags.
   const nameSpan = document.createElement("span");
   nameSpan.className = "bcc-userrow-name";
   li.appendChild(nameSpan);
-  // Apply user state to the row (classes, dot color, name text, gast chip).
+  if (user.away) {
+    const tag = document.createElement("span");
+    tag.className = "bcc-user-tag";
+    tag.textContent = "[A]";
+    li.appendChild(tag);
+  }
+  if (user.sep) {
+    const tag = document.createElement("span");
+    tag.className = "bcc-user-tag";
+    tag.textContent = "[S]";
+    li.appendChild(tag);
+  }
+  // Apply user state to the row (classes, name text, tags).
   applyUserState(li, user);
   // Open the popup on click OR Enter/Space (R1: discoverable; was silent log).
   // stopPropagation on click so the opening event doesn't bubble to the

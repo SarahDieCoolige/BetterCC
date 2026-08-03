@@ -1313,37 +1313,30 @@
   }
 
   // src/sidebar.ts
-  function statusDotClass(user) {
-    return user.sep ? "bcc-dot-sep" : "bcc-dot-online";
-  }
-  function isGuestTag(user) {
-    return user.guest;
-  }
   function getStatusClasses(user) {
     const classes = ["bcc-userrow"];
-    if (user.away) classes.push("bcc-away");
     if (user.sep) classes.push("bcc-sep");
     return classes.join(" ");
   }
   function applyUserState(row, user) {
     row.className = getStatusClasses(user);
-    const dot = row.querySelector(".bcc-status-dot");
-    if (dot) {
-      dot.className = "bcc-status-dot fas " + statusDotClass(user) + " " + (user.sep ? "fa-circle-half-stroke" : "fa-circle");
-    }
     const nameSpan = row.querySelector(".bcc-userrow-name");
     if (nameSpan) {
-      nameSpan.classList.toggle("bcc-name-away", user.away);
+      nameSpan.classList.toggle("bcc-name-away", user.away || user.sep);
       nameSpan.textContent = user.name;
     }
-    const existingChip = row.querySelector(".bcc-gast");
-    if (isGuestTag(user) && !existingChip) {
-      const gast = document.createElement("span");
-      gast.className = "bcc-user-tag bcc-gast";
-      gast.textContent = "gast";
-      row.appendChild(gast);
-    } else if (!isGuestTag(user) && existingChip) {
-      existingChip.remove();
+    row.querySelectorAll(".bcc-user-tag").forEach((t) => t.remove());
+    if (user.away) {
+      const tag = document.createElement("span");
+      tag.className = "bcc-user-tag";
+      tag.textContent = "[A]";
+      row.appendChild(tag);
+    }
+    if (user.sep) {
+      const tag = document.createElement("span");
+      tag.className = "bcc-user-tag";
+      tag.textContent = "[S]";
+      row.appendChild(tag);
     }
   }
   function buildRow(user) {
@@ -1352,13 +1345,21 @@
     li.tabIndex = 0;
     li.setAttribute("role", "button");
     li.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
-    const dot = document.createElement("i");
-    dot.className = "bcc-status-dot fas";
-    dot.setAttribute("aria-hidden", "true");
-    li.appendChild(dot);
     const nameSpan = document.createElement("span");
     nameSpan.className = "bcc-userrow-name";
     li.appendChild(nameSpan);
+    if (user.away) {
+      const tag = document.createElement("span");
+      tag.className = "bcc-user-tag";
+      tag.textContent = "[A]";
+      li.appendChild(tag);
+    }
+    if (user.sep) {
+      const tag = document.createElement("span");
+      tag.className = "bcc-user-tag";
+      tag.textContent = "[S]";
+      li.appendChild(tag);
+    }
     applyUserState(li, user);
     const open = (e) => {
       e?.stopPropagation();
