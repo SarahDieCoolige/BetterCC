@@ -65,6 +65,7 @@ function closePopup(): void {
   openPopup = null;
   currentUser = null;
   document.removeEventListener("keydown", onKeydown, true);
+  window.removeEventListener("bcc-iframe-interaction", onIframeInteraction);
   if (onOutsideClick) {
     document.removeEventListener("click", onOutsideClick);
     onOutsideClick = null;
@@ -81,6 +82,10 @@ function onKeydown(e: KeyboardEvent): void {
     e.stopPropagation();
     closePopup();
   }
+}
+
+function onIframeInteraction(): void {
+  if (openPopup) closePopup();
 }
 
 // ─── Click-to-copy username ────────────────────────────────────────────────
@@ -398,6 +403,7 @@ export function openUserPopup(
   loadPhoto(photoContainer, user.name);
 
   openPopup = popup;
+  window.addEventListener("bcc-iframe-interaction", onIframeInteraction);
   document.addEventListener("keydown", onKeydown, true);
 
   // Outside-click closes the popup. Managed explicitly (not {once:true}) so

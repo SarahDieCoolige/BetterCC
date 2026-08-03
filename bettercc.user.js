@@ -168,6 +168,12 @@
     doc.body.style.setProperty("background-color", "var(--chatBackground)");
     doc.body.style.setProperty("color", "var(--chatText)");
     addAutoscrollBanner(doc, win);
+    doc.body.addEventListener("mousedown", () => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
+    });
     cclog("injectIntoChatframe: injection complete");
   }
   function betterccOnWsMessage(ev) {
@@ -953,6 +959,7 @@
     openPopup = null;
     currentUser = null;
     document.removeEventListener("keydown", onKeydown, true);
+    window.removeEventListener("bcc-iframe-interaction", onIframeInteraction);
     if (onOutsideClick) {
       document.removeEventListener("click", onOutsideClick);
       onOutsideClick = null;
@@ -968,6 +975,9 @@
       e.stopPropagation();
       closePopup();
     }
+  }
+  function onIframeInteraction() {
+    if (openPopup) closePopup();
   }
   function copyToClipboard(el, text) {
     const originalText = el.textContent ?? text;
@@ -1160,6 +1170,7 @@
     });
     loadPhoto(photoContainer, user.name);
     openPopup = popup;
+    window.addEventListener("bcc-iframe-interaction", onIframeInteraction);
     document.addEventListener("keydown", onKeydown, true);
     onOutsideClick = (e) => {
       if (openPopup && !openPopup.contains(e.target)) closePopup();

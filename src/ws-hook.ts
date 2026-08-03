@@ -64,6 +64,15 @@ export function injectIntoChatframe(): void {
   // 3) Add autoscroll banner
   addAutoscrollBanner(doc, win);
 
+  // 4) Inject iframe-interaction listener so parent-page UI (popup, input)
+  //    can react to clicks inside the chatframe.
+  doc.body.addEventListener("mousedown", () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
+  });
+
   cclog("injectIntoChatframe: injection complete");
 }
 
