@@ -21,6 +21,7 @@ describe("parseUserlist — cha_my flat array → User[]", () => {
     expect(users).toHaveLength(2);
     expect(users[0]).toEqual({
       name: "CoolerNick",
+      key: "coolernick",
       registered: true,
       guest: false,
       sep: false,
@@ -28,6 +29,7 @@ describe("parseUserlist — cha_my flat array → User[]", () => {
     });
     expect(users[1]).toEqual({
       name: "GastUser",
+      key: "gastuser",
       registered: false,
       guest: true,
       sep: false,
@@ -64,7 +66,7 @@ describe("parseUserlist — cha_my flat array → User[]", () => {
     // Real upstream always pairs, but the parser must not throw on a dangling name.
     const users = parseUserlist(["Solo", ""]);
     expect(users).toEqual([
-      { name: "Solo", registered: false, guest: false, sep: false, away: false },
+      { name: "Solo", key: "solo", registered: false, guest: false, sep: false, away: false },
     ]);
   });
 });
@@ -73,7 +75,7 @@ describe("parseUserlist — cha_my flat array → User[]", () => {
 
 describe("diffUserlists — {added, removed} by name", () => {
   const mk = (names: string[]): User[] =>
-    names.map((n) => ({ name: n, registered: true, guest: false, sep: false, away: false }));
+    names.map((n) => ({ name: n, key: n.toLowerCase(), registered: true, guest: false, sep: false, away: false }));
 
   it("reports users present in new but not old as added", () => {
     const d = diffUserlists(mk(["A", "B"]), mk(["A", "B", "C"]));
@@ -101,9 +103,9 @@ describe("diffUserlists — {added, removed} by name", () => {
 
   it("diffs by name regardless of status changes (status is re-rendered, not a diff key)", () => {
     const oldList: User[] = [
-      { name: "X", registered: true, guest: false, sep: false, away: false },
+      { name: "X", key: "x", registered: true, guest: false, sep: false, away: false },
     ];
-    const newList: User[] = [{ name: "X", registered: true, guest: false, sep: false, away: true }];
+    const newList: User[] = [{ name: "X", key: "x", registered: true, guest: false, sep: false, away: true }];
     const d = diffUserlists(oldList, newList);
     expect(d.added).toEqual([]);
     expect(d.removed).toEqual([]);
@@ -148,7 +150,7 @@ describe("sortUsers — German-umlaut sort with pinned-to-top", () => {
 
   it("pinned users sort to the very top, ahead of all unpinned", () => {
     const users = parseUserlist(["Zorro", "hR", "Alice", "hR", "Middle", "hR", "Aaron", "hR", ""]);
-    const pinned = new Set(["Zorro", "Aaron"]);
+    const pinned = new Set(["zorro", "aaron"]);
     const sorted = sortUsers(users, pinned).map((u) => u.name);
     // Pinned first (themselves sorted), then the rest sorted.
     expect(sorted).toEqual(["Aaron", "Zorro", "Alice", "Middle"]);
@@ -156,12 +158,22 @@ describe("sortUsers — German-umlaut sort with pinned-to-top", () => {
 
   it("pinned section sorts internally, then unpinned section sorts internally", () => {
     const users = parseUserlist(["P2", "hR", "U2", "hR", "P1", "hR", "U1", "hR", ""]);
-    const sorted = sortUsers(users, new Set(["P2", "P1"]));
+    const sorted = sortUsers(users, new Set(["p2", "p1"]));
     expect(sorted.map((u) => u.name)).toEqual(["P1", "P2", "U1", "U2"]);
   });
 
   it("empty pinned set → plain alphabetical", () => {
     const users = parseUserlist(["Charlie", "hR", "Alpha", "hR", "Bravo", "hR", ""]);
     expect(sortUsers(users, new Set()).map((u) => u.name)).toEqual(["Alpha", "Bravo", "Charlie"]);
+  });
+
+  it("pins users by key (lowercase) so mixed-case names match pinned set", () => {
+    // User name is "Sariam" (capital S), pinned set has the lowercased key "sariam".
+    // sortUsers must match via user.key, not user.name, so the mixed-case name
+    // still lands in the pinned section.
+    const users = parseUserlist(["Sariam", "hR", "Beta", "hR", "alpha", "hR", ""]);
+    const pinned = new Set(["sariam"]);
+    const sorted = sortUsers(users, pinned).map((u) => u.name);
+    expect(sorted).toEqual(["Sariam", "alpha", "Beta"]);
   });
 });

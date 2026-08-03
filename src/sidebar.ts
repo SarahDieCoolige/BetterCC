@@ -102,21 +102,20 @@ let pinnedCache: Set<string> = new Set();
 
 async function refreshPinned(): Promise<void> {
   const list = (await getConfig("pinned", [])) as string[];
-  pinnedCache = new Set(list.map((n: string) => n.toLowerCase()));
+  pinnedCache = new Set(list);
 }
 
 async function togglePin(user: User): Promise<void> {
   const list = (await getConfig("pinned", [])) as string[];
-  const name = user.name.toLowerCase();
-  const idx = list.findIndex((n: string) => n.toLowerCase() === name);
+  const idx = list.indexOf(user.key);
   if (idx === -1) {
-    list.push(name);
+    list.push(user.key);
   } else {
     list.splice(idx, 1);
   }
   await setConfig("pinned", list);
   emit({ type: "config", key: "pinned" }); // notify subscribers
-  pinnedCache = new Set(list.map((n: string) => n.toLowerCase()));
+  pinnedCache = new Set(list);
   // Re-render from the last known userlist with a trivial diff (everything is
   // "unchanged" — sortUsers + section placement handle the move between
   // pinned/regular; no rows are added or removed by a pin toggle).
@@ -124,7 +123,7 @@ async function togglePin(user: User): Promise<void> {
 }
 
 function handleRowClick(user: User, anchor: HTMLElement): void {
-  openUserPopup(anchor, user, pinnedCache.has(user.name.toLowerCase()), (u) => {
+  openUserPopup(anchor, user, pinnedCache.has(user.key), (u) => {
     togglePin(u).catch(() => {
       cclog("pin toggle failed for " + u.name, "v3");
     });
@@ -201,7 +200,7 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
   const sorted = sortUsers(users, pinnedCache);
 
   for (const user of sorted) {
-    const isPinned = pinnedCache.has(user.name.toLowerCase());
+    const isPinned = pinnedCache.has(user.key);
     const target = isPinned ? pinnedUl : regularUl;
 
     let row = rowMap.get(user.name);

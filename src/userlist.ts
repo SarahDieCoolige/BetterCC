@@ -37,6 +37,7 @@ function decodeStatus(name: string, status: string): User {
   const guest = status.includes("h") && !registered;
   return {
     name,
+    key: name.toLowerCase(),
     registered,
     guest,
     sep: status.includes("S"),
@@ -86,8 +87,8 @@ export function sortUsers(users: User[], pinned: Set<string>): User[] {
   const cmp = new Intl.Collator(LOCALE, SORT_OPTS);
   return [...users].sort((a, b) => {
     // Pinned-first partition, then alphabetical within each section.
-    const pa = pinned.has(a.name) ? 0 : 1;
-    const pb = pinned.has(b.name) ? 0 : 1;
+    const pa = pinned.has(a.key) ? 0 : 1;
+    const pb = pinned.has(b.key) ? 0 : 1;
     return pa - pb || cmp.compare(a.name, b.name);
   });
 }

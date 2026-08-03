@@ -289,7 +289,7 @@ export function openUserPopup(
       // Re-read pinned list from source of truth and update pin button
       getConfig("pinned", []).then((pinned: string[]) => {
         if (!openPopup) return;
-        const nowPinned = pinned.some((n: string) => n.toLowerCase() === user.name.toLowerCase());
+        const nowPinned = pinned.includes(user.key);
         updatePinButton(pinBtn, nowPinned);
       }).catch(() => {});
     }

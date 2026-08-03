@@ -10,6 +10,7 @@
 /** A user as parsed from the upstream cha[]/cha_my[] arrays (spec §2.4). */
 export interface User {
   name: string;
+  key: string; // name.toLowerCase(), used for storage lookups and comparisons
   registered: boolean; // status contains "hR"
   guest: boolean; // status contains "h"  (without R)
   sep: boolean; // status contains "S"

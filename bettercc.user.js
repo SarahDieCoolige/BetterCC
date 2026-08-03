@@ -675,6 +675,7 @@
     const guest = status.includes("h") && !registered;
     return {
       name,
+      key: name.toLowerCase(),
       registered,
       guest,
       sep: status.includes("S"),
@@ -698,8 +699,8 @@
   function sortUsers(users, pinned) {
     const cmp = new Intl.Collator(LOCALE, SORT_OPTS);
     return [...users].sort((a, b) => {
-      const pa = pinned.has(a.name) ? 0 : 1;
-      const pb = pinned.has(b.name) ? 0 : 1;
+      const pa = pinned.has(a.key) ? 0 : 1;
+      const pb = pinned.has(b.key) ? 0 : 1;
       return pa - pb || cmp.compare(a.name, b.name);
     });
   }
@@ -1261,7 +1262,7 @@
       if (e.type === "config" && e.key === "pinned") {
         getConfig("pinned", []).then((pinned) => {
           if (!openPopup) return;
-          const nowPinned = pinned.some((n) => n.toLowerCase() === user.name.toLowerCase());
+          const nowPinned = pinned.includes(user.key);
           updatePinButton(pinBtn, nowPinned);
         }).catch(() => {
         });
@@ -1561,24 +1562,23 @@
   var pinnedCache = /* @__PURE__ */ new Set();
   async function refreshPinned() {
     const list = await getConfig("pinned", []);
-    pinnedCache = new Set(list.map((n) => n.toLowerCase()));
+    pinnedCache = new Set(list);
   }
   async function togglePin(user) {
     const list = await getConfig("pinned", []);
-    const name = user.name.toLowerCase();
-    const idx = list.findIndex((n) => n.toLowerCase() === name);
+    const idx = list.indexOf(user.key);
     if (idx === -1) {
-      list.push(name);
+      list.push(user.key);
     } else {
       list.splice(idx, 1);
     }
     await setConfig("pinned", list);
     emit({ type: "config", key: "pinned" });
-    pinnedCache = new Set(list.map((n) => n.toLowerCase()));
+    pinnedCache = new Set(list);
     if (lastUserlistEvent) renderSidebar(lastUserlistEvent, [], []);
   }
   function handleRowClick(user, anchor) {
-    openUserPopup(anchor, user, pinnedCache.has(user.name.toLowerCase()), (u) => {
+    openUserPopup(anchor, user, pinnedCache.has(user.key), (u) => {
       togglePin(u).catch(() => {
         cclog("pin toggle failed for " + u.name, "v3");
       });
@@ -1629,7 +1629,7 @@
     const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
     const sorted = sortUsers(users, pinnedCache);
     for (const user of sorted) {
-      const isPinned = pinnedCache.has(user.name.toLowerCase());
+      const isPinned = pinnedCache.has(user.key);
       const target = isPinned ? pinnedUl : regularUl;
       let row = rowMap.get(user.name);
       if (row) {
