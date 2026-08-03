@@ -107,9 +107,11 @@ async function doSubmit(whispernick?: string): Promise<void> {
           );
           break;
         case "color-info":
-          getConfig("color", "").then((c) =>
-            printToChat("Thema-Farbe: " + c)
-          );
+          getConfig("color", "").then((c) => {
+            const hex = String(c).replace(/^#/, "");
+            const swatch = '<span style="display:inline-block;width:10px;height:10px;background:#' + hex + ';margin:0 4px 0 2px;border-radius:2px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>';
+            printToChat("Thema-Farbe: " + swatch + "#" + hex);
+          });
           break;
         case "scheme-info":
           Promise.all([
@@ -120,7 +122,10 @@ async function doSubmit(whispernick?: string): Promise<void> {
             lines.push("Generator: " + (v2 ? "v2 (experimentell)" : "v1"));
             if (scheme) {
               for (const [k, v] of Object.entries(scheme as Record<string, unknown>)) {
-                lines.push(k + ": " + v);
+                const hex = String(v);
+                const hexDisplay = "#" + hex.replace(/^#/, "");
+                const swatch = '<span style="display:inline-block;width:10px;height:10px;background:#' + hex.replace(/^#/, "") + ';margin:0 4px 0 2px;border-radius:2px;vertical-align:middle;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>';
+                lines.push(k + ": " + swatch + hexDisplay);
               }
             }
             printToChat(lines.join("\n"));
@@ -250,6 +255,9 @@ export function mountInput(): void {
     const n = (nick as string) || "";
     if (n) superwhisper(n, false);
   });
+
+  // Auto-focus the textarea so users can type immediately
+  if (textarea) textarea.focus();
 
   cclog("input mounted — textarea + whisper indicator + send contract", "v3");
 }
