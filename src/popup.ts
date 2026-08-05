@@ -424,11 +424,23 @@ export function openUserPopup(
   const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
   mount.appendChild(popup);
 
-  // Position below anchor
+  // Position: popup shifted left into chatframe, anchored corner-to-corner
+  // to the row. Prefer above (bottom-right → top-left), flip below when
+  // no room. Clamp both axes to viewport. position:fixed is in CSS.
   const rect = anchor.getBoundingClientRect();
-  popup.style.position = "fixed";
-  popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
-  popup.style.top = rect.bottom + 4 + "px";
+  const popupH = popup.offsetHeight || 200;
+  const popupW = popup.offsetWidth || 200;
+  const gap = 4;
+
+  popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
+
+  if (rect.top - popupH - gap >= 0) {
+    // Above: bottom-right → row top-left
+    popup.style.top = (rect.top - popupH - gap) + "px";
+  } else {
+    // Below: top-right → row bottom-left, clamped
+    popup.style.top = Math.min(rect.bottom + gap, window.innerHeight - popupH - 8) + "px";
+  }
 
   // Photo: hover = centered preview, click = toggle pin (stays open on mouseleave).
   // Hover: temporary preview. Click: pin/unpin.
