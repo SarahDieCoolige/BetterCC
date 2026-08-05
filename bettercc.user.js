@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.4.3
+// @version      3.4.4
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -273,7 +273,11 @@
   }
   function sendCommand(cmd) {
     const w = unsafeWindow;
-    if (typeof w.com_set === "function") w.com_set(cmd);
+    if (typeof w.com_set === "function") {
+      w.com_set(cmd);
+    } else {
+      cclog("sendCommand: com_set unavailable \u2014 dropped: " + cmd, "v3");
+    }
   }
   function leaveChat() {
     sendCommand("/bye");
@@ -2274,12 +2278,7 @@
     } else {
       chatbar.append(buildCompactToggle());
     }
-    chatbar.append(
-      buildChatPill(),
-      buildBetterccPill(),
-      buildLinksPill(),
-      buildExitBtn()
-    );
+    chatbar.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
     const headerReload = document.querySelector(".bcc-reload");
     if (headerReload) trackReloadButton(headerReload);
     patchSetStatus();
