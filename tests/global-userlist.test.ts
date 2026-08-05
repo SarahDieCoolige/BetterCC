@@ -241,6 +241,21 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     expect(e.removed).toEqual([{ user: mkUser("Beta"), channel: "Erotik" }]);
   });
 
+  it("skips an empty parse result when snapshot is non-empty (server error guard)", async () => {
+    vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
+    startPolling(5000);
+    await flushMicrotasks();
+    events = [];
+    expect(getLastSnapshot().size).toBeGreaterThan(0); // snapshot populated
+
+    // Server returns non-aw.js content — parseAw yields empty Map.
+    vi.mocked(fetchAw).mockResolvedValue("Internal Server Error");
+    await vi.advanceTimersByTimeAsync(5000);
+    await flushMicrotasks();
+    expect(events).toHaveLength(0); // no emit — guard skipped the update
+    expect(getLastSnapshot().size).toBeGreaterThan(0); // snapshot preserved
+  });
+
   it("stopPolling stops the loop", async () => {
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);

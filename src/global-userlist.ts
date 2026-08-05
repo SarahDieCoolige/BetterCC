@@ -65,6 +65,10 @@ async function pollOnce(): Promise<void> {
   try {
     const raw = await fetchAw();
     const next = parseAw(raw);
+    // Defend against a server error returning non-aw.js content: an empty parse
+    // result when we already have a snapshot is almost certainly a transient
+    // error — skip the update rather than emitting a spurious mass-removal.
+    if (next.size === 0 && lastSnapshot.size > 0) return;
     const { added, removed } = diffGlobal(lastSnapshot, next);
     lastSnapshot = next;
     emit({ type: "globalUserlist", channels: next, added, removed });
