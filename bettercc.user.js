@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.4.5
+// @version      3.4.6
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -1395,12 +1395,11 @@
     const popupH = popup.offsetHeight || 200;
     const popupW = popup.offsetWidth || 200;
     const gap = 4;
+    const photoEl = popup.querySelector(".bcc-popup-photo");
+    const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
     popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
-    if (rect.top - popupH - gap >= 0) {
-      popup.style.top = rect.top - popupH - gap + "px";
-    } else {
-      popup.style.top = Math.min(rect.bottom + gap, window.innerHeight - popupH - 8) + "px";
-    }
+    const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
+    popup.style.top = Math.max(8, Math.min(window.innerHeight - popupH - 8, idealTop)) + "px";
     photoContainer.addEventListener("mouseenter", () => {
       if (previewByUser.has(user.name)) return;
       const img = photoContainer.querySelector("img");
