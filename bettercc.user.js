@@ -2245,6 +2245,11 @@
     link.href = "https://use.fontawesome.com/releases/v6.5.1/css/all.css";
     document.head.appendChild(link);
   }
+  function setToggleState(btn, compact) {
+    btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
+    btn.setAttribute("aria-label", btn.title);
+    btn.querySelector("i").className = compact ? "fas fa-chevron-up" : "fas fa-chevron-down";
+  }
   function buildCompactToggle() {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -2256,9 +2261,7 @@
       const chatbar = document.querySelector(".bcc-chatbar");
       if (!chatbar) return;
       const compact = chatbar.classList.toggle("bcc-compact");
-      btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
-      btn.setAttribute("aria-label", btn.title);
-      btn.querySelector("i").className = compact ? "fas fa-chevron-up" : "fas fa-chevron-down";
+      setToggleState(btn, compact);
       updatePlaceholder();
       await setConfig("compact", compact ? "1" : "");
     });
@@ -2288,11 +2291,7 @@
       if (v) {
         chatbar.classList.add("bcc-compact");
         const toggle = chatbar.querySelector(".bcc-compact-toggle");
-        if (toggle) {
-          toggle.title = "Chatbar erweitern";
-          toggle.setAttribute("aria-label", "Chatbar erweitern");
-          toggle.querySelector("i").className = "fas fa-chevron-up";
-        }
+        if (toggle) setToggleState(toggle, true);
         updatePlaceholder();
       }
     });

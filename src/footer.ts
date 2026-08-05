@@ -5,10 +5,10 @@
 //
 // Groups (left → right after the textarea):
 //   1. Chat pill      — upstream interaction: away / back / sysmsg on/off /
-//                       autoscroll / reload / nick-color picker (4-col, 7 items)
+//                       autoscroll / reload (4-col, 6 items)
 //   2. BetterCC pill  — our added features: theme color / scheme toggle /
 //                       help / settings (2-col, 4 items)
-//   3. Links pill     — upstream external links: ID / forum / help (2-col)
+//   3. Links pill     — upstream external: ID / forum / nick-color / help (2-col, 4 items)
 //   4. Exit           — red sign-out icon button (standalone, always last)
 
 import { cclog, getUserKey, printHelp } from "./utils";
@@ -51,10 +51,8 @@ function iconBtn(iconClass: string, title: string, onClick: () => void): HTMLBut
 /**
  * A pill container — a translucent rounded grid wrapping a group of buttons.
  *
- * `columns` mirrors the v2 design: 0 = bare .bcc-pill (single centered column,
- * children stack vertically); 2/3 = N-column grid (children flow into rows of
- * N, last partial row centered via justify-items). `extraClass` adds a modifier
- * (e.g. "bcc-chat-actions") for special-case spanning rules in v3.css.
+ * `columns`: 0 = bare .bcc-pill (vertical stack), 2/3/4 = N-column grid.
+ * `extraClass` adds a modifier (e.g. "bcc-chat") for targeting in CSS.
  */
 function pill(columns: number, extraClass: string, ...children: HTMLElement[]): HTMLElement {
   const p = document.createElement("div");
@@ -96,7 +94,7 @@ function buildReloadBtn(): HTMLButtonElement {
 /**
  * Local color picker swatch — a native <input type="color"> styled as a color
  * circle. oninput regenerates the scheme via saveColor (writes --bcc-* to
- * :root + mirrors into the iframe). Seeds from the stored base color.
+ * .bcc-shell + mirrors into the iframe). Seeds from the stored base color.
  */
 function buildColorSwatch(): HTMLElement {
   const wrap = document.createElement("label");
@@ -275,6 +273,14 @@ function injectFontAwesome(): void {
 // Toggles .bcc-compact on the chatbar. State persisted to GM storage
 // (key compact_{user}) so it survives page refresh.
 
+function setToggleState(btn: HTMLElement, compact: boolean): void {
+  btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
+  btn.setAttribute("aria-label", btn.title);
+  btn.querySelector("i")!.className = compact
+    ? "fas fa-chevron-up"
+    : "fas fa-chevron-down";
+}
+
 function buildCompactToggle(): HTMLElement {
   const btn = document.createElement("button");
   btn.type = "button";
@@ -287,11 +293,7 @@ function buildCompactToggle(): HTMLElement {
     const chatbar = document.querySelector(".bcc-chatbar");
     if (!chatbar) return;
     const compact = chatbar.classList.toggle("bcc-compact");
-    btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
-    btn.setAttribute("aria-label", btn.title);
-    btn.querySelector("i")!.className = compact
-      ? "fas fa-chevron-up"
-      : "fas fa-chevron-down";
+    setToggleState(btn, compact);
     updatePlaceholder();
     await setConfig("compact", compact ? "1" : "");
   });
@@ -337,11 +339,7 @@ export function mountFooter(): void {
     if (v) {
       chatbar.classList.add("bcc-compact");
       const toggle = chatbar.querySelector(".bcc-compact-toggle") as HTMLElement | null;
-      if (toggle) {
-        toggle.title = "Chatbar erweitern";
-        toggle.setAttribute("aria-label", "Chatbar erweitern");
-        toggle.querySelector("i")!.className = "fas fa-chevron-up";
-      }
+      if (toggle) setToggleState(toggle, true);
       updatePlaceholder();
     }
   });
