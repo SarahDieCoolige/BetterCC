@@ -142,19 +142,10 @@ function buildRow(merged: MergedUser, badges: Map<string, string>): HTMLLIElemen
   const nameSpan = document.createElement("span");
   nameSpan.className = "bcc-userrow-name";
   li.appendChild(nameSpan);
-  if (user.away) {
-    const tag = document.createElement("span");
-    tag.className = "bcc-user-tag";
-    tag.textContent = "[A]";
-    li.appendChild(tag);
-  }
-  if (user.sep) {
-    const tag = document.createElement("span");
-    tag.className = "bcc-user-tag";
-    tag.textContent = "[S]";
-    li.appendChild(tag);
-  }
   // Apply user state to the row (classes, name text, channel badge, tags).
+  // Status tags ([A]/[S]) are created here, not in buildRow — applyUserState
+  // handles them conditionally so cross-channel users (never away/sep) skip
+  // the create-then-remove choreography.
   applyUserState(li, merged, badges);
   // Open the popup on click OR Enter/Space (R1: discoverable; was silent log).
   // stopPropagation on click so the opening event doesn't bubble to the
@@ -223,7 +214,8 @@ function handleRowClick(user: User, anchor: HTMLElement): void {
 
 let lastChannelUsers: User[] | null = null; // last "userlist" event (cha_my)
 let lastGlobalChannels: Map<string, User[]> | null = null; // last "globalUserlist" event
-const NO_GLOBAL: Map<string, User[]> = new Map(); // fallback before first global event
+let globalTotal = 0; // cached sum over lastGlobalChannels — updated once per event
+const NO_GLOBAL: Map<string, User[]> = new Map(); // read-only fallback, never mutated
 let rowMap: Map<string, HTMLLIElement> = new Map();
 let pinnedUl: HTMLUListElement | null = null;
 let regularUl: HTMLUListElement | null = null;
@@ -329,16 +321,13 @@ function renderSidebar(merged: MergedUser[]): void {
 }
 
 /** "N/M online" — N = current-channel users (cha_my), M = all users across all
- *  channels in the last global snapshot. Before the first "globalUserlist"
- *  event M is unknown, so the simple "N online" form is kept. */
+ *  channels in the last global snapshot (cached when the event arrives, so
+ *  this is O(1)). Before the first "globalUserlist" event M is unknown, so
+ *  the simple "N online" form is kept. */
 function updateOnlineCount(): void {
   if (!onlineCount) return;
   const n = lastChannelUsers ? lastChannelUsers.length : 0;
-  let m = 0;
-  if (lastGlobalChannels) {
-    for (const users of lastGlobalChannels.values()) m += users.length;
-  }
-  onlineCount.textContent = m > 0 ? n + "/" + m + " online" : n + " online";
+  onlineCount.textContent = globalTotal > 0 ? n + "/" + globalTotal + " online" : n + " online";
 }
 
 /** Recompute the merged list from the last known sources and re-render. Called
@@ -372,6 +361,11 @@ export function mountSidebar(): void {
     } else if (e.type === "globalUserlist") {
       // Full aw.js snapshot — source for cross-channel pinned users.
       lastGlobalChannels = e.channels;
+      // Cache the global total once per event rather than summing on every
+      // render (O(channels) → O(1)).
+      let total = 0;
+      for (const users of e.channels.values()) total += users.length;
+      globalTotal = total;
       renderFromState();
     }
   });
