@@ -424,23 +424,20 @@ export function openUserPopup(
   const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
   mount.appendChild(popup);
 
-  // Position: popup shifted left into chatframe, anchored corner-to-corner
-  // to the row. Prefer above (bottom-right → top-left), flip below when
-  // no room. Clamp both axes to viewport. position:fixed is in CSS.
+  // Position: popup shifted left into chatframe. Photo centered vertically
+  // on the clicked row. Clamp to viewport.
   const rect = anchor.getBoundingClientRect();
   const popupH = popup.offsetHeight || 200;
   const popupW = popup.offsetWidth || 200;
   const gap = 4;
+  const photoEl = popup.querySelector(".bcc-popup-photo") as HTMLElement | null;
+  const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
 
   popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
 
-  if (rect.top - popupH - gap >= 0) {
-    // Above: bottom-right → row top-left
-    popup.style.top = (rect.top - popupH - gap) + "px";
-  } else {
-    // Below: top-right → row bottom-left, clamped
-    popup.style.top = Math.min(rect.bottom + gap, window.innerHeight - popupH - 8) + "px";
-  }
+  // Center photo on the row vertically, clamped to viewport
+  const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
+  popup.style.top = Math.max(8, Math.min(window.innerHeight - popupH - 8, idealTop)) + "px";
 
   // Photo: hover = centered preview, click = toggle pin (stays open on mouseleave).
   // Hover: temporary preview. Click: pin/unpin.
