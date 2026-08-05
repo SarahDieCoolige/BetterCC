@@ -18,7 +18,7 @@ import { fetchAw } from "./upstream";
 import { cclog } from "./utils";
 
 let lastSnapshot: Map<string, User[]> = new Map();
-let timerId: ReturnType<typeof setInterval> | undefined;
+let timerId: ReturnType<typeof setTimeout> | undefined;
 let running = false;
 
 // ─── diffGlobal ────────────────────────────────────────────────────────────
@@ -54,6 +54,10 @@ export function diffGlobal(prev: Map<string, User[]>, next: Map<string, User[]>)
 
 // ─── Poll-Loop ─────────────────────────────────────────────────────────────
 
+/** Jitter range for the poll interval (±20% of base), so the server never
+ *  sees a perfectly predictable request cadence. */
+const JITTER_PCT = 0.2;
+
 /**
  * One poll cycle: fetch aw.js → parse → diff → emit. Errors are swallowed —
  * the next cycle retries silently (no cclog spam on a flaky network).
@@ -62,9 +66,6 @@ async function pollOnce(): Promise<void> {
   try {
     const raw = await fetchAw();
     const next = parseAw(raw);
-    // Defend against a server error returning non-aw.js content: an empty parse
-    // result when we already have a snapshot is almost certainly a transient
-    // error — skip the update rather than emitting a spurious mass-removal.
     if (next.size === 0 && lastSnapshot.size > 0) return;
     const { added, removed } = diffGlobal(lastSnapshot, next);
     lastSnapshot = next;
@@ -74,21 +75,32 @@ async function pollOnce(): Promise<void> {
   }
 }
 
+function scheduleNext(intervalMs: number): void {
+  const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT;
+  timerId = setTimeout(() => {
+    pollOnce().finally(() => {
+      if (running) scheduleNext(intervalMs);
+    });
+  }, intervalMs + jitter);
+}
+
 /**
- * Start the poll loop: immediate first fetch (no intervalMs delay), then one
- * cycle every intervalMs. Starting while already running is a no-op.
+ * Start the poll loop: immediate first fetch, then one cycle roughly every
+ * intervalMs (±20% jitter so the server sees a spread, not a metronome).
+ * Starting while already running is a no-op.
  */
 export function startPolling(intervalMs: number): void {
   if (running) return;
   running = true;
-  pollOnce(); // immediate first fetch — no 5s wait
-  timerId = setInterval(pollOnce, intervalMs);
-  cclog("Globaler Userlist-Poll gestartet — aw.js alle " + intervalMs + " ms", "v3");
+  pollOnce().finally(() => {
+    if (running) scheduleNext(intervalMs);
+  });
+  cclog("Globaler Userlist-Poll gestartet — aw.js alle ~" + intervalMs + " ms", "v3");
 }
 
 /** Stop the poll loop. Idempotent — safe to call when not running. */
 export function stopPolling(): void {
-  if (timerId !== undefined) clearInterval(timerId);
+  if (timerId !== undefined) clearTimeout(timerId);
   timerId = undefined;
   running = false;
 }

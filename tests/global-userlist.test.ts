@@ -145,14 +145,17 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal("GM_log", vi.fn());
+    // Pin jitter to 0 so fake timers fire at exactly intervalMs.
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
     vi.mocked(fetchAw).mockReset();
     events = [];
     unsubscribe = subscribe((e) => events.push(e));
   });
 
   afterEach(() => {
-    stopPolling(); // before restoring real timers, so the interval is cleared
+    stopPolling();
     unsubscribe();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
@@ -294,6 +297,7 @@ describe("findUserChannel — queries the last snapshot by key", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal("GM_log", vi.fn());
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
     vi.mocked(fetchAw).mockReset();
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);
@@ -301,6 +305,7 @@ describe("findUserChannel — queries the last snapshot by key", () => {
 
   afterEach(() => {
     stopPolling();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });

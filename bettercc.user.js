@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.5.1
+// @version      3.5.2
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -851,6 +851,7 @@
     }
     return { added, removed };
   }
+  var JITTER_PCT = 0.2;
   async function pollOnce() {
     try {
       const raw = await fetchAw();
@@ -862,15 +863,24 @@
     } catch {
     }
   }
+  function scheduleNext(intervalMs) {
+    const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT;
+    timerId = setTimeout(() => {
+      pollOnce().finally(() => {
+        if (running) scheduleNext(intervalMs);
+      });
+    }, intervalMs + jitter);
+  }
   function startPolling(intervalMs) {
     if (running) return;
     running = true;
-    pollOnce();
-    timerId = setInterval(pollOnce, intervalMs);
-    cclog("Globaler Userlist-Poll gestartet \u2014 aw.js alle " + intervalMs + " ms", "v3");
+    pollOnce().finally(() => {
+      if (running) scheduleNext(intervalMs);
+    });
+    cclog("Globaler Userlist-Poll gestartet \u2014 aw.js alle ~" + intervalMs + " ms", "v3");
   }
   function stopPolling() {
-    if (timerId !== void 0) clearInterval(timerId);
+    if (timerId !== void 0) clearTimeout(timerId);
     timerId = void 0;
     running = false;
   }
