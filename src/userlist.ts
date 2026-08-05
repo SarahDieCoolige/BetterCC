@@ -92,3 +92,123 @@ export function sortUsers(users: User[], pinned: Set<string>): User[] {
     return pa - pb || cmp.compare(a.name, b.name);
   });
 }
+
+// ─── parseAw — global userlist from aw.js (spec §cross-channel) ─────────────
+//
+// Source: https://images.chatcity.de/script/aw.js — JS source of the form
+//   var cha = new Array(
+//   <!--Tabelle-->
+//   "Channel","count","name name2^id ...",
+//   ...
+//   "");
+// 3-element stride: [channel, count, space-separated user list], terminated by
+// an empty string. Guest users carry a "^id" suffix (e.g. "SomeGuest^12345")
+// that is stripped; everyone else gets neutral status (aw.js has no flags).
+
+// Extracts the quoted string literals that make up the cha array. Anchored on
+// "new Array(" so non-aw.js input yields nothing; the <!--Tabelle--> comment
+// inside the literal is skipped because it is not a quoted string.
+const STRING_LITERAL = /"((?:[^"\\]|\\.)*)"/g;
+
+/**
+ * Parse the raw aw.js response into a Map of channel name → users. The user
+ * count element is informational — users are read from the space-separated
+ * list. Empty channels are kept with an empty array. Defensive: any input
+ * that is not aw.js-shaped returns an empty Map.
+ */
+export function parseAw(raw: string): Map<string, User[]> {
+  const channels = new Map<string, User[]>();
+  const arrayStart = raw.indexOf("new Array(");
+  if (arrayStart === -1) return channels;
+  const body = raw.slice(arrayStart);
+  const literals = body.match(STRING_LITERAL);
+  if (!literals) return channels;
+  for (let i = 0; i + 2 < literals.length; i += 3) {
+    const channel = literals[i].slice(1, -1);
+    if (channel === "") break; // "" terminator — trailing entries are garbage
+    channels.set(channel, parseAwUsers(literals[i + 2].slice(1, -1)));
+  }
+  return channels;
+}
+
+/** Split the space-separated user list (trailing spaces included) into Users. */
+function parseAwUsers(raw: string): User[] {
+  const users: User[] = [];
+  for (const entry of raw.split(" ")) {
+    if (entry === "") continue;
+    users.push(decodeAwEntry(entry));
+  }
+  return users;
+}
+
+/**
+ * Decode one user-list entry. A trailing "^id" marks a guest — the suffix is
+ * stripped and guest: true is set. Everything else is neutral (all flags
+ * false): aw.js carries no status flags.
+ */
+function decodeAwEntry(entry: string): User {
+  const guestMatch = entry.match(/\^(\d+)$/);
+  const name = guestMatch ? entry.slice(0, guestMatch.index) : entry;
+  return {
+    name,
+    key: name.toLowerCase(),
+    registered: false,
+    guest: guestMatch !== null,
+    sep: false,
+    away: false,
+  };
+}
+
+// ─── channelAbbrev — unified abbreviation (spec §abbreviation) ──────────────
+
+/**
+ * Shorten a channel name to a sidebar badge. One algorithm for all channels:
+ *  1. Strip hyphens
+ *  2. Short names (≤3) returned as-is
+ *  3. CamelCase names (no hyphens, internal uppercase) use first 2 chars +
+ *     remaining internal capitals: "EroRsp" → "ErR"
+ *  4. Hyphenated / plain names use first-3-char truncation: "Chatcity" → "Cha"
+ *  5. Trailing digit replaces 3rd char: "Erotik2" → "Er2"
+ *  6. Positive `index` extends the abbreviation by one char per step for
+ *     collision resolution (callers pass the occurrence index of channels
+ *     sharing a base, e.g. Herzschmerz = 1 → "Hers").
+ */
+export function channelAbbrev(name: string, index: number): string {
+  const hadHyphens = name.includes("-");
+  const stripped = name.replace(/-/g, "");
+
+  // 2. If shorter than 3 chars, return as-is: "MOD" → "MOD"
+  if (stripped.length <= 3) return stripped;
+
+  let abbrev: string;
+
+  // 3. CamelCase detection — only for non-hyphenated names (hyphenated names
+  //    like "Bizarre-Talk" should NOT trigger this branch; their internal caps
+  //    come from the hyphen boundary, not a true camelCase word).
+  if (!hadHyphens) {
+    const internalCaps = stripped.slice(1).replace(/[^A-Z]/g, "");
+    if (internalCaps.length > 0) {
+      // "EroRsp" → "Er" + "R" → "ErR"
+      abbrev = stripped[0].toUpperCase() + stripped[1].toLowerCase() + internalCaps;
+    } else {
+      // 4. Plain truncation: "Chatcity" → "Cha"
+      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
+    }
+  } else {
+    // 4. Hyphenated name: "Women-Corner" → "WomenCorner" → "Wom"
+    abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
+  }
+
+  // 5. Trailing digit replaces 3rd char: "Erotik2" → "Er2"
+  const digitMatch = stripped.match(/(\d+)$/);
+  if (digitMatch) {
+    abbrev = stripped[0].toUpperCase() + stripped.slice(1, 2).toLowerCase() + digitMatch[1];
+  }
+
+  // 6. Collision extension: index 1+ extends by one char
+  if (index > 0 && index < stripped.length - 2) {
+    abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3 + index).toLowerCase();
+  }
+
+  return abbrev;
+}
