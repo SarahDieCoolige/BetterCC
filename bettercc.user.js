@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.4.6
+// @version      3.5.0
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=e2682f5f
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=cb405032
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -270,6 +270,16 @@
   }
   function getChannelGroups() {
     return unsafeWindow.ccg ?? [];
+  }
+  function fetchAw() {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: "https://images.chatcity.de/script/aw.js?x=" + Date.now(),
+        onload: (resp) => resolve(resp.responseText),
+        onerror: (err) => reject(err)
+      });
+    });
   }
   function sendCommand(cmd) {
     const w = unsafeWindow;
@@ -729,6 +739,65 @@
       return pa - pb || cmp.compare(a.name, b.name);
     });
   }
+  var STRING_LITERAL = /"((?:[^"\\]|\\.)*)"/g;
+  function parseAw(raw) {
+    const channels = /* @__PURE__ */ new Map();
+    const arrayStart = raw.indexOf("new Array(");
+    if (arrayStart === -1) return channels;
+    const body = raw.slice(arrayStart);
+    const literals = body.match(STRING_LITERAL);
+    if (!literals) return channels;
+    for (let i = 0; i + 2 < literals.length; i += 3) {
+      const channel = literals[i].slice(1, -1);
+      if (channel === "") break;
+      channels.set(channel, parseAwUsers(literals[i + 2].slice(1, -1)));
+    }
+    return channels;
+  }
+  function parseAwUsers(raw) {
+    const users = [];
+    for (const entry of raw.split(" ")) {
+      if (entry === "") continue;
+      users.push(decodeAwEntry(entry));
+    }
+    return users;
+  }
+  function decodeAwEntry(entry) {
+    const guestMatch = entry.match(/\^(\d+)$/);
+    const name = guestMatch ? entry.slice(0, guestMatch.index) : entry;
+    return {
+      name,
+      key: name.toLowerCase(),
+      registered: false,
+      guest: guestMatch !== null,
+      sep: false,
+      away: false
+    };
+  }
+  function channelAbbrev(name, index) {
+    const hadHyphens = name.includes("-");
+    const stripped = name.replace(/-/g, "");
+    if (stripped.length <= 3) return stripped;
+    let abbrev;
+    if (!hadHyphens) {
+      const internalCaps = stripped.slice(1).replace(/[^A-Z]/g, "");
+      if (internalCaps.length > 0) {
+        abbrev = stripped[0].toUpperCase() + stripped[1].toLowerCase() + internalCaps;
+      } else {
+        abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
+      }
+    } else {
+      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
+    }
+    const digitMatch = stripped.match(/(\d+)$/);
+    if (digitMatch) {
+      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 2).toLowerCase() + digitMatch[1];
+    }
+    if (index > 0 && index < stripped.length - 2) {
+      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3 + index).toLowerCase();
+    }
+    return abbrev;
+  }
 
   // src/store.ts
   var listeners = /* @__PURE__ */ new Set();
@@ -759,6 +828,51 @@
     cclog("set_uinfo1 overridden \u2014 userlist events now feed the store", "v3");
     const chaMy = getChaMy();
     if (chaMy.length > 0) unsafeWindow.set_uinfo1();
+  }
+
+  // src/global-userlist.ts
+  var lastSnapshot = /* @__PURE__ */ new Map();
+  var timerId;
+  var running = false;
+  function diffGlobal(prev, next) {
+    const added = [];
+    const removed = [];
+    for (const [channel, users] of next) {
+      const prevKeys = new Set((prev.get(channel) ?? []).map((u) => u.key));
+      for (const user of users) {
+        if (!prevKeys.has(user.key)) added.push({ user, channel });
+      }
+    }
+    for (const [channel, users] of prev) {
+      const nextKeys = new Set((next.get(channel) ?? []).map((u) => u.key));
+      for (const user of users) {
+        if (!nextKeys.has(user.key)) removed.push({ user, channel });
+      }
+    }
+    return { added, removed };
+  }
+  async function pollOnce() {
+    try {
+      const raw = await fetchAw();
+      const next = parseAw(raw);
+      if (next.size === 0 && lastSnapshot.size > 0) return;
+      const { added, removed } = diffGlobal(lastSnapshot, next);
+      lastSnapshot = next;
+      emit({ type: "globalUserlist", channels: next, added, removed });
+    } catch {
+    }
+  }
+  function startPolling(intervalMs) {
+    if (running) return;
+    running = true;
+    pollOnce();
+    timerId = setInterval(pollOnce, intervalMs);
+    cclog("Globaler Userlist-Poll gestartet \u2014 aw.js alle " + intervalMs + " ms", "v3");
+  }
+  function stopPolling() {
+    if (timerId !== void 0) clearInterval(timerId);
+    timerId = void 0;
+    running = false;
   }
 
   // src/dom.ts
@@ -1541,12 +1655,44 @@
     if (user.sep) classes.push("bcc-sep");
     return classes.join(" ");
   }
-  function applyUserState(row, user) {
+  function mergeUserlists(current, globalChannels, pinned) {
+    const merged = current.map((u) => ({ user: u, channel: null }));
+    const present = new Set(current.map((u) => u.key));
+    for (const [channel, users] of globalChannels) {
+      for (const user of users) {
+        if (pinned.has(user.key) && !present.has(user.key)) {
+          merged.push({ user, channel });
+          present.add(user.key);
+        }
+      }
+    }
+    return merged;
+  }
+  function abbrevChannels(channels) {
+    const used = /* @__PURE__ */ new Map();
+    const badges = /* @__PURE__ */ new Map();
+    for (const channel of [...new Set(channels)].sort()) {
+      const base = channelAbbrev(channel, 0);
+      const index = used.get(base) ?? 0;
+      used.set(base, index + 1);
+      badges.set(channel, channelAbbrev(channel, index));
+    }
+    return badges;
+  }
+  function applyUserState(row, merged, badges) {
+    const user = merged.user;
     row.className = getStatusClasses(user);
     row.classList.toggle("bcc-name-away", user.away || user.sep);
     const nameSpan = row.querySelector(".bcc-userrow-name");
     if (nameSpan) {
       nameSpan.textContent = user.name;
+    }
+    row.querySelectorAll(".bcc-channel-badge").forEach((b) => b.remove());
+    if (merged.channel) {
+      const badge = document.createElement("span");
+      badge.className = "bcc-channel-badge";
+      badge.textContent = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
+      row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
     }
     row.querySelectorAll(".bcc-user-tag").forEach((t) => t.remove());
     if (user.away) {
@@ -1562,7 +1708,8 @@
       row.appendChild(tag);
     }
   }
-  function buildRow(user) {
+  function buildRow(merged, badges) {
+    const user = merged.user;
     const li = document.createElement("li");
     li.dataset.name = user.name;
     li.tabIndex = 0;
@@ -1571,19 +1718,7 @@
     const nameSpan = document.createElement("span");
     nameSpan.className = "bcc-userrow-name";
     li.appendChild(nameSpan);
-    if (user.away) {
-      const tag = document.createElement("span");
-      tag.className = "bcc-user-tag";
-      tag.textContent = "[A]";
-      li.appendChild(tag);
-    }
-    if (user.sep) {
-      const tag = document.createElement("span");
-      tag.className = "bcc-user-tag";
-      tag.textContent = "[S]";
-      li.appendChild(tag);
-    }
-    applyUserState(li, user);
+    applyUserState(li, merged, badges);
     const open = (e) => {
       e?.stopPropagation();
       handleRowClick(user, li);
@@ -1614,7 +1749,7 @@
     await setConfig("pinned", list);
     emit({ type: "config", key: "pinned" });
     pinnedCache = new Set(list);
-    if (lastUserlistEvent) renderSidebar(lastUserlistEvent, [], []);
+    renderFromState();
   }
   function handleRowClick(user, anchor) {
     openUserPopup(anchor, user, pinnedCache.has(user.key), (u) => {
@@ -1623,7 +1758,10 @@
       });
     });
   }
-  var lastUserlistEvent = null;
+  var lastChannelUsers = null;
+  var lastGlobalChannels = null;
+  var globalTotal = 0;
+  var NO_GLOBAL = /* @__PURE__ */ new Map();
   var rowMap = /* @__PURE__ */ new Map();
   var pinnedUl = null;
   var regularUl = null;
@@ -1657,34 +1795,54 @@
     const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
     if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
   }
-  function renderSidebar(users, added, removed) {
+  function renderSidebar(merged) {
     const sidebar = document.querySelector(".bcc-sidebar");
     if (!sidebar || !pinnedUl || !regularUl) return;
-    for (const name of removed) {
-      const row = rowMap.get(name);
-      if (row) row.remove();
-      rowMap.delete(name);
+    const liveNames = new Set(merged.map((m) => m.user.name));
+    for (const [name, row] of rowMap) {
+      if (!liveNames.has(name)) {
+        row.remove();
+        rowMap.delete(name);
+      }
     }
     const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-    const sorted = sortUsers(users, pinnedCache);
-    for (const user of sorted) {
-      const isPinned = pinnedCache.has(user.key);
+    const byKey = new Map(merged.map((m) => [m.user.key, m]));
+    const sorted = sortUsers(
+      merged.map((m) => m.user),
+      pinnedCache
+    ).map((u) => byKey.get(u.key));
+    const badges = abbrevChannels(
+      sorted.filter((m) => m.channel !== null).map((m) => m.channel)
+    );
+    for (const m of sorted) {
+      const isPinned = pinnedCache.has(m.user.key);
       const target = isPinned ? pinnedUl : regularUl;
-      let row = rowMap.get(user.name);
+      let row = rowMap.get(m.user.name);
       if (row) {
-        applyUserState(row, user);
+        applyUserState(row, m, badges);
       } else {
-        row = buildRow(user);
-        rowMap.set(user.name, row);
+        row = buildRow(m, badges);
+        rowMap.set(m.user.name, row);
       }
       target.appendChild(row);
     }
     if (scrollContainer)
       scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
     refreshSectionVisibility();
-    if (onlineCount) onlineCount.textContent = users.length + " online";
-    lastUserlistEvent = users;
-    void added;
+    updateOnlineCount();
+  }
+  function updateOnlineCount() {
+    if (!onlineCount) return;
+    const n = lastChannelUsers ? lastChannelUsers.length : 0;
+    onlineCount.textContent = globalTotal > 0 ? n + "/" + globalTotal + " online" : n + " online";
+  }
+  function renderFromState() {
+    const merged = mergeUserlists(
+      lastChannelUsers ?? [],
+      lastGlobalChannels ?? NO_GLOBAL,
+      pinnedCache
+    );
+    renderSidebar(merged);
   }
   function mountSidebar() {
     const sidebar = document.querySelector(".bcc-sidebar");
@@ -1695,10 +1853,17 @@
     });
     subscribe((e) => {
       if (e.type === "userlist") {
-        renderSidebar(e.users, e.added, e.removed);
+        lastChannelUsers = e.users;
+        renderFromState();
+      } else if (e.type === "globalUserlist") {
+        lastGlobalChannels = e.channels;
+        let total = 0;
+        for (const users of e.channels.values()) total += users.length;
+        globalTotal = total;
+        renderFromState();
       }
     });
-    cclog("sidebar mounted \u2014 subscribed to userlist events", "v3");
+    cclog("sidebar mounted \u2014 subscribed to userlist + globalUserlist events", "v3");
   }
 
   // src/stats.ts
@@ -1786,7 +1951,7 @@
       count.classList.toggle("bcc-stat-no", value < 1);
     }
   }
-  function pollOnce() {
+  function pollOnce2() {
     try {
       const w = unsafeWindow;
       const ajax = w.ajax;
@@ -1812,8 +1977,8 @@
     if (statsBar && statsBar.isConnected) return;
     const nick = getChatNick();
     parent.insertBefore(buildStatsBar(nick), parent.firstChild);
-    pollOnce();
-    pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
+    pollOnce2();
+    pollTimer = window.setInterval(pollOnce2, POLL_INTERVAL_MS);
     window.addEventListener("beforeunload", () => {
       if (pollTimer !== null) window.clearInterval(pollTimer);
     });
@@ -2324,6 +2489,10 @@
     };
     hookChatoutConnect();
     mountSidebar();
+    startPolling(5e3);
+    subscribe((e) => {
+      if (e.type === "session" && e.session.authDead) stopPolling();
+    });
     mountStatsBar(document.querySelector(".bcc-sidebar"));
     mountInput();
     mountFooter();
