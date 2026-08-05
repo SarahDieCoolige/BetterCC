@@ -9,9 +9,19 @@
 // Two sections: pinned (top) and regular, separated by a .bcc-userlist-divider.
 // Status indicators: [S] for sep, [A] for away, with opacity ported from
 // main.css (u_away / u_sep: opacity 0.5; u_sep: font-style italic).
+//
+// Cross-channel pinned users (spec §Sidebar Behavior / §Merge rules): also
+// subscribes to "globalUserlist" events (the aw.js snapshot polled by
+// global-userlist.ts). Pinned users in OTHER channels are merged into the
+// pinned section with a channel-abbreviation badge (.bcc-channel-badge).
+// cha_my always wins for the current channel — aw.js data for users already
+// present in the current userlist is discarded (key-based exclusion, so the
+// two sources never conflict). Online count shows "N/M online" once the global
+// snapshot exists: N = current-channel users, M = all users across all
+// channels.
 
 import { subscribe, emit, type BccEvent, type User } from "./store";
-import { sortUsers } from "./userlist";
+import { sortUsers, channelAbbrev } from "./userlist";
 import { getConfig, setConfig } from "./config";
 import { openUserPopup } from "./popup";
 import { cclog } from "./utils";
@@ -25,14 +35,83 @@ export function getStatusClasses(user: User): string {
   return classes.join(" ");
 }
 
-/** Apply a user's state to an existing row's child elements (name span, tags).
- *  Use after buildRow or to patch an in-place status change. */
-function applyUserState(row: HTMLLIElement, user: User): void {
+// ─── Merge: current channel + pinned cross-channel users (spec §Merge rules) ─
+
+/** A sidebar row's source: user + the channel they are in (null = current
+ *  channel, from cha_my). Cross-channel users carry their aw.js channel. */
+export interface MergedUser {
+  user: User;
+  channel: string | null;
+}
+
+/**
+ * Merge the two userlist sources into the displayed set. cha_my (current
+ * channel) ALWAYS wins: every current-channel user is included with
+ * channel: null, and aw.js data for users already present in the current
+ * userlist is discarded (key-based exclusion). Pinned users from the global
+ * snapshot are added ONLY when NOT already present in the current channel —
+ * each with their aw.js channel for the badge. Unpinned cross-channel users
+ * are not displayed here (they only show in their own channel's sidebar).
+ */
+export function mergeUserlists(
+  current: User[],
+  globalChannels: Map<string, User[]>,
+  pinned: Set<string>,
+): MergedUser[] {
+  const merged: MergedUser[] = current.map((u) => ({ user: u, channel: null }));
+  const present = new Set(current.map((u) => u.key));
+  for (const [channel, users] of globalChannels) {
+    for (const user of users) {
+      if (pinned.has(user.key) && !present.has(user.key)) {
+        merged.push({ user, channel });
+        present.add(user.key); // first channel wins on a (theoretical) duplicate
+      }
+    }
+  }
+  return merged;
+}
+
+/**
+ * Collision-aware badge text per channel (spec §abbreviation). Channels whose
+ * base abbreviation collides (e.g. "Herzklopfen" + "Herzschmerz" both → "Her")
+ * get an incrementing index passed to channelAbbrev, extending the second by
+ * one char ("Herz"). Indices are assigned in sorted channel order so the
+ * badges are stable across renders. Channels are deduped (a user can only be
+ * in one channel per snapshot, but the defensive set costs nothing).
+ */
+export function abbrevChannels(channels: string[]): Map<string, string> {
+  const used = new Map<string, number>();
+  const badges = new Map<string, string>();
+  for (const channel of [...new Set(channels)].sort()) {
+    const base = channelAbbrev(channel, 0);
+    const index = used.get(base) ?? 0;
+    used.set(base, index + 1);
+    badges.set(channel, channelAbbrev(channel, index));
+  }
+  return badges;
+}
+
+/** Apply a user's state to an existing row's child elements (name span,
+ *  channel badge, tags). Use after buildRow or to patch an in-place change —
+ *  the badge is rebuilt every refresh so a user moving into the current
+ *  channel loses their cross-channel badge. */
+function applyUserState(row: HTMLLIElement, merged: MergedUser, badges: Map<string, string>): void {
+  const user = merged.user;
   row.className = getStatusClasses(user);
   row.classList.toggle("bcc-name-away", user.away || user.sep);
   const nameSpan = row.querySelector(".bcc-userrow-name");
   if (nameSpan) {
     nameSpan.textContent = user.name;
+  }
+  // Channel badge — cross-channel users only (merged.channel set). Inserted
+  // right after the name span, before any [A]/[S] tags (cross-channel users
+  // carry no status tags — aw.js has no flags).
+  row.querySelectorAll(".bcc-channel-badge").forEach((b) => b.remove());
+  if (merged.channel) {
+    const badge = document.createElement("span");
+    badge.className = "bcc-channel-badge";
+    badge.textContent = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
+    row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
   }
   // Remove old tags, rebuild
   row.querySelectorAll(".bcc-user-tag").forEach((t) => t.remove());
@@ -50,7 +129,8 @@ function applyUserState(row: HTMLLIElement, user: User): void {
   }
 }
 
-function buildRow(user: User): HTMLLIElement {
+function buildRow(merged: MergedUser, badges: Map<string, string>): HTMLLIElement {
+  const user = merged.user;
   const li = document.createElement("li");
   li.dataset.name = user.name;
   // tabindex + role so the list is keyboard-navigable (spec §4.5 / R4).
@@ -74,8 +154,8 @@ function buildRow(user: User): HTMLLIElement {
     tag.textContent = "[S]";
     li.appendChild(tag);
   }
-  // Apply user state to the row (classes, name text, tags).
-  applyUserState(li, user);
+  // Apply user state to the row (classes, name text, channel badge, tags).
+  applyUserState(li, merged, badges);
   // Open the popup on click OR Enter/Space (R1: discoverable; was silent log).
   // stopPropagation on click so the opening event doesn't bubble to the
   // popup's document-level outside-click listener (which would close the
@@ -116,10 +196,10 @@ async function togglePin(user: User): Promise<void> {
   await setConfig("pinned", list);
   emit({ type: "config", key: "pinned" }); // notify subscribers
   pinnedCache = new Set(list);
-  // Re-render from the last known userlist with a trivial diff (everything is
-  // "unchanged" — sortUsers + section placement handle the move between
-  // pinned/regular; no rows are added or removed by a pin toggle).
-  if (lastUserlistEvent) renderSidebar(lastUserlistEvent, [], []);
+  // Re-render from the last known sources. No rows are added or removed by a
+  // pin toggle — sortUsers + section placement move the row between
+  // pinned/regular, and the merge recomputes cross-channel membership.
+  renderFromState();
 }
 
 function handleRowClick(user: User, anchor: HTMLElement): void {
@@ -133,14 +213,17 @@ function handleRowClick(user: User, anchor: HTMLElement): void {
 // ─── Rendering ──────────────────────────────────────────────────────────────
 //
 // True diff-and-patch (spec §2.4 / review C3). The two <ul> containers and the
-// divider are created ONCE at mount and never wiped. Each userlist event carries
-// {users, added, removed} from the store — we drop removed rows, add new ones,
-// and re-insert the rest in sorted order into their section. Unchanged rows
+// divider are created ONCE at mount and never wiped. Each event (userlist or
+// globalUserlist) recomputes the merged list and re-renders: rows whose user
+// is no longer in the merged list are dropped, new users get new rows, and the
+// rest are re-inserted in sorted order into their section. Unchanged rows
 // keep their <li> node (event listeners and state survive); only their status
-// classes/text get refreshed. Scroll position is preserved because the
+// classes/text/badge get refreshed. Scroll position is preserved because the
 // container is never rebuilt.
 
-let lastUserlistEvent: User[] | null = null;
+let lastChannelUsers: User[] | null = null; // last "userlist" event (cha_my)
+let lastGlobalChannels: Map<string, User[]> | null = null; // last "globalUserlist" event
+const NO_GLOBAL: Map<string, User[]> = new Map(); // fallback before first global event
 let rowMap: Map<string, HTMLLIElement> = new Map();
 let pinnedUl: HTMLUListElement | null = null;
 let regularUl: HTMLUListElement | null = null;
@@ -181,36 +264,51 @@ function refreshSectionVisibility(): void {
   if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
 }
 
-function renderSidebar(users: User[], added: string[], removed: string[]): void {
+function renderSidebar(merged: MergedUser[]): void {
   const sidebar = document.querySelector(".bcc-sidebar");
   if (!sidebar || !pinnedUl || !regularUl) return;
 
-  // 1) Drop removed rows (their <li>s are GC'd). This is the cheap path the
-  //    store pre-computed so we don't scan the whole list.
-  for (const name of removed) {
-    const row = rowMap.get(name);
-    if (row) row.remove();
-    rowMap.delete(name);
+  // 1) Drop rows whose user is no longer in the merged list — a current-
+  //    channel user leaving OR a cross-channel pinned user going offline
+  //    anywhere. rowMap is keyed by name; names are unique across channels
+  //    (a cross-channel pinned user is never in cha_my), so one pass
+  //    reconciles both event sources (their <li>s are GC'd).
+  const liveNames = new Set(merged.map((m) => m.user.name));
+  for (const [name, row] of rowMap) {
+    if (!liveNames.has(name)) {
+      row.remove();
+      rowMap.delete(name);
+    }
   }
 
-  // 2) Sort once for this event, then place every (possibly reused) row in
-  //    sorted order within its section. appendChild on an existing node MOVES
-  //    it (preserving listeners), so this re-orders without rebuilding.
+  // 2) Sort once (pinned-first, German collation), then place every (possibly
+  //    reused) row in sorted order within its section. appendChild on an
+  //    existing node MOVES it (preserving listeners), so this re-orders
+  //    without rebuilding. Cross-channel users ride along on sortUsers — they
+  //    have the same User shape; their channel is looked up by key for the
+  //    badge map.
   const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-  const sorted = sortUsers(users, pinnedCache);
+  const byKey = new Map(merged.map((m) => [m.user.key, m]));
+  const sorted = sortUsers(
+    merged.map((m) => m.user),
+    pinnedCache,
+  ).map((u) => byKey.get(u.key)!);
+  const badges = abbrevChannels(
+    sorted.filter((m) => m.channel !== null).map((m) => m.channel as string),
+  );
 
-  for (const user of sorted) {
-    const isPinned = pinnedCache.has(user.key);
+  for (const m of sorted) {
+    const isPinned = pinnedCache.has(m.user.key);
     const target = isPinned ? pinnedUl : regularUl;
 
-    let row = rowMap.get(user.name);
+    let row = rowMap.get(m.user.name);
     if (row) {
       // Unchanged user — refresh status in place (a status flip like
       // away↔present is NOT an add/remove; it reuses the node).
-      applyUserState(row, user);
+      applyUserState(row, m, badges);
     } else {
-      row = buildRow(user);
-      rowMap.set(user.name, row);
+      row = buildRow(m, badges);
+      rowMap.set(m.user.name, row);
     }
     // Always (re)place in sorted order. appendChild MOVES an existing node
     // (preserving listeners) — iterating sorted and appending each yields the
@@ -227,9 +325,31 @@ function renderSidebar(users: User[], added: string[], removed: string[]): void 
   if (scrollContainer)
     scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
   refreshSectionVisibility();
-  if (onlineCount) onlineCount.textContent = users.length + " online";
-  lastUserlistEvent = users;
-  void added; // diff already consumed via removed[] + rowMap reuse above
+  updateOnlineCount();
+}
+
+/** "N/M online" — N = current-channel users (cha_my), M = all users across all
+ *  channels in the last global snapshot. Before the first "globalUserlist"
+ *  event M is unknown, so the simple "N online" form is kept. */
+function updateOnlineCount(): void {
+  if (!onlineCount) return;
+  const n = lastChannelUsers ? lastChannelUsers.length : 0;
+  let m = 0;
+  if (lastGlobalChannels) {
+    for (const users of lastGlobalChannels.values()) m += users.length;
+  }
+  onlineCount.textContent = m > 0 ? n + "/" + m + " online" : n + " online";
+}
+
+/** Recompute the merged list from the last known sources and re-render. Called
+ *  after either store event and after pin toggles. */
+function renderFromState(): void {
+  const merged = mergeUserlists(
+    lastChannelUsers ?? [],
+    lastGlobalChannels ?? NO_GLOBAL,
+    pinnedCache,
+  );
+  renderSidebar(merged);
 }
 
 // ─── Mount ──────────────────────────────────────────────────────────────────
@@ -246,9 +366,15 @@ export function mountSidebar(): void {
 
   subscribe((e: BccEvent) => {
     if (e.type === "userlist") {
-      renderSidebar(e.users, e.added, e.removed);
+      // cha_my snapshot — the authoritative source for the current channel.
+      lastChannelUsers = e.users;
+      renderFromState();
+    } else if (e.type === "globalUserlist") {
+      // Full aw.js snapshot — source for cross-channel pinned users.
+      lastGlobalChannels = e.channels;
+      renderFromState();
     }
   });
 
-  cclog("sidebar mounted — subscribed to userlist events", "v3");
+  cclog("sidebar mounted — subscribed to userlist + globalUserlist events", "v3");
 }
