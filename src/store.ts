@@ -17,6 +17,12 @@ export interface User {
   away: boolean; // status contains "A"
 }
 
+/** A user found in the global userlist (aw.js), with their channel. */
+export interface UserWithChannel {
+  user: User;
+  channel: string;
+}
+
 /** Session state read from unsafeWindow globals (spec §2.3). */
 export interface SessionState {
   nick: string;
@@ -32,6 +38,12 @@ export interface SessionState {
 export type BccEvent =
   | { type: "session"; session: SessionState }
   | { type: "userlist"; users: User[]; added: string[]; removed: string[] }
+  | {
+      type: "globalUserlist";
+      channels: Map<string, User[]>; // full snapshot: channel → users
+      added: UserWithChannel[]; // users that just came online (any channel)
+      removed: UserWithChannel[]; // users that just went offline (any channel)
+    }
   | { type: "config"; key: string };
 
 type Listener = (e: BccEvent) => void;

@@ -5,7 +5,7 @@
 // UI components subscribe() and re-render on emit(); this pins the bus contract.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { subscribe, emit, type BccEvent } from "../src/store";
+import { subscribe, emit, type BccEvent, type User, type UserWithChannel } from "../src/store";
 
 // A couple of concrete event shapes the bus must carry (spec §2.2). The union
 // is open in the impl, but these are the ones the data layer emits.
@@ -16,6 +16,36 @@ const userlistEvent: BccEvent = {
   removed: [],
 };
 const configEvent: BccEvent = { type: "config", key: "color_testuser" };
+
+// Fictional fixtures for the global userlist event (spec §New store event).
+// Usernames are placeholders, not real chat users.
+const alice: User = {
+  name: "Alice",
+  key: "alice",
+  registered: true,
+  guest: false,
+  sep: false,
+  away: false,
+};
+const bob: User = {
+  name: "Bob",
+  key: "bob",
+  registered: false,
+  guest: true,
+  sep: false,
+  away: true,
+};
+const aliceInErotik: UserWithChannel = { user: alice, channel: "Erotik" };
+
+const globalUserlistEvent: BccEvent = {
+  type: "globalUserlist",
+  channels: new Map([
+    ["Erotik", [alice]],
+    ["Women-Corner", [bob]],
+  ]),
+  added: [aliceInErotik],
+  removed: [],
+};
 
 describe("event bus — subscribe / emit", () => {
   beforeEach(() => {
@@ -30,6 +60,27 @@ describe("event bus — subscribe / emit", () => {
     emit(userlistEvent);
     expect(fn).toHaveBeenCalledTimes(1);
     expect(fn).toHaveBeenCalledWith(userlistEvent);
+    off();
+  });
+
+  it('delivers a "globalUserlist" event with its full shape (spec §New store event)', () => {
+    // The global userlist carries the full per-channel snapshot plus the
+    // UserWithChannel[] diffs. This pins the discriminated-union contract so
+    // global-userlist.ts and the sidebar can rely on the shape.
+    let received: BccEvent | undefined;
+    const off = subscribe((e: BccEvent) => {
+      received = e;
+    });
+    emit(globalUserlistEvent);
+    expect(received).toBe(globalUserlistEvent);
+    if (received?.type === "globalUserlist") {
+      expect(received.channels).toBe(globalUserlistEvent.channels);
+      expect(received.channels.get("Erotik")).toEqual([alice]);
+      expect(received.added).toEqual([aliceInErotik]);
+      expect(received.removed).toEqual([]);
+    } else {
+      throw new Error("expected a globalUserlist event");
+    }
     off();
   });
 
