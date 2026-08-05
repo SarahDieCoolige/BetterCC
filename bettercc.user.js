@@ -2109,29 +2109,42 @@
       unsafeWindow.bettercc.reloadChat();
     });
   }
-  function buildColorSwatch() {
+  function buildColorPicker(title, name, defaultColor, onInput) {
     const wrap = document.createElement("label");
     wrap.className = "bcc-color-btn bcc-color-picker-wrap";
-    wrap.title = "Thema-Farbe w\xE4hlen";
+    wrap.title = title;
+    wrap.setAttribute("aria-label", title);
     const input = document.createElement("input");
     input.type = "color";
-    input.name = "bcc-color";
+    input.name = name;
     input.className = "bcc-color-input";
-    input.setAttribute("aria-label", "Thema-Farbe w\xE4hlen");
-    input.value = "#6aaed8";
-    getConfig("color", "6AAED8").then((hex) => {
-      input.value = "#" + String(hex).replace(/^#/, "");
-      wrap.style.setProperty("--swatch-color", input.value);
-    });
+    input.value = defaultColor;
     input.addEventListener("input", () => {
-      const baseHex = input.value.replace(/^#/, "").toUpperCase();
+      const hex = input.value.replace(/^#/, "").toUpperCase();
       wrap.style.setProperty("--swatch-color", input.value);
-      saveColor(baseHex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
-        cclog("color swatch: saveColor failed \u2014 " + e.message, "v3");
-      });
+      onInput(hex);
     });
     wrap.appendChild(input);
     return wrap;
+  }
+  function buildColorSwatch() {
+    const picker = buildColorPicker("Thema-Farbe w\xE4hlen", "bcc-color", "#6aaed8", (hex) => {
+      saveColor(hex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
+        cclog("color swatch: saveColor failed \u2014 " + e.message, "v3");
+      });
+    });
+    getConfig("color", "6AAED8").then((hex) => {
+      const input = picker.querySelector("input");
+      input.value = "#" + String(hex).replace(/^#/, "");
+      picker.style.setProperty("--swatch-color", input.value);
+    });
+    return picker;
+  }
+  function comSetBtn(cls, title, cmd) {
+    return iconBtn(cls, title, () => {
+      const w = unsafeWindow;
+      if (typeof w.com_set === "function") w.com_set(cmd);
+    });
   }
   function buildChatPill() {
     const awayBtn = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
@@ -2147,14 +2160,8 @@
       "bcc-chat",
       awayBtn,
       backBtn,
-      iconBtn("b5", "Systemmeldungen an", () => {
-        const w = unsafeWindow;
-        if (typeof w.com_set === "function") w.com_set("/messageon");
-      }),
-      iconBtn("b6", "Systemmeldungen aus", () => {
-        const w = unsafeWindow;
-        if (typeof w.com_set === "function") w.com_set("/messageoff");
-      }),
+      comSetBtn("b5", "Systemmeldungen an", "/messageon"),
+      comSetBtn("b6", "Systemmeldungen aus", "/messageoff"),
       autoscrollBtn,
       reloadBtn
     );
@@ -2199,23 +2206,11 @@
     const help = iconBtn("b1", "Chat-Hilfe (extern)", () => {
       window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
     });
-    const nickColor = document.createElement("label");
-    nickColor.className = "bcc-color-btn bcc-color-picker-wrap";
-    nickColor.title = "Nick-Farbe w\xE4hlen";
-    const nickInput = document.createElement("input");
-    nickInput.type = "color";
-    nickInput.name = "bcc-nick-color";
-    nickInput.className = "bcc-color-input";
-    nickInput.setAttribute("aria-label", "Nick-Farbe w\xE4hlen");
-    nickInput.value = "#aa0000";
-    nickInput.addEventListener("input", () => {
-      const hex = nickInput.value.replace(/^#/, "").toUpperCase();
+    const nickColor = buildColorPicker("Nick-Farbe w\xE4hlen", "bcc-nick-color", "#aa0000", (hex) => {
       const w = unsafeWindow;
       if (typeof w.color_set === "function") w.color_set(hex);
       else cclog("nick-color: upstream color_set not found", "v3");
-      nickColor.style.setProperty("--swatch-color", nickInput.value);
     });
-    nickColor.appendChild(nickInput);
     return pill(2, "bcc-links", id, forum, nickColor, help);
   }
   function buildExitBtn() {

@@ -92,40 +92,67 @@ function buildReloadBtn(): HTMLButtonElement {
 }
 
 /**
- * Local color picker swatch — a native <input type="color"> styled as a color
- * circle. oninput regenerates the scheme via saveColor (writes --bcc-* to
- * .bcc-shell + mirrors into the iframe). Seeds from the stored base color.
+ * Build a color-picker swatch — <label> wrapping an invisible <input type="color">.
+ * `onInput` receives the uppercase hex string (no # prefix).
  */
-function buildColorSwatch(): HTMLElement {
+function buildColorPicker(
+  title: string,
+  name: string,
+  defaultColor: string,
+  onInput: (hex: string) => void,
+): HTMLElement {
   const wrap = document.createElement("label");
   wrap.className = "bcc-color-btn bcc-color-picker-wrap";
-  wrap.title = "Thema-Farbe wählen";
+  wrap.title = title;
+  wrap.setAttribute("aria-label", title);
 
   const input = document.createElement("input");
   input.type = "color";
-  input.name = "bcc-color";
+  input.name = name;
   input.className = "bcc-color-input";
-  input.setAttribute("aria-label", "Thema-Farbe wählen");
-  input.value = "#6aaed8"; // default until the stored color loads
-
-  getConfig("color", "6AAED8").then((hex) => {
-    input.value = "#" + String(hex).replace(/^#/, "");
-    wrap.style.setProperty("--swatch-color", input.value);
-  });
+  input.value = defaultColor;
 
   input.addEventListener("input", () => {
-    const baseHex = input.value.replace(/^#/, "").toUpperCase();
+    const hex = input.value.replace(/^#/, "").toUpperCase();
     wrap.style.setProperty("--swatch-color", input.value);
-    saveColor(baseHex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
-      cclog("color swatch: saveColor failed — " + (e as Error).message, "v3");
-    });
+    onInput(hex);
   });
 
   wrap.appendChild(input);
   return wrap;
 }
 
-// ─── Chat pill — upstream chat-interaction controls (4-col, 7 items) ───────
+/**
+ * Local theme color picker. oninput regenerates the scheme via saveColor
+ * (writes --bcc-* to .bcc-shell + mirrors into the iframe).
+ * Seeds from the stored base color.
+ */
+function buildColorSwatch(): HTMLElement {
+  const picker = buildColorPicker("Thema-Farbe wählen", "bcc-color", "#6aaed8", (hex) => {
+    saveColor(hex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
+      cclog("color swatch: saveColor failed — " + (e as Error).message, "v3");
+    });
+  });
+
+  // Load stored color asynchronously.
+  getConfig("color", "6AAED8").then((hex) => {
+    const input = picker.querySelector("input")!;
+    input.value = "#" + String(hex).replace(/^#/, "");
+    picker.style.setProperty("--swatch-color", input.value);
+  });
+
+  return picker;
+}
+
+/** Run an upstream com_set command (e.g. "/messageon", "/messageoff"). */
+function comSetBtn(cls: string, title: string, cmd: string): HTMLButtonElement {
+  return iconBtn(cls, title, () => {
+    const w = unsafeWindow as any;
+    if (typeof w.com_set === "function") w.com_set(cmd);
+  });
+}
+
+// ─── Chat pill — upstream chat-interaction controls (4-col, 6 items) ───────
 // Groups all upstream ChatCity controls that were previously spread across
 // the Account pill, Chat-actions pill, and standalone nick-color picker.
 
@@ -144,14 +171,8 @@ function buildChatPill(): HTMLElement {
     "bcc-chat",
     awayBtn,
     backBtn,
-    iconBtn("b5", "Systemmeldungen an", () => {
-      const w = unsafeWindow as any;
-      if (typeof w.com_set === "function") w.com_set("/messageon");
-    }),
-    iconBtn("b6", "Systemmeldungen aus", () => {
-      const w = unsafeWindow as any;
-      if (typeof w.com_set === "function") w.com_set("/messageoff");
-    }),
+    comSetBtn("b5", "Systemmeldungen an", "/messageon"),
+    comSetBtn("b6", "Systemmeldungen aus", "/messageoff"),
     autoscrollBtn,
     reloadBtn,
   );
@@ -209,25 +230,13 @@ function buildLinksPill(): HTMLElement {
   });
 
 
-  // Nick-color picker (built inline — same pattern as buildColorSwatch)
-  const nickColor = document.createElement("label");
-  nickColor.className = "bcc-color-btn bcc-color-picker-wrap";
-  nickColor.title = "Nick-Farbe wählen";
-  const nickInput = document.createElement("input");
-  nickInput.type = "color";
-  nickInput.name = "bcc-nick-color";
-  nickInput.className = "bcc-color-input";
-  nickInput.setAttribute("aria-label", "Nick-Farbe wählen");
-  nickInput.value = "#aa0000";
-  nickInput.addEventListener("input", () => {
-    const hex = nickInput.value.replace(/^#/, "").toUpperCase();
+  // Nick-color picker — calls upstream color_set on change.
+  const nickColor = buildColorPicker("Nick-Farbe wählen", "bcc-nick-color", "#aa0000", (hex) => {
     const w = unsafeWindow as any;
     if (typeof w.color_set === "function") w.color_set(hex);
     else cclog("nick-color: upstream color_set not found", "v3");
-    nickColor.style.setProperty("--swatch-color", nickInput.value);
   });
-  nickColor.appendChild(nickInput);
-  
+
   return pill(2, "bcc-links", id, forum, nickColor, help);
 }
 
