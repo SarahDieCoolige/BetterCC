@@ -2085,12 +2085,15 @@
     for (const c of children) p.appendChild(c);
     return p;
   }
+  function callUpstream(fn, ...args) {
+    const w = unsafeWindow;
+    if (typeof w[fn] === "function") w[fn](...args);
+  }
   function sendSlashCommand(cmd) {
     const docHold = document.hold;
     if (!docHold) return;
     docHold.OUT1.value = cmd;
-    const w = unsafeWindow;
-    if (typeof w.delout === "function") w.delout();
+    callUpstream("delout");
   }
   function buildAutoscrollBtn() {
     const btn = iconBtn("fa-angle-double-down", "Autoscroll ein/aus", () => {
@@ -2141,10 +2144,7 @@
     return picker;
   }
   function comSetBtn(cls, title, cmd) {
-    return iconBtn(cls, title, () => {
-      const w = unsafeWindow;
-      if (typeof w.com_set === "function") w.com_set(cmd);
-    });
+    return iconBtn(cls, title, () => callUpstream("com_set", cmd));
   }
   function buildChatPill() {
     const awayBtn = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
@@ -2207,17 +2207,12 @@
       window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
     });
     const nickColor = buildColorPicker("Nick-Farbe w\xE4hlen", "bcc-nick-color", "#aa0000", (hex) => {
-      const w = unsafeWindow;
-      if (typeof w.color_set === "function") w.color_set(hex);
-      else cclog("nick-color: upstream color_set not found", "v3");
+      callUpstream("color_set", hex);
     });
     return pill(2, "bcc-links", id, forum, nickColor, help);
   }
   function buildExitBtn() {
-    const btn = iconBtn("b7", "Verlassen", () => {
-      const w = unsafeWindow;
-      if (typeof w.bye === "function") w.bye();
-    });
+    const btn = iconBtn("b7", "Verlassen", () => callUpstream("bye"));
     btn.classList.add("bcc-danger");
     return btn;
   }

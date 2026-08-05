@@ -63,13 +63,18 @@ function pill(columns: number, extraClass: string, ...children: HTMLElement[]): 
   return p;
 }
 
+/** Call an upstream function by name if it exists. */
+function callUpstream(fn: string, ...args: string[]): void {
+  const w = unsafeWindow as any;
+  if (typeof w[fn] === "function") w[fn](...args);
+}
+
 /** Run an upstream "set OUT1 + delout" command (/away, /awayoff, /bye…). */
 function sendSlashCommand(cmd: string): void {
   const docHold = (document as any).hold;
   if (!docHold) return;
   docHold.OUT1.value = cmd;
-  const w = unsafeWindow as any;
-  if (typeof w.delout === "function") w.delout();
+  callUpstream("delout");
 }
 
 function buildAutoscrollBtn(): HTMLButtonElement {
@@ -146,10 +151,7 @@ function buildColorSwatch(): HTMLElement {
 
 /** Run an upstream com_set command (e.g. "/messageon", "/messageoff"). */
 function comSetBtn(cls: string, title: string, cmd: string): HTMLButtonElement {
-  return iconBtn(cls, title, () => {
-    const w = unsafeWindow as any;
-    if (typeof w.com_set === "function") w.com_set(cmd);
-  });
+  return iconBtn(cls, title, () => callUpstream("com_set", cmd));
 }
 
 // ─── Chat pill — upstream chat-interaction controls (4-col, 6 items) ───────
@@ -232,9 +234,7 @@ function buildLinksPill(): HTMLElement {
 
   // Nick-color picker — calls upstream color_set on change.
   const nickColor = buildColorPicker("Nick-Farbe wählen", "bcc-nick-color", "#aa0000", (hex) => {
-    const w = unsafeWindow as any;
-    if (typeof w.color_set === "function") w.color_set(hex);
-    else cclog("nick-color: upstream color_set not found", "v3");
+    callUpstream("color_set", hex);
   });
 
   return pill(2, "bcc-links", id, forum, nickColor, help);
@@ -243,10 +243,7 @@ function buildLinksPill(): HTMLElement {
 // ─── Group 4: Exit (red, standalone) ───────────────────────────────────────
 
 function buildExitBtn(): HTMLElement {
-  const btn = iconBtn("b7", "Verlassen", () => {
-    const w = unsafeWindow as any;
-    if (typeof w.bye === "function") w.bye();
-  });
+  const btn = iconBtn("b7", "Verlassen", () => callUpstream("bye"));
   btn.classList.add("bcc-danger");
   return btn;
 }
