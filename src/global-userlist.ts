@@ -34,10 +34,7 @@ export interface GlobalDiff {
  * channel). Status/guest-flag changes are NOT add/remove — like
  * diffUserlists, only presence per channel matters.
  */
-export function diffGlobal(
-  prev: Map<string, User[]>,
-  next: Map<string, User[]>,
-): GlobalDiff {
+export function diffGlobal(prev: Map<string, User[]>, next: Map<string, User[]>): GlobalDiff {
   const added: UserWithChannel[] = [];
   const removed: UserWithChannel[] = [];
   for (const [channel, users] of next) {

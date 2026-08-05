@@ -40,11 +40,13 @@ import type { BccColorScheme } from "./scheme";
 import { enableV2Scheme } from "./scheme";
 import { getConfig } from "./config";
 import { overrideSetUinfo1 } from "./userlist-wire";
+import { startPolling, stopPolling } from "./global-userlist";
 import { mountSidebar } from "./sidebar";
 import { mountStatsBar } from "./stats";
 import { initSession } from "./session";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
+import { subscribe, type BccEvent } from "./store";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (deleted with ui.ts)
@@ -131,6 +133,14 @@ export function initV3(): void {
   // does diff-and-patch rendering (reuses DOM nodes, never innerHTML).
   // Must be after buildShell() so .bcc-sidebar exists.
   mountSidebar();
+
+  // Start the global userlist poll (aw.js, every 5s). Must be AFTER mountSidebar
+  // so the sidebar is subscribed before the first "globalUserlist" event fires.
+  // Stop polling when the session is dead — no point fetching aw.js.
+  startPolling(5000);
+  subscribe((e: BccEvent) => {
+    if (e.type === "session" && e.session.authDead) stopPolling();
+  });
 
   // Mount the stats bar (Freunde Online / Anfragen / Nachrichten badges) at the
   // TOP of the sidebar, above the online-count heading. Polled from

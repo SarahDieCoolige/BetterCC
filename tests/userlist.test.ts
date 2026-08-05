@@ -201,7 +201,7 @@ describe("parseAw — aw.js JS source → Map<channel, User[]>", () => {
     // Real aw.js shape: each tuple is "channel","count","name name ..." and the
     // user list string carries a trailing space; the array ends with "").
     const raw = [
-      'var cha = new Array(',
+      "var cha = new Array(",
       '"MOD","1","TestUser ",',
       '"Chatcity","1","SomeGuest^12345 ",',
       '"Erotik","2","Beta01_ GastUser ",',
@@ -251,10 +251,26 @@ describe("parseAw — aw.js JS source → Map<channel, User[]>", () => {
   });
 
   it("strips the ^id guest suffix and sets guest: true", () => {
-    const map = parseAw('var cha = new Array("Chatcity","2","SomeGuest^12345 OtherGuest^678 ","");');
+    const map = parseAw(
+      'var cha = new Array("Chatcity","2","SomeGuest^12345 OtherGuest^678 ","");',
+    );
     expect(map.get("Chatcity")).toEqual([
-      { name: "SomeGuest", key: "someguest", registered: false, guest: true, sep: false, away: false },
-      { name: "OtherGuest", key: "otherguest", registered: false, guest: true, sep: false, away: false },
+      {
+        name: "SomeGuest",
+        key: "someguest",
+        registered: false,
+        guest: true,
+        sep: false,
+        away: false,
+      },
+      {
+        name: "OtherGuest",
+        key: "otherguest",
+        registered: false,
+        guest: true,
+        sep: false,
+        away: false,
+      },
     ]);
   });
 
@@ -294,7 +310,14 @@ describe("parseAw — aw.js JS source → Map<channel, User[]>", () => {
     expect(map.size).toBe(2);
     expect(map.get("MOD")).toHaveLength(1);
     expect(map.get("Chatcity")).toEqual([
-      { name: "SomeGuest", key: "someguest", registered: false, guest: true, sep: false, away: false },
+      {
+        name: "SomeGuest",
+        key: "someguest",
+        registered: false,
+        guest: true,
+        sep: false,
+        away: false,
+      },
     ]);
   });
 
