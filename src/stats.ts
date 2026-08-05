@@ -10,9 +10,8 @@
 // Only the pure parser (parseStats) is unit-tested; the DOM builder + poller
 // are verified via the dev-server smoke (consistent with sidebar.ts / shell.ts).
 
-import { cclog } from "./utils";
+import { cclog, encodeChatLink } from "./utils";
 import { getChatNick } from "./upstream";
-import { encodeChatLink } from "./utils";
 
 /** The three counts parsed from the chat_info_friends_nc.html response. */
 export interface Stats {
@@ -62,10 +61,6 @@ export function parseStats(html: string): Stats {
     messages: read("unc"),
   };
 }
-
-/**
- * Encode a nick for a ChatCity URL path — see utils.ts.
- */
 
 /** The three badge specs: CSS class, Font Awesome icon, and popup URL target. */
 interface BadgeSpec {

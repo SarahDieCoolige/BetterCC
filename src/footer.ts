@@ -189,12 +189,12 @@ function buildBetterccPill(): HTMLElement {
   return pill(
     2,
     "bcc-bettercc",
-	    buildColorSwatch(),
-	    iconBtn("fa-cog", "Einstellungen", () => {
-	      cclog("settings clicked — stub (T10)", "v3");
-	    }),
-	    schemeToggle,
-	    iconBtn("fa-circle-info", "Hilfe", () => printHelp()),
+    buildColorSwatch(),
+    iconBtn("fa-cog", "Einstellungen", () => {
+      cclog("settings clicked — stub (T10)", "v3");
+    }),
+    schemeToggle,
+    iconBtn("fa-circle-info", "Hilfe", () => printHelp()),
   );
 }
 
@@ -211,7 +211,6 @@ function buildLinksPill(): HTMLElement {
   const help = iconBtn("b1", "Chat-Hilfe (extern)", () => {
     window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
   });
-
 
   // Nick-color picker — calls upstream color_set on change.
   const nickColor = buildColorPicker("Nick-Farbe wählen", "bcc-nick-color", "#aa0000", (hex) => {
@@ -263,9 +262,7 @@ function injectFontAwesome(): void {
 function setToggleState(btn: HTMLElement, compact: boolean): void {
   btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
   btn.setAttribute("aria-label", btn.title);
-  btn.querySelector("i")!.className = compact
-    ? "fas fa-chevron-up"
-    : "fas fa-chevron-down";
+  btn.querySelector("i")!.className = compact ? "fas fa-chevron-up" : "fas fa-chevron-down";
 }
 
 function buildCompactToggle(): HTMLElement {
@@ -306,12 +303,7 @@ export function mountFooter(): void {
 
   // Append the pill groups AFTER the textarea (mountInput already put
   // .bcc-input-area first; it's flex:1 so these sit to its right).
-  chatbar.append(
-    buildChatPill(),
-    buildBetterccPill(),
-    buildLinksPill(),
-    buildExitBtn(),
-  );
+  chatbar.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
 
   // R3: also track the header reload button so setstatus colors it too.
   const headerReload = document.querySelector(".bcc-reload") as HTMLElement | null;

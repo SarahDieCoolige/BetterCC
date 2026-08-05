@@ -4,6 +4,8 @@
 // this module. Exceptions (bootstrapping, WebSocket, AJAX) are documented
 // and deliberate — not leaks.
 //
+import { cclog } from "./utils";
+
 // ── State reads — typed getters for unsafeWindow globals.
 
 /** The current user's nick (empty string if not set, e.g. before init). */
@@ -67,7 +69,11 @@ export function getChannelGroups(): string[] {
  *  "/away", "/j Klassik", "/color AA0000", "/ignore Name", etc. */
 export function sendCommand(cmd: string): void {
   const w = unsafeWindow as any;
-  if (typeof w.com_set === "function") w.com_set(cmd);
+  if (typeof w.com_set === "function") {
+    w.com_set(cmd);
+  } else {
+    cclog("sendCommand: com_set unavailable — dropped: " + cmd, "v3");
+  }
 }
 
 /** Leave the chat — send /bye, then close the window after 1s. */

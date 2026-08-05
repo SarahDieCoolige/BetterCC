@@ -224,17 +224,17 @@ async function superwhisper(whispernick: string, toggle = true): Promise<void> {
     await setConfig("whisper", "");
     currentWhisperNick = "";
 
-	    if (textarea) {
-	      textarea.classList.remove("bcc-superwhisper");
-	      updatePlaceholder();
-	    }
-	  } else {
-	    await setConfig("whisper", whispernick);
-	    currentWhisperNick = whispernick;
-	    if (textarea) {
-	      textarea.classList.add("bcc-superwhisper");
-	      updatePlaceholder();
-	    }
+    if (textarea) {
+      textarea.classList.remove("bcc-superwhisper");
+      updatePlaceholder();
+    }
+  } else {
+    await setConfig("whisper", whispernick);
+    currentWhisperNick = whispernick;
+    if (textarea) {
+      textarea.classList.add("bcc-superwhisper");
+      updatePlaceholder();
+    }
   }
 }
 
