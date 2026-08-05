@@ -1,26 +1,22 @@
-// ─── v3 chatbar footer — pill groups matching the v2 footer design ───────
+// ─── v3 chatbar footer — pill groups by origin ─────────────────────────────
 //
 // Builds the pill groups that sit to the RIGHT of the textarea in .bcc-chatbar
-// (mountInput builds the textarea on the left). Matches the v2 footer layout:
-// grouped icon buttons in translucent rounded "pill" containers, plus a row of
-// preset nick-color circles and a red exit button.
+// (mountInput builds the textarea on the left). Pills are organized by origin:
 //
 // Groups (left → right after the textarea):
-//   1. Account pill   — away / awayoff / sysmsg on / off  (upstream fns)
-//   2. Chat actions   — autoscroll + reload + local color picker
-//   3. BetterCC pill  — help + settings
-//   4. Preset colors  — 6 nick-color circles (upstream color_set, NOT local theme)
-//   5. Links pill     — ID + forum + external help
-//   6. Exit           — red sign-out icon button (standalone)
-//
-// The color picker (3) is the LOCAL theme (saveColor → --bcc-*); the preset
-// circles (4) set the SERVER-SIDE nick color via upstream color_set — distinct.
+//   1. Chat pill      — upstream interaction: away / back / sysmsg on/off /
+//                       autoscroll / reload / nick-color picker (4-col, 7 items)
+//   2. BetterCC pill  — our added features: theme color / scheme toggle /
+//                       help / settings (2-col, 4 items)
+//   3. Links pill     — upstream external links: ID / forum / help (2-col)
+//   4. Exit           — red sign-out icon button (standalone, always last)
 
 import { cclog, getUserKey, printHelp } from "./utils";
 import { saveColor, toggleSchemeVersion, getSchemeVersion } from "./theme";
-import { getConfig } from "./config";
+import { getConfig, setConfig } from "./config";
 import { getChatNick } from "./upstream";
 import { actionButton } from "./dom";
+import { updatePlaceholder } from "./input";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.
@@ -65,6 +61,7 @@ function pill(columns: number, extraClass: string, ...children: HTMLElement[]): 
   p.className = columns > 0 ? "bcc-pill bcc-pill-" + columns : "bcc-pill";
   if (extraClass) p.classList.add(extraClass);
   for (const c of children) p.appendChild(c);
+
   return p;
 }
 
@@ -76,25 +73,6 @@ function sendSlashCommand(cmd: string): void {
   const w = unsafeWindow as any;
   if (typeof w.delout === "function") w.delout();
 }
-
-// ─── Group 1: Account / status ─────────────────────────────────────────────
-// away / awayoff via hold.OUT1 + delout; sysmsg on/off via com_set.
-
-function buildAccountPill(): HTMLElement {
-  const away = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
-  const awayOff = iconBtn("b3", "Zurück (/awayoff)", () => sendSlashCommand("/awayoff"));
-  const sysOn = iconBtn("b5", "Systemmeldungen an", () => {
-    const w = unsafeWindow as any;
-    if (typeof w.com_set === "function") w.com_set("/messageon");
-  });
-  const sysOff = iconBtn("b6", "Systemmeldungen aus", () => {
-    const w = unsafeWindow as any;
-    if (typeof w.com_set === "function") w.com_set("/messageoff");
-  });
-  return pill(2, "", away, sysOn, awayOff, sysOff);
-}
-
-// ─── Group 2: Chat actions (autoscroll + reload + local color picker) ──────
 
 function buildAutoscrollBtn(): HTMLButtonElement {
   const btn = iconBtn("fa-angle-double-down", "Autoscroll ein/aus", () => {
@@ -149,9 +127,44 @@ function buildColorSwatch(): HTMLElement {
   return wrap;
 }
 
-function buildChatActionsPill(): HTMLElement {
-  // Scheme-version toggle (v1 ↔ v2, live, no reload) — small button next to
-  // the theme colour swatch so both colour-related controls sit together.
+// ─── Chat pill — upstream chat-interaction controls (4-col, 7 items) ───────
+// Groups all upstream ChatCity controls that were previously spread across
+// the Account pill, Chat-actions pill, and standalone nick-color picker.
+
+function buildChatPill(): HTMLElement {
+  const awayBtn = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
+  const backBtn = iconBtn("b3", "Zurück (/awayoff)", () => sendSlashCommand("/awayoff"));
+  const autoscrollBtn = buildAutoscrollBtn();
+  const reloadBtn = trackReloadButton(buildReloadBtn());
+  awayBtn.classList.add("bcc-keep");
+  backBtn.classList.add("bcc-keep");
+  autoscrollBtn.classList.add("bcc-keep");
+  reloadBtn.classList.add("bcc-keep");
+
+  return pill(
+    4,
+    "bcc-chat",
+    awayBtn,
+    backBtn,
+    iconBtn("b5", "Systemmeldungen an", () => {
+      const w = unsafeWindow as any;
+      if (typeof w.com_set === "function") w.com_set("/messageon");
+    }),
+    iconBtn("b6", "Systemmeldungen aus", () => {
+      const w = unsafeWindow as any;
+      if (typeof w.com_set === "function") w.com_set("/messageoff");
+    }),
+    autoscrollBtn,
+    reloadBtn,
+  );
+}
+
+// ─── BetterCC pill — our added features (2-col, 4 items) ───────────────────
+// Theme color picker + scheme toggle moved here from the old Chat-actions pill
+// because they are BetterCC features, not upstream controls.
+
+function buildBetterccPill(): HTMLElement {
+  // Scheme-version toggle (v1 ↔ v2, live, no reload)
   const schemeToggle = document.createElement("button");
   schemeToggle.type = "button";
   schemeToggle.className = "bcc-icon-btn";
@@ -171,63 +184,19 @@ function buildChatActionsPill(): HTMLElement {
     schemeToggle.style.pointerEvents = "";
   });
 
-  // 2-column pill (autoscroll + reload on row 1); the color swatch + scheme
-  // toggle share row 2 via the .bcc-chat-actions rule in v3.css.
   return pill(
     2,
-    "bcc-chat-actions",
-    buildAutoscrollBtn(),
-    trackReloadButton(buildReloadBtn()),
-    buildColorSwatch(),
-    schemeToggle,
+    "bcc-bettercc",
+	    buildColorSwatch(),
+	    iconBtn("fa-cog", "Einstellungen", () => {
+	      cclog("settings clicked — stub (T10)", "v3");
+	    }),
+	    schemeToggle,
+	    iconBtn("fa-circle-info", "Hilfe", () => printHelp()),
   );
 }
 
-// ─── Group 3: BetterCC (help + settings) ───────────────────────────────────
-
-function buildBetterccPill(): HTMLElement {
-  const help = iconBtn("fa-question", "Hilfe", () => printHelp());
-  const settings = iconBtn("fa-cog", "Einstellungen", () => {
-    cclog("settings clicked — stub (T10)", "v3");
-  });
-  // Bare .bcc-pill — single centered column, help above settings (matches v2
-  // "BetterCC pill" which had no grid-template-columns override).
-  return pill(0, "", help, settings);
-}
-
-// ─── Group 4: Preset nick-color circles (upstream color_set) ───────────────
-// These set the SERVER-SIDE nick color (what other chatters see) via
-// color_set('/color HEX') → com_set → AJAX /chatin. Distinct from the local
-// theme picker above.
-
-const PRESET_COLORS: ReadonlyArray<readonly [cls: string, hex: string]> = [
-  ["b10", "AA0000"], // red
-  ["b13", "00AA00"], // green
-  ["b14", "0000AA"], // blue
-  ["b8", "AAAA00"], // yellow
-  ["b12", "00AAAA"], // cyan
-  ["b11", "AA00AA"], // magenta
-];
-
-function buildPresetColorPill(): HTMLElement {
-  const children = PRESET_COLORS.map(([cls, hex]) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-color-btn " + cls;
-    btn.title = "Nick-Farbe #" + hex;
-    btn.setAttribute("aria-label", "Nick-Farbe auf #" + hex + " setzen");
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const w = unsafeWindow as any;
-      if (typeof w.color_set === "function") w.color_set(hex);
-      else cclog("preset color: upstream color_set not found", "v3");
-    });
-    return btn;
-  });
-  return pill(3, "", ...children);
-}
-
-// ─── Group 5: Links (ID + forum + external help) ───────────────────────────
+// ─── Group 3: Links (ID + forum + external help) ───────────────────────────
 
 function buildLinksPill(): HTMLElement {
   const id = iconBtn("b16", "Eigene ID", () => {
@@ -240,10 +209,31 @@ function buildLinksPill(): HTMLElement {
   const help = iconBtn("b1", "Chat-Hilfe (extern)", () => {
     window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
   });
-  return pill(2, "bcc-links", id, forum, help);
+
+
+  // Nick-color picker (built inline — same pattern as buildColorSwatch)
+  const nickColor = document.createElement("label");
+  nickColor.className = "bcc-color-btn bcc-color-picker-wrap";
+  nickColor.title = "Nick-Farbe wählen";
+  const nickInput = document.createElement("input");
+  nickInput.type = "color";
+  nickInput.name = "bcc-nick-color";
+  nickInput.className = "bcc-color-input";
+  nickInput.setAttribute("aria-label", "Nick-Farbe wählen");
+  nickInput.value = "#aa0000";
+  nickInput.addEventListener("input", () => {
+    const hex = nickInput.value.replace(/^#/, "").toUpperCase();
+    const w = unsafeWindow as any;
+    if (typeof w.color_set === "function") w.color_set(hex);
+    else cclog("nick-color: upstream color_set not found", "v3");
+    nickColor.style.setProperty("--swatch-color", nickInput.value);
+  });
+  nickColor.appendChild(nickInput);
+  
+  return pill(2, "bcc-links", id, forum, nickColor, help);
 }
 
-// ─── Group 6: Exit (red, standalone) ───────────────────────────────────────
+// ─── Group 4: Exit (red, standalone) ───────────────────────────────────────
 
 function buildExitBtn(): HTMLElement {
   const btn = iconBtn("b7", "Verlassen", () => {
@@ -279,6 +269,36 @@ function injectFontAwesome(): void {
   document.head.appendChild(link);
 }
 
+// ─── Compact-mode toggle ──────────────────────────────────────────────────
+// Small chevron at the left edge of the chatbar (before the textarea).
+// ▼ = collapse bar down (compact), ▲ = expand bar up.
+// Toggles .bcc-compact on the chatbar. State persisted to GM storage
+// (key compact_{user}) so it survives page refresh.
+
+function buildCompactToggle(): HTMLElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "bcc-compact-toggle";
+  btn.title = "Chatbar komprimieren";
+  btn.setAttribute("aria-label", "Chatbar komprimieren");
+  btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+
+  btn.addEventListener("click", async () => {
+    const chatbar = document.querySelector(".bcc-chatbar");
+    if (!chatbar) return;
+    const compact = chatbar.classList.toggle("bcc-compact");
+    btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
+    btn.setAttribute("aria-label", btn.title);
+    btn.querySelector("i")!.className = compact
+      ? "fas fa-chevron-up"
+      : "fas fa-chevron-down";
+    updatePlaceholder();
+    await setConfig("compact", compact ? "1" : "");
+  });
+
+  return btn;
+}
+
 // ─── Mount ─────────────────────────────────────────────────────────────────
 
 export function mountFooter(): void {
@@ -287,13 +307,19 @@ export function mountFooter(): void {
 
   injectFontAwesome();
 
-  // Append the pill groups AFTER the textarea area (mountInput already put
+  // Insert compact toggle between textarea and first pill.
+  const firstPill = chatbar.querySelector(".bcc-chat") as HTMLElement | null;
+  if (firstPill) {
+    chatbar.insertBefore(buildCompactToggle(), firstPill);
+  } else {
+    chatbar.append(buildCompactToggle());
+  }
+
+  // Append the pill groups AFTER the textarea (mountInput already put
   // .bcc-input-area first; it's flex:1 so these sit to its right).
   chatbar.append(
-    buildAccountPill(),
-    buildChatActionsPill(),
+    buildChatPill(),
     buildBetterccPill(),
-    buildPresetColorPill(),
     buildLinksPill(),
     buildExitBtn(),
   );
@@ -305,4 +331,18 @@ export function mountFooter(): void {
   patchSetStatus();
 
   cclog("footer mounted — pill groups + FA + setstatus patch", "v3");
+
+  // Restore persisted compact state
+  getConfig("compact", "").then((v) => {
+    if (v) {
+      chatbar.classList.add("bcc-compact");
+      const toggle = chatbar.querySelector(".bcc-compact-toggle") as HTMLElement | null;
+      if (toggle) {
+        toggle.title = "Chatbar erweitern";
+        toggle.setAttribute("aria-label", "Chatbar erweitern");
+        toggle.querySelector("i")!.className = "fas fa-chevron-up";
+      }
+      updatePlaceholder();
+    }
+  });
 }

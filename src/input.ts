@@ -22,6 +22,12 @@ function placeholderFor(nick: string): string {
   return "Du flüsterst mit " + nick + "...\n\n" + HINTS_WHISPER;
 }
 
+// Compact-mode placeholder — single line for the 2-line textarea.
+const PLACEHOLDER_COMPACT_ALL = "Nachricht...  |  /sw Name  |  /o Hi all  |  /help";
+function placeholderCompactFor(nick: string): string {
+  return "Flüstern zu " + nick + "...  |  /open  |  /o Hi all  |  /help";
+}
+
 // ─── The send-path decision (pure — extracted from doSubmit, tested) ───────
 //
 // Given the raw textarea message and the active whisper nick, decide what to
@@ -218,17 +224,17 @@ async function superwhisper(whispernick: string, toggle = true): Promise<void> {
     await setConfig("whisper", "");
     currentWhisperNick = "";
 
-    if (textarea) {
-      textarea.classList.remove("bcc-superwhisper");
-      textarea.placeholder = PLACEHOLDER_ALL;
-    }
-  } else {
-    await setConfig("whisper", whispernick);
-    currentWhisperNick = whispernick;
-    if (textarea) {
-      textarea.classList.add("bcc-superwhisper");
-      textarea.placeholder = placeholderFor(whispernick);
-    }
+	    if (textarea) {
+	      textarea.classList.remove("bcc-superwhisper");
+	      updatePlaceholder();
+	    }
+	  } else {
+	    await setConfig("whisper", whispernick);
+	    currentWhisperNick = whispernick;
+	    if (textarea) {
+	      textarea.classList.add("bcc-superwhisper");
+	      updatePlaceholder();
+	    }
   }
 }
 
@@ -274,6 +280,8 @@ export function mountInput(): void {
   (unsafeWindow.bettercc as any).onSubmit = doSubmit;
   (unsafeWindow.bettercc as any).superwhisper = superwhisper;
   (unsafeWindow.bettercc as any).prefillWhisper = prefillWhisper;
+  // Expose placeholder update for the compact toggle
+  (unsafeWindow.bettercc as any).updatePlaceholder = updatePlaceholder;
 
   // Restore any previously-set superwhisper
   getConfig("whisper", "").then((nick) => {
@@ -284,5 +292,23 @@ export function mountInput(): void {
   // Auto-focus the textarea so users can type immediately
   if (textarea) textarea.focus();
 
+  // Set initial placeholder — compact state is restored async in mountFooter,
+  // but call here so it's correct once the class lands.
+  updatePlaceholder();
+
   cclog("input mounted — textarea + whisper indicator + send contract", "v3");
+}
+
+/** Update the placeholder based on compact mode. Called by the toggle button. */
+export function updatePlaceholder(): void {
+  if (!textarea) return;
+  const chatbar = document.querySelector(".bcc-chatbar");
+  const compact = chatbar?.classList.contains("bcc-compact");
+  if (currentWhisperNick) {
+    textarea.placeholder = compact
+      ? placeholderCompactFor(currentWhisperNick)
+      : placeholderFor(currentWhisperNick);
+  } else {
+    textarea.placeholder = compact ? PLACEHOLDER_COMPACT_ALL : PLACEHOLDER_ALL;
+  }
 }

@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=9f6aa41b
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=f43ba929
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -562,7 +562,9 @@
     pinned: [],
     whisper: "",
     // "" = no superwhisper target
-    scheme_v2: false
+    scheme_v2: false,
+    compact: ""
+    // "" = chatbar expanded; "1" = compact mode
   };
   async function getConfig(key, fallback) {
     const def = fallback ?? DEFAULTS[key];
@@ -1873,6 +1875,10 @@
   function placeholderFor(nick) {
     return "Du fl\xFCsterst mit " + nick + "...\n\n" + HINTS_WHISPER;
   }
+  var PLACEHOLDER_COMPACT_ALL = "Nachricht...  |  /sw Name  |  /o Hi all  |  /help";
+  function placeholderCompactFor(nick) {
+    return "Fl\xFCstern zu " + nick + "...  |  /open  |  /o Hi all  |  /help";
+  }
   function prepareMessage(rawMsg, whisperNick) {
     const cmd = classifyMessage(rawMsg);
     if (cmd.handled) {
@@ -2001,14 +2007,14 @@
       currentWhisperNick = "";
       if (textarea) {
         textarea.classList.remove("bcc-superwhisper");
-        textarea.placeholder = PLACEHOLDER_ALL;
+        updatePlaceholder();
       }
     } else {
       await setConfig("whisper", whispernick);
       currentWhisperNick = whispernick;
       if (textarea) {
         textarea.classList.add("bcc-superwhisper");
-        textarea.placeholder = placeholderFor(whispernick);
+        updatePlaceholder();
       }
     }
   }
@@ -2040,12 +2046,24 @@
     unsafeWindow.bettercc.onSubmit = doSubmit;
     unsafeWindow.bettercc.superwhisper = superwhisper;
     unsafeWindow.bettercc.prefillWhisper = prefillWhisper;
+    unsafeWindow.bettercc.updatePlaceholder = updatePlaceholder;
     getConfig("whisper", "").then((nick) => {
       const n = nick || "";
       if (n) superwhisper(n, false);
     });
     if (textarea) textarea.focus();
+    updatePlaceholder();
     cclog("input mounted \u2014 textarea + whisper indicator + send contract", "v3");
+  }
+  function updatePlaceholder() {
+    if (!textarea) return;
+    const chatbar = document.querySelector(".bcc-chatbar");
+    const compact = chatbar?.classList.contains("bcc-compact");
+    if (currentWhisperNick) {
+      textarea.placeholder = compact ? placeholderCompactFor(currentWhisperNick) : placeholderFor(currentWhisperNick);
+    } else {
+      textarea.placeholder = compact ? PLACEHOLDER_COMPACT_ALL : PLACEHOLDER_ALL;
+    }
   }
 
   // src/footer.ts
@@ -2073,19 +2091,6 @@
     docHold.OUT1.value = cmd;
     const w = unsafeWindow;
     if (typeof w.delout === "function") w.delout();
-  }
-  function buildAccountPill() {
-    const away = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
-    const awayOff = iconBtn("b3", "Zur\xFCck (/awayoff)", () => sendSlashCommand("/awayoff"));
-    const sysOn = iconBtn("b5", "Systemmeldungen an", () => {
-      const w = unsafeWindow;
-      if (typeof w.com_set === "function") w.com_set("/messageon");
-    });
-    const sysOff = iconBtn("b6", "Systemmeldungen aus", () => {
-      const w = unsafeWindow;
-      if (typeof w.com_set === "function") w.com_set("/messageoff");
-    });
-    return pill(2, "", away, sysOn, awayOff, sysOff);
   }
   function buildAutoscrollBtn() {
     const btn = iconBtn("fa-angle-double-down", "Autoscroll ein/aus", () => {
@@ -2128,7 +2133,33 @@
     wrap.appendChild(input);
     return wrap;
   }
-  function buildChatActionsPill() {
+  function buildChatPill() {
+    const awayBtn = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
+    const backBtn = iconBtn("b3", "Zur\xFCck (/awayoff)", () => sendSlashCommand("/awayoff"));
+    const autoscrollBtn = buildAutoscrollBtn();
+    const reloadBtn = trackReloadButton(buildReloadBtn());
+    awayBtn.classList.add("bcc-keep");
+    backBtn.classList.add("bcc-keep");
+    autoscrollBtn.classList.add("bcc-keep");
+    reloadBtn.classList.add("bcc-keep");
+    return pill(
+      4,
+      "bcc-chat",
+      awayBtn,
+      backBtn,
+      iconBtn("b5", "Systemmeldungen an", () => {
+        const w = unsafeWindow;
+        if (typeof w.com_set === "function") w.com_set("/messageon");
+      }),
+      iconBtn("b6", "Systemmeldungen aus", () => {
+        const w = unsafeWindow;
+        if (typeof w.com_set === "function") w.com_set("/messageoff");
+      }),
+      autoscrollBtn,
+      reloadBtn
+    );
+  }
+  function buildBetterccPill() {
     const schemeToggle = document.createElement("button");
     schemeToggle.type = "button";
     schemeToggle.className = "bcc-icon-btn";
@@ -2148,50 +2179,14 @@
     });
     return pill(
       2,
-      "bcc-chat-actions",
-      buildAutoscrollBtn(),
-      trackReloadButton(buildReloadBtn()),
+      "bcc-bettercc",
       buildColorSwatch(),
-      schemeToggle
+      iconBtn("fa-cog", "Einstellungen", () => {
+        cclog("settings clicked \u2014 stub (T10)", "v3");
+      }),
+      schemeToggle,
+      iconBtn("fa-circle-info", "Hilfe", () => printHelp())
     );
-  }
-  function buildBetterccPill() {
-    const help = iconBtn("fa-question", "Hilfe", () => printHelp());
-    const settings = iconBtn("fa-cog", "Einstellungen", () => {
-      cclog("settings clicked \u2014 stub (T10)", "v3");
-    });
-    return pill(0, "", help, settings);
-  }
-  var PRESET_COLORS = [
-    ["b10", "AA0000"],
-    // red
-    ["b13", "00AA00"],
-    // green
-    ["b14", "0000AA"],
-    // blue
-    ["b8", "AAAA00"],
-    // yellow
-    ["b12", "00AAAA"],
-    // cyan
-    ["b11", "AA00AA"]
-    // magenta
-  ];
-  function buildPresetColorPill() {
-    const children = PRESET_COLORS.map(([cls, hex]) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "bcc-color-btn " + cls;
-      btn.title = "Nick-Farbe #" + hex;
-      btn.setAttribute("aria-label", "Nick-Farbe auf #" + hex + " setzen");
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const w = unsafeWindow;
-        if (typeof w.color_set === "function") w.color_set(hex);
-        else cclog("preset color: upstream color_set not found", "v3");
-      });
-      return btn;
-    });
-    return pill(3, "", ...children);
   }
   function buildLinksPill() {
     const id = iconBtn("b16", "Eigene ID", () => {
@@ -2204,7 +2199,24 @@
     const help = iconBtn("b1", "Chat-Hilfe (extern)", () => {
       window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
     });
-    return pill(2, "bcc-links", id, forum, help);
+    const nickColor = document.createElement("label");
+    nickColor.className = "bcc-color-btn bcc-color-picker-wrap";
+    nickColor.title = "Nick-Farbe w\xE4hlen";
+    const nickInput = document.createElement("input");
+    nickInput.type = "color";
+    nickInput.name = "bcc-nick-color";
+    nickInput.className = "bcc-color-input";
+    nickInput.setAttribute("aria-label", "Nick-Farbe w\xE4hlen");
+    nickInput.value = "#aa0000";
+    nickInput.addEventListener("input", () => {
+      const hex = nickInput.value.replace(/^#/, "").toUpperCase();
+      const w = unsafeWindow;
+      if (typeof w.color_set === "function") w.color_set(hex);
+      else cclog("nick-color: upstream color_set not found", "v3");
+      nickColor.style.setProperty("--swatch-color", nickInput.value);
+    });
+    nickColor.appendChild(nickInput);
+    return pill(2, "bcc-links", id, forum, nickColor, help);
   }
   function buildExitBtn() {
     const btn = iconBtn("b7", "Verlassen", () => {
@@ -2233,15 +2245,38 @@
     link.href = "https://use.fontawesome.com/releases/v6.5.1/css/all.css";
     document.head.appendChild(link);
   }
+  function buildCompactToggle() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-compact-toggle";
+    btn.title = "Chatbar komprimieren";
+    btn.setAttribute("aria-label", "Chatbar komprimieren");
+    btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+    btn.addEventListener("click", async () => {
+      const chatbar = document.querySelector(".bcc-chatbar");
+      if (!chatbar) return;
+      const compact = chatbar.classList.toggle("bcc-compact");
+      btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
+      btn.setAttribute("aria-label", btn.title);
+      btn.querySelector("i").className = compact ? "fas fa-chevron-up" : "fas fa-chevron-down";
+      updatePlaceholder();
+      await setConfig("compact", compact ? "1" : "");
+    });
+    return btn;
+  }
   function mountFooter() {
     const chatbar = document.querySelector(".bcc-chatbar");
     if (!chatbar) return;
     injectFontAwesome();
+    const firstPill = chatbar.querySelector(".bcc-chat");
+    if (firstPill) {
+      chatbar.insertBefore(buildCompactToggle(), firstPill);
+    } else {
+      chatbar.append(buildCompactToggle());
+    }
     chatbar.append(
-      buildAccountPill(),
-      buildChatActionsPill(),
+      buildChatPill(),
       buildBetterccPill(),
-      buildPresetColorPill(),
       buildLinksPill(),
       buildExitBtn()
     );
@@ -2249,6 +2284,18 @@
     if (headerReload) trackReloadButton(headerReload);
     patchSetStatus();
     cclog("footer mounted \u2014 pill groups + FA + setstatus patch", "v3");
+    getConfig("compact", "").then((v) => {
+      if (v) {
+        chatbar.classList.add("bcc-compact");
+        const toggle = chatbar.querySelector(".bcc-compact-toggle");
+        if (toggle) {
+          toggle.title = "Chatbar erweitern";
+          toggle.setAttribute("aria-label", "Chatbar erweitern");
+          toggle.querySelector("i").className = "fas fa-chevron-up";
+        }
+        updatePlaceholder();
+      }
+    });
   }
 
   // src/init.ts

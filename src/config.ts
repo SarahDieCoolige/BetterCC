@@ -22,6 +22,7 @@ export const KNOWN_KEYS = [
   "pinned",
   "whisper",
   "scheme_v2",
+  "compact",
 ] as const;
 export type ConfigKey = (typeof KNOWN_KEYS)[number];
 
@@ -33,6 +34,7 @@ export const DEFAULTS: Record<ConfigKey, unknown> = {
   pinned: [],
   whisper: "", // "" = no superwhisper target
   scheme_v2: false,
+  compact: "", // "" = chatbar expanded; "1" = compact mode
 };
 
 /**

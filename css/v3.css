@@ -359,6 +359,59 @@
   overflow: hidden;
   background: var(--bcc-surface-footer);
   border-top: 1px solid var(--bcc-border);
+  transition: height 0.3s ease;
+}
+
+/* ─── Compact mode — single toggle compacts the entire chatbar ─────────── */
+.bcc-compact.bcc-chatbar {
+  height: 68px;
+}
+
+/* Compact toggle button (chevron, left edge of chatbar). */
+.bcc-compact-toggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--bcc-text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+.bcc-compact-toggle:hover {
+  opacity: 1;
+}
+
+/* Compact pill states: hide non-essential children.
+   Single-icon pills switch to single-column auto so the icon centers.
+   Chat pill switches to row flow and pulls keep items to the front. */
+.bcc-compact .bcc-chat > :not(.bcc-keep) {
+  display: none;
+}
+.bcc-compact .bcc-chat {
+  grid-auto-flow: row;
+  grid-template-rows: none;
+}
+.bcc-compact .bcc-chat > .bcc-keep {
+  order: -1;
+}
+.bcc-compact .bcc-bettercc > :not(:first-child) {
+  display: none;
+}
+.bcc-compact .bcc-bettercc {
+  grid-template-columns: auto;
+}
+.bcc-compact .bcc-links > :not(:first-child) {
+  display: none;
+}
+.bcc-compact .bcc-links {
+  grid-template-columns: auto;
 }
 
 /* ─── Input area (textarea fills the rest) ─── */
@@ -408,6 +461,7 @@
   justify-items: center;
   flex-shrink: 0;
 }
+
 /* Bare .bcc-pill = single centered column (children stack vertically); the
    -N variants add N columns so children flow into rows of N (the last partial
    row centers via justify-items: center on the container). Mirrors v2. */
@@ -417,19 +471,20 @@
 .bcc-pill-3 {
   grid-template-columns: repeat(3, auto);
 }
-
-/* Chat-actions pill: the local color picker spans the full width and centers
-   below the autoscroll + reload row (v2 parity). */
-.bcc-chat-actions .bcc-color-picker-wrap {
-  justify-self: center;
+.bcc-pill-4 {
+  grid-template-columns: repeat(4, auto);
 }
-
+/* Chat pill: column flow → zigzag layout (top row then bottom row). */
+.bcc-chat {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+}
 /* Links pill (id + forum + help): the last child spans + centers, so a 3-item
    2-col pill reads [id forum] / [help] centered, not [id forum] / [help _]. */
-.bcc-pill.bcc-links > :last-child {
+/* .bcc-pill.bcc-links > :last-child {
   grid-column: 1 / -1;
   justify-self: center;
-}
+} */
 
 /* ─── Icon buttons (32×32) ─── */
 .bcc-icon-btn {
@@ -554,26 +609,6 @@
   filter: brightness(0.9);
 }
 
-/* Preset nick colors (upstream color_set — server-side nick color). */
-.bcc-color-btn.b8::after {
-  background-color: #aaaa00;
-}
-.bcc-color-btn.b10::after {
-  background-color: #aa0000;
-}
-.bcc-color-btn.b11::after {
-  background-color: #aa00aa;
-}
-.bcc-color-btn.b12::after {
-  background-color: #00aaaa;
-}
-.bcc-color-btn.b13::after {
-  background-color: #00aa00;
-}
-.bcc-color-btn.b14::after {
-  background-color: #0000aa;
-}
-
 /* Local-theme color picker — a color circle whose dot is the current theme
    color. The native <input type=color> is layered invisibly over the circle. */
 .bcc-color-picker-wrap::after {
@@ -607,6 +642,29 @@
       "chatbar";
   }
   .bcc-sidebar {
+    display: none;
+  }
+}
+
+/* ─── Responsive: progressive chatbar control hiding ──────────────────────
+   Below 599px: hide Links (least critical). */
+@media (max-width: 599px) {
+  .bcc-links {
+    display: none;
+  }
+}
+
+/* Below 499px: hide BetterCC pill (theme, scheme, help, settings). */
+@media (max-width: 499px) {
+  .bcc-bettercc {
+    display: none;
+  }
+}
+
+/* Below 399px: hide Chat pill (away/back, sysmsg, autoscroll, reload, nick-color).
+   Only the textarea + exit button remain at all narrower widths. */
+@media (max-width: 399px) {
+  .bcc-chat {
     display: none;
   }
 }
