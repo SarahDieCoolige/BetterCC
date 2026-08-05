@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.4.4
+// @version      3.4.5
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=f43ba929
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=e2682f5f
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1392,9 +1392,15 @@
     const mount = document.querySelector(".bcc-shell") ?? document.body;
     mount.appendChild(popup);
     const rect = anchor.getBoundingClientRect();
-    popup.style.position = "fixed";
-    popup.style.left = Math.min(rect.left, window.innerWidth - 200 - 8) + "px";
-    popup.style.top = rect.bottom + 4 + "px";
+    const popupH = popup.offsetHeight || 200;
+    const popupW = popup.offsetWidth || 200;
+    const gap = 4;
+    popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
+    if (rect.top - popupH - gap >= 0) {
+      popup.style.top = rect.top - popupH - gap + "px";
+    } else {
+      popup.style.top = Math.min(rect.bottom + gap, window.innerHeight - popupH - 8) + "px";
+    }
     photoContainer.addEventListener("mouseenter", () => {
       if (previewByUser.has(user.name)) return;
       const img = photoContainer.querySelector("img");
