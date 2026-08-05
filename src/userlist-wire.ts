@@ -12,6 +12,7 @@
 import { parseUserlist, diffUserlists } from "./userlist";
 import { emit, type User } from "./store";
 import { cclog } from "./utils";
+import { getChaMy } from "./upstream";
 
 let prevList: User[] = [];
 
@@ -33,7 +34,7 @@ export function processUserlist(chaMy: string[], prev: User[]) {
  */
 export function overrideSetUinfo1(): void {
   (unsafeWindow as any).set_uinfo1 = function () {
-    const chaMy: string[] = (unsafeWindow as any).cha_my ?? [];
+    const chaMy: string[] = getChaMy();
     const { newList, added, removed } = processUserlist(chaMy, prevList);
     prevList = newList;
     emit({ type: "userlist", users: newList, added, removed });
@@ -47,6 +48,6 @@ export function overrideSetUinfo1(): void {
   // timer or this call wins. NB: this makes the mock's 20ms timer redundant
   // for seeding — both go through the override now, and prevList diffing
   // turns the second fire into a no-op for the sidebar.
-  const chaMy: string[] = (unsafeWindow as any).cha_my ?? [];
+  const chaMy: string[] = getChaMy();
   if (chaMy.length > 0) (unsafeWindow as any).set_uinfo1();
 }

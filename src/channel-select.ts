@@ -18,6 +18,7 @@
 import { subscribe } from "./store";
 import { getSession } from "./session";
 import { cclog } from "./utils";
+import { getChannelCategories, getChannelGroups, sendCommand } from "./upstream";
 
 /** One channel group, with its upstream id, label, and member channels. */
 export interface ChannelGroup {
@@ -64,17 +65,18 @@ export function parseChannels(ccc: unknown, ccg: unknown): ChannelGroup[] {
 }
 
 /**
- * Build the header channel <select>. Reads unsafeWindow.ccc/ccg for the options,
- * pre-selects the active channel (unsafeWindow.chat_channel), joins on change
- * via com_set, and stays in sync with /j-driven channel changes via the session
- * store subscription (same pattern as the old buildChannelLabel).
+ * Build the header channel <select>. Reads the upstream channel lists via
+ * getChannelCategories/getChannelGroups for the options, pre-selects the
+ * active channel (getSession().channel), joins on change via sendCommand, and
+ * stays in sync with /j-driven channel changes via the session store
+ * subscription (same pattern as the old buildChannelLabel).
  *
  * Defensive: if ccc/ccg are absent at build time (load-order edge case), falls
  * back to a read-only label showing chat_channel so the header never breaks.
  */
 export function buildChannelSelect(): HTMLElement {
-  const ccc = (unsafeWindow as any).ccc;
-  const ccg = (unsafeWindow as any).ccg;
+  const ccc = getChannelCategories();
+  const ccg = getChannelGroups();
   const groups = parseChannels(ccc, ccg);
   const active = getSession().channel;
 
@@ -108,14 +110,8 @@ export function buildChannelSelect(): HTMLElement {
   }
 
   // onChange → join the channel via the upstream entry point (same as old CHN).
-  // If com_set is missing, log + no-op rather than throw.
   select.addEventListener("change", () => {
-    const comSet = (unsafeWindow as any).com_set;
-    if (typeof comSet !== "function") {
-      cclog("buildChannelSelect: com_set unavailable — channel switch dropped", "v3");
-      return;
-    }
-    comSet("/j " + select.value);
+    sendCommand("/j " + select.value);
   });
 
   // Stay in sync: when a /j command changes chat_channel (session module emits),

@@ -14,7 +14,7 @@
 import { cclog, getUserKey, printHelp } from "./utils";
 import { saveColor, toggleSchemeVersion, getSchemeVersion } from "./theme";
 import { getConfig, setConfig } from "./config";
-import { getChatNick } from "./upstream";
+import { getChatNick, sendCommand, leaveChat } from "./upstream";
 import { actionButton } from "./dom";
 import { updatePlaceholder } from "./input";
 
@@ -61,20 +61,6 @@ function pill(columns: number, extraClass: string, ...children: HTMLElement[]): 
   for (const c of children) p.appendChild(c);
 
   return p;
-}
-
-/** Call an upstream function by name if it exists. */
-function callUpstream(fn: string, ...args: string[]): void {
-  const w = unsafeWindow as any;
-  if (typeof w[fn] === "function") w[fn](...args);
-}
-
-/** Run an upstream "set OUT1 + delout" command (/away, /awayoff, /bye…). */
-function sendSlashCommand(cmd: string): void {
-  const docHold = (document as any).hold;
-  if (!docHold) return;
-  docHold.OUT1.value = cmd;
-  callUpstream("delout");
 }
 
 function buildAutoscrollBtn(): HTMLButtonElement {
@@ -149,18 +135,13 @@ function buildColorSwatch(): HTMLElement {
   return picker;
 }
 
-/** Run an upstream com_set command (e.g. "/messageon", "/messageoff"). */
-function comSetBtn(cls: string, title: string, cmd: string): HTMLButtonElement {
-  return iconBtn(cls, title, () => callUpstream("com_set", cmd));
-}
-
 // ─── Chat pill — upstream chat-interaction controls (4-col, 6 items) ───────
 // Groups all upstream ChatCity controls that were previously spread across
 // the Account pill, Chat-actions pill, and standalone nick-color picker.
 
 function buildChatPill(): HTMLElement {
-  const awayBtn = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
-  const backBtn = iconBtn("b3", "Zurück (/awayoff)", () => sendSlashCommand("/awayoff"));
+  const awayBtn = iconBtn("b2", "Away (/away)", () => sendCommand("/away"));
+  const backBtn = iconBtn("b3", "Zurück (/awayoff)", () => sendCommand("/awayoff"));
   const autoscrollBtn = buildAutoscrollBtn();
   const reloadBtn = trackReloadButton(buildReloadBtn());
   awayBtn.classList.add("bcc-keep");
@@ -173,8 +154,8 @@ function buildChatPill(): HTMLElement {
     "bcc-chat",
     awayBtn,
     backBtn,
-    comSetBtn("b5", "Systemmeldungen an", "/messageon"),
-    comSetBtn("b6", "Systemmeldungen aus", "/messageoff"),
+    iconBtn("b5", "Systemmeldungen an", () => sendCommand("/messageon")),
+    iconBtn("b6", "Systemmeldungen aus", () => sendCommand("/messageoff")),
     autoscrollBtn,
     reloadBtn,
   );
@@ -234,7 +215,7 @@ function buildLinksPill(): HTMLElement {
 
   // Nick-color picker — calls upstream color_set on change.
   const nickColor = buildColorPicker("Nick-Farbe wählen", "bcc-nick-color", "#aa0000", (hex) => {
-    callUpstream("color_set", hex);
+    sendCommand("/color " + hex);
   });
 
   return pill(2, "bcc-links", id, forum, nickColor, help);
@@ -243,7 +224,7 @@ function buildLinksPill(): HTMLElement {
 // ─── Group 4: Exit (red, standalone) ───────────────────────────────────────
 
 function buildExitBtn(): HTMLElement {
-  const btn = iconBtn("b7", "Verlassen", () => callUpstream("bye"));
+  const btn = iconBtn("b7", "Verlassen", () => leaveChat());
   btn.classList.add("bcc-danger");
   return btn;
 }

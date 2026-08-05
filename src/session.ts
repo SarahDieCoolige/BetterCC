@@ -10,7 +10,7 @@
 
 import { emit, type SessionState } from "./store";
 import { cclog } from "./utils";
-import { getChatNick, getChannel, isAuthDead } from "./upstream";
+import { getChatNick, getChannel, isAuthDead, getChatUi, getChatId, getChatSid } from "./upstream";
 
 let session: SessionState;
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -25,14 +25,12 @@ export function initSession(): void {
   // second polling interval and double-emit on every change. Clear the old one.
   if (timer) clearInterval(timer);
 
-  const w = unsafeWindow as any;
-
   session = {
     nick: getChatNick(),
-    registered: String(w.chat_ui ?? "").includes("R"),
-    guest: String(w.chat_ui ?? "").includes("h") && !String(w.chat_ui ?? "").includes("R"),
-    userId: String(w.chat_id ?? ""),
-    sessionId: String(w.chat_sid ?? ""),
+    registered: getChatUi().includes("R"),
+    guest: getChatUi().includes("h") && !getChatUi().includes("R"),
+    userId: getChatId(),
+    sessionId: getChatSid(),
     channel: getChannel(),
     authDead: isAuthDead(),
   };

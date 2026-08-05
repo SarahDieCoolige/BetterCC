@@ -28,7 +28,7 @@
 
 import { type User, subscribe, type BccEvent } from "./store";
 import { encodeChatLink } from "./utils";
-import { getBettercc } from "./upstream";
+import { getBettercc, sendCommand } from "./upstream";
 import { iconElement } from "./dom";
 import { fetchUserImage, type UserImageResult } from "./user-image";
 import { getConfig } from "./config";
@@ -376,7 +376,7 @@ export function openUserPopup(
       if (!btn) return;
       if (btn.classList.contains("bcc-confirm")) {
         // Second click — execute ignore, show confirmed state
-        unsafeWindow.com_set?.("/ignore " + user.name);
+        sendCommand("/ignore " + user.name);
         btn.classList.remove("bcc-confirm");
         btn.classList.add("bcc-confirmed");
         const icon = btn.querySelector("i");

@@ -253,6 +253,32 @@
   function getBettercc() {
     return unsafeWindow.bettercc;
   }
+  function getChatUi() {
+    return String(unsafeWindow.chat_ui ?? "");
+  }
+  function getChatId() {
+    return String(unsafeWindow.chat_id ?? "");
+  }
+  function getChatSid() {
+    return String(unsafeWindow.chat_sid ?? "");
+  }
+  function getChaMy() {
+    return unsafeWindow.cha_my ?? [];
+  }
+  function getChannelCategories() {
+    return unsafeWindow.ccc ?? [];
+  }
+  function getChannelGroups() {
+    return unsafeWindow.ccg ?? [];
+  }
+  function sendCommand(cmd) {
+    const w = unsafeWindow;
+    if (typeof w.com_set === "function") w.com_set(cmd);
+  }
+  function leaveChat() {
+    sendCommand("/bye");
+    setTimeout(() => window.close(), 1e3);
+  }
 
   // src/shell.ts
   function buildShell() {
@@ -721,13 +747,13 @@
   }
   function overrideSetUinfo1() {
     unsafeWindow.set_uinfo1 = function() {
-      const chaMy2 = unsafeWindow.cha_my ?? [];
+      const chaMy2 = getChaMy();
       const { newList, added, removed } = processUserlist(chaMy2, prevList);
       prevList = newList;
       emit({ type: "userlist", users: newList, added, removed });
     };
     cclog("set_uinfo1 overridden \u2014 userlist events now feed the store", "v3");
-    const chaMy = unsafeWindow.cha_my ?? [];
+    const chaMy = getChaMy();
     if (chaMy.length > 0) unsafeWindow.set_uinfo1();
   }
 
@@ -1320,7 +1346,7 @@
         const btn = toolbar.lastElementChild;
         if (!btn) return;
         if (btn.classList.contains("bcc-confirm")) {
-          unsafeWindow.com_set?.("/ignore " + user.name);
+          sendCommand("/ignore " + user.name);
           btn.classList.remove("bcc-confirm");
           btn.classList.add("bcc-confirmed");
           const icon = btn.querySelector("i");
@@ -1404,13 +1430,12 @@
   var timer = null;
   function initSession() {
     if (timer) clearInterval(timer);
-    const w = unsafeWindow;
     session = {
       nick: getChatNick(),
-      registered: String(w.chat_ui ?? "").includes("R"),
-      guest: String(w.chat_ui ?? "").includes("h") && !String(w.chat_ui ?? "").includes("R"),
-      userId: String(w.chat_id ?? ""),
-      sessionId: String(w.chat_sid ?? ""),
+      registered: getChatUi().includes("R"),
+      guest: getChatUi().includes("h") && !getChatUi().includes("R"),
+      userId: getChatId(),
+      sessionId: getChatSid(),
       channel: getChannel(),
       authDead: isAuthDead()
     };
@@ -1455,8 +1480,8 @@
     return groups;
   }
   function buildChannelSelect() {
-    const ccc = unsafeWindow.ccc;
-    const ccg = unsafeWindow.ccg;
+    const ccc = getChannelCategories();
+    const ccg = getChannelGroups();
     const groups = parseChannels(ccc, ccg);
     const active = getSession().channel;
     if (groups.length === 0) {
@@ -1485,12 +1510,7 @@
       select.appendChild(optgroup);
     }
     select.addEventListener("change", () => {
-      const comSet = unsafeWindow.com_set;
-      if (typeof comSet !== "function") {
-        cclog("buildChannelSelect: com_set unavailable \u2014 channel switch dropped", "v3");
-        return;
-      }
-      comSet("/j " + select.value);
+      sendCommand("/j " + select.value);
     });
     subscribe((e) => {
       if (e.type === "session" && e.session.channel) {
@@ -2085,16 +2105,6 @@
     for (const c of children) p.appendChild(c);
     return p;
   }
-  function callUpstream(fn, ...args) {
-    const w = unsafeWindow;
-    if (typeof w[fn] === "function") w[fn](...args);
-  }
-  function sendSlashCommand(cmd) {
-    const docHold = document.hold;
-    if (!docHold) return;
-    docHold.OUT1.value = cmd;
-    callUpstream("delout");
-  }
   function buildAutoscrollBtn() {
     const btn = iconBtn("fa-angle-double-down", "Autoscroll ein/aus", () => {
       const cb2 = document.querySelector(
@@ -2143,12 +2153,9 @@
     });
     return picker;
   }
-  function comSetBtn(cls, title, cmd) {
-    return iconBtn(cls, title, () => callUpstream("com_set", cmd));
-  }
   function buildChatPill() {
-    const awayBtn = iconBtn("b2", "Away (/away)", () => sendSlashCommand("/away"));
-    const backBtn = iconBtn("b3", "Zur\xFCck (/awayoff)", () => sendSlashCommand("/awayoff"));
+    const awayBtn = iconBtn("b2", "Away (/away)", () => sendCommand("/away"));
+    const backBtn = iconBtn("b3", "Zur\xFCck (/awayoff)", () => sendCommand("/awayoff"));
     const autoscrollBtn = buildAutoscrollBtn();
     const reloadBtn = trackReloadButton(buildReloadBtn());
     awayBtn.classList.add("bcc-keep");
@@ -2160,8 +2167,8 @@
       "bcc-chat",
       awayBtn,
       backBtn,
-      comSetBtn("b5", "Systemmeldungen an", "/messageon"),
-      comSetBtn("b6", "Systemmeldungen aus", "/messageoff"),
+      iconBtn("b5", "Systemmeldungen an", () => sendCommand("/messageon")),
+      iconBtn("b6", "Systemmeldungen aus", () => sendCommand("/messageoff")),
       autoscrollBtn,
       reloadBtn
     );
@@ -2207,12 +2214,12 @@
       window.open("//www.chatcity.de/de/hilfe-allgemeines.html#cmd", "_blank");
     });
     const nickColor = buildColorPicker("Nick-Farbe w\xE4hlen", "bcc-nick-color", "#aa0000", (hex) => {
-      callUpstream("color_set", hex);
+      sendCommand("/color " + hex);
     });
     return pill(2, "bcc-links", id, forum, nickColor, help);
   }
   function buildExitBtn() {
-    const btn = iconBtn("b7", "Verlassen", () => callUpstream("bye"));
+    const btn = iconBtn("b7", "Verlassen", () => leaveChat());
     btn.classList.add("bcc-danger");
     return btn;
   }
