@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.5.0
+// @version      3.5.1
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=cb405032
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=e2682f5f
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1687,14 +1687,22 @@
     if (nameSpan) {
       nameSpan.textContent = user.name;
     }
-    row.querySelectorAll(".bcc-channel-badge").forEach((b) => b.remove());
+    const oldBadge = row.querySelector(".bcc-user-tag[data-bcc-badge]");
     if (merged.channel) {
-      const badge = document.createElement("span");
-      badge.className = "bcc-channel-badge";
-      badge.textContent = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
-      row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
+      const text = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
+      if (oldBadge) {
+        if (oldBadge.textContent !== text) oldBadge.textContent = text;
+      } else {
+        const badge = document.createElement("span");
+        badge.className = "bcc-user-tag";
+        badge.dataset.bccBadge = "1";
+        badge.textContent = text;
+        row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
+      }
+    } else if (oldBadge) {
+      oldBadge.remove();
     }
-    row.querySelectorAll(".bcc-user-tag").forEach((t) => t.remove());
+    row.querySelectorAll(".bcc-user-tag:not([data-bcc-badge])").forEach((t) => t.remove());
     if (user.away) {
       const tag = document.createElement("span");
       tag.className = "bcc-user-tag";

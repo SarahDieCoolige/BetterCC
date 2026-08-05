@@ -303,16 +303,6 @@
 .bcc-user-tag + .bcc-user-tag {
   margin-left: 1px;
 }
-/* Channel badge — short abbreviation for cross-channel pinned users. */
-.bcc-channel-badge {
-  margin-left: 3px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--bcc-text-muted);
-  background: var(--bcc-badge-bg, #e8e8e8);
-  padding: 0 3px;
-  border-radius: 2px;
-}
 /* Away/sep: name dims (550 weight, muted, 0.5 opacity). Tags match the name. */
 .bcc-userrow.bcc-name-away .bcc-userrow-name,
 .bcc-userrow.bcc-name-away .bcc-user-tag {

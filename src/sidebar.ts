@@ -103,18 +103,26 @@ function applyUserState(row: HTMLLIElement, merged: MergedUser, badges: Map<stri
   if (nameSpan) {
     nameSpan.textContent = user.name;
   }
-  // Channel badge — cross-channel users only (merged.channel set). Inserted
-  // right after the name span, before any [A]/[S] tags (cross-channel users
-  // carry no status tags — aw.js has no flags).
-  row.querySelectorAll(".bcc-channel-badge").forEach((b) => b.remove());
+  // Channel badge — cross-channel users only. Patched in place via a
+  // data-bcc-badge marker so we don't remove/recreate it on every render;
+  // only the text changes when the channel abbreviation map updates.
+  const oldBadge = row.querySelector(".bcc-user-tag[data-bcc-badge]") as HTMLElement | null;
   if (merged.channel) {
-    const badge = document.createElement("span");
-    badge.className = "bcc-channel-badge";
-    badge.textContent = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
-    row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
+    const text = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
+    if (oldBadge) {
+      if (oldBadge.textContent !== text) oldBadge.textContent = text;
+    } else {
+      const badge = document.createElement("span");
+      badge.className = "bcc-user-tag";
+      badge.dataset.bccBadge = "1";
+      badge.textContent = text;
+      row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
+    }
+  } else if (oldBadge) {
+    oldBadge.remove();
   }
-  // Remove old tags, rebuild
-  row.querySelectorAll(".bcc-user-tag").forEach((t) => t.remove());
+  // Status tags — removed and rebuilt each render (cheap DOM: 0-2 tags).
+  row.querySelectorAll(".bcc-user-tag:not([data-bcc-badge])").forEach((t) => t.remove());
   if (user.away) {
     const tag = document.createElement("span");
     tag.className = "bcc-user-tag";
