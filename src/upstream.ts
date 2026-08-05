@@ -63,6 +63,19 @@ export function getChannelGroups(): string[] {
   return (unsafeWindow as any).ccg ?? [];
 }
 
+/** Fetch the global userlist script (aw.js) — resolves with the raw
+ *  response text, rejects on network error (caller retries next cycle). */
+export function fetchAw(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    GM_xmlhttpRequest({
+      method: "GET",
+      url: "https://images.chatcity.de/script/aw.js?x=" + Date.now(),
+      onload: (resp: any) => resolve(resp.responseText),
+      onerror: (err: any) => reject(err),
+    });
+  });
+}
+
 // ── Commands — typed write helpers for upstream functions.
 
 /** Send a slash command through upstream com_set.
