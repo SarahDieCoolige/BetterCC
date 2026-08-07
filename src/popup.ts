@@ -65,11 +65,21 @@ let currentUser: string | null = null;
 
 let unsubscribeStore: (() => void) | null = null;
 
+/** The userlist <li> row that opened the popup — tracked so the popup can
+ *  follow it when the window is resized (re-derived from its current rect).
+ *  Null when no popup is open. */
+let popupAnchor: HTMLElement | null = null;
+
+/** Reposition the open popup against its anchor's current rect. Null when
+ *  no popup is open (removed alongside the other listeners in closePopup). */
+let onResize: (() => void) | null = null;
+
 function closePopup(): void {
   if (!openPopup) return;
   openPopup.remove();
   openPopup = null;
   currentUser = null;
+  popupAnchor = null;
   document.removeEventListener("keydown", onKeydown, true);
   window.removeEventListener("bcc-iframe-interaction", onIframeInteraction);
   if (onOutsideClick) {
@@ -79,6 +89,10 @@ function closePopup(): void {
   if (unsubscribeStore) {
     unsubscribeStore();
     unsubscribeStore = null;
+  }
+  if (onResize) {
+    window.removeEventListener("resize", onResize);
+    onResize = null;
   }
 }
 
@@ -425,19 +439,39 @@ export function openUserPopup(
   mount.appendChild(popup);
 
   // Position: popup shifted left into chatframe. Photo centered vertically
-  // on the clicked row. Clamp to viewport.
-  const rect = anchor.getBoundingClientRect();
-  const popupH = popup.offsetHeight || 200;
-  const popupW = popup.offsetWidth || 200;
-  const gap = 4;
+  // on the clicked row. Clamp to viewport top + the bottom chatbar (the popup
+  // stays above the chat input bar, not just inside the full viewport).
+  // Extracted into reposition() so the popup follows its anchor row when the
+  // window is resized (the row's rect changes with layout, so the position is
+  // re-derived each call).
+  popupAnchor = anchor;
   const photoEl = popup.querySelector(".bcc-popup-photo") as HTMLElement | null;
-  const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
-
-  popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
-
-  // Center photo on the row vertically, clamped to viewport
-  const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
-  popup.style.top = Math.max(8, Math.min(window.innerHeight - popupH - 8, idealTop)) + "px";
+  // reposition captures the local `popup` (in scope here) rather than the
+  // module-level openPopup — openPopup is only assigned ~30 lines below, AFTER
+  // the first reposition() call, so reading it here would no-op the guard.
+  // The closure also reads popupAnchor's CURRENT rect each call, which is what
+  // makes the popup follow its row on window resize.
+  const reposition = () => {
+    if (!popupAnchor) return;
+    const rect = popupAnchor.getBoundingClientRect();
+    const popupH = popup.offsetHeight || 200;
+    const popupW = popup.offsetWidth || 200;
+    const gap = 4;
+    const photoCenterOffset = photoEl
+      ? photoEl.offsetTop + photoEl.offsetHeight / 2
+      : 40;
+    popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
+    // Clamp the popup to stay on-screen AND above the bottom chatbar (which
+    // occupies the last ~95px of the viewport). Read .bcc-chatbar's top live
+    // each call so the boundary tracks the chatbar through resizes too.
+    const chatbar = document.querySelector(".bcc-chatbar") as HTMLElement | null;
+    const maxBottom = chatbar ? chatbar.getBoundingClientRect().top - gap : window.innerHeight - 8;
+    const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
+    popup.style.top = Math.max(8, Math.min(maxBottom - popupH, idealTop)) + "px";
+  };
+  reposition();
+  onResize = reposition;
+  window.addEventListener("resize", onResize);
 
   // Photo: hover = centered preview, click = toggle pin (stays open on mouseleave).
   // Hover: temporary preview. Click: pin/unpin.

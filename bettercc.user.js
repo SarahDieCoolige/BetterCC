@@ -1318,11 +1318,14 @@
   var onOutsideClick = null;
   var currentUser = null;
   var unsubscribeStore = null;
+  var popupAnchor = null;
+  var onResize = null;
   function closePopup() {
     if (!openPopup) return;
     openPopup.remove();
     openPopup = null;
     currentUser = null;
+    popupAnchor = null;
     document.removeEventListener("keydown", onKeydown, true);
     window.removeEventListener("bcc-iframe-interaction", onIframeInteraction);
     if (onOutsideClick) {
@@ -1332,6 +1335,10 @@
     if (unsubscribeStore) {
       unsubscribeStore();
       unsubscribeStore = null;
+    }
+    if (onResize) {
+      window.removeEventListener("resize", onResize);
+      onResize = null;
     }
   }
   function onKeydown(e) {
@@ -1557,15 +1564,24 @@
     popup.appendChild(toolbar);
     const mount = document.querySelector(".bcc-shell") ?? document.body;
     mount.appendChild(popup);
-    const rect = anchor.getBoundingClientRect();
-    const popupH = popup.offsetHeight || 200;
-    const popupW = popup.offsetWidth || 200;
-    const gap = 4;
+    popupAnchor = anchor;
     const photoEl = popup.querySelector(".bcc-popup-photo");
-    const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
-    popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
-    const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
-    popup.style.top = Math.max(8, Math.min(window.innerHeight - popupH - 8, idealTop)) + "px";
+    const reposition = () => {
+      if (!popupAnchor) return;
+      const rect = popupAnchor.getBoundingClientRect();
+      const popupH = popup.offsetHeight || 200;
+      const popupW = popup.offsetWidth || 200;
+      const gap = 4;
+      const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
+      popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
+      const chatbar = document.querySelector(".bcc-chatbar");
+      const maxBottom = chatbar ? chatbar.getBoundingClientRect().top - gap : window.innerHeight - 8;
+      const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
+      popup.style.top = Math.max(8, Math.min(maxBottom - popupH, idealTop)) + "px";
+    };
+    reposition();
+    onResize = reposition;
+    window.addEventListener("resize", onResize);
     photoContainer.addEventListener("mouseenter", () => {
       if (previewByUser.has(user.name)) return;
       const img = photoContainer.querySelector("img");
