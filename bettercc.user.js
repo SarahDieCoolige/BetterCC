@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=447008b1
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=33542c73
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1573,7 +1573,9 @@
       const popupW = popup.offsetWidth || 200;
       const gap = 4;
       const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
-      popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
+      const sidebar = document.querySelector(".bcc-sidebar");
+      const edgeLeft = sidebar ? sidebar.getBoundingClientRect().left : rect.left;
+      popup.style.left = Math.max(8, edgeLeft - popupW - gap) + "px";
       const chatbar = document.querySelector(".bcc-chatbar");
       const maxBottom = chatbar ? chatbar.getBoundingClientRect().top - gap : window.innerHeight - 8;
       const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
@@ -1846,16 +1848,50 @@
   function ensureContainers(sidebar) {
     if (pinnedUl && pinnedUl.isConnected) return;
     sidebar.innerHTML = "";
+    const toggle = document.createElement("button");
+    toggle.className = "bcc-sidebar-toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-label", "Userlist ein-/ausklappen");
+    toggle.title = "Userlist ein-/ausklappen";
+    toggle.appendChild(iconElement("fa-chevron-right"));
+    toggle.appendChild(iconElement("fa-chevron-left"));
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle("bcc-collapsed");
+      const collapsed2 = sidebar.classList.contains("bcc-collapsed");
+      toggle.setAttribute("aria-expanded", String(!collapsed2));
+      window.dispatchEvent(new Event("resize"));
+    });
+    sidebar.appendChild(toggle);
     const onlineRow = document.createElement("div");
     onlineRow.className = "bcc-online-row";
     onlineCount = document.createElement("div");
     onlineCount.className = "bcc-online-count";
     onlineCount.setAttribute("role", "status");
     onlineCount.setAttribute("aria-live", "polite");
-    onlineCount.textContent = "0 online";
+    onlineCount.innerHTML = '<span class="bcc-online-num">0</span> online';
     onlineRow.appendChild(onlineCount);
-    onlineRow.appendChild(buildChannelSelect());
+    const channelWrap = document.createElement("label");
+    channelWrap.className = "bcc-channel-select-wrap";
+    const channelSelect = buildChannelSelect();
+    channelSelect.className = (channelSelect.className || "") + " bcc-channel-select-native";
+    const channelFace = document.createElement("span");
+    channelFace.className = "bcc-channel-select-face";
+    channelFace.textContent = channelSelect.value || channelSelect.options[0]?.textContent || "";
+    channelSelect.addEventListener("change", () => {
+      channelFace.textContent = channelSelect.value || "";
+    });
+    subscribe((e) => {
+      if (e.type === "session" && e.session.channel && channelFace.isConnected) {
+        channelFace.textContent = e.session.channel;
+      }
+    });
+    channelWrap.appendChild(channelFace);
+    channelWrap.appendChild(channelSelect);
+    onlineRow.appendChild(channelWrap);
     sidebar.appendChild(onlineRow);
+    const content = document.createElement("div");
+    content.className = "bcc-sidebar-content";
     pinnedUl = document.createElement("ul");
     pinnedUl.className = "bcc-userlist-pinned";
     pinnedUl.setAttribute("role", "list");
@@ -1865,7 +1901,11 @@
     scrollContainer = document.createElement("div");
     scrollContainer.className = "bcc-userlist-scroll";
     scrollContainer.appendChild(regularUl);
-    sidebar.append(pinnedUl, scrollContainer);
+    content.append(pinnedUl, scrollContainer);
+    sidebar.appendChild(content);
+    if (window.innerWidth < 600) sidebar.classList.add("bcc-collapsed");
+    const collapsed = sidebar.classList.contains("bcc-collapsed");
+    toggle.setAttribute("aria-expanded", String(!collapsed));
   }
   function refreshSectionVisibility() {
     const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
@@ -1910,7 +1950,7 @@
   function updateOnlineCount() {
     if (!onlineCount) return;
     const n = lastChannelUsers ? lastChannelUsers.length : 0;
-    onlineCount.textContent = globalTotal > 0 ? n + "/" + globalTotal + " online" : n + " online";
+    onlineCount.innerHTML = globalTotal > 0 ? '<span class="bcc-online-num">' + n + "/" + globalTotal + "</span> online" : '<span class="bcc-online-num">' + n + "</span> online";
   }
   function renderFromState() {
     const merged = mergeUserlists(

@@ -26,6 +26,7 @@ import { getConfig, setConfig } from "./config";
 import { openUserPopup } from "./popup";
 import { cclog } from "./utils";
 import { buildChannelSelect } from "./channel-select";
+import { iconElement } from "./dom";
 
 // ─── Pure helpers (exported for testing) ────────────────────────────────────
 
@@ -235,18 +236,83 @@ function ensureContainers(sidebar: HTMLElement): void {
   if (pinnedUl && pinnedUl.isConnected) return;
   sidebar.innerHTML = "";
 
-  // Online count + channel select row. The channel select sits to the right.
+  // ── Sidebar DOM plan ──
+  // The sidebar has two kinds of children:
+  //   chrome  — .bcc-stats (prepended later by mountStatsBar), .bcc-sidebar-header
+  //             (toggle), .bcc-online-row (online count + channel select).
+  //             These stay VISIBLE in both expanded and collapsed states; CSS
+  //             just reorients them (horizontal row ↔ vertical stack).
+  //   lists   — .bcc-sidebar-content (pinned + regular userlist). This fades
+  //             out on collapse (visibility:hidden preserves the rows' rects so
+  //             an open user popup keeps a valid anchor).
+  // The collapsed column reads top→bottom: toggle, stats icons (vertical),
+  // online count, channel select — a purpose-built mini-panel, not a bare toggle.
+
+  // ── Toggle button (direct child of sidebar, positioned next to stats) ──
+  // Expanded: sits at the top-right of the sidebar, absolutely positioned
+  // alongside the stats bar (which stays centered independently). Collapsed:
+  // normal flow, first in the vertical stack via order:-1.
+  const toggle = document.createElement("button");
+  toggle.className = "bcc-sidebar-toggle";
+  toggle.type = "button";
+  toggle.setAttribute("aria-label", "Userlist ein-/ausklappen");
+  toggle.title = "Userlist ein-/ausklappen";
+  toggle.appendChild(iconElement("fa-chevron-right"));
+  toggle.appendChild(iconElement("fa-chevron-left"));
+  toggle.addEventListener("click", (e: MouseEvent) => {
+    e.stopPropagation();
+    sidebar.classList.toggle("bcc-collapsed");
+    const collapsed = sidebar.classList.contains("bcc-collapsed");
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    window.dispatchEvent(new Event("resize"));
+  });
+  sidebar.appendChild(toggle);
+
+  // ── Online count + channel select (chrome — stays visible when collapsed) ──
+  // Expanded: a horizontal row (count left, select right). Collapsed: CSS
+  // stacks them vertically (count, then select) below the stats icons.
   const onlineRow = document.createElement("div");
   onlineRow.className = "bcc-online-row";
   onlineCount = document.createElement("div");
   onlineCount.className = "bcc-online-count";
   onlineCount.setAttribute("role", "status");
   onlineCount.setAttribute("aria-live", "polite");
-  onlineCount.textContent = "0 online";
+  onlineCount.innerHTML = '<span class="bcc-online-num">0</span> online';
   onlineRow.appendChild(onlineCount);
-  onlineRow.appendChild(buildChannelSelect());
+
+  // Channel select — invisible native <select> overlaid with a styled button.
+  // Same technique as the color picker (.bcc-color-input): the native control
+  // sits on top (opacity:0, absolute, full size) and receives clicks; a visible
+  // face element below it provides the styling. On change, the face's text is
+  // synced to the selected option.
+  const channelWrap = document.createElement("label");
+  channelWrap.className = "bcc-channel-select-wrap";
+  const channelSelect = buildChannelSelect() as HTMLSelectElement;
+  channelSelect.className = (channelSelect.className || "") + " bcc-channel-select-native";
+  // The native select already has a change listener (sends /j via sendCommand).
+  // We add another to sync the visible face.
+  const channelFace = document.createElement("span");
+  channelFace.className = "bcc-channel-select-face";
+  channelFace.textContent = channelSelect.value || channelSelect.options[0]?.textContent || "";
+  channelSelect.addEventListener("change", () => {
+    channelFace.textContent = channelSelect.value || "";
+  });
+  // The native select updates via a store subscription (not a change event) when
+  // the channel is switched via /j. Sync the face here too.
+  subscribe((e) => {
+    if (e.type === "session" && e.session.channel && channelFace.isConnected) {
+      channelFace.textContent = e.session.channel;
+    }
+  });
+  channelWrap.appendChild(channelFace);
+  channelWrap.appendChild(channelSelect);
+  onlineRow.appendChild(channelWrap);
+
   sidebar.appendChild(onlineRow);
 
+  // ── Content (the userlists — fades out on collapse) ──
+  const content = document.createElement("div");
+  content.className = "bcc-sidebar-content";
   pinnedUl = document.createElement("ul");
   pinnedUl.className = "bcc-userlist-pinned";
   pinnedUl.setAttribute("role", "list");
@@ -256,7 +322,14 @@ function ensureContainers(sidebar: HTMLElement): void {
   scrollContainer = document.createElement("div");
   scrollContainer.className = "bcc-userlist-scroll";
   scrollContainer.appendChild(regularUl);
-  sidebar.append(pinnedUl, scrollContainer);
+  content.append(pinnedUl, scrollContainer);
+  sidebar.appendChild(content);
+
+  // Default-collapse below 600px (the old <600px hide behavior, now a mini-panel
+  // instead of fully removed). User can expand at any width. No persistence.
+  if (window.innerWidth < 600) sidebar.classList.add("bcc-collapsed");
+  const collapsed = sidebar.classList.contains("bcc-collapsed");
+  toggle.setAttribute("aria-expanded", String(!collapsed));
 }
 
 function refreshSectionVisibility(): void {
@@ -335,7 +408,11 @@ function renderSidebar(merged: MergedUser[]): void {
 function updateOnlineCount(): void {
   if (!onlineCount) return;
   const n = lastChannelUsers ? lastChannelUsers.length : 0;
-  onlineCount.textContent = globalTotal > 0 ? n + "/" + globalTotal + " online" : n + " online";
+  // Wrap the number in a span so collapsed mode can show only the numeric part
+  // via CSS (hiding the "online" word, bumping font-size on the span).
+  onlineCount.innerHTML = globalTotal > 0
+    ? '<span class="bcc-online-num">' + n + "/" + globalTotal + "</span> online"
+    : '<span class="bcc-online-num">' + n + "</span> online";
 }
 
 /** Recompute the merged list from the last known sources and re-render. Called

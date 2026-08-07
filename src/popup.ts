@@ -460,7 +460,13 @@ export function openUserPopup(
     const photoCenterOffset = photoEl
       ? photoEl.offsetTop + photoEl.offsetHeight / 2
       : 40;
-    popup.style.left = Math.max(8, rect.left - popupW - gap) + "px";
+    // Horizontal: glue the popup's right edge to the sidebar's left edge, so it
+    // stays put whether the sidebar is expanded or collapsed (the sidebar's
+    // left edge is the stable boundary the popup should hug). Falls back to the
+    // anchor row's left edge if the sidebar element can't be found.
+    const sidebar = document.querySelector(".bcc-sidebar") as HTMLElement | null;
+    const edgeLeft = sidebar ? sidebar.getBoundingClientRect().left : rect.left;
+    popup.style.left = Math.max(8, edgeLeft - popupW - gap) + "px";
     // Clamp the popup to stay on-screen AND above the bottom chatbar (which
     // occupies the last ~95px of the viewport). Read .bcc-chatbar's top live
     // each call so the boundary tracks the chatbar through resizes too.

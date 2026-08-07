@@ -70,6 +70,8 @@
     "chatbar  chatbar";
   height: 100vh;
   width: 100%;
+  box-sizing: border-box;
+  padding-top: 8px;
   background: var(--bcc-surface);
   color: var(--bcc-text);
   /* Warmer humanist stack: rounded system fonts first (Nunito Sans / Segoe UI
@@ -129,7 +131,18 @@
   color: var(--bcc-text-muted);
   line-height: 1;
 }
-.bcc-online-row .bcc-channel-select {
+/* Channel select — invisible native <select> overlaid with a styled face.
+   Same pattern as .bcc-color-input: the native control is opacity:0 + absolute
+   on top, and a visible span (.bcc-channel-select-face) provides the styling.
+   The wrap anchors the absolute positioning and sets the overall size. */
+.bcc-channel-select-wrap {
+  position: relative;
+  margin-left: auto;
+  max-width: 100px;
+  flex-shrink: 0;
+}
+.bcc-channel-select-face {
+  display: block;
   font-weight: 600;
   font-size: 12px;
   font-family: inherit;
@@ -139,32 +152,153 @@
   border-radius: 3px;
   padding: 0 6px;
   cursor: pointer;
-  margin-left: auto;
   text-align-last: center;
-  max-width: 100px;
   filter: brightness(0.95);
   transition:
     filter 0.2s ease-out,
     text-shadow 0.2s ease-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.bcc-online-row .bcc-channel-select:hover {
+.bcc-channel-select-wrap:hover .bcc-channel-select-face {
   filter: brightness(1);
   text-shadow: 0 0 10px currentColor;
 }
-.bcc-online-row .bcc-channel-select:focus-visible {
-  outline: 2px solid var(--bcc-accent-whisper);
-  outline-offset: -1px;
+.bcc-channel-select-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  /* Re-use the face's font-size so the native dropdown is readable */
+  font-size: 12px;
+  font-family: inherit;
 }
 
 .bcc-sidebar {
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* only .bcc-userlist-scroll scrolls; header area stays fixed */
+  overflow: hidden; /* clips content during collapse. Rows keep real rects
+                       (visibility:hidden not display:none) for popup anchor. */
   background: var(--bcc-surface-raised);
   color: var(--bcc-text-sidebar);
   border-left: 1px solid var(--bcc-border);
   padding: 12px 8px 8px;
+  position: relative; /* anchor for absolutely positioned toggle */
+}
+
+/* ─── Sidebar toggle ──────────────────────────────────────────────────────
+   Direct child of the sidebar. Expanded: absolutely positioned at the top-right
+   so it sits alongside the stats bar without shifting the badges (stats stays
+   perfectly centered via justify-content:center). Collapsed: normal flow, first
+   in the vertical stack via order:-1. */
+.bcc-sidebar-toggle {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  filter: brightness(0.95);
+  transition: filter 0.15s ease-out, text-shadow 0.15s ease-out;
+}
+.bcc-sidebar-toggle:hover {
+  filter: brightness(1);
+  text-shadow: 0 0 12px currentColor;
+}
+.bcc-sidebar-toggle .fas { display: none; }
+.bcc-sidebar:not(.bcc-collapsed) .bcc-sidebar-toggle .fa-chevron-left { display: inline-block; }
+.bcc-sidebar.bcc-collapsed .bcc-sidebar-toggle .fa-chevron-right { display: inline-block; }
+.bcc-sidebar.bcc-collapsed .bcc-sidebar-toggle {
+  position: static; /* normal flow in the vertical stack */
+  order: -1; /* first */
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  margin: 0 auto; /* center in the narrow column */
+}
+
+/* ─── Sidebar content (the userlists — instant hide on collapse) ──────────
+   visibility:hidden (not display:none) preserves the rows' rects so an open
+   user popup keeps a valid anchor while collapsed. No transition — hide
+   instantly (the content slide/fade looked bad). */
+.bcc-sidebar-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* allow the scroll container to shrink */
+  padding: 12px 8px 8px;
+}
+.bcc-sidebar.bcc-collapsed .bcc-sidebar-content {
+  visibility: hidden; /* preserves rects for the popup anchor */
+}
+
+/* ─── Collapsed state: vertical mini-panel ────────────────────────────────
+   When collapsed, the sidebar becomes a narrow column showing (top→bottom):
+   toggle, stats icons (vertical), online count, channel select. The stats and
+   online-row are the SAME elements as expanded — CSS just flips their flow from
+   horizontal rows to a vertical stack. The grid column snaps to fit (~52px). */
+.bcc-shell:has(.bcc-sidebar.bcc-collapsed) {
+  grid-template-columns: 1fr 52px;
+}
+.bcc-sidebar.bcc-collapsed {
+  padding: 6px 4px;
+  align-items: center;
+}
+/* Stats: horizontal row (expanded) → vertical stack (collapsed). */
+.bcc-sidebar.bcc-collapsed .bcc-stats {
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 8px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--bcc-border);
+}
+/* Online row: horizontal (count left, select right) → vertical stack. */
+.bcc-sidebar.bcc-collapsed .bcc-online-row {
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0 4px;
+  margin-bottom: 0;
+  border-bottom: none;
+  align-items: center;
+}
+.bcc-sidebar.bcc-collapsed .bcc-channel-select-wrap {
+  margin-left: 0; /* override the expanded auto-margin-left */
+  max-width: 46px;
+}
+.bcc-sidebar.bcc-collapsed .bcc-channel-select-face {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: var(--bcc-surface-raised);
+  color: var(--bcc-text-muted);
+}
+/* Online count in collapsed: hide the word "online" (font-size:0), show only
+   the .bcc-online-num span at a larger size. updateOnlineCount wraps the
+   number part so CSS can toggle the two formats cleanly. */
+.bcc-sidebar.bcc-collapsed .bcc-online-count {
+  font-size: 0; /* hide "online" suffix */
+  text-align: center;
+}
+.bcc-sidebar.bcc-collapsed .bcc-online-num {
+  font-size: 11px;
+  font-weight: 700;
 }
 
 /* ─── Stats bar (Freunde Online / Anfragen / Nachrichten badges) ───────────
@@ -633,18 +767,13 @@
   font-size: 12px;
 }
 
-/* ─── Responsive: <600px collapses the sidebar ─────────────────────────── */
-@media (max-width: 599px) {
-  .bcc-shell {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "main"
-      "chatbar";
-  }
-  .bcc-sidebar {
-    display: none;
-  }
-}
+/* ─── Responsive: <600px default-collapses the sidebar ────────────────────
+   Previously: display:none (sidebar fully removed, rows had zero rects, open
+   user popups lost their anchor). Now: sidebar.ts adds .bcc-collapsed on mount
+   below 600px, and the user can expand it via the toggle handle at any width.
+   The .bcc-collapsed rules above handle all the visual/layout changes; this
+   media query now only hides the progressively-less-critical chatbar controls.
+   State is not persisted (resets each session). */
 
 /* ─── Responsive: progressive chatbar control hiding ──────────────────────
    Below 599px: hide Links (least critical). */
