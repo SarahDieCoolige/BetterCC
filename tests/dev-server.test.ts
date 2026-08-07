@@ -62,21 +62,30 @@ describe("buildIdFixtureResponse — query-aware ID search mock", () => {
     expect(html).toContain("/id/testascii.html");
   });
 
-  it("returns photo row for unknown nick with even hash sum", () => {
-    // "test" → t(116)+e(101)+s(115)+t(116)=448 — even → photo
+  it("returns substring matches for partial nick", () => {
+    // "test" matches all 3 knownUsers (testascii, testuser_one, test-hyphen)
     const html = buildIdFixtureResponse("test", knownUsers);
-    expect(html).toContain("userfiles/");
-    expect(html).toContain("_3.jpg");
-    expect(html).toContain("/id/test.html");
+    expect(html).toContain("testascii");
+    expect(html).toContain("testuser_one");
+    expect(html).toContain("test-hyphen");
+    // All three are returned as separate obj_uimg/obj_uname pairs
+    const uimgCount = (html.match(/obj_uimg wrapper/g) || []).length;
+    expect(uimgCount).toBe(3);
   });
 
-  it("returns empty result for unknown nick with odd hash sum", () => {
-    // "user" → u(117)+s(115)+e(101)+r(114)=447 — odd → no photo
+  it("returns substring match for partial nick (single result)", () => {
+    // "user" only matches testuser_one
     const html = buildIdFixtureResponse("user", knownUsers);
-    expect(html).toContain("0");
-    expect(html).toContain("User gefunden.");
-    expect(html).not.toContain("userfiles/");
-    expect(html).not.toContain("/id/");
+    expect(html).toContain("testuser_one");
+    expect(html).not.toContain("testascii");
+    expect(html).not.toContain("test-hyphen");
+  });
+
+  it("falls back to deterministic synthetic when no match at all", () => {
+    // "abc" matches nothing → a(97)+b(98)+c(99)=294 (even) → photo row
+    const html = buildIdFixtureResponse("abc", knownUsers);
+    expect(html).toContain("userfiles/");
+    expect(html).toContain("/id/abc.html");
   });
 
   it("returns empty result (0 User gefunden) for blank/empty nick", () => {
@@ -93,12 +102,11 @@ describe("buildIdFixtureResponse — query-aware ID search mock", () => {
     expect(html).toContain('title="testascii"');
   });
 
-  it("uses raw nick as encoded form when not in the knownUsers map", () => {
-    // "Testuser_one" (uppercase T) is not in the map (only "testuser_one" is).
-    // It falls through to the raw nick and still gets a photo row.
+  it("matches case-insensitively via substring search", () => {
+    // "Testuser_one" (uppercase T) is not an exact key match, but the
+    // case-insensitive substring search finds "testuser_one".
     const html = buildIdFixtureResponse("Testuser_one", knownUsers);
-    expect(html).toContain("Testuser_one");
-    expect(html).toContain("userfiles/");
-    expect(html).not.toContain("testuser_one"); // did NOT use the knownUsers entry
+    expect(html).toContain("testuser:5F:one"); // uses the knownUsers encoded form
+    expect(html).toContain('title="testuser_one"');
   });
 });
