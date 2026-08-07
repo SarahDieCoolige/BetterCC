@@ -370,3 +370,47 @@ export function fetchUserImage(nick: string, opts?: { force?: boolean }): Promis
     }
   });
 }
+
+/** Fetch raw /id/ search HTML for a nick — returns responseText unfiltered.
+ *  Used by the /id popup to render multi-row search results. Mirrors
+ *  fetchUserImage's AJAX setup but skips parsing/filtering/cache. */
+export function fetchIdSearchRaw(nick: string): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    try {
+      const w = unsafeWindow as any;
+      const ajax = w.ajax;
+      const pajax = w.PAJAX;
+
+      if (typeof ajax !== "function" || typeof pajax !== "string") {
+        cclog("user-image: upstream ajax/PAJAX unavailable — rejecting fetchIdSearchRaw", "user-image");
+        reject(new Error("user-image: upstream ajax/PAJAX unavailable"));
+        return;
+      }
+
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error("user-image: timeout"));
+        }
+      }, TIMEOUT_MS);
+
+      const params = AJAX_PARAMS.map((p, i) =>
+        i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p,
+      ).join("&");
+
+      new ajax(pajax + "obj_list.html", {
+        postBody: params,
+        onComplete: (transport: any) => {
+          if (settled) return; // timeout already fired
+          settled = true;
+          clearTimeout(timer);
+          resolve(transport?.responseText ?? "");
+        },
+      });
+    } catch (e) {
+      // The ajax constructor itself threw (e.g. invalid args)
+      reject(e);
+    }
+  });
+}

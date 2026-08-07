@@ -2,7 +2,7 @@
 // @name  BetterCC (alpha)
 // @description  BetterCC v3 alpha
 // @author  Sarah
-// @version      3.5.2
+// @version      3.5.3
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=e2682f5f
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=447008b1
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1109,6 +1109,41 @@
       }
     });
   }
+  function fetchIdSearchRaw(nick) {
+    return new Promise((resolve, reject) => {
+      try {
+        const w = unsafeWindow;
+        const ajax = w.ajax;
+        const pajax = w.PAJAX;
+        if (typeof ajax !== "function" || typeof pajax !== "string") {
+          cclog("user-image: upstream ajax/PAJAX unavailable \u2014 rejecting fetchIdSearchRaw", "user-image");
+          reject(new Error("user-image: upstream ajax/PAJAX unavailable"));
+          return;
+        }
+        let settled = false;
+        const timer2 = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            reject(new Error("user-image: timeout"));
+          }
+        }, TIMEOUT_MS);
+        const params = AJAX_PARAMS.map(
+          (p, i) => i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p
+        ).join("&");
+        new ajax(pajax + "obj_list.html", {
+          postBody: params,
+          onComplete: (transport) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer2);
+            resolve(transport?.responseText ?? "");
+          }
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
   // src/photo-preview.ts
   var previewByUser = /* @__PURE__ */ new Map();
@@ -1156,7 +1191,7 @@
     dismissHover();
     for (const name of previewByUser.keys()) dismissPreview(name);
   }
-  function buildPreviewBox(fullUrl, userName) {
+  function buildPreviewBox(fullUrl, userName, anchor) {
     const mount = document.querySelector(".bcc-shell") ?? document.body;
     const box = document.createElement("div");
     box.className = "bcc-photo-preview";
@@ -1167,6 +1202,7 @@
     img.className = "bcc-photo-preview-img";
     img.src = fullUrl;
     img.alt = "";
+    img.decoding = "async";
     box.appendChild(img);
     let cx = window.innerWidth / 2;
     let cy = window.innerHeight / 2;
@@ -1178,6 +1214,12 @@
         boxW = saved.boxW;
         boxH = saved.boxH;
       }
+    } else if (anchor) {
+      const gap = 12;
+      const centerTop = anchor.top + anchor.height / 2;
+      const fitsLeft = anchor.left - gap - boxW >= 0;
+      cx = fitsLeft ? anchor.left - gap - boxW / 2 : Math.min(window.innerWidth - boxW / 2 - gap, anchor.right + gap + boxW / 2);
+      cy = Math.max(boxH / 2 + 8, Math.min(window.innerHeight - boxH / 2 - 8, centerTop));
     }
     const updateBox = () => {
       box.style.left = cx + "px";
@@ -2077,6 +2119,152 @@
     return new Function(patchAwayTimer(raw));
   }
 
+  // src/id-popup.ts
+  function dedupRows(rows) {
+    const seen = /* @__PURE__ */ new Set();
+    return rows.filter((row) => {
+      if (seen.has(row.href)) return false;
+      seen.add(row.href);
+      return true;
+    });
+  }
+  function formatIdCardUrl(name) {
+    return "//www.chatcity.de/de/id/" + encodeChatLink(name) + ".html";
+  }
+  var overlayEl = null;
+  var documentKeydown = null;
+  function renderState(el, state) {
+    el.innerHTML = "";
+    const div = document.createElement("div");
+    div.className = "bcc-id-" + state;
+    if (state === "loading") div.textContent = "Wird geladen...";
+    else if (state === "error") div.textContent = "Fehler beim Laden.";
+    else if (state === "empty") div.textContent = "Kein Ergebnis gefunden.";
+    el.appendChild(div);
+  }
+  function renderResults(el, rows) {
+    el.innerHTML = "";
+    for (const row of rows) {
+      const rowEl = document.createElement("div");
+      rowEl.className = "bcc-id-row";
+      if (row.imgUrl) {
+        const fullUrl = stripThumbnailSuffix(row.imgUrl);
+        const hasPhoto = !/default/i.test(fullUrl);
+        const showPreview = hasPhoto && fullUrl !== row.imgUrl;
+        const thumb = document.createElement("img");
+        thumb.src = row.imgUrl;
+        thumb.className = "bcc-id-thumb";
+        thumb.setAttribute("alt", "");
+        if (showPreview) {
+          thumb.addEventListener("mouseenter", () => {
+            const rect = thumb.getBoundingClientRect();
+            buildPreviewBox(fullUrl, row.name, rect);
+          });
+          thumb.addEventListener("mouseleave", () => {
+            dismissHover();
+          });
+        }
+        thumb.addEventListener("error", () => {
+          thumb.style.display = "none";
+        });
+        rowEl.appendChild(thumb);
+      }
+      const nameLink = document.createElement("a");
+      nameLink.textContent = row.name;
+      nameLink.href = formatIdCardUrl(row.name);
+      nameLink.target = "_blank";
+      nameLink.className = "bcc-id-name";
+      nameLink.title = "ID-Card \xF6ffnen";
+      rowEl.appendChild(nameLink);
+      el.appendChild(rowEl);
+    }
+  }
+  async function doSearch(name, resultsEl) {
+    if (!name) return;
+    renderState(resultsEl, "loading");
+    try {
+      const rawHtml = await fetchIdSearchRaw(name);
+      const rows = parseIdSearch(rawHtml);
+      const deduped = dedupRows(rows);
+      if (deduped.length === 0) {
+        renderState(resultsEl, "empty");
+      } else {
+        renderResults(resultsEl, deduped);
+      }
+    } catch {
+      renderState(resultsEl, "error");
+    }
+  }
+  function closeIdPopup() {
+    if (documentKeydown) {
+      document.removeEventListener("keydown", documentKeydown);
+      documentKeydown = null;
+    }
+    dismissAllPreviews();
+    if (overlayEl) {
+      overlayEl.remove();
+      overlayEl = null;
+    }
+  }
+  function buildIdPopup(initialName) {
+    closeIdPopup();
+    const shell = document.querySelector(".bcc-shell");
+    if (!shell) return;
+    overlayEl = document.createElement("div");
+    overlayEl.className = "bcc-id-overlay";
+    const card = document.createElement("div");
+    card.className = "bcc-id-card";
+    const header = document.createElement("div");
+    header.className = "bcc-id-header";
+    const title = document.createElement("span");
+    title.textContent = "ID Suche";
+    header.appendChild(title);
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "bcc-id-close";
+    closeBtn.setAttribute("aria-label", "Schlie\xDFen");
+    closeBtn.appendChild(iconElement("fa-xmark"));
+    closeBtn.addEventListener("click", closeIdPopup);
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+    const searchArea = document.createElement("div");
+    searchArea.className = "bcc-id-search";
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.placeholder = "Username...";
+    searchInput.value = initialName;
+    const searchBtn = document.createElement("button");
+    searchBtn.type = "button";
+    searchBtn.className = "bcc-icon-btn";
+    searchBtn.setAttribute("aria-label", "Suchen");
+    searchBtn.title = "Suchen";
+    searchBtn.appendChild(iconElement("fa-magnifying-glass"));
+    searchArea.appendChild(searchInput);
+    searchArea.appendChild(searchBtn);
+    card.appendChild(searchArea);
+    const resultsEl = document.createElement("div");
+    resultsEl.className = "bcc-id-results";
+    card.appendChild(resultsEl);
+    overlayEl.appendChild(card);
+    shell.appendChild(overlayEl);
+    documentKeydown = (e) => {
+      if (e.key === "Escape") closeIdPopup();
+    };
+    document.addEventListener("keydown", documentKeydown);
+    overlayEl.addEventListener("click", (e) => {
+      if (e.target === overlayEl) closeIdPopup();
+    });
+    const trigger = () => doSearch(searchInput.value.trim(), resultsEl);
+    searchBtn.addEventListener("click", trigger);
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") trigger();
+    });
+    if (initialName) {
+      doSearch(initialName, resultsEl);
+    } else {
+      searchInput.focus();
+    }
+  }
+
   // src/input.ts
   var textarea = null;
   var onSubmitOrig = null;
@@ -2138,7 +2326,7 @@
             break;
           // Stub for T12.
           case "id":
-            cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
+            buildIdPopup(cmd.name || "");
             break;
           case "pinned-list":
             getConfig("pinned", []).then(

@@ -8,6 +8,7 @@ import { cclog, printHelp, printToChat } from "./utils";
 import { getConfig, setConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { buildPatchedHandler } from "./patched-handler";
+import { buildIdPopup } from "./id-popup";
 
 let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: ((...args: any[]) => any) | null = null;
@@ -101,7 +102,7 @@ async function doSubmit(whispernick?: string): Promise<void> {
         case "superban":
           break; // Stub for T12.
         case "id":
-          cclog("/id stubbed (T13): " + (cmd.name || "self"), "v3");
+          buildIdPopup(cmd.name || "");
           break;
         case "pinned-list":
           getConfig("pinned", []).then((list) =>

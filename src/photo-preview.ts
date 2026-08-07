@@ -9,7 +9,10 @@
 //   dismissPreview(userName)  — save position and remove a pinned preview
 //   dismissAllPreviews()      — remove hover + all pinned previews
 //   dismissHover()            — remove hover preview (only if not pinned)
-//   buildPreviewBox(fullUrl, userName) — create a preview box + track as hover
+//   buildPreviewBox(fullUrl, userName, anchor?) — create a preview box + track
+//     as hover. anchor = the hovered element's rect; when provided (and no
+//     saved position exists) the preview is placed beside it instead of at
+//     screen center, so it doesn't intercept the trigger's pointer events.
 //   previewByUser             — Map of pinned preview elements by username
 
 /** Open previews keyed by username — supports multiple concurrent pinned previews. */
@@ -73,8 +76,20 @@ export function dismissAllPreviews(): void {
   for (const name of previewByUser.keys()) dismissPreview(name);
 }
 
-/** Build and return a preview box (unpinned — caller decides whether to pin). */
-export function buildPreviewBox(fullUrl: string, userName: string): HTMLElement {
+/** Build and return a preview box (unpinned — caller decides whether to pin).
+ *
+ *  `anchor` (optional): the bounding rect of the element that triggered the
+ *  preview (e.g. a thumbnail). When provided AND no saved position exists for
+ *  this user, the preview is placed adjacent to the anchor rather than at
+ *  screen center — so it doesn't land on top of the hovered element and steal
+ *  its pointer events (which would cause a mouseenter/mouseleave loop). When
+ *  omitted or when a saved position exists, behavior is unchanged (centered /
+ *  restored). Backward-compatible: existing 2-arg callers keep working. */
+export function buildPreviewBox(
+  fullUrl: string,
+  userName: string,
+  anchor?: { left: number; top: number; right: number; bottom: number; width: number; height: number },
+): HTMLElement {
   const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
 
   const box = document.createElement("div");
@@ -87,9 +102,12 @@ export function buildPreviewBox(fullUrl: string, userName: string): HTMLElement 
   img.className = "bcc-photo-preview-img";
   img.src = fullUrl;
   img.alt = "";
+  img.decoding = "async";
   box.appendChild(img);
 
-  // Restore saved position for this user
+  // Default = screen center. Saved position overrides. Anchor offsets adjacent
+  // to the hovered element (only when no saved position exists) so the preview
+  // doesn't cover its trigger and cause a pointer-event intercept loop.
   let cx = window.innerWidth / 2;
   let cy = window.innerHeight / 2;
   const saved = previewSave[userName];
@@ -100,6 +118,19 @@ export function buildPreviewBox(fullUrl: string, userName: string): HTMLElement 
       boxW = saved.boxW;
       boxH = saved.boxH;
     }
+  } else if (anchor) {
+    // Place the preview beside the anchor. Prefer the LEFT side (the /id card
+    // is centered on screen, so left keeps the preview clear of the card and
+    // away from the right viewport edge); fall back to the right only if there
+    // isn't room on the left. Clamp vertically to keep it on screen. The
+    // preview is centered on the anchor's vertical midpoint.
+    const gap = 12;
+    const centerTop = anchor.top + anchor.height / 2;
+    const fitsLeft = anchor.left - gap - boxW >= 0;
+    cx = fitsLeft
+      ? anchor.left - gap - boxW / 2
+      : Math.min(window.innerWidth - boxW / 2 - gap, anchor.right + gap + boxW / 2);
+    cy = Math.max(boxH / 2 + 8, Math.min(window.innerHeight - boxH / 2 - 8, centerTop));
   }
 
   const updateBox = () => {
