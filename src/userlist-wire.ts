@@ -40,8 +40,13 @@ export function overrideSetUinfo1(): void {
     // whether upstream fires set_uinfo1 with an empty cha_my when the sidebar
     // flashes blank. Remove once the root cause is confirmed.
     cclog(
-      "set_uinfo1: cha_my=" + chaMy.length + " → newList=" + newList.length +
-      " (prev=" + prevList.length + (newList.length === 0 ? ") EMITTING-EMPTY" : ")"),
+      "set_uinfo1: cha_my=" +
+        chaMy.length +
+        " → newList=" +
+        newList.length +
+        " (prev=" +
+        prevList.length +
+        (newList.length === 0 ? ") EMITTING-EMPTY" : ")"),
       "v3",
     );
     prevList = newList;

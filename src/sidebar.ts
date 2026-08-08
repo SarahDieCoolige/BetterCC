@@ -410,9 +410,10 @@ function updateOnlineCount(): void {
   const n = lastChannelUsers ? lastChannelUsers.length : 0;
   // Wrap the number in a span so collapsed mode can show only the numeric part
   // via CSS (hiding the "online" word, bumping font-size on the span).
-  onlineCount.innerHTML = globalTotal > 0
-    ? '<span class="bcc-online-num">' + n + "/" + globalTotal + "</span> online"
-    : '<span class="bcc-online-num">' + n + "</span> online";
+  onlineCount.innerHTML =
+    globalTotal > 0
+      ? '<span class="bcc-online-num">' + n + "/" + globalTotal + "</span> online"
+      : '<span class="bcc-online-num">' + n + "</span> online";
 }
 
 /** Recompute the merged list from the last known sources and re-render. Called
