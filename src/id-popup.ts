@@ -5,16 +5,8 @@
 // Singleton pattern — one popup at a time (matches popup.ts).
 
 import type { IdSearchRow } from "./user-image";
-import {
-  fetchIdSearchRaw,
-  parseIdSearch,
-  stripThumbnailSuffix,
-} from "./user-image";
-import {
-  buildPreviewBox,
-  dismissHover,
-  dismissAllPreviews,
-} from "./photo-preview";
+import { fetchIdRows, evictImageCache, stripThumbnailSuffix } from "./user-image";
+import { buildPreviewBox, dismissHover, dismissAllPreviews } from "./photo-preview";
 import { encodeChatLink } from "./utils";
 import { iconElement } from "./dom";
 
@@ -74,7 +66,7 @@ function renderState(el: HTMLElement, state: SearchState): void {
 }
 
 /** Build and append result rows for a list of search results. */
-function renderResults(el: HTMLElement, rows: IdSearchRow[]): void {
+function renderResults(el: HTMLElement, rows: IdSearchRow[], searchTerm: string): void {
   el.innerHTML = "";
   for (const row of rows) {
     const rowEl = document.createElement("div");
@@ -97,7 +89,7 @@ function renderResults(el: HTMLElement, rows: IdSearchRow[]): void {
           // centered, so a centered preview would land on top of the thumb and
           // intercept its pointer events (mouseenter/mouseleave loop).
           const rect = thumb.getBoundingClientRect();
-          buildPreviewBox(fullUrl, row.name, rect);
+          buildPreviewBox(fullUrl, row.name, rect, searchTerm);
         });
         thumb.addEventListener("mouseleave", () => {
           dismissHover();
@@ -106,6 +98,9 @@ function renderResults(el: HTMLElement, rows: IdSearchRow[]): void {
 
       thumb.addEventListener("error", () => {
         thumb.style.display = "none";
+        // The URL the cache held failed to load as bytes (404 / network).
+        // Evict this search term's entry so the next /id search re-fetches.
+        evictImageCache(searchTerm);
       });
 
       rowEl.appendChild(thumb);
@@ -124,20 +119,16 @@ function renderResults(el: HTMLElement, rows: IdSearchRow[]): void {
 }
 
 /** Execute a search: fetch, parse, dedup, render results or error. */
-async function doSearch(
-  name: string,
-  resultsEl: HTMLElement,
-): Promise<void> {
+async function doSearch(name: string, resultsEl: HTMLElement): Promise<void> {
   if (!name) return;
   renderState(resultsEl, "loading");
   try {
-    const rawHtml = await fetchIdSearchRaw(name);
-    const rows = parseIdSearch(rawHtml);
+    const rows = await fetchIdRows(name);
     const deduped = dedupRows(rows);
     if (deduped.length === 0) {
       renderState(resultsEl, "empty");
     } else {
-      renderResults(resultsEl, deduped);
+      renderResults(resultsEl, deduped, name);
     }
   } catch {
     renderState(resultsEl, "error");

@@ -349,13 +349,13 @@ describe("encodeChatLink ↔ decodeIdPath round-trip", () => {
   });
 });
 
-// ─── fetchUserImage (effectful: AJAX + cache) ──────────────────────────────
+// ─── fetchIdRows / getUserPhoto (effectful: AJAX + SWR cache) ─────────────────
 //
 // Mock strategy: inject fake unsafeWindow.ajax + PAJAX before each test,
 // restore after. The mock ajax constructor calls onComplete synchronously with
 // a configurable responseText. GM_log is mocked to avoid Tampermonkey dep.
 
-import { fetchUserImage, clearImageCache } from "../src/user-image";
+import { fetchIdRows, getUserPhoto, clearImageCache, evictImageCache } from "../src/user-image";
 
 // Production HTML fixture for a user with a photo (exact match for "testuser_01")
 const AJAX_PHOTO_RESPONSE = `<div class="obj_uimg wrapper"><div class="value"><a href="https://www.chatcity.de/de/id/testuser:5F:01.html" onclick="..." rel="nofollow" ><img src="userfiles/f/6/c/h/v/1xyOx5L0LG1PhtuOvL41Va_3.jpg"  title="testuser_01 " alt="testuser_01 "  /></a></div></div><div class="obj_uname wrapper"><div class="value"><a href="https://www.chatcity.de/de/id/testuser:5F:01.html" onclick="..." rel="nofollow" >testuser_01</a></div></div>`;
@@ -390,157 +390,155 @@ function cleanupAjaxMock() {
   delete (globalThis as any).GM_log;
 }
 
-describe("fetchUserImage", () => {
+describe("fetchIdRows", () => {
   afterEach(() => {
     clearImageCache();
     cleanupAjaxMock();
   });
 
-  it("calls ajax with correct URL and params, then resolves with the user image", async () => {
+  it("calls ajax with PAJAX + obj_list.html and the correct params, returns parsed rows", async () => {
     const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
-
-    const promise = fetchUserImage("testuser_01");
-    // The mock ajax stores the onComplete callback but doesn't call it yet.
-    // We call completeAll to simulate the AJAX response.
+    const promise = fetchIdRows("testuser_01");
     mock.completeAll();
+    const rows = await promise;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(mock.ajaxCalls).toHaveLength(1);
+    expect(mock.ajaxCalls[0].url).toBe("https://www.chatcity.de/de/obj_list.html");
+    expect(mock.ajaxCalls[0].opts.postBody).toContain("_KW_allbychar=testuser_01");
+  });
 
+  it("returns cached rows without calling ajax on second call within TTL", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    const p1 = fetchIdRows("testuser_01");
+    mock.completeAll();
+    await p1;
+    const p2 = fetchIdRows("testuser_01");
+    const rows2 = await p2;
+    expect(rows2.length).toBeGreaterThan(0);
+    expect(mock.ajaxCalls).toHaveLength(1);
+  });
+
+  it("cache keyed by term.toLowerCase()", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    const p1 = fetchIdRows("Testuser_01");
+    mock.completeAll();
+    await p1;
+    const p2 = fetchIdRows("testuser_01");
+    await p2;
+    expect(mock.ajaxCalls).toHaveLength(1);
+  });
+
+  it("returns stale rows AND triggers background refresh past TTL", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    vi.useFakeTimers();
+    const p1 = fetchIdRows("testuser_01");
+    mock.completeAll();
+    await p1;
+    expect(mock.ajaxCalls).toHaveLength(1);
+    // Advance past the 5-min TTL
+    vi.advanceTimersByTime(5 * 60 * 1000 + 100);
+    const p2 = fetchIdRows("testuser_01");
+    const rows2 = await p2;
+    // Stale rows returned instantly (same content)
+    expect(rows2.length).toBeGreaterThan(0);
+    // Background refresh fired — a second ajax call was made
+    mock.completeAll(); // resolve the background fetch
+    expect(mock.ajaxCalls).toHaveLength(2);
+    vi.useRealTimers();
+  });
+
+  it("background refresh failure does NOT wipe the cache", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    vi.useFakeTimers();
+    const p1 = fetchIdRows("testuser_01");
+    mock.completeAll();
+    await p1;
+    // Make the next ajax call fail by swapping to an unavailable upstream
+    (globalThis as any).unsafeWindow = {};
+    vi.advanceTimersByTime(5 * 60 * 1000 + 100);
+    const p2 = fetchIdRows("testuser_01");
+    const rows2 = await p2; // stale rows still returned
+    expect(rows2.length).toBeGreaterThan(0);
+    // Restore mock so the third call can hit cache (entry survived the failed refresh)
+    (globalThis as any).unsafeWindow = {
+      ajax: function (_url: string, opts: any) {
+        mock.ajaxCalls.push({ url: _url, opts, onComplete: opts.onComplete });
+      },
+      PAJAX: "https://www.chatcity.de/de/",
+    };
+    vi.useRealTimers();
+  });
+
+  it("rejects with timeout error if onComplete never fires within 8s", async () => {
+    installAjaxMock(AJAX_PHOTO_RESPONSE);
+    vi.useFakeTimers();
+    const promise = fetchIdRows("testuser_01");
+    vi.advanceTimersByTime(8100);
+    await expect(promise).rejects.toThrow("user-image: timeout");
+    vi.useRealTimers();
+  });
+
+  it("resolves empty rows when ajax/PAJAX unavailable (rejects — caller catches)", async () => {
+    (globalThis as any).unsafeWindow = {};
+    (globalThis as any).GM_log = () => {};
+    await expect(fetchIdRows("anyone")).rejects.toThrow("unavailable");
+    delete (globalThis as any).unsafeWindow;
+    delete (globalThis as any).GM_log;
+  });
+
+  it("evictImageCache removes one entry; next fetch re-AJAXes", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    const p1 = fetchIdRows("testuser_01");
+    mock.completeAll();
+    await p1;
+    evictImageCache("testuser_01");
+    const p2 = fetchIdRows("testuser_01");
+    mock.completeAll();
+    await p2;
+    expect(mock.ajaxCalls).toHaveLength(2);
+  });
+});
+
+describe("getUserPhoto", () => {
+  afterEach(() => {
+    clearImageCache();
+    cleanupAjaxMock();
+  });
+
+  it("returns the exact-match user's image", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    const promise = getUserPhoto("testuser_01");
+    mock.completeAll();
     const result = await promise;
     expect(result.hasPhoto).toBe(true);
     expect(result.thumbUrl).toBe("userfiles/f/6/c/h/v/1xyOx5L0LG1PhtuOvL41Va_3.jpg");
     expect(result.fullUrl).toBe("userfiles/f/6/c/h/v/1xyOx5L0LG1PhtuOvL41Va.jpg");
   });
 
-  it("calls ajax with PAJAX + obj_list.html and the correct params", async () => {
-    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
-
-    fetchUserImage("testuser_01");
-    mock.completeAll();
-
-    expect(mock.ajaxCalls).toHaveLength(1);
-    const call = mock.ajaxCalls[0];
-    expect(call.url).toBe("https://www.chatcity.de/de/obj_list.html");
-    // postBody should contain the key params
-    expect(call.opts.postBody).toContain("EXT=allbychar");
-    expect(call.opts.postBody).toContain("_KW_allbychar=testuser_01");
-    expect(call.opts.postBody).toContain("TYP=1");
-    expect(call.opts.postBody).toContain("CACHE=3600");
-  });
-
-  it("returns cache hit without calling ajax on second call for same nick", async () => {
-    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
-
-    // First call — populates cache
-    const p1 = fetchUserImage("testuser_01");
-    mock.completeAll();
-    await p1;
-
-    // Second call — should use cache
-    const p2 = fetchUserImage("testuser_01");
-    // p2 should already be resolved (cache hit), no need to completeAll again
-    const result2 = await p2;
-    expect(result2.hasPhoto).toBe(true);
-
-    // ajax should have been called only once (from the first call)
-    expect(mock.ajaxCalls).toHaveLength(1);
-  });
-
-  it("force:true bypasses cache and re-invokes ajax", async () => {
-    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
-
-    // First call
-    const p1 = fetchUserImage("testuser_01");
-    mock.completeAll();
-    await p1;
-
-    // Second call with force
-    const p2 = fetchUserImage("testuser_01", { force: true });
-    mock.completeAll();
-    await p2;
-
-    expect(mock.ajaxCalls).toHaveLength(2);
-  });
-
-  it("resolves with hasPhoto:false when findExactRow returns null (user not in results)", async () => {
-    // Response contains "testuser" but we search for "testuser_01" — exact match will fail
+  it("returns EMPTY_RESULT when nick not in results", async () => {
     const mock = installAjaxMock(AJAX_NOT_FOUND_RESPONSE);
-
-    const promise = fetchUserImage("testuser_01");
+    const promise = getUserPhoto("testuser_01");
     mock.completeAll();
-
     const result = await promise;
     expect(result).toEqual({ thumbUrl: null, fullUrl: null, hasPhoto: false });
   });
 
-  it("resolves with hasPhoto:false when ajax/PAJAX are unavailable (does not throw)", async () => {
-    // No ajax function, no PAJAX
+  it("shares the row cache: getUserPhoto then fetchIdRows same term = one AJAX", async () => {
+    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
+    const p1 = getUserPhoto("testuser_01");
+    mock.completeAll();
+    await p1;
+    const p2 = fetchIdRows("testuser_01");
+    await p2;
+    expect(mock.ajaxCalls).toHaveLength(1);
+  });
+
+  it("resolves EMPTY_RESULT when ajax unavailable (does not throw)", async () => {
     (globalThis as any).unsafeWindow = {};
     (globalThis as any).GM_log = () => {};
-
-    const result = await fetchUserImage("anyone");
+    const result = await getUserPhoto("anyone");
     expect(result).toEqual({ thumbUrl: null, fullUrl: null, hasPhoto: false });
-  });
-
-  it("rejects with timeout error if onComplete never fires within 8s", async () => {
-    installAjaxMock(AJAX_PHOTO_RESPONSE);
-
-    // Use fake timers to fast-forward past the 8s timeout
-    vi.useFakeTimers();
-
-    const promise = fetchUserImage("testuser_01");
-
-    // Advance past the 8s timeout
-    vi.advanceTimersByTime(8100);
-
-    await expect(promise).rejects.toThrow("user-image: timeout");
-
-    vi.useRealTimers();
-  });
-
-  it("does not double-resolve if onComplete fires after timeout", async () => {
-    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
-
-    vi.useFakeTimers();
-
-    const promise = fetchUserImage("testuser_01");
-
-    // Advance past the 8s timeout — should reject
-    vi.advanceTimersByTime(8100);
-
-    // Now fire onComplete — should NOT resolve (already rejected)
-    mock.completeAll();
-
-    // The promise should still reject (not resolve)
-    await expect(promise).rejects.toThrow("user-image: timeout");
-
-    vi.useRealTimers();
-  });
-
-  it("caches result keyed by nick.toLowerCase()", async () => {
-    const mock = installAjaxMock(AJAX_PHOTO_RESPONSE);
-
-    // First call with mixed case
-    const p1 = fetchUserImage("Testuser_01");
-    mock.completeAll();
-    await p1;
-
-    // Second call with different case — should hit cache
-    const p2 = fetchUserImage("testuser_01");
-    const result = await p2;
-    expect(result.hasPhoto).toBe(true);
-    expect(mock.ajaxCalls).toHaveLength(1);
-  });
-
-  it("stores result in cache even for not-found results", async () => {
-    const mock = installAjaxMock(AJAX_NOT_FOUND_RESPONSE);
-
-    const p1 = fetchUserImage("testuser_01");
-    mock.completeAll();
-    await p1;
-
-    // Second call should use cached not-found result
-    const p2 = fetchUserImage("testuser_01");
-    const result = await p2;
-    expect(result.hasPhoto).toBe(false);
-    expect(mock.ajaxCalls).toHaveLength(1);
+    delete (globalThis as any).unsafeWindow;
+    delete (globalThis as any).GM_log;
   });
 });

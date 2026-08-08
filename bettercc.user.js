@@ -1039,7 +1039,11 @@
       hasPhoto: !isDefault
     };
   }
-  var cache = /* @__PURE__ */ new Map();
+  var ROW_CACHE = /* @__PURE__ */ new Map();
+  var TTL_MS = 5 * 60 * 1e3;
+  function evictImageCache(term) {
+    ROW_CACHE.delete(term.toLowerCase());
+  }
   var AJAX_PARAMS = [
     "TYP=1",
     "_EN_OBJ_ORDER_SORT_SHOW=",
@@ -1063,64 +1067,26 @@
   var KW_PARAM_INDEX = 7;
   var TIMEOUT_MS = 8e3;
   var EMPTY_RESULT = { thumbUrl: null, fullUrl: null, hasPhoto: false };
-  function fetchUserImage(nick, opts) {
-    const key = nick.toLowerCase();
-    if (!opts?.force && cache.has(key)) {
-      return Promise.resolve(cache.get(key));
-    }
-    return new Promise((resolve, reject) => {
-      try {
-        const w = unsafeWindow;
-        const ajax = w.ajax;
-        const pajax = w.PAJAX;
-        if (typeof ajax !== "function" || typeof pajax !== "string") {
-          cclog("user-image: upstream ajax/PAJAX unavailable \u2014 returning empty result", "user-image");
-          resolve(EMPTY_RESULT);
-          return;
-        }
-        let settled = false;
-        const timer2 = setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            reject(new Error("user-image: timeout"));
-          }
-        }, TIMEOUT_MS);
-        const params = AJAX_PARAMS.map(
-          (p, i) => i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p
-        ).join("&");
-        new ajax(pajax + "obj_list.html", {
-          postBody: params,
-          onComplete: (transport) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer2);
-            try {
-              const html = transport?.responseText ?? "";
-              const rows = parseIdSearch(html);
-              const row = findExactRow(rows, nick);
-              const result = deriveImageUrl(row?.imgUrl ?? null);
-              cache.set(key, result);
-              resolve(result);
-            } catch (e) {
-              cclog("user-image: parse failed \u2014 " + e.message, "user-image");
-              cache.set(key, EMPTY_RESULT);
-              resolve(EMPTY_RESULT);
-            }
-          }
-        });
-      } catch (e) {
-        reject(e);
+  function fetchIdRows(term) {
+    const key = term.toLowerCase();
+    const entry = ROW_CACHE.get(key);
+    if (entry) {
+      if (Date.now() - entry.fetchedAt <= TTL_MS) {
+        return Promise.resolve(entry.rows);
       }
-    });
+      refreshInBackground(key, term);
+      return Promise.resolve(entry.rows);
+    }
+    return fetchAndStore(key, term);
   }
-  function fetchIdSearchRaw(nick) {
+  function fetchAndStore(key, term) {
     return new Promise((resolve, reject) => {
       try {
         const w = unsafeWindow;
         const ajax = w.ajax;
         const pajax = w.PAJAX;
         if (typeof ajax !== "function" || typeof pajax !== "string") {
-          cclog("user-image: upstream ajax/PAJAX unavailable \u2014 rejecting fetchIdSearchRaw", "user-image");
+          cclog("user-image: upstream ajax/PAJAX unavailable \u2014 rejecting", "user-image");
           reject(new Error("user-image: upstream ajax/PAJAX unavailable"));
           return;
         }
@@ -1132,7 +1098,7 @@
           }
         }, TIMEOUT_MS);
         const params = AJAX_PARAMS.map(
-          (p, i) => i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p
+          (p, i) => i === KW_PARAM_INDEX ? p + encodeURIComponent(term) : p
         ).join("&");
         new ajax(pajax + "obj_list.html", {
           postBody: params,
@@ -1140,13 +1106,38 @@
             if (settled) return;
             settled = true;
             clearTimeout(timer2);
-            resolve(transport?.responseText ?? "");
+            try {
+              const html = transport?.responseText ?? "";
+              const rows = parseIdSearch(html);
+              ROW_CACHE.set(key, { rows, fetchedAt: Date.now() });
+              resolve(rows);
+            } catch (e) {
+              cclog("user-image: parse failed \u2014 " + e.message, "user-image");
+              reject(new Error("user-image: parse failed"));
+            }
           }
         });
       } catch (e) {
         reject(e);
       }
     });
+  }
+  function refreshInBackground(key, term) {
+    fetchAndStore(key, term).catch((e) => {
+      cclog("user-image: background refresh failed \u2014 " + e.message, "user-image");
+    });
+  }
+  async function getUserPhoto(nick) {
+    try {
+      const rows = await fetchIdRows(nick);
+      const row = findExactRow(rows, nick);
+      return deriveImageUrl(row?.imgUrl ?? null);
+    } catch (e) {
+      if (e.message.includes("unavailable")) {
+        return EMPTY_RESULT;
+      }
+      throw e;
+    }
   }
 
   // src/photo-preview.ts
@@ -1195,7 +1186,7 @@
     dismissHover();
     for (const name of previewByUser.keys()) dismissPreview(name);
   }
-  function buildPreviewBox(fullUrl, userName, anchor) {
+  function buildPreviewBox(fullUrl, userName, anchor, searchTerm) {
     const mount = document.querySelector(".bcc-shell") ?? document.body;
     const box = document.createElement("div");
     box.className = "bcc-photo-preview";
@@ -1208,6 +1199,9 @@
     img.alt = "";
     img.decoding = "async";
     box.appendChild(img);
+    img.addEventListener("error", () => {
+      if (searchTerm) evictImageCache(searchTerm);
+    });
     let cx = window.innerWidth / 2;
     let cy = window.innerHeight / 2;
     const saved = previewSave[userName];
@@ -1388,7 +1382,7 @@
     const img = container.querySelector("img");
     const avatar = container.querySelector(".bcc-popup-avatar");
     if (!img || !avatar) return;
-    fetchUserImage(userName).then((result) => {
+    getUserPhoto(userName).then((result) => {
       if (!result.hasPhoto || !result.thumbUrl) return;
       if (!openPopup?.contains(container)) return;
       img.src = result.thumbUrl;
@@ -1404,6 +1398,7 @@
       img.addEventListener(
         "error",
         () => {
+          evictImageCache(userName);
         },
         { once: true }
       );
@@ -1593,7 +1588,7 @@
       const img = photoContainer.querySelector("img");
       if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
         dismissHover();
-        buildPreviewBox(img.dataset.fullUrl, user.name);
+        buildPreviewBox(img.dataset.fullUrl, user.name, void 0, user.name);
       }
     });
     photoContainer.addEventListener("mouseleave", () => {
@@ -1608,7 +1603,7 @@
       const img = photoContainer.querySelector("img");
       if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
         dismissHover();
-        const box = buildPreviewBox(img.dataset.fullUrl, user.name);
+        const box = buildPreviewBox(img.dataset.fullUrl, user.name, void 0, user.name);
         previewByUser.set(user.name, box);
       }
     });
@@ -2205,7 +2200,7 @@
     else if (state === "empty") div.textContent = "Kein Ergebnis gefunden.";
     el.appendChild(div);
   }
-  function renderResults(el, rows) {
+  function renderResults(el, rows, searchTerm) {
     el.innerHTML = "";
     for (const row of rows) {
       const rowEl = document.createElement("div");
@@ -2221,7 +2216,7 @@
         if (showPreview) {
           thumb.addEventListener("mouseenter", () => {
             const rect = thumb.getBoundingClientRect();
-            buildPreviewBox(fullUrl, row.name, rect);
+            buildPreviewBox(fullUrl, row.name, rect, searchTerm);
           });
           thumb.addEventListener("mouseleave", () => {
             dismissHover();
@@ -2229,6 +2224,7 @@
         }
         thumb.addEventListener("error", () => {
           thumb.style.display = "none";
+          evictImageCache(searchTerm);
         });
         rowEl.appendChild(thumb);
       }
@@ -2246,13 +2242,12 @@
     if (!name) return;
     renderState(resultsEl, "loading");
     try {
-      const rawHtml = await fetchIdSearchRaw(name);
-      const rows = parseIdSearch(rawHtml);
+      const rows = await fetchIdRows(name);
       const deduped = dedupRows(rows);
       if (deduped.length === 0) {
         renderState(resultsEl, "empty");
       } else {
-        renderResults(resultsEl, deduped);
+        renderResults(resultsEl, deduped, name);
       }
     } catch {
       renderState(resultsEl, "error");

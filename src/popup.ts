@@ -23,14 +23,14 @@
 //   - Superwhisper      → wired (bettercc.superwhisper, GM whisper_{user})
 //   - Flüstern (1×)     → wired (sets a one-shot whisper target via bettercc.superwhisper)
 //   - Ignorieren (/ig)  → wired (two-tap confirm, upstream com_set /ignore)
-//   - Bild              → photo container in center (fetchUserImage + hover/pin preview)
+//   - Bild              → photo container in center (getUserPhoto + hover/pin preview)
 //   - ID (/id)          → wired (opens ID page in new window)
 
 import { type User, subscribe, type BccEvent } from "./store";
 import { encodeChatLink } from "./utils";
 import { getBettercc, sendCommand } from "./upstream";
 import { iconElement } from "./dom";
-import { fetchUserImage, type UserImageResult } from "./user-image";
+import { getUserPhoto, evictImageCache, type UserImageResult } from "./user-image";
 import { getConfig } from "./config";
 import {
   dismissPreview,
@@ -173,7 +173,7 @@ function loadPhoto(container: HTMLElement, userName: string): void {
   const avatar = container.querySelector(".bcc-popup-avatar") as HTMLElement | null;
   if (!img || !avatar) return;
 
-  fetchUserImage(userName)
+  getUserPhoto(userName)
     .then((result: UserImageResult) => {
       if (!result.hasPhoto || !result.thumbUrl) return; // avatar stays
       // Only update if the popup is still open
@@ -193,7 +193,9 @@ function loadPhoto(container: HTMLElement, userName: string): void {
       img.addEventListener(
         "error",
         () => {
-          // Leave avatar visible — photo failed to load
+          // Photo URL failed to load as bytes (404 / network). Evict this
+          // nick's cache entry so the next popup open re-fetches the URL.
+          evictImageCache(userName);
         },
         { once: true },
       );
@@ -457,9 +459,7 @@ export function openUserPopup(
     const popupH = popup.offsetHeight || 200;
     const popupW = popup.offsetWidth || 200;
     const gap = 4;
-    const photoCenterOffset = photoEl
-      ? photoEl.offsetTop + photoEl.offsetHeight / 2
-      : 40;
+    const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
     // Horizontal: glue the popup's right edge to the sidebar's left edge, so it
     // stays put whether the sidebar is expanded or collapsed (the sidebar's
     // left edge is the stable boundary the popup should hug). Falls back to the
@@ -486,7 +486,7 @@ export function openUserPopup(
     const img = photoContainer.querySelector("img") as HTMLImageElement;
     if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
       dismissHover();
-      buildPreviewBox(img.dataset.fullUrl, user.name);
+      buildPreviewBox(img.dataset.fullUrl, user.name, undefined, user.name);
     }
   });
   photoContainer.addEventListener("mouseleave", () => {
@@ -501,7 +501,7 @@ export function openUserPopup(
     const img = photoContainer.querySelector("img") as HTMLImageElement;
     if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
       dismissHover();
-      const box = buildPreviewBox(img.dataset.fullUrl, user.name);
+      const box = buildPreviewBox(img.dataset.fullUrl, user.name, undefined, user.name);
       previewByUser.set(user.name, box);
     }
   });

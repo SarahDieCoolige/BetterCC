@@ -264,14 +264,39 @@ export function deriveImageUrl(thumbUrl: string | null): UserImageResult {
   };
 }
 
-// ─── fetchUserImage (effectful: AJAX + cache) ──────────────────────────────
+// ─── fetchIdRows (effectful: AJAX + SWR row cache) ──────────────────────────
+//
+// The sole image-fetching primitive. Owns the AJAX call, the cache, and the
+// SWR (stale-while-revalidate) logic. No other module calls ajax() for user
+// images. Two thin consumers project over the cached rows:
+//   - getUserPhoto(nick) → one user's UserImageResult (used by the popup)
+//   - /id doSearch(term) → deduped rows rendered as a list (id-popup.ts)
+//
+// The cache stores ROWS, not derived images, because both consumers need rows
+// (one plucks a single user, the other renders all). Deriving an image is a
+// cheap pure projection (deriveImageUrl), never stored.
 
-/** In-memory cache keyed by nick.toLowerCase(). Cleared each session. */
-const cache = new Map<string, UserImageResult>();
+/** One cache entry: the rows returned for a term, plus when they were fetched. */
+interface CacheEntry {
+  rows: IdSearchRow[];
+  fetchedAt: number;
+}
+
+/** In-memory row cache keyed by term.toLowerCase(). Cleared each session. */
+const ROW_CACHE = new Map<string, CacheEntry>();
+
+/** SWR freshness window. A hit older than this returns stale + background-refreshes. */
+const TTL_MS = 5 * 60 * 1000;
 
 /** Clear the image cache (test-only + manual refresh). */
 export function clearImageCache(): void {
-  cache.clear();
+  ROW_CACHE.clear();
+}
+
+/** Evict one term's entry. Called by <img> error handlers when a URL the cache
+ *  held failed to load as bytes (404 / network) — the next fetch re-AJAXes. */
+export function evictImageCache(term: string): void {
+  ROW_CACHE.delete(term.toLowerCase());
 }
 
 /** Fixed AJAX params for the ID-search endpoint (from modernize showIdPopup). */
@@ -302,87 +327,48 @@ const TIMEOUT_MS = 8000;
 const EMPTY_RESULT: UserImageResult = { thumbUrl: null, fullUrl: null, hasPhoto: false };
 
 /**
- * Fetch a user's profile image via the ChatCity ID-search AJAX.
+ * Fetch the rows for a search term via the ChatCity ID-search AJAX.
  *
- * Wraps the pure parseIdSearch → findExactRow → deriveImageUrl pipeline with
- * AJAX + in-memory cache. The popup (UI-3) calls this.
+ * The sole image-fetching primitive. SWR semantics:
+ * - Cache hit, age ≤ TTL  → return rows instantly, no network.
+ * - Cache hit, age > TTL  → return stale rows instantly; background-refresh.
+ * - Cache miss            → AJAX; store + return on success; reject on failure.
  *
- * - Cache hit (same nick, no force) → instant resolved promise.
- * - Cache miss → POST obj_list.html, parse, filter, store, resolve.
- * - Not found → resolves with `{hasPhoto:false}` (does NOT throw).
- * - Timeout (8s) or ajax constructor throw → rejects.
+ * Background refresh overwrites the cache on success. On failure it logs via
+ * cclog and does NOT mutate the cache (the stale value stays until a refresh
+ * succeeds) — a transient refresh failure must not wipe a known-good entry.
+ *
+ * Errors (timeout, ajax constructor throw) reject. Callers that want a
+ * no-throw fallback (getUserPhoto) catch and resolve EMPTY_RESULT.
  */
-export function fetchUserImage(nick: string, opts?: { force?: boolean }): Promise<UserImageResult> {
-  const key = nick.toLowerCase();
+export function fetchIdRows(term: string): Promise<IdSearchRow[]> {
+  const key = term.toLowerCase();
+  const entry = ROW_CACHE.get(key);
 
-  // Cache hit (unless force)
-  if (!opts?.force && cache.has(key)) {
-    return Promise.resolve(cache.get(key)!);
+  if (entry) {
+    if (Date.now() - entry.fetchedAt <= TTL_MS) {
+      // Fresh hit — instant return, no network
+      return Promise.resolve(entry.rows);
+    }
+    // Stale hit — return instantly, refresh in background
+    refreshInBackground(key, term);
+    return Promise.resolve(entry.rows);
   }
 
-  return new Promise<UserImageResult>((resolve, reject) => {
-    try {
-      const w = unsafeWindow as any;
-      const ajax = w.ajax;
-      const pajax = w.PAJAX;
-
-      if (typeof ajax !== "function" || typeof pajax !== "string") {
-        cclog("user-image: upstream ajax/PAJAX unavailable — returning empty result", "user-image");
-        resolve(EMPTY_RESULT);
-        return;
-      }
-
-      let settled = false;
-      const timer = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          reject(new Error("user-image: timeout"));
-        }
-      }, TIMEOUT_MS);
-
-      const params = AJAX_PARAMS.map((p, i) =>
-        i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p,
-      ).join("&");
-
-      new ajax(pajax + "obj_list.html", {
-        postBody: params,
-        onComplete: (transport: any) => {
-          if (settled) return; // timeout already fired
-          settled = true;
-          clearTimeout(timer);
-          try {
-            const html = transport?.responseText ?? "";
-            const rows = parseIdSearch(html);
-            const row = findExactRow(rows, nick);
-            const result = deriveImageUrl(row?.imgUrl ?? null);
-            cache.set(key, result);
-            resolve(result);
-          } catch (e) {
-            cclog("user-image: parse failed — " + (e as Error).message, "user-image");
-            cache.set(key, EMPTY_RESULT);
-            resolve(EMPTY_RESULT);
-          }
-        },
-      });
-    } catch (e) {
-      // The ajax constructor itself threw (e.g. invalid args)
-      reject(e);
-    }
-  });
+  // Miss — fetch, store, return
+  return fetchAndStore(key, term);
 }
 
-/** Fetch raw /id/ search HTML for a nick — returns responseText unfiltered.
- *  Used by the /id popup to render multi-row search results. Mirrors
- *  fetchUserImage's AJAX setup but skips parsing/filtering/cache. */
-export function fetchIdSearchRaw(nick: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
+/** Fetch a term, store the result, return the rows. Rejects on AJAX failure. */
+function fetchAndStore(key: string, term: string): Promise<IdSearchRow[]> {
+  return new Promise<IdSearchRow[]>((resolve, reject) => {
     try {
       const w = unsafeWindow as any;
       const ajax = w.ajax;
       const pajax = w.PAJAX;
 
       if (typeof ajax !== "function" || typeof pajax !== "string") {
-        cclog("user-image: upstream ajax/PAJAX unavailable — rejecting fetchIdSearchRaw", "user-image");
+        cclog("user-image: upstream ajax/PAJAX unavailable — rejecting", "user-image");
         reject(new Error("user-image: upstream ajax/PAJAX unavailable"));
         return;
       }
@@ -396,7 +382,7 @@ export function fetchIdSearchRaw(nick: string): Promise<string> {
       }, TIMEOUT_MS);
 
       const params = AJAX_PARAMS.map((p, i) =>
-        i === KW_PARAM_INDEX ? p + encodeURIComponent(nick) : p,
+        i === KW_PARAM_INDEX ? p + encodeURIComponent(term) : p,
       ).join("&");
 
       new ajax(pajax + "obj_list.html", {
@@ -405,7 +391,15 @@ export function fetchIdSearchRaw(nick: string): Promise<string> {
           if (settled) return; // timeout already fired
           settled = true;
           clearTimeout(timer);
-          resolve(transport?.responseText ?? "");
+          try {
+            const html = transport?.responseText ?? "";
+            const rows = parseIdSearch(html);
+            ROW_CACHE.set(key, { rows, fetchedAt: Date.now() });
+            resolve(rows);
+          } catch (e) {
+            cclog("user-image: parse failed — " + (e as Error).message, "user-image");
+            reject(new Error("user-image: parse failed"));
+          }
         },
       });
     } catch (e) {
@@ -413,4 +407,40 @@ export function fetchIdSearchRaw(nick: string): Promise<string> {
       reject(e);
     }
   });
+}
+
+/** Background SWR refresh. Fire-and-forget: logs on failure, never mutates
+ *  the cache on error (stale value stays). Overwrites the cache on success. */
+function refreshInBackground(key: string, term: string): void {
+  fetchAndStore(key, term).catch((e: unknown) => {
+    cclog("user-image: background refresh failed — " + (e as Error).message, "user-image");
+  });
+}
+
+/**
+ * Get one user's profile image. Thin projection over fetchIdRows:
+ * fetch rows for the nick (as term), find the exact row, derive the image.
+ *
+ * - Nick found with photo → { thumbUrl, fullUrl, hasPhoto: true }
+ * - Nick found, no photo / default placeholder → EMPTY_RESULT
+ * - Nick not found in rows → EMPTY_RESULT (uncertain — but SWR TTL bounds it)
+ * - AJAX unavailable → EMPTY_RESULT (does not throw)
+ * - AJAX timeout / parse failure → rejects (caller decides fallback)
+ *
+ * The nick is passed as the search term, so "/id maja" and clicking "maja"
+ * share one cache entry. No own cache — derives from cached rows on read.
+ */
+export async function getUserPhoto(nick: string): Promise<UserImageResult> {
+  try {
+    const rows = await fetchIdRows(nick);
+    const row = findExactRow(rows, nick);
+    return deriveImageUrl(row?.imgUrl ?? null);
+  } catch (e) {
+    // AJAX unavailable is a soft failure (upstream missing) — resolve empty.
+    // Timeouts and parse failures propagate as rejections (caller fallbacks).
+    if ((e as Error).message.includes("unavailable")) {
+      return EMPTY_RESULT;
+    }
+    throw e;
+  }
 }

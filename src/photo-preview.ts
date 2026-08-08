@@ -15,6 +15,8 @@
 //     screen center, so it doesn't intercept the trigger's pointer events.
 //   previewByUser             — Map of pinned preview elements by username
 
+import { evictImageCache } from "./user-image";
+
 /** Open previews keyed by username — supports multiple concurrent pinned previews. */
 export const previewByUser: Map<string, HTMLElement> = new Map();
 /** Saved position + size per username (localStorage key: "bcc_previews"). */
@@ -88,7 +90,15 @@ export function dismissAllPreviews(): void {
 export function buildPreviewBox(
   fullUrl: string,
   userName: string,
-  anchor?: { left: number; top: number; right: number; bottom: number; width: number; height: number },
+  anchor?: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+  },
+  searchTerm?: string,
 ): HTMLElement {
   const mount = (document.querySelector(".bcc-shell") as HTMLElement | null) ?? document.body;
 
@@ -104,6 +114,11 @@ export function buildPreviewBox(
   img.alt = "";
   img.decoding = "async";
   box.appendChild(img);
+  img.addEventListener("error", () => {
+    // The full-size URL failed to load as bytes. If the caller passed the
+    // source search term, evict that cache entry so the next fetch re-AJAXes.
+    if (searchTerm) evictImageCache(searchTerm);
+  });
 
   // Default = screen center. Saved position overrides. Anchor offsets adjacent
   // to the hovered element (only when no saved position exists) so the preview
