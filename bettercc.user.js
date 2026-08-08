@@ -822,6 +822,10 @@
     unsafeWindow.set_uinfo1 = function() {
       const chaMy2 = getChaMy();
       const { newList, added, removed } = processUserlist(chaMy2, prevList);
+      cclog(
+        "set_uinfo1: cha_my=" + chaMy2.length + " \u2192 newList=" + newList.length + " (prev=" + prevList.length + (newList.length === 0 ? ") EMITTING-EMPTY" : ")"),
+        "v3"
+      );
       prevList = newList;
       emit({ type: "userlist", users: newList, added, removed });
     };

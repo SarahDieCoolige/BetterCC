@@ -36,6 +36,14 @@ export function overrideSetUinfo1(): void {
   (unsafeWindow as any).set_uinfo1 = function () {
     const chaMy: string[] = getChaMy();
     const { newList, added, removed } = processUserlist(chaMy, prevList);
+    // TEMP DEBUG (userlist-empty investigation): log every call so we can see
+    // whether upstream fires set_uinfo1 with an empty cha_my when the sidebar
+    // flashes blank. Remove once the root cause is confirmed.
+    cclog(
+      "set_uinfo1: cha_my=" + chaMy.length + " → newList=" + newList.length +
+      " (prev=" + prevList.length + (newList.length === 0 ? ") EMITTING-EMPTY" : ")"),
+      "v3",
+    );
     prevList = newList;
     emit({ type: "userlist", users: newList, added, removed });
   };
