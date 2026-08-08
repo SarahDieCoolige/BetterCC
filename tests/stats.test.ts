@@ -2,10 +2,10 @@
 //
 // parseStats reads the chat_info_friends_nc.html response (three <a> tags with
 // .uonl/.ufri/.unc classes, each holding a .value span with the count) and
-// returns the three numeric counts. The response is plain HTML, so the parser
-// uses DOMParser (no DOM dependency beyond the parser itself). Tolerant:
-// malformed/empty/partial input → zeros so the poll loop never crashes and a
-// missing count hides its badge.
+// returns the three numeric counts — or null when the response is unparseable
+// (no anchors found), so the caller can keep the last good render instead of
+// flashing zeros on a transient bad fetch. A valid all-zero response (three
+// anchors present, values all 0) still returns {0,0,0} and renders immediately.
 
 import { describe, it, expect } from "vitest";
 import { parseStats } from "../src/stats";
@@ -54,34 +54,40 @@ describe("parseStats — upstream fixture HTML structure", () => {
 // ─── Tolerance: missing / empty / malformed input ──────────────────────────
 
 describe("parseStats — tolerance", () => {
-  it("returns zeros for an empty string", () => {
-    expect(parseStats("")).toEqual({ friendsOnline: 0, requests: 0, messages: 0 });
+  it("returns null for an empty string (unparseable — keep last good)", () => {
+    expect(parseStats("")).toBeNull();
   });
 
-  it("returns zeros for input with no recognizable anchors", () => {
-    expect(parseStats("<div>nothing here</div>")).toEqual({
-      friendsOnline: 0,
-      requests: 0,
-      messages: 0,
-    });
+  it("returns null for input with no recognizable anchors (garbage response)", () => {
+    expect(parseStats("<div>nothing here</div>")).toBeNull();
   });
 
-  it("treats a missing .value span as zero (partial response)", () => {
-    // Only the friends anchor present, others absent entirely.
+  it("returns null for null-ish input (defensive)", () => {
+    expect(() => parseStats(null as any)).not.toThrow();
+    expect(parseStats(null as any)).toBeNull();
+  });
+
+  it("treats a missing .value span as zero (partial response still parseable)", () => {
+    // Only the friends anchor present — that's still a parseable response,
+    // just with the other two counts defaulting to 0.
     const partial = `<a class="uonl"><span class="value">7</span></a>`;
     expect(parseStats(partial)).toEqual({ friendsOnline: 7, requests: 0, messages: 0 });
   });
 
-  it("treats a non-numeric .value as zero", () => {
+  it("treats a non-numeric .value as zero (parseable response)", () => {
     const badNum = `<a class="uonl"><span class="value">viele</span></a>
 <a class="ufri"><span class="value">1</span></a>
 <a class="unc"><span class="value">2</span></a>`;
     expect(parseStats(badNum)).toEqual({ friendsOnline: 0, requests: 1, messages: 2 });
   });
 
-  it("does not throw on a null-ish input (defensive)", () => {
-    expect(() => parseStats(null as any)).not.toThrow();
-    expect(parseStats(null as any)).toEqual({ friendsOnline: 0, requests: 0, messages: 0 });
+  it("returns {0,0,0} for a valid all-zero response (three anchors, real zeros)", () => {
+    // Genuine "all counts resolved" — three anchors present, values all 0.
+    // This must render immediately (hide badges), NOT be treated as garbage.
+    const allZero = `<a class="uonl"><span class="value">0</span></a>
+<a class="ufri"><span class="value">0</span></a>
+<a class="unc"><span class="value">0</span></a>`;
+    expect(parseStats(allZero)).toEqual({ friendsOnline: 0, requests: 0, messages: 0 });
   });
 });
 

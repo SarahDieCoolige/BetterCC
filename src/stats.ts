@@ -25,9 +25,11 @@ export interface Stats {
  *
  * The response is three <a> tags (.uonl/.ufri/.unc), each holding a .value
  * span with the count (zeros carry an upstream "no" class — irrelevant to the
- * parser, which reads .value text regardless). Tolerant: malformed/empty input
- * or a non-numeric value → 0 for that field, so a bad response never crashes
- * the poll loop and the badge simply hides.
+ * parser, which reads .value text regardless). Returns null when NONE of the
+ * three anchors are found — i.e., the response was empty/garbage/truncated —
+ * so the caller can keep the last good render instead of flashing zeros on a
+ * transient bad fetch. A valid all-zero response (three anchors present, values
+ * all 0) still returns {0,0,0} and renders immediately.
  *
  * Implementation note: we extract via a small regex rather than DOMParser so
  * the function stays pure and unit-testable in vitest's default Node
@@ -35,19 +37,18 @@ export interface Stats {
  * response is fixed upstream markup, not arbitrary HTML, so a targeted regex
  * keyed on the stable class structure is proportionate here.
  */
-export function parseStats(html: string): Stats {
-  const empty: Stats = { friendsOnline: 0, requests: 0, messages: 0 };
-  if (typeof html !== "string" || html.length === 0) return empty;
+export function parseStats(html: string): Stats | null {
+  if (typeof html !== "string" || html.length === 0) return null;
 
   // Match in two steps so a non-numeric value can't bleed into the NEXT
   // anchor's count. Step 1: scope to a single <a>…</a> block (the first one
   // carrying the class). Step 2: within that block, find the .value span and
   // capture its digits. `[^]*?` crosses newlines (the response is multi-line);
   // a non-numeric value falls through the \d+ guard to 0.
-  const read = (cls: string): number => {
+  const read = (cls: string): number | null => {
     const anchorRe = new RegExp('class="[^"]*\\b' + cls + '\\b[^"]*"[^]*?</a>', "i");
     const anchorMatch = html.match(anchorRe);
-    if (!anchorMatch) return 0;
+    if (!anchorMatch) return null; // anchor absent — distinguishes "garbage" from "zero"
     const block = anchorMatch[0];
     const valueRe = /<span\s+class="value(?:\s+[^"]*)?"\s*>\s*(\d+)\s*<\/span>/i;
     const valueMatch = block.match(valueRe);
@@ -55,10 +56,17 @@ export function parseStats(html: string): Stats {
     return Number.isFinite(n) ? n : 0;
   };
 
+  const friendsOnline = read("uonl");
+  const requests = read("ufri");
+  const messages = read("unc");
+
+  // No anchors found at all → unparseable response. Caller keeps last good.
+  if (friendsOnline === null && requests === null && messages === null) return null;
+
   return {
-    friendsOnline: read("uonl"),
-    requests: read("ufri"),
-    messages: read("unc"),
+    friendsOnline: friendsOnline ?? 0,
+    requests: requests ?? 0,
+    messages: messages ?? 0,
   };
 }
 
@@ -140,9 +148,11 @@ export function buildStatsBar(nick: string): HTMLElement {
 }
 
 /** Render a parsed Stats into the bar: update count text + toggle the
- *  zero-hiding class. Safe to call before/without buildStatsBar (no-op). */
-function renderStats(stats: Stats): void {
-  if (!statsBar) return;
+ *  zero-hiding class. No-op on null (keeps the last good render — guards
+ *  against transient bad fetches flashing the badges to zero).
+ *  Safe to call before/without buildStatsBar (no-op). */
+function renderStats(stats: Stats | null): void {
+  if (!statsBar || stats === null) return;
   for (const spec of BADGES) {
     const link = statsBar.querySelector(".bcc-stat-" + spec.statKey);
     if (!link) continue;

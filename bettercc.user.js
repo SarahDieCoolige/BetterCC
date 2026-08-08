@@ -1984,22 +1984,25 @@
 
   // src/stats.ts
   function parseStats(html) {
-    const empty = { friendsOnline: 0, requests: 0, messages: 0 };
-    if (typeof html !== "string" || html.length === 0) return empty;
+    if (typeof html !== "string" || html.length === 0) return null;
     const read = (cls) => {
       const anchorRe = new RegExp('class="[^"]*\\b' + cls + '\\b[^"]*"[^]*?</a>', "i");
       const anchorMatch = html.match(anchorRe);
-      if (!anchorMatch) return 0;
+      if (!anchorMatch) return null;
       const block = anchorMatch[0];
       const valueRe = /<span\s+class="value(?:\s+[^"]*)?"\s*>\s*(\d+)\s*<\/span>/i;
       const valueMatch = block.match(valueRe);
       const n = valueMatch ? Number(valueMatch[1]) : 0;
       return Number.isFinite(n) ? n : 0;
     };
+    const friendsOnline = read("uonl");
+    const requests = read("ufri");
+    const messages = read("unc");
+    if (friendsOnline === null && requests === null && messages === null) return null;
     return {
-      friendsOnline: read("uonl"),
-      requests: read("ufri"),
-      messages: read("unc")
+      friendsOnline: friendsOnline ?? 0,
+      requests: requests ?? 0,
+      messages: messages ?? 0
     };
   }
   var BADGES = [
@@ -2056,7 +2059,7 @@
     return bar;
   }
   function renderStats(stats) {
-    if (!statsBar) return;
+    if (!statsBar || stats === null) return;
     for (const spec of BADGES) {
       const link = statsBar.querySelector(".bcc-stat-" + spec.statKey);
       if (!link) continue;
