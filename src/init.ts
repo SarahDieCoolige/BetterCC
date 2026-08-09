@@ -39,11 +39,11 @@ import { loadTheme, applyScheme } from "./theme";
 import type { BccColorScheme } from "./scheme";
 import { enableV2Scheme } from "./scheme";
 import { getConfig } from "./config";
-import { overrideSetUinfo1 } from "./userlist-wire";
+import { startUlistPoll, stopUlistPoll, refreshUlistNow } from "./ulist-poll";
 import { startPolling, stopPolling } from "./global-userlist";
 import { mountSidebar } from "./sidebar";
 import { mountStatsBar } from "./stats";
-import { initSession } from "./session";
+import { initSession, getSession } from "./session";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
 import { subscribe, type BccEvent } from "./store";
@@ -60,6 +60,18 @@ function neuterResizeFix(): void {
   };
   clearTimeout((unsafeWindow as any).size_timeout);
   clearInterval((unsafeWindow as any).size_interval);
+}
+
+/**
+ * Neuter the upstream get_info() timer loop. get_info() is a self-rescheduling
+ * timer (it re-arms info_timer1 at the end of each call), so a single
+ * clearTimeout can't kill it. v3 now owns both halves: stats.ts owns the
+ * friends-stats fetch, and ulist-poll.ts owns the userlist fetch. Replace the
+ * function with a no-op so it never fires and never re-arms.
+ */
+function neuterGetInfo(): void {
+  clearTimeout((unsafeWindow as any).info_timer1);
+  (unsafeWindow as any).get_info = function get_info(): void {};
 }
 
 /**
@@ -93,11 +105,6 @@ export function initV3(): void {
   // deleted doColorStuff).
   (unsafeWindow.bettercc as any).reloadChat = reloadChat;
   buildShell();
-
-  // Intercept the upstream set_uinfo1 BEFORE mountSidebar so the hook is in
-  // place before the dev mock's 20ms setTimeout fires. Userlist polls now
-  // emit "userlist" store events instead of writing to the hidden #ul.
-  overrideSetUinfo1();
 
   // Apply the saved theme (tier-0 per spec §5.3): read color_{user}, regenerate
   // or reuse the cached scheme, write --bcc-* to .bcc-shell. v3 calls the pure
@@ -133,6 +140,31 @@ export function initV3(): void {
   // does diff-and-patch rendering (reuses DOM nodes, never innerHTML).
   // Must be after buildShell() so .bcc-sidebar exists.
   mountSidebar();
+
+  // v3 owns the ulist poll now (migration Phase 1). Replaces the old
+  // set_uinfo1 override path: fetch ulist directly, parse, emit "userlist"
+  // events. /j (channel change) triggers an immediate refresh via
+  // refreshUlistNow(); auth-dead stops the poll. info_timer1 (upstream's
+  // 20s get_info timer) is cleared — v3's poll replaces it.
+  // Must be AFTER mountSidebar so the sidebar is subscribed before the
+  // first "userlist" event fires.
+  startUlistPoll(20000);
+  neuterGetInfo();
+  {
+    let lastChannel = getSession().channel;
+    subscribe((e: BccEvent) => {
+      if (e.type !== "session") return;
+      if (e.session.authDead) {
+        stopUlistPoll();
+      } else if (e.session.channel !== lastChannel) {
+        lastChannel = e.session.channel;
+        refreshUlistNow();
+      }
+    });
+  }
+  // Expose refreshUlistNow on the bettercc API so the dev panel's user
+  // controls (and future callers) can trigger an immediate refresh.
+  (unsafeWindow.bettercc as any).refreshUlistNow = refreshUlistNow;
 
   // Start the global userlist poll (aw.js, every 5s). Must be AFTER mountSidebar
   // so the sidebar is subscribed before the first "globalUserlist" event fires.

@@ -135,3 +135,10 @@ export function refreshUlistNow(intervalMs = 20000): void {
     if (running) scheduleNext(intervalMs);
   });
 }
+
+/** The most recent parsed userlist snapshot (empty before the first poll).
+ *  Synchronous point-in-time read for callers that can't subscribe — mirrors
+ *  global-userlist.ts getLastSnapshot(). */
+export function getLastUserlist(): User[] {
+  return prevList;
+}

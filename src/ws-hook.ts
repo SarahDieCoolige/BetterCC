@@ -123,6 +123,21 @@ export function betterccOnWsMessage(ev: MessageEvent): void {
     doc.body.style.setProperty("background-color", "var(--chatBackground)");
     doc.body.style.setProperty("color", "var(--chatText)");
   }
+
+  // 4. Stop the test2_kylr.js keepalive ping — every message, always.
+  // Each contentDocument.write re-runs test2_kylr.js, which creates a NEW
+  // chatCityPing interval. A one-shot stop (in injectIntoChatframe) only kills
+  // the first instance; subsequent channel transitions create new ones. Calling
+  // stop() on every message is idempotent and cheap — redundant with the
+  // parent's getalive() 20s poll.
+  const win = getChatWin();
+  if (win) {
+    try {
+      (win as any).chatCityPing?.stop?.();
+    } catch {
+      // iframe API missing or changed — ignore
+    }
+  }
 }
 
 export function betterccOnWsClose(): void {

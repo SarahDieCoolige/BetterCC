@@ -214,6 +214,13 @@
       doc.body.style.setProperty("background-color", "var(--chatBackground)");
       doc.body.style.setProperty("color", "var(--chatText)");
     }
+    const win = getChatWin();
+    if (win) {
+      try {
+        win.chatCityPing?.stop?.();
+      } catch {
+      }
+    }
   }
   function betterccOnWsClose() {
   }
@@ -262,14 +269,14 @@
   function getChatSid() {
     return String(unsafeWindow.chat_sid ?? "");
   }
+  function getPChat() {
+    return String(unsafeWindow.PCHAT ?? "");
+  }
   function getPAjax() {
     return String(unsafeWindow.PAJAX ?? "");
   }
   function getAjax() {
     return unsafeWindow.ajax;
-  }
-  function getChaMy() {
-    return unsafeWindow.cha_my ?? [];
   }
   function getChannelCategories() {
     return unsafeWindow.ccc ?? [];
@@ -872,34 +879,76 @@
   }
 
   // src/ulist-poll.ts
+  var chatId = "";
+  var chatSid = "";
+  var pchatBase = "";
+  var prevList = [];
+  var timerId;
+  var running = false;
+  function parseUlistResponse(text) {
+    const decl = text.match(/var\s+cha_my\s*=\s*new\s+Array\([\s\S]*?\)\s*;/);
+    if (!decl) return [];
+    try {
+      const fn = new Function(`${decl[0]} return cha_my;`);
+      return fn();
+    } catch {
+      return [];
+    }
+  }
   function processUserlist(chaMy, prev) {
     const newList = parseUserlist(chaMy);
     const { added, removed } = diffUserlists(prev, newList);
     return { newList, added, removed };
   }
-
-  // src/userlist-wire.ts
-  var prevList = [];
-  function overrideSetUinfo1() {
-    unsafeWindow.set_uinfo1 = function() {
-      const chaMy2 = getChaMy();
-      const { newList, added, removed } = processUserlist(chaMy2, prevList);
-      cclog(
-        "set_uinfo1: cha_my=" + chaMy2.length + " \u2192 newList=" + newList.length + " (prev=" + prevList.length + (newList.length === 0 ? ") EMITTING-EMPTY" : ")"),
-        "v3"
-      );
+  var JITTER_PCT = 0.2;
+  async function pollOnce() {
+    try {
+      const url = pchatBase + "/ulist?AKTION=j&ID=" + chatId + "&SID=" + chatSid + "&x=" + Math.random();
+      const resp = await fetch(url);
+      const text = await resp.text();
+      const chaMy = parseUlistResponse(text);
+      if (chaMy.length === 0 && prevList.length > 0) return;
+      const { newList, added, removed } = processUserlist(chaMy, prevList);
       prevList = newList;
       emit({ type: "userlist", users: newList, added, removed });
-    };
-    cclog("set_uinfo1 overridden \u2014 userlist events now feed the store", "v3");
-    const chaMy = getChaMy();
-    if (chaMy.length > 0) unsafeWindow.set_uinfo1();
+    } catch {
+    }
+  }
+  function scheduleNext(intervalMs) {
+    const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT;
+    timerId = setTimeout(() => {
+      pollOnce().finally(() => {
+        if (running) scheduleNext(intervalMs);
+      });
+    }, intervalMs + jitter);
+  }
+  function startUlistPoll(intervalMs = 2e4) {
+    chatId = getChatId();
+    chatSid = getChatSid();
+    pchatBase = getPChat();
+    if (running) return;
+    running = true;
+    pollOnce().finally(() => {
+      if (running) scheduleNext(intervalMs);
+    });
+    cclog("ulist-poll gestartet \u2014 alle ~" + intervalMs + " ms", "v3");
+  }
+  function stopUlistPoll() {
+    if (timerId !== void 0) clearTimeout(timerId);
+    timerId = void 0;
+    running = false;
+  }
+  function refreshUlistNow(intervalMs = 2e4) {
+    if (timerId !== void 0) clearTimeout(timerId);
+    pollOnce().finally(() => {
+      if (running) scheduleNext(intervalMs);
+    });
   }
 
   // src/global-userlist.ts
   var lastSnapshot = /* @__PURE__ */ new Map();
-  var timerId;
-  var running = false;
+  var timerId2;
+  var running2 = false;
   function diffGlobal(prev, next) {
     const added = [];
     const removed = [];
@@ -917,8 +966,8 @@
     }
     return { added, removed };
   }
-  var JITTER_PCT = 0.2;
-  async function pollOnce() {
+  var JITTER_PCT2 = 0.2;
+  async function pollOnce2() {
     try {
       const raw = await fetchAw();
       const next = parseAw(raw);
@@ -929,26 +978,26 @@
     } catch {
     }
   }
-  function scheduleNext(intervalMs) {
-    const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT;
-    timerId = setTimeout(() => {
-      pollOnce().finally(() => {
-        if (running) scheduleNext(intervalMs);
+  function scheduleNext2(intervalMs) {
+    const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT2;
+    timerId2 = setTimeout(() => {
+      pollOnce2().finally(() => {
+        if (running2) scheduleNext2(intervalMs);
       });
     }, intervalMs + jitter);
   }
   function startPolling(intervalMs) {
-    if (running) return;
-    running = true;
-    pollOnce().finally(() => {
-      if (running) scheduleNext(intervalMs);
+    if (running2) return;
+    running2 = true;
+    pollOnce2().finally(() => {
+      if (running2) scheduleNext2(intervalMs);
     });
     cclog("Globaler Userlist-Poll gestartet \u2014 aw.js alle ~" + intervalMs + " ms", "v3");
   }
   function stopPolling() {
-    if (timerId !== void 0) clearTimeout(timerId);
-    timerId = void 0;
-    running = false;
+    if (timerId2 !== void 0) clearTimeout(timerId2);
+    timerId2 = void 0;
+    running2 = false;
   }
 
   // src/dom.ts
@@ -2130,7 +2179,7 @@
       count.classList.toggle("bcc-stat-no", value < 1);
     }
   }
-  function pollOnce2() {
+  function pollOnce3() {
     try {
       const ajax = getAjax();
       const pajax = getPAjax();
@@ -2155,8 +2204,8 @@
     if (statsBar && statsBar.isConnected) return;
     const nick = getChatNick();
     parent.insertBefore(buildStatsBar(nick), parent.firstChild);
-    pollOnce2();
-    pollTimer = window.setInterval(pollOnce2, POLL_INTERVAL_MS);
+    pollOnce3();
+    pollTimer = window.setInterval(pollOnce3, POLL_INTERVAL_MS);
     window.addEventListener("beforeunload", () => {
       if (pollTimer !== null) window.clearInterval(pollTimer);
     });
@@ -2795,6 +2844,11 @@
     clearTimeout(unsafeWindow.size_timeout);
     clearInterval(unsafeWindow.size_interval);
   }
+  function neuterGetInfo() {
+    clearTimeout(unsafeWindow.info_timer1);
+    unsafeWindow.get_info = function get_info() {
+    };
+  }
   function initV3() {
     cclog("v3 init (parent-page rewrite, iteration 1)");
     const v3Css = GM_getResourceText("v3_css");
@@ -2803,7 +2857,6 @@
     initSession();
     unsafeWindow.bettercc.reloadChat = reloadChat;
     buildShell();
-    overrideSetUinfo1();
     const schemePromise = getConfig("scheme_v2").then((v2) => {
       if (v2) enableV2Scheme();
       return loadTheme(getUserKey("color"), getUserKey("colorscheme"));
@@ -2813,6 +2866,21 @@
     };
     hookChatoutConnect();
     mountSidebar();
+    startUlistPoll(2e4);
+    neuterGetInfo();
+    {
+      let lastChannel = getSession().channel;
+      subscribe((e) => {
+        if (e.type !== "session") return;
+        if (e.session.authDead) {
+          stopUlistPoll();
+        } else if (e.session.channel !== lastChannel) {
+          lastChannel = e.session.channel;
+          refreshUlistNow();
+        }
+      });
+    }
+    unsafeWindow.bettercc.refreshUlistNow = refreshUlistNow;
     startPolling(5e3);
     subscribe((e) => {
       if (e.type === "session" && e.session.authDead) stopPolling();

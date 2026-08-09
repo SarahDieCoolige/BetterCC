@@ -63,11 +63,6 @@ export function getAjax(): any {
   return (unsafeWindow as any).ajax;
 }
 
-/** The channel user-list array (alternating nick/status from cha_my). */
-export function getChaMy(): string[] {
-  return (unsafeWindow as any).cha_my ?? [];
-}
-
 /** Channel categories — flat array of channel objects. */
 export function getChannelCategories(): any[] {
   return (unsafeWindow as any).ccc ?? [];
