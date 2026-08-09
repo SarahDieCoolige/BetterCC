@@ -162,7 +162,8 @@ function decodeAwEntry(entry: string): User {
 // ─── channelAbbrev — unified abbreviation (spec §abbreviation) ──────────────
 
 /**
- * Shorten a channel name to a sidebar badge. One algorithm for all channels:
+ * Shorten a channel name to a sidebar badge. Known channels are hardcoded;
+ * unknown future channels fall back to the generic algorithm:
  *  1. Strip hyphens
  *  2. Short names (≤3) returned as-is
  *  3. CamelCase names (no hyphens, internal uppercase) use first 2 chars +
@@ -176,6 +177,64 @@ function decodeAwEntry(entry: string): User {
 export function channelAbbrev(name: string, index: number): string {
   const hadHyphens = name.includes("-");
   const stripped = name.replace(/-/g, "");
+
+  // 1. Hardcoded known channels (case-insensitive) — these are the only ones
+  //    that have a non-trivial abbreviation. All other channels fall through
+  //    to the generic algorithm below.
+  switch (stripped.toLowerCase()) {
+    case "mod":
+      return "MOD";
+    case "zauberwald":
+      return "Zaub";
+    case "bizarretalk":
+      return "BizT";
+    case "herzklopfen":
+      return "HerzK";
+    case "knuddelecke":
+      return "KnudE";
+    case "hexensabbat":
+      return "HexS";
+    case "bluemchensex":
+      return "Bluem";
+    case "manstreet":
+      return "ManS";
+    case "fortysomething":
+      return "Forty";
+    case "trauminsel":
+      return "Traum";
+    case "streikchannel":
+      return "Streik";
+    case "goldenfifty":
+      return "Golden";
+    case "herzschmerz":
+      return "HerzS";
+    case "nerdkultur":
+      return "NerdK";
+    case "query":
+      return "Query";
+    case "gaycruising":
+      return "Gay";
+    case "womencorner":
+      return "WoCo";
+    case "erorsp":
+      return "EroR";
+    case "erotik":
+      return "Ero";
+    case "erotik2":
+      return "Ero2";
+    case "erotik3":
+      return "Ero3";
+    case "erotik4":
+      return "Ero4";
+    case "registriert":
+      return "Reg";
+    case "chatcity":
+      return "CC";
+    case "international":
+      return "Intl";
+    case "baklava":
+      return "Bak";
+  }
 
   // 2. If shorter than 3 chars, return as-is: "MOD" → "MOD"
   if (stripped.length <= 3) return stripped;

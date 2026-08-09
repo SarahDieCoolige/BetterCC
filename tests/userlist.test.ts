@@ -331,10 +331,10 @@ describe("parseAw — aw.js JS source → Map<channel, User[]>", () => {
 // ─── channelAbbrev — unified abbreviation (spec §abbreviation) ─────────────
 
 describe("channelAbbrev — unified abbreviation (hyphens, digits, collisions)", () => {
-  it("abbreviates to the first 3 chars with the first letter capitalized", () => {
+  it("uses the hardcoded names for known real channels", () => {
     expect(channelAbbrev("Erotik", 0)).toBe("Ero");
-    expect(channelAbbrev("Chatcity", 0)).toBe("Cha");
-    expect(channelAbbrev("nerdkultur", 0)).toBe("Ner");
+    expect(channelAbbrev("Chatcity", 0)).toBe("CC");
+    expect(channelAbbrev("nerdkultur", 0)).toBe("NerdK");
   });
 
   it("returns names of length ≤ 3 unchanged", () => {
@@ -342,29 +342,27 @@ describe("channelAbbrev — unified abbreviation (hyphens, digits, collisions)",
     expect(channelAbbrev("ab", 0)).toBe("ab");
   });
 
-  it("strips hyphens before abbreviating", () => {
-    expect(channelAbbrev("Women-Corner", 0)).toBe("Wom");
-    expect(channelAbbrev("Bizarre-Talk", 0)).toBe("Biz");
+  it("uses the hardcoded names for known hyphenated real channels", () => {
+    expect(channelAbbrev("Women-Corner", 0)).toBe("WoCo");
+    expect(channelAbbrev("Bizarre-Talk", 0)).toBe("BizT");
     expect(channelAbbrev("Gay-Cruising", 0)).toBe("Gay");
-    expect(channelAbbrev("Man-Street", 0)).toBe("Man");
+    expect(channelAbbrev("Man-Street", 0)).toBe("ManS");
   });
 
   it("preserves a trailing digit by replacing the third char", () => {
-    expect(channelAbbrev("Erotik2", 0)).toBe("Er2");
-    expect(channelAbbrev("Erotik3", 0)).toBe("Er3");
-    expect(channelAbbrev("Erotik4", 0)).toBe("Er4");
+    expect(channelAbbrev("Erotik2", 0)).toBe("Ero2");
+    expect(channelAbbrev("Erotik3", 0)).toBe("Ero3");
+    expect(channelAbbrev("Erotik4", 0)).toBe("Ero4");
     // Multi-digit suffixes are preserved wholesale.
     expect(channelAbbrev("Chat24", 0)).toBe("Ch24");
   });
 
-  it("extends by one char per index to resolve collisions", () => {
-    // Both share the "Her" base — index 0 alone would collide.
-    expect(channelAbbrev("Herzklopfen", 0)).toBe("Her");
-    expect(channelAbbrev("Herzschmerz", 0)).toBe("Her");
-    // index 1 extends the second channel by one char → "Herz".
-    expect(channelAbbrev("Herzschmerz", 1)).toBe("Herz");
-    // Extension also applies to any channel when asked for.
-    expect(channelAbbrev("Erotik", 1)).toBe("Erot");
+  it("still extends unknown names by one char per index to resolve collisions", () => {
+    expect(channelAbbrev("Herzchen", 0)).toBe("Her");
+    expect(channelAbbrev("Herzchen", 1)).toBe("Herz");
+    expect(channelAbbrev("Herzchen", 2)).toBe("Herzc");
+    // Extension also applies to any unknown channel when asked for.
+    expect(channelAbbrev("Spacebar", 1)).toBe("Spac");
   });
 
   it("ignores out-of-range or non-positive indexes", () => {
@@ -374,43 +372,42 @@ describe("channelAbbrev — unified abbreviation (hyphens, digits, collisions)",
 
   it("handles camelCase names by using first-2-chars + internal capitals", () => {
     // EroRsp is the only real channel with genuine camelCase (no hyphens).
-    // Its abbreviation should be "ErR", not "Ero" — the internal capital 'R'
-    // is the distinguishing feature, and "Ero" would collide with Erotik.
-    expect(channelAbbrev("EroRsp", 0)).toBe("ErR");
+    // Its current abbreviation is "EroR": the base stem plus the internal
+    // capital 'R', which keeps it distinct from Erotik.
+    expect(channelAbbrev("EroRsp", 0)).toBe("EroR");
     // Non-hyphenated names without internal capitals still use truncation.
-    expect(channelAbbrev("Erotik", 0)).toBe("Ero");
+    expect(channelAbbrev("SpaceClub", 0)).toBe("SpC");
   });
 
   it("abbreviates all 26 real channels from aw.js", () => {
     // Channel list straight from https://images.chatcity.de/script/aw.js.
-    // Herzschmerz carries index 1 — it collides with Herzklopfen at index 0.
-    // EroRsp uses camelCase initials ("ErR") — no collision with Erotik.
+    // Expected outputs follow the current hardcoded list for known channels.
     const channels: Array<[string, number, string]> = [
       ["MOD", 0, "MOD"],
       ["Registriert", 0, "Reg"],
-      ["Chatcity", 0, "Cha"],
-      ["Zauberwald", 0, "Zau"],
-      ["Bizarre-Talk", 0, "Biz"],
-      ["Herzklopfen", 0, "Her"],
-      ["Knuddelecke", 0, "Knu"],
-      ["Hexensabbat", 0, "Hex"],
-      ["Bluemchensex", 0, "Blu"],
-      ["Man-Street", 0, "Man"],
-      ["Fortysomething", 0, "For"],
-      ["Trauminsel", 0, "Tra"],
-      ["Streik-Channel", 0, "Str"],
-      ["Goldenfifty", 0, "Gol"],
-      ["Herzschmerz", 1, "Herz"],
-      ["nerdkultur", 0, "Ner"],
-      ["query", 0, "Que"],
+      ["Chatcity", 0, "CC"],
+      ["Zauberwald", 0, "Zaub"],
+      ["Bizarre-Talk", 0, "BizT"],
+      ["Herzklopfen", 0, "HerzK"],
+      ["Knuddelecke", 0, "KnudE"],
+      ["Hexensabbat", 0, "HexS"],
+      ["Bluemchensex", 0, "Bluem"],
+      ["Man-Street", 0, "ManS"],
+      ["Fortysomething", 0, "Forty"],
+      ["Trauminsel", 0, "Traum"],
+      ["Streik-Channel", 0, "Streik"],
+      ["Goldenfifty", 0, "Golden"],
+      ["Herzschmerz", 1, "HerzS"],
+      ["nerdkultur", 0, "NerdK"],
+      ["query", 0, "Query"],
       ["Gay-Cruising", 0, "Gay"],
-      ["Women-Corner", 0, "Wom"],
-      ["EroRsp", 0, "ErR"],
+      ["Women-Corner", 0, "WoCo"],
+      ["EroRsp", 0, "EroR"],
       ["Erotik", 0, "Ero"],
-      ["Erotik2", 0, "Er2"],
-      ["Erotik3", 0, "Er3"],
-      ["Erotik4", 0, "Er4"],
-      ["International", 0, "Int"],
+      ["Erotik2", 0, "Ero2"],
+      ["Erotik3", 0, "Ero3"],
+      ["Erotik4", 0, "Ero4"],
+      ["International", 0, "Intl"],
       ["Baklava", 0, "Bak"],
     ];
     for (const [name, index, expected] of channels) {

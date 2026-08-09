@@ -97,39 +97,39 @@ describe("abbrevChannels — channel abbreviation badges with collision indices"
   it("keeps the base abbreviation for channels with distinct bases", () => {
     const badges = abbrevChannels(["Erotik", "Women-Corner", "MOD"]);
     expect(badges.get("Erotik")).toBe("Ero");
-    expect(badges.get("Women-Corner")).toBe("Wom");
+    expect(badges.get("Women-Corner")).toBe("WoCo");
     expect(badges.get("MOD")).toBe("MOD");
   });
 
-  it("extends the second channel that collides on a base (Herzklopfen → Her, Herzschmerz → Herz)", () => {
+  it("uses the hardcoded badge names for known channels even when they share a word stem", () => {
     const badges = abbrevChannels(["Herzklopfen", "Herzschmerz"]);
-    expect(badges.get("Herzklopfen")).toBe("Her");
-    expect(badges.get("Herzschmerz")).toBe("Herz");
+    expect(badges.get("Herzklopfen")).toBe("HerzK");
+    expect(badges.get("Herzschmerz")).toBe("HerzS");
   });
 
-  it("extends progressively on a three-way collision", () => {
+  it("still extends progressively on a three-way collision for unknown channels", () => {
     // Indices are assigned in sorted channel order: Herzchen (0), Herzklopfen
-    // (1), Herzschmerz (2) — each extends one char further.
+    // and Herzschmerz are hardcoded, so only Herzchen uses the fallback shape.
     const badges = abbrevChannels(["Herzklopfen", "Herzschmerz", "Herzchen"]);
     expect(badges.get("Herzchen")).toBe("Her");
-    expect(badges.get("Herzklopfen")).toBe("Herz");
-    expect(badges.get("Herzschmerz")).toBe("Herzs");
+    expect(badges.get("Herzklopfen")).toBe("HerzK");
+    expect(badges.get("Herzschmerz")).toBe("HerzS");
   });
 
   it("does not treat digit-suffixed channels as collisions (Erotik vs Erotik2)", () => {
     const badges = abbrevChannels(["Erotik", "Erotik2", "Erotik3"]);
     expect(badges.get("Erotik")).toBe("Ero");
-    expect(badges.get("Erotik2")).toBe("Er2");
-    expect(badges.get("Erotik3")).toBe("Er3");
+    expect(badges.get("Erotik2")).toBe("Ero2");
+    expect(badges.get("Erotik3")).toBe("Ero3");
   });
 
   it("assigns indices in sorted channel order (deterministic regardless of input order)", () => {
     const a = abbrevChannels(["Herzschmerz", "Herzklopfen"]);
     const b = abbrevChannels(["Herzklopfen", "Herzschmerz"]);
-    expect(a.get("Herzklopfen")).toBe("Her");
-    expect(a.get("Herzschmerz")).toBe("Herz");
-    expect(b.get("Herzklopfen")).toBe("Her");
-    expect(b.get("Herzschmerz")).toBe("Herz");
+    expect(a.get("Herzklopfen")).toBe("HerzK");
+    expect(a.get("Herzschmerz")).toBe("HerzS");
+    expect(b.get("Herzklopfen")).toBe("HerzK");
+    expect(b.get("Herzschmerz")).toBe("HerzS");
   });
 
   it("dedupes duplicate channel names", () => {
