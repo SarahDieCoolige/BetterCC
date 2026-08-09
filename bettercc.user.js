@@ -871,13 +871,15 @@
     for (const fn of listeners) fn(e);
   }
 
-  // src/userlist-wire.ts
-  var prevList = [];
+  // src/ulist-poll.ts
   function processUserlist(chaMy, prev) {
     const newList = parseUserlist(chaMy);
     const { added, removed } = diffUserlists(prev, newList);
     return { newList, added, removed };
   }
+
+  // src/userlist-wire.ts
+  var prevList = [];
   function overrideSetUinfo1() {
     unsafeWindow.set_uinfo1 = function() {
       const chaMy2 = getChaMy();

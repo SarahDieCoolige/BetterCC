@@ -9,22 +9,13 @@
 // This module does NOT call the upstream set_uinfo1; the hidden userlist table
 // is never updated. The sidebar replaces it.
 
-import { parseUserlist, diffUserlists } from "./userlist";
+import { processUserlist } from "./ulist-poll";
+export { processUserlist };
 import { emit, type User } from "./store";
 import { cclog } from "./utils";
 import { getChaMy } from "./upstream";
 
 let prevList: User[] = [];
-
-/**
- * Pure core (tested): parse the flat cha_my array and diff against the
- * previous snapshot, returning everything the store event needs.
- */
-export function processUserlist(chaMy: string[], prev: User[]) {
-  const newList = parseUserlist(chaMy);
-  const { added, removed } = diffUserlists(prev, newList);
-  return { newList, added, removed };
-}
 
 /**
  * Override the upstream set_uinfo1 so userlist polls feed the store instead of
