@@ -214,13 +214,6 @@
       doc.body.style.setProperty("background-color", "var(--chatBackground)");
       doc.body.style.setProperty("color", "var(--chatText)");
     }
-    const win = getChatWin();
-    if (win) {
-      try {
-        win.chatCityPing?.stop?.();
-      } catch {
-      }
-    }
   }
   function betterccOnWsClose() {
   }
