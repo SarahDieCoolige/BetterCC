@@ -111,6 +111,15 @@ export function startUlistPoll(intervalMs = 20000): void {
   pchatBase = getPChat();
   if (running) return;
   running = true;
+  // Seed the sidebar from the page-load cha_my so the userlist appears
+  // immediately, while the first network poll is in flight. The old
+  // userlist-wire.ts override did this same replay — see Amendment 5a.
+  const seed = (unsafeWindow as any).cha_my;
+  if (Array.isArray(seed) && seed.length > 0) {
+    const { newList, added, removed } = processUserlist(seed, prevList);
+    prevList = newList;
+    emit({ type: "userlist", users: newList, added, removed });
+  }
   pollOnce().finally(() => {
     if (running) scheduleNext(intervalMs);
   });

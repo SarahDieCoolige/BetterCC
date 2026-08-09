@@ -921,6 +921,12 @@
     pchatBase = getPChat();
     if (running) return;
     running = true;
+    const seed = unsafeWindow.cha_my;
+    if (Array.isArray(seed) && seed.length > 0) {
+      const { newList, added, removed } = processUserlist(seed, prevList);
+      prevList = newList;
+      emit({ type: "userlist", users: newList, added, removed });
+    }
     pollOnce().finally(() => {
       if (running) scheduleNext(intervalMs);
     });
