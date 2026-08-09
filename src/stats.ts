@@ -11,7 +11,7 @@
 // are verified via the dev-server smoke (consistent with sidebar.ts / shell.ts).
 
 import { cclog, encodeChatLink } from "./utils";
-import { getChatNick } from "./upstream";
+import { getChatNick, getAjax, getPAjax } from "./upstream";
 
 /** The three counts parsed from the chat_info_friends_nc.html response. */
 export interface Stats {
@@ -171,9 +171,8 @@ function renderStats(stats: Stats | null): void {
  */
 function pollOnce(): void {
   try {
-    const w = unsafeWindow as any;
-    const ajax = w.ajax;
-    const pajax = w.PAJAX;
+    const ajax = getAjax();
+    const pajax = getPAjax();
     if (typeof ajax !== "function" || typeof pajax !== "string") {
       cclog("stats: upstream ajax/PAJAX unavailable — skipping poll", "v3");
       return;

@@ -262,6 +262,12 @@
   function getChatSid() {
     return String(unsafeWindow.chat_sid ?? "");
   }
+  function getPAjax() {
+    return String(unsafeWindow.PAJAX ?? "");
+  }
+  function getAjax() {
+    return unsafeWindow.ajax;
+  }
   function getChaMy() {
     return unsafeWindow.cha_my ?? [];
   }
@@ -777,6 +783,60 @@
   function channelAbbrev(name, index) {
     const hadHyphens = name.includes("-");
     const stripped = name.replace(/-/g, "");
+    switch (stripped.toLowerCase()) {
+      case "mod":
+        return "MOD";
+      case "zauberwald":
+        return "Zaub";
+      case "bizarretalk":
+        return "BizT";
+      case "herzklopfen":
+        return "HerzK";
+      case "knuddelecke":
+        return "KnudE";
+      case "hexensabbat":
+        return "HexS";
+      case "bluemchensex":
+        return "Bluem";
+      case "manstreet":
+        return "ManS";
+      case "fortysomething":
+        return "Forty";
+      case "trauminsel":
+        return "Traum";
+      case "streikchannel":
+        return "Streik";
+      case "goldenfifty":
+        return "Golden";
+      case "herzschmerz":
+        return "HerzS";
+      case "nerdkultur":
+        return "NerdK";
+      case "query":
+        return "Query";
+      case "gaycruising":
+        return "Gay";
+      case "womencorner":
+        return "WoCo";
+      case "erorsp":
+        return "EroR";
+      case "erotik":
+        return "Ero";
+      case "erotik2":
+        return "Ero2";
+      case "erotik3":
+        return "Ero3";
+      case "erotik4":
+        return "Ero4";
+      case "registriert":
+        return "Reg";
+      case "chatcity":
+        return "CC";
+      case "international":
+        return "Intl";
+      case "baklava":
+        return "Bak";
+    }
     if (stripped.length <= 3) return stripped;
     let abbrev;
     if (!hadHyphens) {
@@ -1082,9 +1142,8 @@
   function fetchAndStore(key, term) {
     return new Promise((resolve, reject) => {
       try {
-        const w = unsafeWindow;
-        const ajax = w.ajax;
-        const pajax = w.PAJAX;
+        const ajax = getAjax();
+        const pajax = getPAjax();
         if (typeof ajax !== "function" || typeof pajax !== "string") {
           cclog("user-image: upstream ajax/PAJAX unavailable \u2014 rejecting", "user-image");
           reject(new Error("user-image: upstream ajax/PAJAX unavailable"));
@@ -2071,9 +2130,8 @@
   }
   function pollOnce2() {
     try {
-      const w = unsafeWindow;
-      const ajax = w.ajax;
-      const pajax = w.PAJAX;
+      const ajax = getAjax();
+      const pajax = getPAjax();
       if (typeof ajax !== "function" || typeof pajax !== "string") {
         cclog("stats: upstream ajax/PAJAX unavailable \u2014 skipping poll", "v3");
         return;

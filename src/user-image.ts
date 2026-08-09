@@ -7,6 +7,7 @@
 // T13's future id-popup.ts will import parseIdSearch + decodeIdPath from here.
 
 import { cclog } from "./utils";
+import { getAjax, getPAjax } from "./upstream";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────
 
@@ -363,9 +364,8 @@ export function fetchIdRows(term: string): Promise<IdSearchRow[]> {
 function fetchAndStore(key: string, term: string): Promise<IdSearchRow[]> {
   return new Promise<IdSearchRow[]>((resolve, reject) => {
     try {
-      const w = unsafeWindow as any;
-      const ajax = w.ajax;
-      const pajax = w.PAJAX;
+      const ajax = getAjax();
+      const pajax = getPAjax();
 
       if (typeof ajax !== "function" || typeof pajax !== "string") {
         cclog("user-image: upstream ajax/PAJAX unavailable — rejecting", "user-image");
