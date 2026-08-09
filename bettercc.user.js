@@ -900,20 +900,22 @@
       const resp = await fetch(url);
       const text = await resp.text();
       const chaMy = parseUlistResponse(text);
-      if (chaMy.length === 0 && prevList.length > 0) return;
+      if (!chaMy.some((s) => s !== "") && prevList.length > 0) return;
       const { newList, added, removed } = processUserlist(chaMy, prevList);
       prevList = newList;
       emit({ type: "userlist", users: newList, added, removed });
     } catch {
     }
   }
+  var STALE_RETRY_MS = 2e3;
   function scheduleNext(intervalMs) {
-    const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT;
+    const effectiveInterval = prevList.length === 0 ? STALE_RETRY_MS : intervalMs;
+    const jitter = (Math.random() - 0.5) * 2 * effectiveInterval * JITTER_PCT;
     timerId = setTimeout(() => {
       pollOnce().finally(() => {
         if (running) scheduleNext(intervalMs);
       });
-    }, intervalMs + jitter);
+    }, effectiveInterval + jitter);
   }
   function startUlistPoll(intervalMs = 2e4) {
     chatId = getChatId();
@@ -921,12 +923,6 @@
     pchatBase = getPChat();
     if (running) return;
     running = true;
-    const seed = unsafeWindow.cha_my;
-    if (Array.isArray(seed) && seed.length > 0) {
-      const { newList, added, removed } = processUserlist(seed, prevList);
-      prevList = newList;
-      emit({ type: "userlist", users: newList, added, removed });
-    }
     pollOnce().finally(() => {
       if (running) scheduleNext(intervalMs);
     });

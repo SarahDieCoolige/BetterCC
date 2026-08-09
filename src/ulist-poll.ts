@@ -67,10 +67,15 @@ const JITTER_PCT = 0.2;
 
 /**
  * One poll cycle: fetch ulist → parse → diff → emit. Errors are swallowed —
- * the next cycle retries silently (no cclog spam on a flaky network).
- * The empty-response guard prevents a transient bad response from blanking
- * the sidebar: if we had users before and the parse came back empty, we
- * keep the last snapshot.
+ * the next cycle retries silently.
+ *
+ * The empty-response guard handles two cases:
+ * 1. First join: the daemon returns new Array("") (one empty string — the
+ *    terminator, zero real users) or <!--UCHANNEL--> while the channel is
+ *    being set up. We skip the emit (keeping any previous snapshot, if any)
+ *    and scheduleNext retries at 2s until real data arrives.
+ * 2. Transient network blip / bad HTML response: parseUlistResponse returns
+ *    [] (failed match or eval error). Same skip-and-retry.
  */
 async function pollOnce(): Promise<void> {
   try {
@@ -79,25 +84,33 @@ async function pollOnce(): Promise<void> {
     const resp = await fetch(url);
     const text = await resp.text();
     const chaMy = parseUlistResponse(text);
-    // Empty-response guard: a transient bad response (parse fail, empty channel,
-    // network blip returning HTML) must NOT blank the sidebar. If we had users
-    // before and the parse came back empty, keep the last snapshot.
-    if (chaMy.length === 0 && prevList.length > 0) return;
+    // Guard: check for effective users, not raw array length. An empty response
+    // is new Array("") — one element (the empty-string terminator) but zero
+    // real users. A failed parse returns [] (zero elements, zero users).
+    if (!chaMy.some((s) => s !== "") && prevList.length > 0) return;
     const { newList, added, removed } = processUserlist(chaMy, prevList);
     prevList = newList;
     emit({ type: "userlist", users: newList, added, removed });
   } catch {
-    // Silent retry next cycle — no cclog spam on a flaky network.
+    // Silent retry next cycle.
   }
 }
 
+/** Stale-retry interval — used when no real user data has arrived yet (first
+ *  join, channel change, transient empty response). Once real data arrives,
+ *  scheduleNext switches to the normal poll interval. */
+const STALE_RETRY_MS = 2000;
+
 function scheduleNext(intervalMs: number): void {
-  const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT;
+  // Retry at 2s until the first real data arrives (prevList empty after a
+  // successful poll means the response was empty or the parse failed).
+  const effectiveInterval = prevList.length === 0 ? STALE_RETRY_MS : intervalMs;
+  const jitter = (Math.random() - 0.5) * 2 * effectiveInterval * JITTER_PCT;
   timerId = setTimeout(() => {
     pollOnce().finally(() => {
       if (running) scheduleNext(intervalMs);
     });
-  }, intervalMs + jitter);
+  }, effectiveInterval + jitter);
 }
 
 /**
@@ -111,15 +124,6 @@ export function startUlistPoll(intervalMs = 20000): void {
   pchatBase = getPChat();
   if (running) return;
   running = true;
-  // Seed the sidebar from the page-load cha_my so the userlist appears
-  // immediately, while the first network poll is in flight. The old
-  // userlist-wire.ts override did this same replay — see Amendment 5a.
-  const seed = (unsafeWindow as any).cha_my;
-  if (Array.isArray(seed) && seed.length > 0) {
-    const { newList, added, removed } = processUserlist(seed, prevList);
-    prevList = newList;
-    emit({ type: "userlist", users: newList, added, removed });
-  }
   pollOnce().finally(() => {
     if (running) scheduleNext(intervalMs);
   });
