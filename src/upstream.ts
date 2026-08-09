@@ -53,6 +53,16 @@ export function getPChat(): string {
   return String((unsafeWindow as any).PCHAT ?? "");
 }
 
+/** The page-load channel userlist (cha_my), empty if not yet populated.
+ *  Used to seed the ulist poll on first enter — the fetch queue can lag the
+ *  page-load cha_my by seconds on live. v3 owns the ulist poll now, so cha_my
+ *  is otherwise dead (upstream's set_uinfo1 no longer runs); this seed read
+ *  is its only consumer. */
+export function getChaMy(): string[] {
+  const v = (unsafeWindow as any).cha_my;
+  return Array.isArray(v) ? v : [];
+}
+
 /** Base URL for general AJAX endpoints (e.g. friends stats, ID search). Ends in `/de/`. */
 export function getPAjax(): string {
   return String((unsafeWindow as any).PAJAX ?? "");

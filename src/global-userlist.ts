@@ -54,39 +54,41 @@ export function diffGlobal(prev: Map<string, User[]>, next: Map<string, User[]>)
 
 // ─── Poll-Loop ─────────────────────────────────────────────────────────────
 
-/** Jitter range for the poll interval (±20% of base), so the server never
- *  sees a perfectly predictable request cadence. */
-const JITTER_PCT = 0.2;
-
 /**
- * One poll cycle: fetch aw.js → parse → diff → emit. Errors are swallowed —
- * the next cycle retries silently (no cclog spam on a flaky network).
+ * One poll cycle: fetch aw.js → parse → diff → emit. Errors are logged and
+ * retried next cycle.
+ *
+ * Empty-response guard: aw.js lists every user online across the whole site,
+ * so an empty parse result is never a legitimate snapshot — it means the
+ * fetch returned garbage (a 500 body, an HTML error page, etc.). Always skip
+ * the emit and retry, regardless of prior snapshot state. The previous guard
+ * required lastSnapshot.size > 0 before skipping, which opened a hole: on the
+ * first poll, lastSnapshot is still empty, so a garbage response would fall
+ * through and emit a bogus empty globalUserlist. Mirrors ulist-poll.ts.
  */
 async function pollOnce(): Promise<void> {
   try {
     const raw = await fetchAw();
     const next = parseAw(raw);
-    if (next.size === 0 && lastSnapshot.size > 0) return;
+    if (next.size === 0) return;
     const { added, removed } = diffGlobal(lastSnapshot, next);
     lastSnapshot = next;
     emit({ type: "globalUserlist", channels: next, added, removed });
-  } catch {
-    // Silent retry next cycle.
+  } catch (e) {
+    cclog("global-userlist: poll error — " + (e as Error).message, "v3");
   }
 }
 
 function scheduleNext(intervalMs: number): void {
-  const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT;
   timerId = setTimeout(() => {
     pollOnce().finally(() => {
       if (running) scheduleNext(intervalMs);
     });
-  }, intervalMs + jitter);
+  }, intervalMs);
 }
 
 /**
- * Start the poll loop: immediate first fetch, then one cycle roughly every
- * intervalMs (±20% jitter so the server sees a spread, not a metronome).
+ * Start the poll loop: immediate first fetch, then one cycle every intervalMs.
  * Starting while already running is a no-op.
  */
 export function startPolling(intervalMs: number): void {

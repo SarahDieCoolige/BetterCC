@@ -187,12 +187,15 @@ describe("ulist-poll loop", () => {
     expect(fetchCount).toBe(2);
   });
 
-  it("empty-response guard: skip emit when parsed empty AND prevList non-empty", async () => {
-    // First poll returns users, second returns empty — the second should NOT
-    // overwrite prevList (the guard preserves the previous snapshot).
+  it("empty-response guard: skip emit when response has no real users", async () => {
+    // A valid response always contains at least our own nick, so an empty
+    // response (bare terminator or parse failure) is never legitimate — skip
+    // + retry, regardless of prior state. Verified twice below: once when
+    // prevList is populated (after a good poll), once when it's empty (no seed).
     const RESPONSES = [
       'var cha_my = new Array("Alice","hR","");', // first: has users
       "no cha_my here", // second: empty parse
+      'var cha_my = new Array("");', // third: bare terminator, zero users
     ];
     let callIdx = 0;
     vi.stubGlobal("fetch", () => {
@@ -201,18 +204,37 @@ describe("ulist-poll loop", () => {
 
     const mod = await import("../src/ulist-poll");
     mod.startUlistPoll(10000);
-
-    // First poll runs immediately
+    mod.refreshUlistNow(10000); // second fetch (empty parse) — must skip
+    mod.refreshUlistNow(10000); // third fetch (bare terminator) — must skip
     mod.stopUlistPoll();
     await vi.runAllTimersAsync();
-    expect(callIdx).toBe(1);
 
-    // Now refresh to get the empty response
+    expect(callIdx).toBe(3); // start immediate + 2 refreshes
+  });
+
+  it("empty-response guard: skips empty even with no prior data (no seed)", async () => {
+    // No seed → prevList stays empty. First fetch returns a bare terminator
+    // (daemon not ready). The guard must still skip it — an empty response is
+    // never legitimate. Without the guard fix, this would fall through and
+    // emit a bogus empty userlist.
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve({ text: () => Promise.resolve('var cha_my = new Array("");') }),
+    );
+
+    // Subscribe before importing the poll module so any emit is observed.
+    const userlistEvents: unknown[] = [];
+    const { subscribe } = await import("../src/store");
+    const unsub = subscribe((e) => {
+      if ((e as { type: string }).type === "userlist") userlistEvents.push(e);
+    });
+
+    const mod = await import("../src/ulist-poll");
     mod.startUlistPoll(10000);
-    mod.refreshUlistNow(10000);
     mod.stopUlistPoll();
     await vi.runAllTimersAsync();
-    expect(callIdx).toBe(3); // start immediate + refresh = 2 more
+
+    expect(userlistEvents).toHaveLength(0); // guard skipped the empty response
+    unsub();
   });
 
   it("double startUlistPoll is a no-op (running guard)", async () => {

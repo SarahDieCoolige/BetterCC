@@ -145,8 +145,6 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal("GM_log", vi.fn());
-    // Pin jitter to 0 so fake timers fire at exactly intervalMs.
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
     vi.mocked(fetchAw).mockReset();
     events = [];
     unsubscribe = subscribe((e) => events.push(e));
@@ -244,7 +242,7 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     expect(e.removed).toEqual([{ user: mkUser("Beta"), channel: "Erotik" }]);
   });
 
-  it("skips an empty parse result when snapshot is non-empty (server error guard)", async () => {
+  it("skips an empty parse result — snapshot preserved if populated", async () => {
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);
     await flushMicrotasks();
@@ -257,6 +255,19 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     await flushMicrotasks();
     expect(events).toHaveLength(0); // no emit — guard skipped the update
     expect(getLastSnapshot().size).toBeGreaterThan(0); // snapshot preserved
+  });
+
+  it("skips an empty parse result even with no prior snapshot (first poll garbage)", async () => {
+    // aw.js lists every user online site-wide, so an empty parse is never
+    // legitimate. On the very first poll the snapshot is still empty — the
+    // guard must still skip (not fall through and emit a bogus empty snapshot).
+    // NB: module state persists across this describe block, so we only assert
+    // the skip (no emit); the no-snapshot precondition is covered indirectly
+    // by the ulist-poll suite which uses vi.resetModules() for fresh state.
+    vi.mocked(fetchAw).mockResolvedValue("Internal Server Error");
+    startPolling(5000);
+    await flushMicrotasks();
+    expect(events).toHaveLength(0); // no emit — guard skipped
   });
 
   it("stopPolling stops the loop", async () => {

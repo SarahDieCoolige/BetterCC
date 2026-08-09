@@ -265,6 +265,10 @@
   function getPChat() {
     return String(unsafeWindow.PCHAT ?? "");
   }
+  function getChaMy() {
+    const v = unsafeWindow.cha_my;
+    return Array.isArray(v) ? v : [];
+  }
   function getPAjax() {
     return String(unsafeWindow.PAJAX ?? "");
   }
@@ -894,30 +898,30 @@
     const { added, removed } = diffUserlists(prev, newList);
     return { newList, added, removed };
   }
-  var JITTER_PCT = 0.2;
   async function pollOnce() {
     try {
       const url = pchatBase + "/ulist?AKTION=j&ID=" + chatId + "&SID=" + chatSid + "&x=" + Math.random();
       const resp = await fetch(url);
       const text = await resp.text();
       const chaMy = parseUlistResponse(text);
-      if (!chaMy.some((s) => s !== "") && prevList.length > 0) return;
+      if (!chaMy.some((s) => s !== "")) return;
       stale = false;
       const { newList, added, removed } = processUserlist(chaMy, prevList);
       prevList = newList;
       emit({ type: "userlist", users: newList, added, removed });
-    } catch {
+    } catch (e) {
+      cclog("ulist-poll: poll error \u2014 " + e.message, "v3");
     }
   }
   var STALE_RETRY_MS = 2e3;
+  function pollAndReschedule(intervalMs) {
+    pollOnce().finally(() => {
+      if (running) scheduleNext(intervalMs);
+    });
+  }
   function scheduleNext(intervalMs) {
     const effectiveInterval = stale ? STALE_RETRY_MS : intervalMs;
-    const jitter = (Math.random() - 0.5) * 2 * effectiveInterval * JITTER_PCT;
-    timerId = setTimeout(() => {
-      pollOnce().finally(() => {
-        if (running) scheduleNext(intervalMs);
-      });
-    }, effectiveInterval + jitter);
+    timerId = setTimeout(() => pollAndReschedule(intervalMs), effectiveInterval);
   }
   function startUlistPoll(intervalMs = 2e4) {
     chatId = getChatId();
@@ -925,15 +929,13 @@
     pchatBase = getPChat();
     if (running) return;
     running = true;
-    const seed = unsafeWindow.cha_my;
-    if (Array.isArray(seed) && seed.length > 0) {
+    const seed = getChaMy();
+    if (seed.length > 0) {
       const { newList, added, removed } = processUserlist(seed, prevList);
       prevList = newList;
       emit({ type: "userlist", users: newList, added, removed });
     }
-    pollOnce().finally(() => {
-      if (running) scheduleNext(intervalMs);
-    });
+    pollAndReschedule(intervalMs);
     cclog("ulist-poll gestartet \u2014 alle ~" + intervalMs + " ms", "v3");
   }
   function stopUlistPoll() {
@@ -943,9 +945,7 @@
   }
   function refreshUlistNow(intervalMs = 2e4) {
     if (timerId !== void 0) clearTimeout(timerId);
-    pollOnce().finally(() => {
-      if (running) scheduleNext(intervalMs);
-    });
+    pollAndReschedule(intervalMs);
   }
 
   // src/global-userlist.ts
@@ -969,25 +969,24 @@
     }
     return { added, removed };
   }
-  var JITTER_PCT2 = 0.2;
   async function pollOnce2() {
     try {
       const raw = await fetchAw();
       const next = parseAw(raw);
-      if (next.size === 0 && lastSnapshot.size > 0) return;
+      if (next.size === 0) return;
       const { added, removed } = diffGlobal(lastSnapshot, next);
       lastSnapshot = next;
       emit({ type: "globalUserlist", channels: next, added, removed });
-    } catch {
+    } catch (e) {
+      cclog("global-userlist: poll error \u2014 " + e.message, "v3");
     }
   }
   function scheduleNext2(intervalMs) {
-    const jitter = (Math.random() - 0.5) * 2 * intervalMs * JITTER_PCT2;
     timerId2 = setTimeout(() => {
       pollOnce2().finally(() => {
         if (running2) scheduleNext2(intervalMs);
       });
-    }, intervalMs + jitter);
+    }, intervalMs);
   }
   function startPolling(intervalMs) {
     if (running2) return;

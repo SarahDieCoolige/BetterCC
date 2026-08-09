@@ -13,7 +13,7 @@
 
 import { parseUserlist, diffUserlists } from "./userlist";
 import { emit, type User } from "./store";
-import { getChatId, getChatSid, getPChat } from "./upstream";
+import { getChatId, getChatSid, getPChat, getChaMy } from "./upstream";
 import { cclog } from "./utils";
 
 let chatId = ""; // read ONCE at startUlistPoll — doesn't change per session
@@ -62,21 +62,21 @@ export function processUserlist(chaMy: string[], prev: User[]) {
 
 // ─── Poll-Loop ──────────────────────────────────────────────────────────────
 
-/** Jitter range for the poll interval (±20% of base), so the server never
- *  sees a perfectly predictable request cadence. */
-const JITTER_PCT = 0.2;
-
 /**
- * One poll cycle: fetch ulist → parse → diff → emit. Errors are swallowed —
- * the next cycle retries silently.
+ * One poll cycle: fetch ulist → parse → diff → emit. Errors are logged and
+ * retried next cycle.
  *
- * The empty-response guard handles two cases:
- * 1. First join: the daemon returns new Array("") (one empty string — the
- *    terminator, zero real users) or <!--UCHANNEL--> while the channel is
- *    being set up. We skip the emit (keeping any previous snapshot, if any)
- *    and scheduleNext retries at 2s until real data arrives.
- * 2. Transient network blip / bad HTML response: parseUlistResponse returns
- *    [] (failed match or eval error). Same skip-and-retry.
+ * Empty-response guard: a valid ulist response always contains at least our
+ * own nick, so an "empty" response — new Array("") (the bare terminator, one
+ * element, zero real users) or [] (a failed parse / bad HTML) — is NEVER a
+ * legitimate snapshot. It means the daemon isn't ready (first join, channel
+ * change), the response was garbage, or the parse failed. In all cases we
+ * skip the emit entirely and retry next cycle, regardless of prevList state.
+ *
+ * The previous guard also required prevList.length > 0 before skipping, which
+ * encoded the wrong assumption that an empty response could be legitimate. It
+ * opened a hole: with no seed (prevList empty), the first empty daemon
+ * response would fall through, set stale=false, and emit a bogus empty list.
  */
 async function pollOnce(): Promise<void> {
   try {
@@ -87,14 +87,15 @@ async function pollOnce(): Promise<void> {
     const chaMy = parseUlistResponse(text);
     // Guard: check for effective users, not raw array length. An empty response
     // is new Array("") — one element (the empty-string terminator) but zero
-    // real users. A failed parse returns [] (zero elements, zero users).
-    if (!chaMy.some((s) => s !== "") && prevList.length > 0) return;
+    // real users. A failed parse returns [] (zero elements, zero users). Both
+    // are invalid; always skip + retry.
+    if (!chaMy.some((s) => s !== "")) return;
     stale = false; // first successful network poll with real data — switch to normal interval
     const { newList, added, removed } = processUserlist(chaMy, prevList);
     prevList = newList;
     emit({ type: "userlist", users: newList, added, removed });
-  } catch {
-    // Silent retry next cycle.
+  } catch (e) {
+    cclog("ulist-poll: poll error — " + (e as Error).message, "v3");
   }
 }
 
@@ -103,24 +104,29 @@ async function pollOnce(): Promise<void> {
  *  scheduleNext switches to the normal poll interval. */
 const STALE_RETRY_MS = 2000;
 
+/**
+ * Run one poll cycle, then reschedule the loop if still running. The shared
+ * body of startUlistPoll / scheduleNext / refreshUlistNow — names the
+ * "poll-then-rearm" concept so the three call sites don't drift apart.
+ */
+function pollAndReschedule(intervalMs: number): void {
+  pollOnce().finally(() => {
+    if (running) scheduleNext(intervalMs);
+  });
+}
+
 function scheduleNext(intervalMs: number): void {
   // Retry at 2s until the first real network data arrives, then switch to
   // the normal interval. The seed from page-load cha_my populates prevList
   // immediately for the sidebar, but stale tracks whether we've received
   // fresh data from the daemon.
   const effectiveInterval = stale ? STALE_RETRY_MS : intervalMs;
-  const jitter = (Math.random() - 0.5) * 2 * effectiveInterval * JITTER_PCT;
-  timerId = setTimeout(() => {
-    pollOnce().finally(() => {
-      if (running) scheduleNext(intervalMs);
-    });
-  }, effectiveInterval + jitter);
+  timerId = setTimeout(() => pollAndReschedule(intervalMs), effectiveInterval);
 }
 
 /**
  * Start the poll loop: read session data, immediate first fetch, then one cycle
- * roughly every intervalMs (±20% jitter). Starting while already running is a
- * no-op.
+ * every intervalMs. Starting while already running is a no-op.
  */
 export function startUlistPoll(intervalMs = 20000): void {
   chatId = getChatId();
@@ -132,15 +138,13 @@ export function startUlistPoll(intervalMs = 20000): void {
   // immediately, while the first network poll is in flight (the fetch gets
   // queued behind the page-load request storm — up to 15s on live).
   // stale stays true so scheduleNext retries at 2s until real data arrives.
-  const seed = (unsafeWindow as any).cha_my;
-  if (Array.isArray(seed) && seed.length > 0) {
+  const seed = getChaMy();
+  if (seed.length > 0) {
     const { newList, added, removed } = processUserlist(seed, prevList);
     prevList = newList;
     emit({ type: "userlist", users: newList, added, removed });
   }
-  pollOnce().finally(() => {
-    if (running) scheduleNext(intervalMs);
-  });
+  pollAndReschedule(intervalMs);
   cclog("ulist-poll gestartet — alle ~" + intervalMs + " ms", "v3");
 }
 
@@ -158,14 +162,5 @@ export function stopUlistPoll(): void {
  */
 export function refreshUlistNow(intervalMs = 20000): void {
   if (timerId !== undefined) clearTimeout(timerId);
-  pollOnce().finally(() => {
-    if (running) scheduleNext(intervalMs);
-  });
-}
-
-/** The most recent parsed userlist snapshot (empty before the first poll).
- *  Synchronous point-in-time read for callers that can't subscribe — mirrors
- *  global-userlist.ts getLastSnapshot(). */
-export function getLastUserlist(): User[] {
-  return prevList;
+  pollAndReschedule(intervalMs);
 }
