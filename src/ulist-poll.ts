@@ -22,6 +22,7 @@ let pchatBase = ""; // read ONCE at startUlistPoll — server-rendered, stable
 let prevList: User[] = [];
 let timerId: ReturnType<typeof setTimeout> | undefined;
 let running = false;
+let stale = true; // true until first network poll with real data — drives 2s retry
 
 // ─── parseUlistResponse ──────────────────────────────────────────────────────
 
@@ -88,6 +89,7 @@ async function pollOnce(): Promise<void> {
     // is new Array("") — one element (the empty-string terminator) but zero
     // real users. A failed parse returns [] (zero elements, zero users).
     if (!chaMy.some((s) => s !== "") && prevList.length > 0) return;
+    stale = false; // first successful network poll with real data — switch to normal interval
     const { newList, added, removed } = processUserlist(chaMy, prevList);
     prevList = newList;
     emit({ type: "userlist", users: newList, added, removed });
@@ -102,9 +104,11 @@ async function pollOnce(): Promise<void> {
 const STALE_RETRY_MS = 2000;
 
 function scheduleNext(intervalMs: number): void {
-  // Retry at 2s until the first real data arrives (prevList empty after a
-  // successful poll means the response was empty or the parse failed).
-  const effectiveInterval = prevList.length === 0 ? STALE_RETRY_MS : intervalMs;
+  // Retry at 2s until the first real network data arrives, then switch to
+  // the normal interval. The seed from page-load cha_my populates prevList
+  // immediately for the sidebar, but stale tracks whether we've received
+  // fresh data from the daemon.
+  const effectiveInterval = stale ? STALE_RETRY_MS : intervalMs;
   const jitter = (Math.random() - 0.5) * 2 * effectiveInterval * JITTER_PCT;
   timerId = setTimeout(() => {
     pollOnce().finally(() => {
@@ -124,6 +128,16 @@ export function startUlistPoll(intervalMs = 20000): void {
   pchatBase = getPChat();
   if (running) return;
   running = true;
+  // Seed the sidebar from the page-load cha_my so the userlist appears
+  // immediately, while the first network poll is in flight (the fetch gets
+  // queued behind the page-load request storm — up to 15s on live).
+  // stale stays true so scheduleNext retries at 2s until real data arrives.
+  const seed = (unsafeWindow as any).cha_my;
+  if (Array.isArray(seed) && seed.length > 0) {
+    const { newList, added, removed } = processUserlist(seed, prevList);
+    prevList = newList;
+    emit({ type: "userlist", users: newList, added, removed });
+  }
   pollOnce().finally(() => {
     if (running) scheduleNext(intervalMs);
   });
