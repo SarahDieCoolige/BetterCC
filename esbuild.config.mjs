@@ -13,8 +13,8 @@ function hashCSS(p) {
 const BASE = "https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3";
 
 const USERSCRIPT_HEADER = `// ==UserScript==
-// @name  BetterCC (alpha)
-// @description  BetterCC v3 alpha
+// @name  BetterCC (dev)
+// @description  BetterCC
 // @author  Sarah
 // @version      ${V}
 // @icon  ${BASE}/BetterCC.png

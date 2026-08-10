@@ -17,6 +17,10 @@
 !tests/
 !tests/**
 
+# CI
+!.github/
+!.github/**
+
 # Formatter / linter
 !.prettierrc
 !.prettierignore

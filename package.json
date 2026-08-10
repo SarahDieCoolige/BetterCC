@@ -4,6 +4,9 @@
   "description": "BetterCC is better",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node esbuild.config.mjs",
     "test": "vitest run",
@@ -12,22 +15,23 @@
     "dev": "node dev/server.mjs",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'css/**/*.css' '*.mjs' '*.json'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' 'css/**/*.css' '*.mjs' '*.json'",
-    "lint": "eslint 'src/**/*.ts' 'tests/**/*.ts'"
+    "lint": "eslint 'src/**/*.ts' 'tests/**/*.ts'",
+    "release": "v=$(node -p 'require(\"./package.json\").version') && git tag \"v$v\" && git push origin \"v$v\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/tampermonkey": "^5.0.0",
     "@types/tinycolor2": "^1.4.6",
-    "@typescript-eslint/eslint-plugin": "^8.65.0",
-    "@typescript-eslint/parser": "^8.65.0",
-    "esbuild": "^0.28.1",
-    "eslint": "^10.8.0",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.8.1",
     "prettier": "^3.9.6",
     "tinycolor2": "^1.6.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   },
   "allowScripts": {
-    "esbuild@0.28.1": true
+    "esbuild@0.28.2": true
   }
 }
