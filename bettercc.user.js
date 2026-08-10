@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name  BetterCC (alpha)
-// @description  BetterCC v3 alpha
+// @name  BetterCC (dev)
+// @description  BetterCC
 // @author  Sarah
-// @version      3.8.2
+// @version      3.9.0
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
