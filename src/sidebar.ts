@@ -453,6 +453,9 @@ export function mountSidebar(): void {
       for (const users of e.channels.values()) total += users.length;
       globalTotal = total;
       renderFromState();
+    } else if (e.type === "config" && e.key === "pinned") {
+      // Settings Save wrote a new pinned list; re-read and re-render.
+      refreshPinned().then(() => renderFromState());
     }
   });
 

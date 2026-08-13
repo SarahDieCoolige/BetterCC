@@ -1,10 +1,10 @@
-// Tests für die nickToHue Hilfsfunktion — stabiler HSL-Farbton aus dem
-// Benutzernamen für den Initial-Buchstaben-Avatar im User-Popup.
+// Tests for the nickToHue helper — a stable HSL hue derived from the
+// username for the initial-letter avatar in the user popup.
 import { describe, it, expect } from "vitest";
 import { nickToHue } from "../src/popup";
 
 describe("nickToHue", () => {
-  // ─── Deterministisch ──────────────────────────────────────────────────
+  // ─── Deterministic ────────────────────────────────────────────────────
 
   it("returns the same hue for the same input on repeated calls", () => {
     const a = nickToHue("TestUser");
@@ -12,7 +12,7 @@ describe("nickToHue", () => {
     expect(a).toBe(b);
   });
 
-  // ─── Wertebereich 0–359 ───────────────────────────────────────────────
+  // ─── Value range 0–359 ────────────────────────────────────────────────
 
   it("returns values in 0–359 for ASCII input", () => {
     const hue = nickToHue("TestUser");
@@ -37,7 +37,7 @@ describe("nickToHue", () => {
     expect(hue).toBeLessThanOrEqual(359);
   });
 
-  // ─── Verschiedene Eingaben ────────────────────────────────────────────
+  // ─── Different inputs ─────────────────────────────────────────────────
 
   it("different nicks produce stable per-input hues", () => {
     const hueA1 = nickToHue("TestUser");

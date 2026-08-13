@@ -1133,3 +1133,420 @@
   text-align: center;
   padding: 24px 16px;
 }
+
+/* ─── Settings Modal (T10) ─── */
+.bcc-settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000; /* above all chat overlays (/id, user popup, photo preview: 1000–1001) */
+}
+.bcc-settings-card {
+  background: var(--bcc-surface);
+  color: var(--bcc-text);
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  width: 540px;
+  max-width: 95vw;
+  height: 560px; /* fixed so switching tabs never shifts the card vertically */
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bcc-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bcc-border);
+  flex-shrink: 0;
+}
+.bcc-settings-close {
+  background: none;
+  border: none;
+  color: var(--bcc-icon);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+/* ─── Tab strip ─── */
+.bcc-settings-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--bcc-border);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.bcc-settings-tab {
+  background: none;
+  border: none;
+  color: var(--bcc-text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.bcc-settings-tab:hover {
+  color: var(--bcc-text);
+}
+.bcc-settings-tab[aria-selected="true"] {
+  color: var(--bcc-text);
+  border-bottom-color: var(--bcc-icon);
+  font-weight: 600;
+}
+/* ─── Tab panels ─── */
+.bcc-settings-panels {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 120px;
+}
+.bcc-settings-panel {
+  display: none;
+}
+.bcc-settings-panel[aria-hidden="false"] {
+  display: block;
+}
+/* ─── Save/Cancel bar ─── */
+.bcc-settings-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--bcc-border);
+  flex-shrink: 0;
+}
+.bcc-settings-btn {
+  padding: 6px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--bcc-border);
+  background: var(--bcc-surface-raised);
+  color: var(--bcc-text-raised);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.bcc-settings-btn:hover {
+  filter: brightness(0.95);
+}
+.bcc-settings-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.bcc-settings-btn:focus-visible {
+  outline: 2px solid var(--bcc-accent-whisper);
+  outline-offset: -2px;
+}
+
+/* ─── Switch (styled checkbox) ─── */
+.bcc-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.bcc-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.bcc-switch-track {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background: var(--bcc-border);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+.bcc-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bcc-surface-raised);
+  transition: transform 0.2s ease;
+}
+.bcc-switch input:checked + .bcc-switch-track {
+  background: var(--bcc-icon);
+}
+.bcc-switch input:checked + .bcc-switch-track::after {
+  transform: translateX(16px);
+}
+.bcc-switch input:focus-visible + .bcc-switch-track {
+  outline: 2px solid var(--bcc-accent-whisper);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bcc-switch-track,
+  .bcc-switch-track::after {
+    transition: none !important;
+  }
+}
+
+/* ─── Erscheinungsbild (Appearance) panel ─── */
+.bcc-appearance-section {
+  margin-bottom: 16px;
+}
+.bcc-appearance-section:last-child {
+  margin-bottom: 0;
+}
+.bcc-appearance-heading {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--bcc-text);
+}
+.bcc-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.bcc-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--bcc-border);
+  cursor: pointer;
+  padding: 0;
+  transition: box-shadow 0.15s ease;
+}
+.bcc-swatch:hover {
+  filter: brightness(0.9);
+}
+.bcc-swatch-active {
+  box-shadow: 0 0 0 2px var(--bcc-text);
+}
+.bcc-appearance-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bcc-appearance-picker {
+  width: 32px;
+  height: 28px;
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  padding: 2px;
+  background: var(--bcc-surface-raised);
+  cursor: pointer;
+}
+.bcc-appearance-hex {
+  width: 80px;
+  padding: 4px 6px;
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  background: var(--bcc-surface-input);
+  color: var(--bcc-text-input);
+  font-size: 13px;
+  font-family: inherit;
+}
+.bcc-appearance-error {
+  display: block;
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--bcc-accent-ban);
+  margin-top: 4px;
+}
+.bcc-appearance-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bcc-appearance-chip {
+  width: 64px;
+  height: 48px;
+  border-radius: 4px;
+  border: 1px solid var(--bcc-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.bcc-appearance-sample {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+}
+.bcc-appearance-chip-label {
+  font-size: 9px;
+  color: var(--bcc-text-muted);
+  margin-top: 2px;
+  text-align: center;
+  line-height: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bcc-swatch,
+  .bcc-swatch-active {
+    transition: none !important;
+  }
+}
+
+/* ─── Settings: generic field + hint (Chat tab etc.) ─── */
+.bcc-settings-field {
+  margin-bottom: 16px;
+}
+.bcc-settings-field:last-child {
+  margin-bottom: 0;
+}
+.bcc-settings-hint {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: var(--bcc-text-muted);
+  line-height: 1.4;
+}
+
+/* ─── Verwaltung (Management) panel ─── */
+.bcc-manage-section {
+  margin-bottom: 12px;
+}
+.bcc-manage-section:last-child {
+  margin-bottom: 0;
+}
+.bcc-manage-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.bcc-manage-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+}
+.bcc-manage-name {
+  flex: 1;
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bcc-manage-remove {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--bcc-text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+.bcc-manage-remove:hover {
+  opacity: 1;
+}
+.bcc-manage-add {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.bcc-manage-input {
+  flex: 1;
+  min-width: 0;
+  width: 80px;
+  padding: 4px 6px;
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  background: var(--bcc-surface-input);
+  color: var(--bcc-text-input);
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.bcc-manage-whisper {
+  /* no extra styles needed; the section + heading handle layout */
+}
+.bcc-manage-current {
+  font-size: 13px;
+  color: var(--bcc-text-muted);
+  margin-bottom: 8px;
+}
+
+/* ─── Befehle (Commands) panel ─── */
+.bcc-cmds-table {
+  border-collapse: collapse;
+  font: inherit;
+  width: 100%;
+}
+.bcc-cmds-cmd {
+  padding: 3px 12px 3px 0;
+  color: var(--bcc-text);
+  white-space: nowrap;
+  font-family: monospace;
+  font-size: 12px;
+}
+.bcc-cmds-desc {
+  padding: 3px 0;
+  color: var(--bcc-text-muted);
+  font-size: 13px;
+}
+
+/* ─── Info (Diagnostics) panel ─── */
+.bcc-info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.bcc-info-row {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.bcc-info-row + .bcc-info-row {
+  border-top: 1px solid var(--bcc-border);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+.bcc-info-key {
+  color: var(--bcc-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.bcc-info-val {
+  color: var(--bcc-text);
+  word-break: break-all;
+}
+
+/* ─── Daten (Data) panel ─── */
+.bcc-data-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bcc-data-row .bcc-settings-btn {
+  cursor: pointer;
+}
+.bcc-data-error {
+  display: block;
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--bcc-accent-ban);
+  margin-top: 4px;
+}

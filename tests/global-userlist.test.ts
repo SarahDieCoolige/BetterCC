@@ -136,7 +136,7 @@ describe("diffGlobal — two channel snapshots → { added, removed }", () => {
   });
 });
 
-// ─── Poll-Lebenszyklus (startPolling/stopPolling) ───────────────────────────
+// ─── Poll lifecycle (startPolling/stopPolling) ──────────────────────────────
 
 describe("startPolling/stopPolling — fetch → parse → diff → emit loop", () => {
   let events: BccEvent[];

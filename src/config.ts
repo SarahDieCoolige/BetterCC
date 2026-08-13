@@ -23,6 +23,8 @@ export const KNOWN_KEYS = [
   "whisper",
   "scheme_v2",
   "compact",
+  "send_on_enter",
+  "hover_preview",
 ] as const;
 export type ConfigKey = (typeof KNOWN_KEYS)[number];
 
@@ -35,6 +37,8 @@ export const DEFAULTS: Record<ConfigKey, unknown> = {
   whisper: "", // "" = no superwhisper target
   scheme_v2: false,
   compact: "", // "" = chatbar expanded; "1" = compact mode
+  send_on_enter: true, // true = Enter sends (current behavior)
+  hover_preview: true, // true = hover preview on (current behavior)
 };
 
 /**

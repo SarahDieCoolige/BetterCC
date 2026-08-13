@@ -32,6 +32,7 @@ import { getBettercc, sendCommand } from "./upstream";
 import { iconElement } from "./dom";
 import { getUserPhoto, evictImageCache, type UserImageResult } from "./user-image";
 import { getConfig } from "./config";
+import { hoverPreview } from "./config-cache";
 import {
   dismissPreview,
   dismissAllPreviews,
@@ -41,8 +42,8 @@ import {
 } from "./photo-preview";
 
 /**
- * Stabiler HSL-Farbton (0–359) aus einem Benutzernamen, für den
- * Initial-Buchstaben-Avatar im User-Popup.
+ * Stable HSL hue (0–359) derived from a username, for the
+ * initial-letter avatar in the user popup.
  *
  * Algorithm: sum of all charCodeAt(i) values, then mod 360.
  * Deterministic — same input always returns the same output.
@@ -350,7 +351,7 @@ export function openUserPopup(
   });
   nameRow.appendChild(nameSpan);
 
-  // ID button (stub, T13)
+  // ID button — opens the user's ID page in a new window (shipped v3.5.3)
   const idBtn = document.createElement("button");
   idBtn.type = "button";
   idBtn.className = "bcc-popup-id-btn";
@@ -482,6 +483,7 @@ export function openUserPopup(
   // Photo: hover = centered preview, click = toggle pin (stays open on mouseleave).
   // Hover: temporary preview. Click: pin/unpin.
   photoContainer.addEventListener("mouseenter", () => {
+    if (!hoverPreview()) return;
     if (previewByUser.has(user.name)) return;
     const img = photoContainer.querySelector("img") as HTMLImageElement;
     if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {

@@ -1,16 +1,15 @@
-// ─── v3 Globaler Userlist-Poll: aw.js → diff → emit (spec §cross-channel) ──
+// ─── v3 global userlist poll: aw.js → diff → emit (spec §cross-channel) ────
 //
-// Feature (German): Der globale Userlist-Poll lädt das aw.js von
-// images.chatcity.de alle 5 Sekunden, parst es (parseAw), vergleicht es mit
-// dem letzten Snapshot (diffGlobal) und meldet Änderungen als
-// "globalUserlist"-Store-Event. Pinned-Benutzer in anderen Kanälen werden so
-// in der Sidebar sichtbar. Ein fehlgeschlagener Fetch wird still übersprungen
-// und im nächsten Zyklus erneut versucht — kein Log-Spam.
+// The global userlist poll fetches aw.js from images.chatcity.de every 5
+// seconds, parses it (parseAw), diffs it against the last snapshot
+// (diffGlobal), and reports changes as a "globalUserlist" store event.
+// Pinned users in other channels thus become visible in the sidebar. A failed
+// fetch is silently skipped and retried on the next cycle — no log spam.
 //
-// Technical (English): Mirrors the userlist-wire pattern — module-level state
-// via let, pure core (diffGlobal) exported for testing, impure wiring
-// (startPolling) that calls the pure core + emit(). fetchAw is the GM
-// boundary and is mocked at the seam in tests.
+// Mirrors the userlist-wire pattern — module-level state via let, pure core
+// (diffGlobal) exported for testing, impure wiring (startPolling) that calls
+// the pure core + emit(). fetchAw is the GM boundary and is mocked at the
+// seam in tests.
 
 import { parseAw } from "./userlist";
 import { emit, type User, type UserWithChannel } from "./store";
@@ -97,7 +96,7 @@ export function startPolling(intervalMs: number): void {
   pollOnce().finally(() => {
     if (running) scheduleNext(intervalMs);
   });
-  cclog("Globaler Userlist-Poll gestartet — aw.js alle ~" + intervalMs + " ms", "v3");
+  cclog("global userlist poll started — aw.js every ~" + intervalMs + " ms", "v3");
 }
 
 /** Stop the poll loop. Idempotent — safe to call when not running. */
@@ -107,7 +106,7 @@ export function stopPolling(): void {
   running = false;
 }
 
-// ─── Snapshot-Zugriff ──────────────────────────────────────────────────────
+// ─── Snapshot access ───────────────────────────────────────────────────────
 
 /**
  * Find the channel a user (by lowercase key) is currently in, or null if the

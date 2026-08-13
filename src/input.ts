@@ -9,6 +9,9 @@ import { getConfig, setConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { buildPatchedHandler } from "./patched-handler";
 import { buildIdPopup } from "./id-popup";
+import { openSettings } from "./settings";
+import { sendOnEnter } from "./config-cache";
+import { subscribe, type BccEvent } from "./store";
 
 let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: ((...args: any[]) => any) | null = null;
@@ -68,6 +71,15 @@ export function prepareMessage(rawMsg: string, whisperNick: string): SendDecisio
   // rewriteForWhisper skips messages starting with "/", so explicit commands
   // pass through unchanged; only plain messages get the /w prefix.
   return { action: "send", message: rewriteForWhisper(rawMsg, whisperNick) };
+}
+
+/**
+ * The Enter send rule (invert-the-modifier). Enter is always the "default
+ * action", Shift+Enter the "non-default"; the flag picks which means send.
+ * sendOnEnter=true (default) preserves the original Enter-sends behavior.
+ */
+export function shouldSendOnEnter(sendOnEnterFlag: boolean, shiftKey: boolean): boolean {
+  return sendOnEnterFlag ? !shiftKey : shiftKey;
 }
 
 // ─── The submit handler (thin wrapper over prepareMessage) ─────────────────
@@ -159,23 +171,7 @@ async function doSubmit(whispernick?: string): Promise<void> {
           );
           break;
         case "settings":
-          Promise.all([
-            getConfig("pinned", []),
-            getConfig("color", ""),
-            getConfig("scheme_v2", false),
-          ]).then(([pinned, color, v2]) => {
-            const pinnedLine = (pinned as string[]).length
-              ? "Angepinnt: " + (pinned as string[]).join(", ")
-              : "Keine angepinnten Benutzer.";
-            const cHex = String(color).replace(/^#/, "");
-            const swatch =
-              '<span style="display:inline-block;width:24px;height:24px;background:#' +
-              cHex +
-              ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
-            const colorLine = "Thema-Farbe: " + swatch + "#" + cHex;
-            const schemeLine = "Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1");
-            printToChat(pinnedLine + "\n" + colorLine + "\n" + schemeLine);
-          });
+          openSettings();
           break;
       }
     }
@@ -260,7 +256,7 @@ export function mountInput(): void {
   textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
   textarea.placeholder = PLACEHOLDER_ALL;
   textarea.addEventListener("keydown", (e: KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && shouldSendOnEnter(sendOnEnter(), e.shiftKey)) {
       e.preventDefault();
       doSubmit();
     }
@@ -288,6 +284,18 @@ export function mountInput(): void {
   getConfig("whisper", "").then((nick) => {
     const n = (nick as string) || "";
     if (n) superwhisper(n, false);
+  });
+
+  // Live reaction: settings Save writes whisper directly; mirror what
+  // superwhisper() does to the textarea so placeholder + indicator update.
+  subscribe((e: BccEvent) => {
+    if (e.type !== "config" || e.key !== "whisper") return;
+    getConfig("whisper", "").then((nick) => {
+      const n = (nick as string) || "";
+      currentWhisperNick = n;
+      if (textarea) textarea.classList.toggle("bcc-superwhisper", Boolean(n));
+      updatePlaceholder();
+    });
   });
 
   // Auto-focus the textarea so users can type immediately

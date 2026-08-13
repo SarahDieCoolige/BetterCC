@@ -27,6 +27,7 @@ import {
 } from "./scheme";
 import { applyThemeToIframe, getUserKey } from "./utils";
 import { getConfig, setConfig } from "./config";
+import { emit } from "./store";
 
 // ─── Pure: the --bcc-* name map (spec §6.1) ───────────────────────────────
 
@@ -155,6 +156,7 @@ export async function saveColor(
   const scheme = generateScheme(baseHex);
   await GM.setValue(schemeKey, schemeToStorage(scheme));
   applyScheme(scheme);
+  emit({ type: "config", key: "color" });
   return scheme;
 }
 
@@ -187,27 +189,30 @@ export async function loadTheme(
 // ─── Scheme-version toggle (live switching without page reload) ────────────
 
 /**
- * Toggle between v1 and v2 scheme generators at runtime, regenerate fresh,
- * apply with CSS transitions, and persist the preference to GM storage.
- *
- * Called from the footer pill — no page reload needed.
+ * Set the scheme generator version explicitly (v1 stable / v2 experimental),
+ * regenerate from the stored base color, persist the cache, and apply live.
+ * `toggleSchemeVersion` delegates here; Save calls this with the draft value.
  */
-export async function toggleSchemeVersion(): Promise<void> {
-  // Flip the preference.
-  const currentV2 = (await getConfig("scheme_v2", false)) as boolean;
-  const nextV2 = !currentV2;
-  await setConfig("scheme_v2", nextV2);
-
-  // Update the module-level switch so generateScheme() delegates correctly.
-  if (nextV2) enableV2Scheme();
+export async function setSchemeVersion(v2: boolean): Promise<void> {
+  await setConfig("scheme_v2", v2);
+  if (v2) enableV2Scheme();
   else disableV2Scheme();
-
-  // Read the current base colour (source of truth) and regenerate.
   const base = (await getConfig("color", "6AAED8")) as string;
   const scheme = generateScheme(base);
   const schemeKey = getUserKey("colorscheme");
   await GM.setValue(schemeKey, schemeToStorage(scheme));
   applyScheme(scheme);
+  emit({ type: "config", key: "scheme_v2" });
+}
+
+/**
+ * Toggle between v1 and v2 scheme generators at runtime, regenerate fresh,
+ * apply with CSS transitions, and persist the preference to GM storage.
+ *
+ * Called from the footer pill: no page reload needed.
+ */
+export function toggleSchemeVersion(): Promise<void> {
+  return setSchemeVersion(!getSchemeVersion());
 }
 
 /** Query whether the v2 scheme generator is currently active. */

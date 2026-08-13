@@ -9,6 +9,7 @@ import { fetchIdRows, evictImageCache, stripThumbnailSuffix } from "./user-image
 import { buildPreviewBox, dismissHover, dismissAllPreviews } from "./photo-preview";
 import { encodeChatLink } from "./utils";
 import { iconElement } from "./dom";
+import { hoverPreview } from "./config-cache";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Pure helpers (unit-tested)
@@ -84,6 +85,7 @@ function renderResults(el: HTMLElement, rows: IdSearchRow[], searchTerm: string)
 
       if (showPreview) {
         thumb.addEventListener("mouseenter", () => {
+          if (!hoverPreview()) return;
           // Pass the thumbnail's rect so the preview positions itself beside
           // the thumbnail instead of at screen center — the /id card is itself
           // centered, so a centered preview would land on top of the thumb and

@@ -145,7 +145,7 @@ export function startUlistPoll(intervalMs = 20000): void {
     emit({ type: "userlist", users: newList, added, removed });
   }
   pollAndReschedule(intervalMs);
-  cclog("ulist-poll gestartet — alle ~" + intervalMs + " ms", "v3");
+  cclog("ulist-poll started — every ~" + intervalMs + " ms", "v3");
 }
 
 /** Stop the poll loop. Idempotent — safe to call when not running. */

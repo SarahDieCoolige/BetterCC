@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=cd95a85e
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=751b75c5
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -45,14 +45,85 @@
 
 "use strict";
 (() => {
+  // src/commands.ts
+  var openMsgCmdRegex = /^\/open\s|^\/o\s/;
+  var openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
+  var superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
+  var superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
+  var superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
+  var superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
+  var idMsgCmdRegex = /^\/id\b/i;
+  var idMsgArgRegex = /^\/id\s+/i;
+  var COMMANDS = [
+    { cmd: "/w Nick", desc: "einmalig fl\xFCstern" },
+    { cmd: "/sw Nick", desc: "dauerhaft fl\xFCstern" },
+    { cmd: "/open", desc: "superwhisper beenden" },
+    { cmd: "/ignore Nick", desc: "benutzer ignorieren" },
+    { cmd: "/id Nick", desc: "ID-Karte \xF6ffnen" },
+    { cmd: "/pinned", desc: "angeheftete Benutzer anzeigen" },
+    { cmd: "/color", desc: "Thema-Farbe anzeigen" },
+    { cmd: "/scheme", desc: "Scheme-Version anzeigen" },
+    { cmd: "/settings", desc: "Einstellungen \xF6ffnen" },
+    { cmd: "/reload", desc: "Chat neu laden" },
+    { cmd: "/help", desc: "diese Hilfe" }
+  ];
+  function classifyMessage(mymsg) {
+    const lower = mymsg.toLowerCase();
+    if (lower === "/help" || lower === "/bettercc") {
+      return { handled: true, type: "help" };
+    }
+    if (lower === "/sb" || lower === "/superban") {
+      return { handled: true, type: "superban", nick: "" };
+    }
+    if (superbanMsgCmdRegex.test(lower)) {
+      const nick = mymsg.replace(superbanMsgReplaceRegex, "").split(" ")[0];
+      return { handled: true, type: "superban", nick };
+    }
+    if (idMsgCmdRegex.test(lower)) {
+      let name = mymsg.replace(idMsgArgRegex, "").replace(/^\/id$/i, "").trim();
+      return { handled: true, type: "id", name };
+    }
+    if (lower === "/open") {
+      return { handled: true, type: "open-whisper" };
+    }
+    if (lower === "/reload") {
+      return { handled: true, type: "reload" };
+    }
+    if (lower === "/pinned") {
+      return { handled: true, type: "pinned-list" };
+    }
+    if (lower === "/color") {
+      return { handled: true, type: "color-info" };
+    }
+    if (lower === "/scheme") {
+      return { handled: true, type: "scheme-info" };
+    }
+    if (lower === "/settings") {
+      return { handled: true, type: "settings" };
+    }
+    if (superwhisperMsgCmdRegex.test(lower)) {
+      const nick = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
+      return { handled: true, type: "superwhisper", nick };
+    }
+    if (openMsgCmdRegex.test(lower)) {
+      const message = mymsg.replace(openMsgReplaceRegex, "");
+      return { handled: true, type: "open-msg", message };
+    }
+    return { handled: false, message: mymsg };
+  }
+  function rewriteForWhisper(msg, nick) {
+    if (!nick || msg.startsWith("/")) return msg;
+    return "/w " + nick + " " + msg;
+  }
+
   // src/utils.ts
   function cclog(str, tag = "BetterCC") {
     GM_log(tag + " - " + str);
   }
   function printHelp() {
-    printToChat(
-      "/w Nick        \u2013 einmalig fl\xFCstern\n/sw Nick       \u2013 dauerhaft fl\xFCstern\n/open          \u2013 superwhisper beenden\n/ignore Nick    \u2013 benutzer ignorieren\n/id Nick        \u2013 ID-Karte \xF6ffnen\n/pinned         \u2013 angeheftete Benutzer anzeigen\n/color          \u2013 Thema-Farbe anzeigen\n/scheme         \u2013 Scheme-Version anzeigen\n/settings       \u2013 alle Einstellungen anzeigen\n/reload         \u2013 Chat neu laden\n/help           \u2013 diese Hilfe"
-    );
+    const width = Math.max(...COMMANDS.map((c) => c.cmd.length));
+    const text = COMMANDS.map((c) => c.cmd.padEnd(width) + " \u2013 " + c.desc).join("\n");
+    printToChat(text);
   }
   function getChatDoc() {
     const f = document.getElementById("chatframe");
@@ -613,8 +684,12 @@
     whisper: "",
     // "" = no superwhisper target
     scheme_v2: false,
-    compact: ""
+    compact: "",
     // "" = chatbar expanded; "1" = compact mode
+    send_on_enter: true,
+    // true = Enter sends (current behavior)
+    hover_preview: true
+    // true = hover preview on (current behavior)
   };
   async function getConfig(key, fallback) {
     const def = fallback ?? DEFAULTS[key];
@@ -622,6 +697,18 @@
   }
   async function setConfig(key, value) {
     await GM.setValue(getUserKey(key), value);
+  }
+
+  // src/store.ts
+  var listeners = /* @__PURE__ */ new Set();
+  function subscribe(fn) {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  }
+  function emit(e) {
+    for (const fn of listeners) fn(e);
   }
 
   // src/theme.ts
@@ -673,6 +760,7 @@
     const scheme = generateScheme3(baseHex);
     await GM.setValue(schemeKey, schemeToStorage(scheme));
     applyScheme(scheme);
+    emit({ type: "config", key: "color" });
     return scheme;
   }
   async function loadTheme(colorKey, schemeKey, defaultBase = "6AAED8") {
@@ -688,17 +776,19 @@
     applyScheme(scheme);
     return scheme;
   }
-  async function toggleSchemeVersion() {
-    const currentV2 = await getConfig("scheme_v2", false);
-    const nextV2 = !currentV2;
-    await setConfig("scheme_v2", nextV2);
-    if (nextV2) enableV2Scheme();
+  async function setSchemeVersion(v2) {
+    await setConfig("scheme_v2", v2);
+    if (v2) enableV2Scheme();
     else disableV2Scheme();
     const base = await getConfig("color", "6AAED8");
     const scheme = generateScheme3(base);
     const schemeKey = getUserKey("colorscheme");
     await GM.setValue(schemeKey, schemeToStorage(scheme));
     applyScheme(scheme);
+    emit({ type: "config", key: "scheme_v2" });
+  }
+  function toggleSchemeVersion() {
+    return setSchemeVersion(!getSchemeVersion());
   }
   function getSchemeVersion() {
     return isV2Scheme();
@@ -863,18 +953,6 @@
     return abbrev;
   }
 
-  // src/store.ts
-  var listeners = /* @__PURE__ */ new Set();
-  function subscribe(fn) {
-    listeners.add(fn);
-    return () => {
-      listeners.delete(fn);
-    };
-  }
-  function emit(e) {
-    for (const fn of listeners) fn(e);
-  }
-
   // src/ulist-poll.ts
   var chatId = "";
   var chatSid = "";
@@ -936,7 +1014,7 @@
       emit({ type: "userlist", users: newList, added, removed });
     }
     pollAndReschedule(intervalMs);
-    cclog("ulist-poll gestartet \u2014 alle ~" + intervalMs + " ms", "v3");
+    cclog("ulist-poll started \u2014 every ~" + intervalMs + " ms", "v3");
   }
   function stopUlistPoll() {
     if (timerId !== void 0) clearTimeout(timerId);
@@ -994,7 +1072,7 @@
     pollOnce2().finally(() => {
       if (running2) scheduleNext2(intervalMs);
     });
-    cclog("Globaler Userlist-Poll gestartet \u2014 aw.js alle ~" + intervalMs + " ms", "v3");
+    cclog("global userlist poll started \u2014 aw.js every ~" + intervalMs + " ms", "v3");
   }
   function stopPolling() {
     if (timerId2 !== void 0) clearTimeout(timerId2);
@@ -1252,6 +1330,32 @@
     }
   }
 
+  // src/config-cache.ts
+  var _sendOnEnter = true;
+  var _hoverPreview = true;
+  async function initConfigCache() {
+    _sendOnEnter = await getConfig("send_on_enter", true);
+    _hoverPreview = await getConfig("hover_preview", true);
+  }
+  function sendOnEnter() {
+    return _sendOnEnter;
+  }
+  function hoverPreview() {
+    return _hoverPreview;
+  }
+  subscribe((e) => {
+    if (e.type !== "config") return;
+    if (e.key === "send_on_enter") {
+      void getConfig("send_on_enter", true).then((v) => {
+        _sendOnEnter = v;
+      });
+    } else if (e.key === "hover_preview") {
+      void getConfig("hover_preview", true).then((v) => {
+        _hoverPreview = v;
+      });
+    }
+  });
+
   // src/photo-preview.ts
   var previewByUser = /* @__PURE__ */ new Map();
   var previewSave = {};
@@ -1266,20 +1370,20 @@
     } catch {
     }
   }
-  var hoverPreview = null;
+  var hoverPreview2 = null;
   function dismissHover() {
-    if (!hoverPreview) return;
+    if (!hoverPreview2) return;
     let isPinned = false;
     for (const el of previewByUser.values()) {
-      if (el === hoverPreview) {
+      if (el === hoverPreview2) {
         isPinned = true;
         break;
       }
     }
     if (!isPinned) {
-      hoverPreview.remove();
+      hoverPreview2.remove();
     }
-    hoverPreview = null;
+    hoverPreview2 = null;
   }
   function dismissPreview(userName) {
     const box = previewByUser.get(userName);
@@ -1399,7 +1503,7 @@
       cy = window.innerHeight / 2;
       updateBox();
     });
-    hoverPreview = box;
+    hoverPreview2 = box;
     return box;
   }
   if (typeof document !== "undefined") {
@@ -1696,6 +1800,7 @@
     onResize = reposition;
     window.addEventListener("resize", onResize);
     photoContainer.addEventListener("mouseenter", () => {
+      if (!hoverPreview()) return;
       if (previewByUser.has(user.name)) return;
       const img = photoContainer.querySelector("img");
       if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
@@ -2088,6 +2193,8 @@
         for (const users of e.channels.values()) total += users.length;
         globalTotal = total;
         renderFromState();
+      } else if (e.type === "config" && e.key === "pinned") {
+        refreshPinned().then(() => renderFromState());
       }
     });
     cclog("sidebar mounted \u2014 subscribed to userlist + globalUserlist events", "v3");
@@ -2213,64 +2320,6 @@
     });
   }
 
-  // src/commands.ts
-  var openMsgCmdRegex = /^\/open\s|^\/o\s/;
-  var openMsgReplaceRegex = /^\/open\s+|^\/o\s+/gi;
-  var superbanMsgCmdRegex = /^\/superban\s|^\/sb\s/;
-  var superbanMsgReplaceRegex = /^\/superban\s+|^\/sb\s+/gi;
-  var superwhisperMsgCmdRegex = /^\/superwhisper\s|^\/sw\s/;
-  var superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
-  var idMsgCmdRegex = /^\/id\b/i;
-  var idMsgArgRegex = /^\/id\s+/i;
-  function classifyMessage(mymsg) {
-    const lower = mymsg.toLowerCase();
-    if (lower === "/help" || lower === "/bettercc") {
-      return { handled: true, type: "help" };
-    }
-    if (lower === "/sb" || lower === "/superban") {
-      return { handled: true, type: "superban", nick: "" };
-    }
-    if (superbanMsgCmdRegex.test(lower)) {
-      const nick = mymsg.replace(superbanMsgReplaceRegex, "").split(" ")[0];
-      return { handled: true, type: "superban", nick };
-    }
-    if (idMsgCmdRegex.test(lower)) {
-      let name = mymsg.replace(idMsgArgRegex, "").replace(/^\/id$/i, "").trim();
-      return { handled: true, type: "id", name };
-    }
-    if (lower === "/open") {
-      return { handled: true, type: "open-whisper" };
-    }
-    if (lower === "/reload") {
-      return { handled: true, type: "reload" };
-    }
-    if (lower === "/pinned") {
-      return { handled: true, type: "pinned-list" };
-    }
-    if (lower === "/color") {
-      return { handled: true, type: "color-info" };
-    }
-    if (lower === "/scheme") {
-      return { handled: true, type: "scheme-info" };
-    }
-    if (lower === "/settings") {
-      return { handled: true, type: "settings" };
-    }
-    if (superwhisperMsgCmdRegex.test(lower)) {
-      const nick = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
-      return { handled: true, type: "superwhisper", nick };
-    }
-    if (openMsgCmdRegex.test(lower)) {
-      const message = mymsg.replace(openMsgReplaceRegex, "");
-      return { handled: true, type: "open-msg", message };
-    }
-    return { handled: false, message: mymsg };
-  }
-  function rewriteForWhisper(msg, nick) {
-    if (!nick || msg.startsWith("/")) return msg;
-    return "/w " + nick + " " + msg;
-  }
-
   // src/patched-handler.ts
   var AWAY_TIMER_NEEDLE = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){';
   var AWAY_TIMER_REPLACEMENT = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){';
@@ -2326,6 +2375,7 @@
         thumb.setAttribute("alt", "");
         if (showPreview) {
           thumb.addEventListener("mouseenter", () => {
+            if (!hoverPreview()) return;
             const rect = thumb.getBoundingClientRect();
             buildPreviewBox(fullUrl, row.name, rect, searchTerm);
           });
@@ -2434,6 +2484,934 @@
     }
   }
 
+  // src/settings-helpers.ts
+  function defaultDraft() {
+    return {
+      color: "6AAED8",
+      schemeV2: false,
+      pinned: [],
+      whisper: "",
+      sendOnEnter: true,
+      hoverPreview: true
+    };
+  }
+  function schemeForPreview(base, useV2) {
+    return useV2 ? generateScheme2(base) : generateScheme(base);
+  }
+  function validateColor(hex) {
+    return /^[0-9A-Fa-f]{6}$/.test(hex.replace(/^#/, "")) ? null : "Kein g\xFCltiger Hex-Wert";
+  }
+  function isDirty(loaded2, draft2) {
+    return loaded2.color !== draft2.color || loaded2.schemeV2 !== draft2.schemeV2 || loaded2.whisper !== draft2.whisper || loaded2.sendOnEnter !== draft2.sendOnEnter || loaded2.hoverPreview !== draft2.hoverPreview || !pinnedEqual(loaded2.pinned, draft2.pinned);
+  }
+  function dedupPinned(names) {
+    const seen = /* @__PURE__ */ new Set();
+    const result = [];
+    for (const name of names) {
+      const lower = name.toLowerCase();
+      if (name === "" || seen.has(lower)) continue;
+      seen.add(lower);
+      result.push(name);
+    }
+    return result;
+  }
+  function addPinned(list, name) {
+    const trimmed = name.trim();
+    if (!trimmed) return list;
+    return dedupPinned([...list, trimmed.toLowerCase()]);
+  }
+  function removePinned(list, name) {
+    const lower = name.toLowerCase();
+    return list.filter((n) => n.toLowerCase() !== lower);
+  }
+  function pinnedEqual(a, b) {
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+  function draftFromConfig(raw) {
+    return {
+      color: typeof raw.color === "string" ? raw.color.replace(/^#/, "") : defaultDraft().color,
+      schemeV2: typeof raw.scheme_v2 === "boolean" ? raw.scheme_v2 : defaultDraft().schemeV2,
+      pinned: Array.isArray(raw.pinned) && raw.pinned.every((v) => typeof v === "string") ? [...raw.pinned] : [],
+      whisper: typeof raw.whisper === "string" ? raw.whisper : defaultDraft().whisper,
+      sendOnEnter: typeof raw.send_on_enter === "boolean" ? raw.send_on_enter : defaultDraft().sendOnEnter,
+      hoverPreview: typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview
+    };
+  }
+  var DRAFT_TO_CONFIG = {
+    color: "color",
+    schemeV2: "scheme_v2",
+    pinned: "pinned",
+    whisper: "whisper",
+    sendOnEnter: "send_on_enter",
+    hoverPreview: "hover_preview"
+  };
+  var CONFIG_TO_DRAFT = Object.fromEntries(
+    Object.entries(DRAFT_TO_CONFIG).map(([d, c]) => [c, d])
+  );
+  function serializeExport(draft2, user) {
+    const settings = {};
+    for (const [draftKey, configKey] of Object.entries(DRAFT_TO_CONFIG)) {
+      settings[configKey] = draft2[draftKey];
+    }
+    return {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      user,
+      settings
+    };
+  }
+  function exportFileName(user, dateStr) {
+    return "bettercc-backup-" + (user || "gast") + "-" + dateStr + ".json";
+  }
+  function parseImport(json) {
+    let parsed;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      return { ok: false, error: "Ung\xFCltiges JSON" };
+    }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return { ok: false, error: "Kein g\xFCltiges Objekt" };
+    }
+    const obj = parsed;
+    if (obj._format !== "bettercc-settings") {
+      return { ok: false, error: 'Falsches Format: erwartet "bettercc-settings"' };
+    }
+    if (obj.version !== 1) {
+      return { ok: false, error: "Nicht unterst\xFCtzte Version (erwartet 1)" };
+    }
+    const defaults = defaultDraft();
+    const rawSettings = obj.settings;
+    if (typeof rawSettings !== "object" || rawSettings === null || Array.isArray(rawSettings)) {
+      return { ok: false, error: 'Fehlendes oder ung\xFCltiges "settings"-Objekt' };
+    }
+    const settings = rawSettings;
+    const draft2 = { ...defaults };
+    for (const [configKey, draftKey] of Object.entries(CONFIG_TO_DRAFT)) {
+      if (!(configKey in settings)) continue;
+      const value = settings[configKey];
+      if (coerceField(draftKey, value, draft2)) continue;
+    }
+    return { ok: true, draft: draft2 };
+  }
+  function coerceField(key, value, draft2) {
+    switch (key) {
+      case "color":
+        if (typeof value === "string" && validateColor(value) === null) {
+          draft2.color = value.replace(/^#/, "");
+          return true;
+        }
+        return false;
+      case "schemeV2":
+        if (typeof value === "boolean") {
+          draft2.schemeV2 = value;
+          return true;
+        }
+        return false;
+      case "pinned":
+        if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+          draft2.pinned = value;
+          return true;
+        }
+        return false;
+      case "whisper":
+        if (typeof value === "string") {
+          draft2.whisper = value;
+          return true;
+        }
+        return false;
+      case "sendOnEnter":
+        if (typeof value === "boolean") {
+          draft2.sendOnEnter = value;
+          return true;
+        }
+        return false;
+      case "hoverPreview":
+        if (typeof value === "boolean") {
+          draft2.hoverPreview = value;
+          return true;
+        }
+        return false;
+    }
+  }
+
+  // src/settings.ts
+  var COLOR_PRESETS = [
+    "6AAED8",
+    "2E86AB",
+    "06A77D",
+    "C9A227",
+    "D7263D",
+    "A23BB6",
+    "3B3B58",
+    "E7E2D3"
+  ];
+  async function emitConfig(key, value) {
+    await setConfig(key, value);
+    emit({ type: "config", key });
+  }
+  function writeConfig(key, value) {
+    emitConfig(key, value).catch(
+      (e) => cclog("settings write failed: " + e.message, "v3")
+    );
+  }
+  function applyColor(hex) {
+    if (!draft) return;
+    draft.color = hex;
+    saveColor(hex, getUserKey("color"), getUserKey("colorscheme")).catch(
+      (e) => cclog("settings color apply failed: " + e.message, "v3")
+    );
+  }
+  function applyScheme2(v2) {
+    if (!draft) return;
+    draft.schemeV2 = v2;
+    setSchemeVersion(v2).catch(
+      (e) => cclog("settings scheme apply failed: " + e.message, "v3")
+    );
+  }
+  async function applyDiff(current, next) {
+    if (current.color !== next.color)
+      await saveColor(next.color, getUserKey("color"), getUserKey("colorscheme"));
+    if (current.schemeV2 !== next.schemeV2) await setSchemeVersion(next.schemeV2);
+    if (current.sendOnEnter !== next.sendOnEnter) await emitConfig("send_on_enter", next.sendOnEnter);
+    if (current.hoverPreview !== next.hoverPreview)
+      await emitConfig("hover_preview", next.hoverPreview);
+    if (!pinnedEqual(current.pinned, next.pinned)) await emitConfig("pinned", next.pinned);
+    if (current.whisper !== next.whisper) await emitConfig("whisper", next.whisper);
+  }
+  var TABS = ["Erscheinungsbild", "Chat", "Verwaltung", "Daten", "Info", "Befehle"];
+  var overlayEl2 = null;
+  var documentKeydown2 = null;
+  var openerEl = null;
+  var loaded = null;
+  var draft = null;
+  var activeTab = 0;
+  var tabButtons = [];
+  var tabPanels = [];
+  var revertBtn = null;
+  var previewChips = null;
+  var swatchButtons = [];
+  function closeSettings() {
+    if (documentKeydown2) {
+      document.removeEventListener("keydown", documentKeydown2);
+      documentKeydown2 = null;
+    }
+    if (overlayEl2) {
+      overlayEl2.remove();
+      overlayEl2 = null;
+    }
+    if (openerEl && "focus" in openerEl) {
+      openerEl.focus();
+    }
+    openerEl = null;
+    loaded = null;
+    draft = null;
+    activeTab = 0;
+    tabButtons.length = 0;
+    tabPanels.length = 0;
+    revertBtn = null;
+    previewChips = null;
+    swatchButtons.length = 0;
+  }
+  async function openSettings() {
+    closeSettings();
+    const shell = document.querySelector(".bcc-shell");
+    if (!shell) return;
+    openerEl = document.activeElement;
+    const [color, schemeV2, pinned, whisper, sendOnEnter2, hoverPreview3] = await Promise.all([
+      getConfig("color", "6AAED8"),
+      getConfig("scheme_v2", false),
+      getConfig("pinned", []),
+      getConfig("whisper", ""),
+      getConfig("send_on_enter", true),
+      getConfig("hover_preview", true)
+    ]);
+    const raw = {
+      color,
+      scheme_v2: schemeV2,
+      pinned,
+      whisper,
+      send_on_enter: sendOnEnter2,
+      hover_preview: hoverPreview3
+    };
+    loaded = draftFromConfig(raw);
+    draft = draftFromConfig(raw);
+    overlayEl2 = document.createElement("div");
+    overlayEl2.className = "bcc-settings-overlay";
+    const card = document.createElement("div");
+    card.className = "bcc-settings-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    card.setAttribute("aria-labelledby", "bcc-settings-title");
+    const header = document.createElement("div");
+    header.className = "bcc-settings-header";
+    const title = document.createElement("span");
+    title.id = "bcc-settings-title";
+    title.textContent = "Einstellungen";
+    header.appendChild(title);
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "bcc-settings-close";
+    closeBtn.setAttribute("aria-label", "Schlie\xDFen");
+    closeBtn.appendChild(iconElement("fa-xmark"));
+    closeBtn.addEventListener("click", closeSettings);
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+    const tabList = document.createElement("div");
+    tabList.className = "bcc-settings-tabs";
+    tabList.setAttribute("role", "tablist");
+    const panelsContainer = document.createElement("div");
+    panelsContainer.className = "bcc-settings-panels";
+    for (let i = 0; i < TABS.length; i++) {
+      const tab = document.createElement("button");
+      tab.className = "bcc-settings-tab";
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", i === 0 ? "true" : "false");
+      tab.setAttribute("aria-controls", "bcc-settings-panel-" + i);
+      tab.id = "bcc-settings-tab-" + i;
+      tab.textContent = TABS[i];
+      tab.addEventListener("click", () => selectTab(i));
+      tabButtons.push(tab);
+      tabList.appendChild(tab);
+      const panel = document.createElement("div");
+      panel.className = "bcc-settings-panel";
+      panel.id = "bcc-settings-panel-" + i;
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", "bcc-settings-tab-" + i);
+      panel.setAttribute("aria-hidden", i === 0 ? "false" : "true");
+      tabPanels.push(panel);
+      panelsContainer.appendChild(panel);
+    }
+    if (tabPanels.length > 0) {
+      buildAppearancePanel(tabPanels[0]);
+    }
+    if (tabPanels.length > 1) {
+      buildChatPanel(tabPanels[1]);
+    }
+    if (tabPanels.length > 2) {
+      buildManagementPanel(tabPanels[2]);
+    }
+    if (tabPanels.length > 3) {
+      buildDatenPanel(tabPanels[3]);
+    }
+    if (tabPanels.length > 4) {
+      buildInfoPanel(tabPanels[4]);
+    }
+    if (tabPanels.length > 5) {
+      buildBefehlePanel(tabPanels[5]);
+    }
+    card.appendChild(tabList);
+    card.appendChild(panelsContainer);
+    const bar = document.createElement("div");
+    bar.className = "bcc-settings-bar";
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "bcc-settings-btn";
+    doneBtn.textContent = "Fertig";
+    doneBtn.addEventListener("click", closeSettings);
+    bar.appendChild(doneBtn);
+    revertBtn = document.createElement("button");
+    revertBtn.className = "bcc-settings-btn";
+    revertBtn.textContent = "R\xFCckg\xE4ngig";
+    revertBtn.title = "Auf den Stand beim \xD6ffnen zur\xFCcksetzen";
+    revertBtn.disabled = true;
+    revertBtn.addEventListener("click", handleRevert);
+    bar.appendChild(revertBtn);
+    card.appendChild(bar);
+    overlayEl2.appendChild(card);
+    shell.appendChild(overlayEl2);
+    documentKeydown2 = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeSettings();
+        return;
+      }
+      handleTabArrow(e);
+      handleFocusTrap(e);
+    };
+    document.addEventListener("keydown", documentKeydown2);
+    overlayEl2.addEventListener("click", (e) => {
+      if (e.target === overlayEl2) closeSettings();
+    });
+    activeTab = 0;
+    if (tabButtons.length > 0) {
+      tabButtons[0].focus();
+    }
+  }
+  function syncPresetActive() {
+    if (!draft) return;
+    const upper = draft.color.toUpperCase();
+    for (const btn of swatchButtons) {
+      const match = btn.getAttribute("data-color")?.toUpperCase() === upper;
+      btn.classList.toggle("bcc-swatch-active", match);
+      btn.setAttribute("aria-pressed", match ? "true" : "false");
+    }
+  }
+  function refreshPreview() {
+    if (!draft || !previewChips) return;
+    const scheme = schemeForPreview(draft.color, draft.schemeV2);
+    const surfaceChip = previewChips.get("surface");
+    if (surfaceChip) {
+      surfaceChip.style.background = "#" + scheme.surface;
+      const sample = surfaceChip.querySelector(".bcc-appearance-sample");
+      if (sample) sample.style.color = "#" + scheme.text;
+    }
+    const setBg = (role) => {
+      const chip = previewChips?.get(role);
+      if (chip) chip.style.background = "#" + scheme[role];
+    };
+    setBg("accentWhisper");
+    setBg("accentBan");
+    setBg("surfaceRaised");
+  }
+  function buildAppearancePanel(panel) {
+    const colorSection = document.createElement("section");
+    colorSection.className = "bcc-appearance-section";
+    const colorHeading = document.createElement("h3");
+    colorHeading.className = "bcc-appearance-heading";
+    colorHeading.textContent = "Farbe";
+    colorSection.appendChild(colorHeading);
+    const presetsRow = document.createElement("div");
+    presetsRow.className = "bcc-presets";
+    for (const hex of COLOR_PRESETS) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "bcc-swatch";
+      btn.style.background = "#" + hex;
+      btn.setAttribute("aria-label", "Farbe " + hex);
+      btn.setAttribute("data-color", hex);
+      btn.addEventListener("click", () => {
+        if (!draft) return;
+        draft.color = hex;
+        if (hexInput) hexInput.value = hex;
+        if (colorPicker) colorPicker.value = "#" + hex;
+        clearError();
+        syncPresetActive();
+        refreshPreview();
+        applyColor(hex);
+        updateRevertButton();
+      });
+      swatchButtons.push(btn);
+      presetsRow.appendChild(btn);
+    }
+    colorSection.appendChild(presetsRow);
+    const inputRow = document.createElement("div");
+    inputRow.className = "bcc-appearance-row";
+    const colorPicker = document.createElement("input");
+    colorPicker.type = "color";
+    colorPicker.className = "bcc-appearance-picker";
+    colorPicker.value = "#" + (draft?.color ?? "6AAED8");
+    colorPicker.setAttribute("aria-label", "Farbe w\xE4hlen");
+    const hexInput = document.createElement("input");
+    hexInput.type = "text";
+    hexInput.className = "bcc-appearance-hex";
+    hexInput.maxLength = 7;
+    hexInput.inputMode = "text";
+    hexInput.value = draft?.color ?? "6AAED8";
+    hexInput.placeholder = "6AAED8";
+    const errorSpan = document.createElement("span");
+    errorSpan.className = "bcc-appearance-error";
+    errorSpan.setAttribute("aria-live", "polite");
+    function clearError() {
+      errorSpan.textContent = "";
+    }
+    function syncPickerFromDraft() {
+      if (draft && colorPicker) colorPicker.value = "#" + draft.color;
+    }
+    colorPicker.addEventListener("input", () => {
+      if (!draft) return;
+      const stripped = colorPicker.value.replace(/^#/, "");
+      draft.color = stripped;
+      hexInput.value = stripped;
+      clearError();
+      syncPresetActive();
+      refreshPreview();
+      applyColor(stripped);
+      updateRevertButton();
+    });
+    hexInput.addEventListener("input", () => {
+      if (!draft) return;
+      const val = hexInput.value;
+      const stripped = val.replace(/^#/, "");
+      const err = validateColor(stripped);
+      if (err) {
+        errorSpan.textContent = err;
+        updateRevertButton();
+        return;
+      }
+      clearError();
+      draft.color = stripped;
+      syncPickerFromDraft();
+      syncPresetActive();
+      refreshPreview();
+      applyColor(stripped);
+      updateRevertButton();
+    });
+    inputRow.appendChild(colorPicker);
+    inputRow.appendChild(hexInput);
+    colorSection.appendChild(inputRow);
+    colorSection.appendChild(errorSpan);
+    panel.appendChild(colorSection);
+    const previewSection = document.createElement("section");
+    previewSection.className = "bcc-appearance-section";
+    const previewHeading = document.createElement("h3");
+    previewHeading.className = "bcc-appearance-heading";
+    previewHeading.textContent = "Vorschau";
+    previewSection.appendChild(previewHeading);
+    const previewRow = document.createElement("div");
+    previewRow.className = "bcc-appearance-preview";
+    const chipDefs = [
+      { role: "surface", label: "Hintergrund" },
+      { role: "accentWhisper", label: "Akzent" },
+      { role: "accentBan", label: "Hinweis" },
+      { role: "surfaceRaised", label: "Hervorgehoben" }
+    ];
+    previewChips = /* @__PURE__ */ new Map();
+    for (const { role, label } of chipDefs) {
+      const chip = document.createElement("div");
+      chip.className = "bcc-appearance-chip";
+      chip.setAttribute("data-role", role);
+      chip.dataset.role = role;
+      previewChips.set(role, chip);
+      if (role === "surface") {
+        const sample = document.createElement("span");
+        sample.className = "bcc-appearance-sample";
+        sample.textContent = "Aa";
+        chip.appendChild(sample);
+      }
+      const chipLabel = document.createElement("span");
+      chipLabel.className = "bcc-appearance-chip-label";
+      chipLabel.textContent = label;
+      chip.appendChild(chipLabel);
+      previewRow.appendChild(chip);
+    }
+    previewSection.appendChild(previewRow);
+    panel.appendChild(previewSection);
+    const toggleSection = document.createElement("section");
+    toggleSection.className = "bcc-appearance-section";
+    const toggleLabel = document.createElement("label");
+    toggleLabel.className = "bcc-switch";
+    const toggleInput = document.createElement("input");
+    toggleInput.type = "checkbox";
+    toggleInput.checked = draft?.schemeV2 ?? false;
+    const toggleTrack = document.createElement("span");
+    toggleTrack.className = "bcc-switch-track";
+    const toggleText = document.createElement("span");
+    toggleText.textContent = "Experimentelles Scheme (v2)";
+    toggleLabel.appendChild(toggleInput);
+    toggleLabel.appendChild(toggleTrack);
+    toggleLabel.appendChild(toggleText);
+    toggleInput.addEventListener("change", () => {
+      if (!draft) return;
+      draft.schemeV2 = toggleInput.checked;
+      refreshPreview();
+      applyScheme2(toggleInput.checked);
+      updateRevertButton();
+    });
+    toggleSection.appendChild(toggleLabel);
+    panel.appendChild(toggleSection);
+    syncPresetActive();
+    refreshPreview();
+  }
+  function buildChatPanel(panel) {
+    const field = document.createElement("div");
+    field.className = "bcc-settings-field";
+    const label = document.createElement("label");
+    label.className = "bcc-switch";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = draft?.sendOnEnter ?? true;
+    const track = document.createElement("span");
+    track.className = "bcc-switch-track";
+    const labelText = document.createElement("span");
+    labelText.textContent = "Enter sendet (Shift+Enter f\xFCr Zeilenumbruch)";
+    label.appendChild(checkbox);
+    label.appendChild(track);
+    label.appendChild(labelText);
+    checkbox.addEventListener("change", () => {
+      if (!draft) return;
+      draft.sendOnEnter = checkbox.checked;
+      writeConfig("send_on_enter", checkbox.checked);
+      updateRevertButton();
+    });
+    field.appendChild(label);
+    const hint = document.createElement("p");
+    hint.className = "bcc-settings-hint";
+    hint.textContent = "Ausgeschaltet: Shift+Enter sendet, Enter macht einen Zeilenumbruch.";
+    field.appendChild(hint);
+    panel.appendChild(field);
+    const hoverField = document.createElement("div");
+    hoverField.className = "bcc-settings-field";
+    const hoverLabel = document.createElement("label");
+    hoverLabel.className = "bcc-switch";
+    const hoverCheckbox = document.createElement("input");
+    hoverCheckbox.type = "checkbox";
+    hoverCheckbox.checked = draft?.hoverPreview ?? true;
+    const hoverTrack = document.createElement("span");
+    hoverTrack.className = "bcc-switch-track";
+    const hoverLabelText = document.createElement("span");
+    hoverLabelText.textContent = "Hover-Vorschau f\xFCr Fotos";
+    hoverLabel.appendChild(hoverCheckbox);
+    hoverLabel.appendChild(hoverTrack);
+    hoverLabel.appendChild(hoverLabelText);
+    hoverCheckbox.addEventListener("change", () => {
+      if (!draft) return;
+      draft.hoverPreview = hoverCheckbox.checked;
+      writeConfig("hover_preview", hoverCheckbox.checked);
+      updateRevertButton();
+    });
+    hoverField.appendChild(hoverLabel);
+    const hoverHint = document.createElement("p");
+    hoverHint.className = "bcc-settings-hint";
+    hoverHint.textContent = "Ausgeschaltet: Vorschaubilder erscheinen nur beim Klicken (Anheften), nicht beim Hovern.";
+    hoverField.appendChild(hoverHint);
+    panel.appendChild(hoverField);
+  }
+  function buildManagementPanel(panel) {
+    const pinnedSection = document.createElement("section");
+    pinnedSection.className = "bcc-appearance-section";
+    const pinnedHeading = document.createElement("h3");
+    pinnedHeading.className = "bcc-appearance-heading";
+    pinnedHeading.textContent = "Angeheftete Benutzer";
+    pinnedSection.appendChild(pinnedHeading);
+    const pinnedWrap = document.createElement("div");
+    pinnedWrap.className = "bcc-manage-section";
+    const listUl = document.createElement("ul");
+    listUl.className = "bcc-manage-list";
+    function renderList() {
+      if (!draft) return;
+      listUl.innerHTML = "";
+      for (const name of draft.pinned) {
+        const li = document.createElement("li");
+        li.className = "bcc-manage-row";
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "bcc-manage-name";
+        nameSpan.textContent = name;
+        li.appendChild(nameSpan);
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "bcc-manage-remove";
+        removeBtn.setAttribute("aria-label", name + " entfernen");
+        removeBtn.appendChild(iconElement("fa-trash"));
+        removeBtn.addEventListener("click", () => {
+          if (!draft) return;
+          draft.pinned = removePinned(draft.pinned, name);
+          renderList();
+          writeConfig("pinned", draft.pinned);
+          updateRevertButton();
+        });
+        li.appendChild(removeBtn);
+        listUl.appendChild(li);
+      }
+    }
+    renderList();
+    pinnedWrap.appendChild(listUl);
+    const addRow = document.createElement("div");
+    addRow.className = "bcc-manage-add";
+    const addInput = document.createElement("input");
+    addInput.type = "text";
+    addInput.className = "bcc-manage-input";
+    addInput.placeholder = "Benutzername";
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "bcc-settings-btn";
+    addBtn.textContent = "Hinzuf\xFCgen";
+    addBtn.addEventListener("click", () => {
+      if (!draft) return;
+      draft.pinned = addPinned(draft.pinned, addInput.value);
+      addInput.value = "";
+      renderList();
+      writeConfig("pinned", draft.pinned);
+      updateRevertButton();
+    });
+    addInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addBtn.click();
+      }
+    });
+    addRow.appendChild(addInput);
+    addRow.appendChild(addBtn);
+    pinnedWrap.appendChild(addRow);
+    pinnedSection.appendChild(pinnedWrap);
+    panel.appendChild(pinnedSection);
+    const whisperSection = document.createElement("section");
+    whisperSection.className = "bcc-appearance-section";
+    const whisperHeading = document.createElement("h3");
+    whisperHeading.className = "bcc-appearance-heading";
+    whisperHeading.textContent = "Fl\xFCsterziel (Superwhisper)";
+    whisperSection.appendChild(whisperHeading);
+    const whisperWrap = document.createElement("div");
+    whisperWrap.className = "bcc-manage-section bcc-manage-whisper";
+    const currentLine = document.createElement("div");
+    currentLine.className = "bcc-manage-current";
+    const currentLabel = document.createElement("span");
+    currentLabel.textContent = "Aktuell: ";
+    currentLine.appendChild(currentLabel);
+    const currentStrong = document.createElement("strong");
+    currentStrong.textContent = draft?.whisper || "Keines";
+    currentLine.appendChild(currentStrong);
+    whisperWrap.appendChild(currentLine);
+    function refreshWhisperDisplay() {
+      currentStrong.textContent = draft?.whisper || "Keines";
+    }
+    const whisperAddRow = document.createElement("div");
+    whisperAddRow.className = "bcc-manage-add";
+    const whisperInput = document.createElement("input");
+    whisperInput.type = "text";
+    whisperInput.className = "bcc-manage-input";
+    whisperInput.placeholder = "Benutzername";
+    const setBtn = document.createElement("button");
+    setBtn.type = "button";
+    setBtn.className = "bcc-settings-btn";
+    setBtn.textContent = "Festlegen";
+    setBtn.addEventListener("click", () => {
+      if (!draft) return;
+      draft.whisper = whisperInput.value.trim();
+      whisperInput.value = "";
+      refreshWhisperDisplay();
+      writeConfig("whisper", draft.whisper);
+      updateRevertButton();
+    });
+    whisperInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        setBtn.click();
+      }
+    });
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.className = "bcc-settings-btn";
+    clearBtn.textContent = "Leeren";
+    clearBtn.addEventListener("click", () => {
+      if (!draft) return;
+      draft.whisper = "";
+      refreshWhisperDisplay();
+      writeConfig("whisper", draft.whisper);
+      updateRevertButton();
+    });
+    whisperAddRow.appendChild(whisperInput);
+    whisperAddRow.appendChild(setBtn);
+    whisperAddRow.appendChild(clearBtn);
+    whisperWrap.appendChild(whisperAddRow);
+    whisperSection.appendChild(whisperWrap);
+    panel.appendChild(whisperSection);
+  }
+  function rebuildDraftPanels() {
+    previewChips = null;
+    swatchButtons.length = 0;
+    for (const i of [0, 1, 2]) {
+      tabPanels[i]?.replaceChildren();
+    }
+    if (tabPanels[0]) buildAppearancePanel(tabPanels[0]);
+    if (tabPanels[1]) buildChatPanel(tabPanels[1]);
+    if (tabPanels[2]) buildManagementPanel(tabPanels[2]);
+  }
+  function handleExport() {
+    if (!draft) return;
+    const user = getChatNick() || "gast";
+    const blob = serializeExport(draft, user);
+    const json = JSON.stringify(blob, null, 2);
+    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = exportFileName(user, (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+  function buildDatenPanel(panel) {
+    const section = document.createElement("section");
+    section.className = "bcc-appearance-section";
+    const heading = document.createElement("h3");
+    heading.className = "bcc-appearance-heading";
+    heading.textContent = "Daten";
+    section.appendChild(heading);
+    const hint = document.createElement("p");
+    hint.className = "bcc-settings-hint";
+    hint.textContent = "Backup als Datei speichern, wiederherstellen oder zur\xFCcksetzen.";
+    section.appendChild(hint);
+    const row = document.createElement("div");
+    row.className = "bcc-data-row";
+    const exportBtn = document.createElement("button");
+    exportBtn.type = "button";
+    exportBtn.className = "bcc-settings-btn";
+    exportBtn.textContent = "Exportieren";
+    exportBtn.addEventListener("click", handleExport);
+    row.appendChild(exportBtn);
+    const importLabel = document.createElement("label");
+    importLabel.className = "bcc-settings-btn";
+    const importInput = document.createElement("input");
+    importInput.type = "file";
+    importInput.accept = "application/json,.json";
+    importInput.style.display = "none";
+    const importText = document.createTextNode("Importieren");
+    importLabel.appendChild(importInput);
+    importLabel.appendChild(importText);
+    row.appendChild(importLabel);
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.className = "bcc-settings-btn";
+    resetBtn.textContent = "Auf Standard zur\xFCcksetzen";
+    row.appendChild(resetBtn);
+    section.appendChild(row);
+    const errorSpan = document.createElement("span");
+    errorSpan.className = "bcc-data-error";
+    errorSpan.setAttribute("aria-live", "polite");
+    section.appendChild(errorSpan);
+    panel.appendChild(section);
+    function showError(msg) {
+      errorSpan.textContent = msg;
+    }
+    importInput.addEventListener("change", () => {
+      const file = importInput.files?.[0];
+      if (!file) return;
+      file.text().then(async (text) => {
+        const result = parseImport(text);
+        if (!result.ok) {
+          showError(result.error);
+          importInput.value = "";
+          return;
+        }
+        if (!window.confirm("Alle Einstellungen durch den Import ersetzen?")) {
+          importInput.value = "";
+          return;
+        }
+        const prev = draft;
+        draft = result.draft;
+        try {
+          if (prev) await applyDiff(prev, result.draft);
+        } catch (e) {
+          cclog("settings import apply failed: " + e.message, "v3");
+        }
+        rebuildDraftPanels();
+        updateRevertButton();
+        showError("");
+        importInput.value = "";
+      });
+    });
+    resetBtn.addEventListener("click", async () => {
+      if (!window.confirm("Alle Einstellungen auf Standard zur\xFCcksetzen?")) return;
+      const prev = draft;
+      draft = defaultDraft();
+      try {
+        if (prev) await applyDiff(prev, draft);
+      } catch (e) {
+        cclog("settings reset apply failed: " + e.message, "v3");
+      }
+      rebuildDraftPanels();
+      updateRevertButton();
+    });
+  }
+  function buildInfoPanel(panel) {
+    const list = document.createElement("div");
+    list.className = "bcc-info-list";
+    const rows = [
+      { key: "Version", val: GM_info.script.version },
+      { key: "Benutzer", val: getChatNick() || "\u2013" },
+      { key: "Kanal", val: getChannel() || "\u2013" },
+      { key: "Speicher-Schl\xFCssel (Bsp.)", val: getUserKey("color") }
+    ];
+    for (const { key, val } of rows) {
+      const row = document.createElement("div");
+      row.className = "bcc-info-row";
+      const keyEl = document.createElement("span");
+      keyEl.className = "bcc-info-key";
+      keyEl.textContent = key;
+      const valEl = document.createElement("span");
+      valEl.className = "bcc-info-val";
+      valEl.textContent = val;
+      row.appendChild(keyEl);
+      row.appendChild(valEl);
+      list.appendChild(row);
+    }
+    panel.appendChild(list);
+  }
+  function buildBefehlePanel(panel) {
+    const heading = document.createElement("h3");
+    heading.className = "bcc-appearance-heading";
+    heading.textContent = "Befehle";
+    panel.appendChild(heading);
+    const table = document.createElement("table");
+    table.className = "bcc-cmds-table";
+    for (const { cmd, desc } of COMMANDS) {
+      const tr = document.createElement("tr");
+      const tdCmd = document.createElement("td");
+      tdCmd.className = "bcc-cmds-cmd";
+      tdCmd.textContent = cmd;
+      const tdDesc = document.createElement("td");
+      tdDesc.className = "bcc-cmds-desc";
+      tdDesc.textContent = desc;
+      tr.appendChild(tdCmd);
+      tr.appendChild(tdDesc);
+      table.appendChild(tr);
+    }
+    panel.appendChild(table);
+  }
+  function selectTab(index) {
+    if (index < 0 || index >= TABS.length) return;
+    activeTab = index;
+    for (let i = 0; i < tabButtons.length; i++) {
+      const isSelected = i === index;
+      tabButtons[i].setAttribute("aria-selected", isSelected ? "true" : "false");
+      tabPanels[i].setAttribute("aria-hidden", isSelected ? "false" : "true");
+    }
+  }
+  function handleTabArrow(e) {
+    if (tabButtons.length === 0) return;
+    const target = e.target;
+    if (!tabButtons.includes(target)) return;
+    let next = -1;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      next = (activeTab + 1) % tabButtons.length;
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      next = (activeTab - 1 + tabButtons.length) % tabButtons.length;
+    }
+    if (next >= 0) {
+      selectTab(next);
+      tabButtons[next].focus();
+    }
+  }
+  function handleFocusTrap(e) {
+    if (e.key !== "Tab") return;
+    if (!overlayEl2) return;
+    const focusable = overlayEl2.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+  async function handleRevert() {
+    if (!loaded || !draft) return;
+    try {
+      await applyDiff(draft, loaded);
+    } catch (e) {
+      cclog("settings undo failed: " + e.message, "v3");
+    }
+    draft = { ...loaded };
+    rebuildDraftPanels();
+    updateRevertButton();
+  }
+  function updateRevertButton() {
+    if (revertBtn && loaded && draft) {
+      revertBtn.disabled = !isDirty(loaded, draft);
+    }
+  }
+
   // src/input.ts
   var textarea = null;
   var onSubmitOrig = null;
@@ -2468,6 +3446,9 @@
       }
     }
     return { action: "send", message: rewriteForWhisper(rawMsg, whisperNick) };
+  }
+  function shouldSendOnEnter(sendOnEnterFlag, shiftKey) {
+    return sendOnEnterFlag ? !shiftKey : shiftKey;
   }
   async function doSubmit(whispernick) {
     const docHold = document.hold;
@@ -2534,18 +3515,7 @@
             );
             break;
           case "settings":
-            Promise.all([
-              getConfig("pinned", []),
-              getConfig("color", ""),
-              getConfig("scheme_v2", false)
-            ]).then(([pinned, color, v2]) => {
-              const pinnedLine = pinned.length ? "Angepinnt: " + pinned.join(", ") : "Keine angepinnten Benutzer.";
-              const cHex = String(color).replace(/^#/, "");
-              const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + cHex + ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
-              const colorLine = "Thema-Farbe: " + swatch + "#" + cHex;
-              const schemeLine = "Scheme-Generator: " + (v2 ? "v2 (experimentell)" : "v1");
-              printToChat(pinnedLine + "\n" + colorLine + "\n" + schemeLine);
-            });
+            openSettings();
             break;
         }
       }
@@ -2600,7 +3570,7 @@
     textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
     textarea.placeholder = PLACEHOLDER_ALL;
     textarea.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === "Enter" && shouldSendOnEnter(sendOnEnter(), e.shiftKey)) {
         e.preventDefault();
         doSubmit();
       }
@@ -2619,6 +3589,15 @@
     getConfig("whisper", "").then((nick) => {
       const n = nick || "";
       if (n) superwhisper(n, false);
+    });
+    subscribe((e) => {
+      if (e.type !== "config" || e.key !== "whisper") return;
+      getConfig("whisper", "").then((nick) => {
+        const n = nick || "";
+        currentWhisperNick = n;
+        if (textarea) textarea.classList.toggle("bcc-superwhisper", Boolean(n));
+        updatePlaceholder();
+      });
     });
     if (textarea) textarea.focus();
     updatePlaceholder();
@@ -2695,10 +3674,16 @@
         cclog("color swatch: saveColor failed \u2014 " + e.message, "v3");
       });
     });
-    getConfig("color", "6AAED8").then((hex) => {
-      const input = picker.querySelector("input");
-      input.value = "#" + String(hex).replace(/^#/, "");
-      picker.style.setProperty("--swatch-color", input.value);
+    const input = picker.querySelector("input");
+    const syncColor = () => {
+      getConfig("color", "6AAED8").then((hex) => {
+        input.value = "#" + String(hex).replace(/^#/, "");
+        picker.style.setProperty("--swatch-color", input.value);
+      });
+    };
+    syncColor();
+    subscribe((e) => {
+      if (e.type === "config" && e.key === "color") syncColor();
     });
     return picker;
   }
@@ -2733,6 +3718,9 @@
       schemeToggle.innerHTML = '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
     };
     updateToggle();
+    subscribe((e) => {
+      if (e.type === "config" && e.key === "scheme_v2") updateToggle();
+    });
     schemeToggle.addEventListener("click", async (e) => {
       e.stopPropagation();
       schemeToggle.style.pointerEvents = "none";
@@ -2745,7 +3733,7 @@
       "bcc-bettercc",
       buildColorSwatch(),
       iconBtn("fa-cog", "Einstellungen", () => {
-        cclog("settings clicked \u2014 stub (T10)", "v3");
+        openSettings();
       }),
       schemeToggle,
       iconBtn("fa-circle-info", "Hilfe", () => printHelp())
@@ -2888,6 +3876,7 @@
       if (e.type === "session" && e.session.authDead) stopPolling();
     });
     mountStatsBar(document.querySelector(".bcc-sidebar"));
+    initConfigCache();
     mountInput();
     mountFooter();
   }

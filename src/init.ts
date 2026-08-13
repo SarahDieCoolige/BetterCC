@@ -45,6 +45,7 @@ import { mountSidebar } from "./sidebar";
 import { mountStatsBar } from "./stats";
 import { initSession, getSession } from "./session";
 import { mountInput } from "./input";
+import { initConfigCache } from "./config-cache";
 import { mountFooter } from "./footer";
 import { subscribe, type BccEvent } from "./store";
 
@@ -183,6 +184,10 @@ export function initV3(): void {
   // Mount the input area — textarea, send contract (reuses hold form's
   // onsubmit handler via the patched-handler approach), superwhisper,
   // and BetterCC command dispatch (/sw /open /reload /help).
+  // Seed the sync config cache first so the keydown handler can read
+  // sendOnEnter() synchronously. Fire-and-forget: defaults are true,
+  // preserving today's behavior until the async read resolves.
+  initConfigCache();
   mountInput();
 
   // Mount the footer — pills (reload, autoscroll, help, settings stub, exit),

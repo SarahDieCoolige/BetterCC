@@ -6,6 +6,8 @@
 // (printInChat/cclogChat, waitForElements, getUserStore, feature flags) were
 // dropped with the v2 UI.
 
+import { COMMANDS } from "./commands";
+
 /** Wrap GM_log with a tag prefix. Use this, never console.log. */
 export function cclog(str: string, tag = "BetterCC"): void {
   GM_log(tag + " - " + str);
@@ -15,41 +17,9 @@ export function cclog(str: string, tag = "BetterCC"): void {
 
 /** Print the command reference directly into the chat iframe. */
 export function printHelp(): void {
-  printToChat(
-    "/w Nick" +
-      "        – " +
-      "einmalig flüstern\n" +
-      "/sw Nick" +
-      "       – " +
-      "dauerhaft flüstern\n" +
-      "/open" +
-      "          – " +
-      "superwhisper beenden\n" +
-      "/ignore Nick" +
-      "    – " +
-      "benutzer ignorieren\n" +
-      "/id Nick" +
-      "        – " +
-      "ID-Karte öffnen\n" +
-      "/pinned" +
-      "         – " +
-      "angeheftete Benutzer anzeigen\n" +
-      "/color" +
-      "          – " +
-      "Thema-Farbe anzeigen\n" +
-      "/scheme" +
-      "         – " +
-      "Scheme-Version anzeigen\n" +
-      "/settings" +
-      "       – " +
-      "alle Einstellungen anzeigen\n" +
-      "/reload" +
-      "         – " +
-      "Chat neu laden\n" +
-      "/help" +
-      "           – " +
-      "diese Hilfe",
-  );
+  const width = Math.max(...COMMANDS.map((c) => c.cmd.length));
+  const text = COMMANDS.map((c) => c.cmd.padEnd(width) + " – " + c.desc).join("\n");
+  printToChat(text);
 }
 
 /** Wrap GM_notification. VM doesn't expose GM.notification as a callable

@@ -16,6 +16,22 @@ const superwhisperMsgReplaceRegex = /^\/superwhisper\s+|^\/sw\s+/gi;
 const idMsgCmdRegex = /^\/id\b/i;
 const idMsgArgRegex = /^\/id\s+/i;
 
+/** The command reference: single source of truth for /help and the Befehle tab.
+ *  Descriptions are German (user-facing) and render verbatim. */
+export const COMMANDS: { cmd: string; desc: string }[] = [
+  { cmd: "/w Nick", desc: "einmalig flüstern" },
+  { cmd: "/sw Nick", desc: "dauerhaft flüstern" },
+  { cmd: "/open", desc: "superwhisper beenden" },
+  { cmd: "/ignore Nick", desc: "benutzer ignorieren" },
+  { cmd: "/id Nick", desc: "ID-Karte öffnen" },
+  { cmd: "/pinned", desc: "angeheftete Benutzer anzeigen" },
+  { cmd: "/color", desc: "Thema-Farbe anzeigen" },
+  { cmd: "/scheme", desc: "Scheme-Version anzeigen" },
+  { cmd: "/settings", desc: "Einstellungen öffnen" },
+  { cmd: "/reload", desc: "Chat neu laden" },
+  { cmd: "/help", desc: "diese Hilfe" },
+];
+
 export type CommandResult =
   | { handled: false; message: string }
   | { handled: true; type: "help" }
@@ -52,7 +68,7 @@ export function classifyMessage(mymsg: string): CommandResult {
     return { handled: true, type: "superban", nick };
   }
 
-  // /id — stub in T8, real popup in T13
+  // /id — opens the search popup (src/id-popup.ts, shipped v3.5.3)
   if (idMsgCmdRegex.test(lower)) {
     let name = mymsg
       .replace(idMsgArgRegex, "")

@@ -17,6 +17,8 @@ import { getConfig, setConfig } from "./config";
 import { getChatNick, sendCommand, leaveChat } from "./upstream";
 import { actionButton } from "./dom";
 import { updatePlaceholder } from "./input";
+import { openSettings } from "./settings";
+import { subscribe, type BccEvent } from "./store";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.
@@ -125,11 +127,19 @@ function buildColorSwatch(): HTMLElement {
     });
   });
 
-  // Load stored color asynchronously.
-  getConfig("color", "6AAED8").then((hex) => {
-    const input = picker.querySelector("input")!;
-    input.value = "#" + String(hex).replace(/^#/, "");
-    picker.style.setProperty("--swatch-color", input.value);
+  const input = picker.querySelector("input")!;
+
+  // Sync the swatch from the stored color: once at mount, and again whenever
+  // the color changes elsewhere (settings modal) via the config bus.
+  const syncColor = () => {
+    getConfig("color", "6AAED8").then((hex) => {
+      input.value = "#" + String(hex).replace(/^#/, "");
+      picker.style.setProperty("--swatch-color", input.value);
+    });
+  };
+  syncColor();
+  subscribe((e: BccEvent) => {
+    if (e.type === "config" && e.key === "color") syncColor();
   });
 
   return picker;
@@ -178,6 +188,10 @@ function buildBetterccPill(): HTMLElement {
       '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
   };
   updateToggle();
+  // Re-render when the scheme version changes elsewhere (settings modal).
+  subscribe((e: BccEvent) => {
+    if (e.type === "config" && e.key === "scheme_v2") updateToggle();
+  });
   schemeToggle.addEventListener("click", async (e) => {
     e.stopPropagation();
     schemeToggle.style.pointerEvents = "none";
@@ -191,7 +205,7 @@ function buildBetterccPill(): HTMLElement {
     "bcc-bettercc",
     buildColorSwatch(),
     iconBtn("fa-cog", "Einstellungen", () => {
-      cclog("settings clicked — stub (T10)", "v3");
+      openSettings();
     }),
     schemeToggle,
     iconBtn("fa-circle-info", "Hilfe", () => printHelp()),

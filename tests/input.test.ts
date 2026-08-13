@@ -8,7 +8,7 @@
 // command consumed the message (with no send).
 
 import { describe, it, expect } from "vitest";
-import { prepareMessage } from "../src/input";
+import { prepareMessage, shouldSendOnEnter } from "../src/input";
 
 describe("prepareMessage — plain messages", () => {
   it("sends a non-command message as-is when no whisper is active", () => {
@@ -79,6 +79,27 @@ describe("prepareMessage — /o (send-to-all) is the whisper escape hatch", () =
       action: "send",
       message: "Hello",
     });
+  });
+});
+
+describe("shouldSendOnEnter — invert-the-modifier rule", () => {
+  // The flag picks which key combination means "send". Enter is always the
+  // default action; Shift+Enter is the non-default. The flag just chooses
+  // which maps to send vs. newline.
+  it("flag=true, no shift → true (default: Enter sends)", () => {
+    expect(shouldSendOnEnter(true, false)).toBe(true);
+  });
+
+  it("flag=true, shift → false (default: Shift+Enter = newline)", () => {
+    expect(shouldSendOnEnter(true, true)).toBe(false);
+  });
+
+  it("flag=false, shift → true (inverted: Shift+Enter sends)", () => {
+    expect(shouldSendOnEnter(false, true)).toBe(true);
+  });
+
+  it("flag=false, no shift → false (inverted: Enter = newline)", () => {
+    expect(shouldSendOnEnter(false, false)).toBe(false);
   });
 });
 

@@ -8,7 +8,7 @@
 // The onSubmit handler + DOM send contract are untestable here (no jsdom/globals).
 
 import { describe, it, expect } from "vitest";
-import { classifyMessage, rewriteForWhisper } from "../src/commands";
+import { classifyMessage, rewriteForWhisper, COMMANDS } from "../src/commands";
 
 // ─── classifyMessage: command dispatch ──────────────────────────────────────
 
@@ -139,5 +139,34 @@ describe("rewriteForWhisper — superwhisper message prepend", () => {
     expect(rewriteForWhisper("/help", "Sariam")).toBe("/help");
     expect(rewriteForWhisper("/sw NewNick", "Sariam")).toBe("/sw NewNick");
     expect(rewriteForWhisper("/w OtherUser msg", "Sariam")).toBe("/w OtherUser msg");
+  });
+});
+
+// ─── COMMANDS table integrity ──────────────────────────────────────────────
+
+describe("COMMANDS table", () => {
+  it("is non-empty and every entry has a non-empty cmd and desc", () => {
+    expect(COMMANDS.length).toBeGreaterThan(0);
+    for (const entry of COMMANDS) {
+      expect(entry.cmd).toBeTruthy();
+      expect(entry.desc).toBeTruthy();
+    }
+  });
+
+  it("every cmd starts with /", () => {
+    for (const entry of COMMANDS) {
+      expect(entry.cmd).toMatch(/^\//);
+    }
+  });
+
+  it('the /settings entry desc is exactly "Einstellungen öffnen"', () => {
+    const settings = COMMANDS.find((c) => c.cmd === "/settings");
+    expect(settings).toBeDefined();
+    expect(settings!.desc).toBe("Einstellungen öffnen");
+  });
+
+  it("cmd values are unique", () => {
+    const cmds = COMMANDS.map((c) => c.cmd);
+    expect(new Set(cmds).size).toBe(cmds.length);
   });
 });
