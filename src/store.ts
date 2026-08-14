@@ -150,7 +150,16 @@ function assertInit(): void {
 function notify<K extends StoreKey>(k: K, v: StateValue<K>): void {
   const set = subscribers.get(k);
   if (!set) return;
-  for (const fn of set) fn(v);
+  for (const fn of set) {
+    // A broken render must not break the writer: other renders still run and
+    // set() still persists. Mount-time react() renders are NOT wrapped — a
+    // failure there belongs to the mount path and should surface there.
+    try {
+      fn(v);
+    } catch (e) {
+      cclog(`render for "${k}" threw: ${(e as Error).message}`, "store");
+    }
+  }
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────

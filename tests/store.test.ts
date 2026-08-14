@@ -289,6 +289,31 @@ describe("store — set ordering (mirror+notify synchronous before persist)", ()
   });
 });
 
+describe("store — a throwing render never breaks the writer", () => {
+  let gm: ReturnType<typeof installGmFakeWithListeners>;
+
+  beforeEach(() => {
+    _resetStoreForTesting();
+    gm = installGmFakeWithListeners();
+  });
+
+  it("set() resolves, other renders still run, and persistence still happens", async () => {
+    await initTestStore(gm);
+
+    on("pinned", () => {
+      throw new Error("render bug");
+    });
+    const good = vi.fn();
+    on("pinned", good);
+
+    await expect(set("pinned", ["alice"])).resolves.toBeUndefined();
+    expect(good).toHaveBeenCalledWith(["alice"]);
+    expect(get("pinned")).toEqual(["alice"]);
+    // Persist must not be skipped because a render threw
+    expect(gm.store.get("pinned_testuser")).toEqual(["alice"]);
+  });
+});
+
 describe("store — codec round-trip for compact", () => {
   let gm: ReturnType<typeof installGmFakeWithListeners>;
 

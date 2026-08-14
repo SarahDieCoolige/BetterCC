@@ -1389,7 +1389,13 @@
   function notify(k, v) {
     const set2 = subscribers.get(k);
     if (!set2) return;
-    for (const fn of set2) fn(v);
+    for (const fn of set2) {
+      try {
+        fn(v);
+      } catch (e) {
+        cclog(`render for "${k}" threw: ${e.message}`, "store");
+      }
+    }
   }
   async function initStore() {
     if (initialized) throw new Error("initStore already called");
