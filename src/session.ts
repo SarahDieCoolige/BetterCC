@@ -1,19 +1,28 @@
 // ─── v3 session module (spec §2.3) ─────────────────────────────────────────
 //
-// Reads the six session globals once at init and polls auth-dead + channel
-// every 2s. The poll approach is simpler than extending the WS handler (that's
-// iteration-2 scope): chatout_auth_dead is a plain boolean global, and
-// channels change rarely (only on /j).
-//
-// S7a migration: this is now a pure store adapter. initSession() reads
-// upstream globals and writes the snapshot to the store via set("session", ...).
-// getSession() returns get("session"). No bus events emitted.
+// Session adapter: reads the upstream session globals and writes snapshots to
+// the store. Polls auth-dead + channel every 2s — simpler than extending the
+// WS handler, and channels change rarely (only on /j).
 
 import { type SessionState, get, set } from "./store";
 import { cclog } from "./utils";
 import { getChatNick, getChannel, isAuthDead, getChatUi, getChatId, getChatSid } from "./upstream";
 
 let timer: ReturnType<typeof setInterval> | null = null;
+
+/** Read a fresh snapshot from the upstream globals. */
+function readSnapshot(): SessionState {
+  const ui = getChatUi();
+  return {
+    nick: getChatNick(),
+    registered: ui.includes("R"),
+    guest: ui.includes("h") && !ui.includes("R"),
+    userId: getChatId(),
+    sessionId: getChatSid(),
+    channel: getChannel(),
+    authDead: isAuthDead(),
+  };
+}
 
 /**
  * Read session globals once at init and start the 2s poll for auth-dead and
@@ -24,36 +33,17 @@ export function initSession(): void {
   // second polling interval. Clear the old one.
   if (timer) clearInterval(timer);
 
-  const snapshot: SessionState = {
-    nick: getChatNick(),
-    registered: getChatUi().includes("R"),
-    guest: getChatUi().includes("h") && !getChatUi().includes("R"),
-    userId: getChatId(),
-    sessionId: getChatSid(),
-    channel: getChannel(),
-    authDead: isAuthDead(),
-  };
-
-  // Seed the store with the initial snapshot.
+  const snapshot = readSnapshot();
   set("session", snapshot);
 
   let prevChannel = snapshot.channel;
   let prevAuthDead = snapshot.authDead;
   timer = setInterval(() => {
-    const newChannel = getChannel();
-    const newAuthDead = isAuthDead();
-    if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
-      prevChannel = newChannel;
-      prevAuthDead = newAuthDead;
-      set("session", {
-        nick: getChatNick(),
-        registered: getChatUi().includes("R"),
-        guest: getChatUi().includes("h") && !getChatUi().includes("R"),
-        userId: getChatId(),
-        sessionId: getChatSid(),
-        channel: newChannel,
-        authDead: newAuthDead,
-      });
+    const next = readSnapshot();
+    if (next.channel !== prevChannel || next.authDead !== prevAuthDead) {
+      prevChannel = next.channel;
+      prevAuthDead = next.authDead;
+      set("session", next);
     }
   }, 2000);
 

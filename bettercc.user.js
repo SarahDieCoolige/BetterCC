@@ -1892,35 +1892,30 @@
 
   // src/session.ts
   var timer = null;
-  function initSession() {
-    if (timer) clearInterval(timer);
-    const snapshot2 = {
+  function readSnapshot() {
+    const ui = getChatUi();
+    return {
       nick: getChatNick(),
-      registered: getChatUi().includes("R"),
-      guest: getChatUi().includes("h") && !getChatUi().includes("R"),
+      registered: ui.includes("R"),
+      guest: ui.includes("h") && !ui.includes("R"),
       userId: getChatId(),
       sessionId: getChatSid(),
       channel: getChannel(),
       authDead: isAuthDead()
     };
+  }
+  function initSession() {
+    if (timer) clearInterval(timer);
+    const snapshot2 = readSnapshot();
     set("session", snapshot2);
     let prevChannel = snapshot2.channel;
     let prevAuthDead = snapshot2.authDead;
     timer = setInterval(() => {
-      const newChannel = getChannel();
-      const newAuthDead = isAuthDead();
-      if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
-        prevChannel = newChannel;
-        prevAuthDead = newAuthDead;
-        set("session", {
-          nick: getChatNick(),
-          registered: getChatUi().includes("R"),
-          guest: getChatUi().includes("h") && !getChatUi().includes("R"),
-          userId: getChatId(),
-          sessionId: getChatSid(),
-          channel: newChannel,
-          authDead: newAuthDead
-        });
+      const next = readSnapshot();
+      if (next.channel !== prevChannel || next.authDead !== prevAuthDead) {
+        prevChannel = next.channel;
+        prevAuthDead = next.authDead;
+        set("session", next);
       }
     }, 2e3);
     cclog("session: init done \u2014 nick=" + snapshot2.nick + " channel=" + snapshot2.channel, "v3");
@@ -3715,12 +3710,9 @@
       schemeToggle.innerHTML = '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
     };
     react("scheme_v2", updateToggle);
-    schemeToggle.addEventListener("click", async (e) => {
+    schemeToggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      schemeToggle.style.pointerEvents = "none";
-      await toggleSchemeVersion();
-      updateToggle();
-      schemeToggle.style.pointerEvents = "";
+      void toggleSchemeVersion();
     });
     return pill(
       2,

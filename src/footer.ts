@@ -177,14 +177,11 @@ function buildBetterccPill(): HTMLElement {
     schemeToggle.innerHTML =
       '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
   };
-  // Sync from store: initial render + re-render when scheme version changes elsewhere.
+  // Sync from store: initial render + re-render when scheme version changes.
   react("scheme_v2", updateToggle);
-  schemeToggle.addEventListener("click", async (e) => {
+  schemeToggle.addEventListener("click", (e) => {
     e.stopPropagation();
-    schemeToggle.style.pointerEvents = "none";
-    await toggleSchemeVersion();
-    updateToggle();
-    schemeToggle.style.pointerEvents = "";
+    void toggleSchemeVersion();
   });
 
   return pill(

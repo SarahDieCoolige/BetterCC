@@ -1,4 +1,4 @@
-// ─── v3-owned ulist poll — replaces get_info()'s loadjscssfile dance (migration Phase 1) ─
+// ─── v3-owned ulist poll — replaces get_info()'s loadjscssfile dance ────────
 //
 // The current-channel userlist arrives via cc_chat/ulist?AKTION=j, which upstream
 // delivers by injecting a <script> that sets cha_my[] and calls set_uinfo1(). v3

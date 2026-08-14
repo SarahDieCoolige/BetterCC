@@ -1,12 +1,12 @@
-// ─── Sync in-memory state store (spec §4) ──────────────────────────────────
+// ─── Sync in-memory state store ────────────────────────────────────────────
 //
 // ONE sync store that owns all state. GM storage is a persistence backend read
 // once at boot, written back on set. After initStore(), get() is sync and never
-// touches GM. Types moved here from bus.ts; bus.ts re-exports until S7 deletes it.
+// touches GM.
 
 import { getUserKey, cclog } from "./utils";
 
-// ─── Types (moved from bus.ts) ────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────
 
 /** A user as parsed from the upstream cha[]/cha_my[] arrays. */
 export interface User {

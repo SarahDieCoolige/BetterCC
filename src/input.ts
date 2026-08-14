@@ -251,8 +251,8 @@ export function mountInput(): void {
   (unsafeWindow.bettercc as any).superwhisper = superwhisper;
   (unsafeWindow.bettercc as any).prefillWhisper = prefillWhisper;
 
-  // Restore + live reaction: store react replaces the old boot-restore
-  // and the bus subscribe block. React's initial render handles both.
+  // Live whisper indicator: initial render restores any saved target,
+  // changes keep class + placeholder in sync.
   react("whisper", (nick) => {
     currentWhisperNick = nick;
     textarea?.classList.toggle("bcc-superwhisper", Boolean(nick));

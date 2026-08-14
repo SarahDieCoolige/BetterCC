@@ -111,8 +111,8 @@ export async function initV3(): Promise<void> {
   // Apply the saved theme (tier-0 per spec §5.3): the store is seeded at
   // initStore(), so initTheme() reads color + scheme_v2 synchronously,
   // selects the generator, generates, and applies. No promise, no cache.
-  // Expose setTheme on the bettercc API so ws-hook.ts can re-apply on
-  // reconnect (kept for backward compat with the public API).
+  // ws-hook re-applies via its own applyCurrentScheme import; the setTheme
+  // exposure is public-API only.
   initTheme();
   (unsafeWindow.bettercc as any).setTheme = applyCurrentScheme;
 
@@ -122,15 +122,14 @@ export async function initV3(): Promise<void> {
   // safe to call after buildShell moved #chatframe.
   hookChatoutConnect();
 
-  // Mount the userlist sidebar — subscribes to "userlist" store events and
-  // does diff-and-patch rendering (reuses DOM nodes, never innerHTML).
+  // Mount the userlist sidebar — reacts to the userlist/globalUserlist store
+  // keys with diff-and-patch rendering (reuses DOM nodes, never innerHTML).
   // Must be after buildShell() so .bcc-sidebar exists.
   mountSidebar();
 
-  // v3 owns the ulist poll now (migration Phase 1). Replaces the old
-  // set_uinfo1 override path: fetch ulist directly, parse, emit "userlist"
-  // events. /j (channel change) triggers an immediate refresh via
-  // refreshUlistNow(); auth-dead stops the poll. info_timer1 (upstream's
+  // v3 owns the ulist poll: fetch ulist directly, parse, write the
+  // "userlist" store key. /j (channel change) triggers an immediate refresh
+  // via refreshUlistNow(); auth-dead stops the poll. info_timer1 (upstream's
   // 20s get_info timer) is cleared — v3's poll replaces it.
   // Must be AFTER mountSidebar so the sidebar is subscribed before the
   // first "userlist" event fires.

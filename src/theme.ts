@@ -4,8 +4,8 @@
 //   scheme → --bcc-* on .bcc-shell     (applyScheme)
 //   color/scheme_v2 → store (get/set)  (initTheme, setColor, setSchemeVersion)
 //
-// The `colorscheme` GM key and its cache are deleted (T6/S4 migration).
-// The store is seeded sync at boot, so no cache or promise is needed.
+// No scheme cache: the store seeds the base color sync at boot, and the
+// scheme is regenerated from it (microseconds) — no promise dance needed.
 
 import { generateScheme, enableV2Scheme, disableV2Scheme, type BccColorScheme } from "./scheme";
 import { applyThemeToIframe } from "./utils";
@@ -118,19 +118,13 @@ export async function setColor(hex: string): Promise<void> {
   await set("color", hex);
 }
 
-/** Toggle between v1 and v2 scheme generators at runtime, regenerate fresh,
- *  apply with CSS transitions, and persist the preference. */
+/** Toggle between v1 and v2 scheme generators at runtime. */
 export function toggleSchemeVersion(): Promise<void> {
   return setSchemeVersion(!get("scheme_v2"));
 }
 
-/** Set the scheme generator version explicitly (v1 stable / v2 experimental),
- *  regenerate from the stored base color, and apply live. */
+/** Set the scheme generator version (v1 stable / v2 experimental). The
+ *  initTheme reacts re-apply the scheme. */
 export async function setSchemeVersion(v2: boolean): Promise<void> {
   await set("scheme_v2", v2);
-}
-
-/** Query whether the v2 scheme generator is currently active. */
-export function getSchemeVersion(): boolean {
-  return get("scheme_v2");
 }
