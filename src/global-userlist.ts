@@ -12,7 +12,7 @@
 // seam in tests.
 
 import { parseAw } from "./userlist";
-import { emit, type User, type UserWithChannel } from "./bus";
+import { set, type User, type UserWithChannel } from "./store";
 import { fetchAw } from "./upstream";
 import { cclog } from "./utils";
 
@@ -72,7 +72,7 @@ async function pollOnce(): Promise<void> {
     if (next.size === 0) return;
     const { added, removed } = diffGlobal(lastSnapshot, next);
     lastSnapshot = next;
-    emit({ type: "globalUserlist", channels: next, added, removed });
+    await set("globalUserlist", { channels: next, added, removed });
   } catch (e) {
     cclog("global-userlist: poll error — " + (e as Error).message, "v3");
   }

@@ -20,7 +20,7 @@
 // snapshot exists: N = current-channel users, M = all users across all
 // channels.
 
-import { subscribe, type BccEvent, type User } from "./bus";
+import { type User } from "./store";
 import { sortUsers, channelAbbrev } from "./userlist";
 import { openUserPopup } from "./popup";
 import { cclog } from "./utils";
@@ -430,22 +430,18 @@ export function mountSidebar(): void {
     renderFromState();
   });
 
-  subscribe((e: BccEvent) => {
-    if (e.type === "userlist") {
-      // cha_my snapshot — the authoritative source for the current channel.
-      lastChannelUsers = e.users;
-      renderFromState();
-    } else if (e.type === "globalUserlist") {
-      // Full aw.js snapshot — source for cross-channel pinned users.
-      lastGlobalChannels = e.channels;
-      // Cache the global total once per event rather than summing on every
-      // render (O(channels) → O(1)).
-      let total = 0;
-      for (const users of e.channels.values()) total += users.length;
-      globalTotal = total;
-      renderFromState();
-    }
+  react("userlist", (u) => {
+    lastChannelUsers = u.users;
+    renderFromState();
   });
 
-  cclog("sidebar mounted — subscribed to userlist + globalUserlist events", "v3");
+  react("globalUserlist", (g) => {
+    lastGlobalChannels = g.channels;
+    let total = 0;
+    for (const users of g.channels.values()) total += users.length;
+    globalTotal = total;
+    renderFromState();
+  });
+
+  cclog("sidebar mounted — reacts to userlist + globalUserlist store keys", "v3");
 }

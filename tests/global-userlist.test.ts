@@ -1,4 +1,4 @@
-// Tests for the v3 global userlist module: aw.js poll → diff → emit (spec
+// Tests for the v3 global userlist module: aw.js poll → diff → set (spec
 // §cross-channel). diffGlobal() is pure and tested directly. The poll
 // lifecycle (startPolling/stopPolling/findUserChannel/getLastSnapshot) is
 // tested with fetchAw mocked at the seam — per the spec, mock the fetchAw
@@ -18,12 +18,31 @@ import {
   findUserChannel,
   getLastSnapshot,
 } from "../src/global-userlist";
-import { subscribe, type BccEvent, type User } from "../src/bus";
+import { _resetStoreForTesting, initStore, on, type User as StoreUser } from "../src/store";
+import { setUserStore } from "../src/utils";
 
-type GlobalEvent = Extract<BccEvent, { type: "globalUserlist" }>;
+function installGmFake() {
+  const store = new Map<string, unknown>();
+  (globalThis as any).GM = {
+    getValue: (key: string, def?: unknown) =>
+      store.has(key) ? Promise.resolve(store.get(key)) : Promise.resolve(def),
+    setValue: (key: string, val: unknown) => {
+      store.set(key, val);
+      return Promise.resolve();
+    },
+  };
+  (globalThis as any).GM_log = () => {};
+}
+
+async function initTestStore() {
+  _resetStoreForTesting();
+  installGmFake();
+  setUserStore("TestUser", false);
+  await initStore();
+}
 
 // Helper factories — placeholder names only, never real usernames.
-const mkUser = (name: string, extra: Partial<User> = {}): User => ({
+const mkUser = (name: string, extra: Partial<StoreUser> = {}): StoreUser => ({
   name,
   key: name.toLowerCase(),
   registered: false,
@@ -138,16 +157,19 @@ describe("diffGlobal — two channel snapshots → { added, removed }", () => {
 
 // ─── Poll lifecycle (startPolling/stopPolling) ──────────────────────────────
 
-describe("startPolling/stopPolling — fetch → parse → diff → emit loop", () => {
-  let events: BccEvent[];
+describe("startPolling/stopPolling — fetch → parse → diff → set loop", () => {
+  let storeEvents: Array<{ channels: Map<string, StoreUser[]>; added: any[]; removed: any[] }>;
   let unsubscribe: () => void;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
     vi.stubGlobal("GM_log", vi.fn());
     vi.mocked(fetchAw).mockReset();
-    events = [];
-    unsubscribe = subscribe((e) => events.push(e));
+    await initTestStore();
+    storeEvents = [];
+    unsubscribe = on("globalUserlist", (v) => {
+      storeEvents.push(v as { channels: Map<string, StoreUser[]>; added: any[]; removed: any[] });
+    });
   });
 
   afterEach(() => {
@@ -158,14 +180,13 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     vi.useRealTimers();
   });
 
-  it("fetches immediately on startPolling (no interval wait) and emits the first snapshot", async () => {
+  it("fetches immediately on startPolling (no interval wait) and writes the first snapshot", async () => {
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);
     expect(fetchAw).toHaveBeenCalledTimes(1); // synchronous first fetch
     await flushMicrotasks();
-    expect(events).toHaveLength(1);
-    const e = events[0] as GlobalEvent;
-    expect(e.type).toBe("globalUserlist");
+    expect(storeEvents).toHaveLength(1);
+    const e = storeEvents[0];
     expect(e.added).toEqual([
       { user: mkUser("Alpha"), channel: "Erotik" },
       { user: mkUser("Beta"), channel: "Erotik" },
@@ -181,7 +202,7 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);
     await flushMicrotasks();
-    events = [];
+    storeEvents = [];
 
     // Next cycle: Beta leaves Erotik, Delta joins MOD.
     const nextRaw = [
@@ -195,19 +216,19 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     await flushMicrotasks();
 
     expect(fetchAw).toHaveBeenCalledTimes(2);
-    const e = events[0] as GlobalEvent;
+    const e = storeEvents[0];
     expect(e.added).toEqual([{ user: mkUser("Delta"), channel: "MOD" }]);
     expect(e.removed).toEqual([{ user: mkUser("Beta"), channel: "Erotik" }]);
   });
 
-  it("emits on every successful cycle, even with no changes", async () => {
+  it("writes store on every successful cycle, even with no changes", async () => {
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);
     await flushMicrotasks();
-    events = [];
+    storeEvents = [];
     await vi.advanceTimersByTimeAsync(5000);
     await flushMicrotasks();
-    const e = events[0] as GlobalEvent;
+    const e = storeEvents[0];
     expect(e.added).toEqual([]);
     expect(e.removed).toEqual([]);
   });
@@ -216,14 +237,14 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);
     await flushMicrotasks();
-    events = [];
+    storeEvents = [];
 
-    // Fetch fails → no emit, previous snapshot preserved (no log spam).
+    // Fetch fails → no store write, previous snapshot preserved (no log spam).
     vi.mocked(fetchAw).mockRejectedValue(new Error("network down"));
     await vi.advanceTimersByTimeAsync(5000);
     await flushMicrotasks();
     expect(fetchAw).toHaveBeenCalledTimes(2);
-    expect(events).toHaveLength(0);
+    expect(storeEvents).toHaveLength(0);
     expect(getLastSnapshot().get("Erotik")).toHaveLength(2); // snapshot kept
 
     // Network recovers → next cycle delivers an updated snapshot.
@@ -237,8 +258,8 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     await vi.advanceTimersByTimeAsync(5000);
     await flushMicrotasks();
     expect(fetchAw).toHaveBeenCalledTimes(3);
-    expect(events).toHaveLength(1);
-    const e = events[0] as GlobalEvent;
+    expect(storeEvents).toHaveLength(1);
+    const e = storeEvents[0];
     expect(e.removed).toEqual([{ user: mkUser("Beta"), channel: "Erotik" }]);
   });
 
@@ -246,28 +267,28 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
     startPolling(5000);
     await flushMicrotasks();
-    events = [];
+    storeEvents = [];
     expect(getLastSnapshot().size).toBeGreaterThan(0); // snapshot populated
 
     // Server returns non-aw.js content — parseAw yields empty Map.
     vi.mocked(fetchAw).mockResolvedValue("Internal Server Error");
     await vi.advanceTimersByTimeAsync(5000);
     await flushMicrotasks();
-    expect(events).toHaveLength(0); // no emit — guard skipped the update
+    expect(storeEvents).toHaveLength(0); // no store write — guard skipped the update
     expect(getLastSnapshot().size).toBeGreaterThan(0); // snapshot preserved
   });
 
   it("skips an empty parse result even with no prior snapshot (first poll garbage)", async () => {
     // aw.js lists every user online site-wide, so an empty parse is never
     // legitimate. On the very first poll the snapshot is still empty — the
-    // guard must still skip (not fall through and emit a bogus empty snapshot).
+    // guard must still skip (not fall through and write a bogus empty snapshot).
     // NB: module state persists across this describe block, so we only assert
-    // the skip (no emit); the no-snapshot precondition is covered indirectly
-    // by the ulist-poll suite which uses vi.resetModules() for fresh state.
+    // the skip (no store write); the no-snapshot precondition is covered
+    // indirectly by the ulist-poll suite which uses vi.resetModules() for fresh state.
     vi.mocked(fetchAw).mockResolvedValue("Internal Server Error");
     startPolling(5000);
     await flushMicrotasks();
-    expect(events).toHaveLength(0); // no emit — guard skipped
+    expect(storeEvents).toHaveLength(0); // no store write — guard skipped
   });
 
   it("stopPolling stops the loop", async () => {
@@ -305,12 +326,13 @@ describe("startPolling/stopPolling — fetch → parse → diff → emit loop", 
 // ─── findUserChannel / getLastSnapshot ──────────────────────────────────────
 
 describe("findUserChannel — queries the last snapshot by key", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
     vi.stubGlobal("GM_log", vi.fn());
     vi.spyOn(Math, "random").mockReturnValue(0.5);
     vi.mocked(fetchAw).mockReset();
     vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
+    await initTestStore();
     startPolling(5000);
   });
 

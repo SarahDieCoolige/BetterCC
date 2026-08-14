@@ -26,7 +26,7 @@
 //   - Bild              → photo container in center (getUserPhoto + hover/pin preview)
 //   - ID (/id)          → wired (opens ID page in new window)
 
-import { type User } from "./bus";
+import { type User } from "./store";
 import { encodeChatLink } from "./utils";
 import { getBettercc, sendCommand } from "./upstream";
 import { iconElement } from "./dom";

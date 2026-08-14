@@ -174,23 +174,3 @@ describe("session — initSession writes to store", () => {
     vi.useRealTimers();
   });
 });
-
-describe("session — no bus session events emitted", () => {
-  beforeEach(() => {
-    _resetStoreForTesting();
-    installGmFakeWithListeners();
-    setUserStore("TestUser", false);
-    setUpstreamDefaults();
-  });
-
-  it("initSession does not import or call emit from bus", async () => {
-    await initStore();
-    const { initSession } = await import("../src/session");
-
-    const busModule = await import("../src/bus");
-    const emitSpy = vi.spyOn(busModule, "emit");
-
-    initSession();
-    expect(emitSpy).not.toHaveBeenCalled();
-  });
-});

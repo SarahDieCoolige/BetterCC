@@ -7,6 +7,35 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { parseUserlist, type User } from "../src/userlist";
 import { parseUlistResponse, processUserlist } from "../src/ulist-poll";
 
+function installGmFake() {
+  const store = new Map<string, unknown>();
+  (globalThis as any).GM = {
+    getValue: (key: string, def?: unknown) =>
+      store.has(key) ? Promise.resolve(store.get(key)) : Promise.resolve(def),
+    setValue: (key: string, val: unknown) => {
+      store.set(key, val);
+      return Promise.resolve();
+    },
+  };
+  (globalThis as any).GM_log = () => {};
+}
+
+// afterEach calls vi.resetModules(), so from the second test on the statically
+// imported modules are STALE instances: a statically imported initStore() would
+// initialize a different store than the one the dynamically imported poll
+// module writes to (its set() would throw "not initialized", get swallowed by
+// pollOnce's catch, and any store assertion would vacuously pass). Resolve
+// store/utils through the registry so init and the poll share ONE instance.
+async function initTestStore() {
+  const store = await import("../src/store");
+  store._resetStoreForTesting();
+  installGmFake();
+  const { setUserStore } = await import("../src/utils");
+  setUserStore("TestUser", false);
+  await store.initStore();
+  return store;
+}
+
 // ─── parseUlistResponse tests (from UP-1) ────────────────────────────────────
 
 describe("parseUlistResponse", () => {
@@ -113,7 +142,7 @@ describe("processUserlist — parse + diff, the set_uinfo1 core", () => {
 // cancelled.
 
 describe("ulist-poll loop", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
     vi.stubGlobal("unsafeWindow", {
       chat_id: "42",
@@ -121,6 +150,7 @@ describe("ulist-poll loop", () => {
       PCHAT: "/cc_chat",
     });
     vi.stubGlobal("GM_log", () => {});
+    await initTestStore();
   });
 
   afterEach(() => {
@@ -216,16 +246,17 @@ describe("ulist-poll loop", () => {
     // No seed → prevList stays empty. First fetch returns a bare terminator
     // (daemon not ready). The guard must still skip it — an empty response is
     // never legitimate. Without the guard fix, this would fall through and
-    // emit a bogus empty userlist.
+    // write a bogus empty userlist to the store.
     vi.stubGlobal("fetch", () =>
       Promise.resolve({ text: () => Promise.resolve('var cha_my = new Array("");') }),
     );
 
-    // Subscribe before importing the poll module so any emit is observed.
-    const userlistEvents: unknown[] = [];
-    const { subscribe } = await import("../src/bus");
-    const unsub = subscribe((e) => {
-      if ((e as { type: string }).type === "userlist") userlistEvents.push(e);
+    // Subscribe on the SAME store instance the poll module writes to
+    // (initTestStore resolved it through the registry after resetModules).
+    const store = await import("../src/store");
+    const userlistSnapshots: unknown[] = [];
+    const unsub = store.on("userlist", (v) => {
+      userlistSnapshots.push(v);
     });
 
     const mod = await import("../src/ulist-poll");
@@ -233,7 +264,9 @@ describe("ulist-poll loop", () => {
     mod.stopUlistPoll();
     await vi.runAllTimersAsync();
 
-    expect(userlistEvents).toHaveLength(0); // guard skipped the empty response
+    // on() fires only on writes — a snapshot here means the guard let an
+    // empty response through.
+    expect(userlistSnapshots).toHaveLength(0);
     unsub();
   });
 

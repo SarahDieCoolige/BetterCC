@@ -9,7 +9,7 @@
 // wiring shim — overriding upstream set_uinfo1 to parse + diff + emit — lives
 // separately and is a thin hook (not unit-testable; no jsdom in this suite).
 
-import type { User } from "./bus";
+import type { User } from "./store";
 
 // ─── parseUserlist ────────────────────────────────────────────────────────
 

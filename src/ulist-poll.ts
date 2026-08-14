@@ -12,7 +12,7 @@
 // classifier, etc.) import and call it without the poll module knowing.
 
 import { parseUserlist, diffUserlists } from "./userlist";
-import { emit, type User } from "./bus";
+import { set, type User } from "./store";
 import { getChatId, getChatSid, getPChat, getChaMy } from "./upstream";
 import { cclog } from "./utils";
 
@@ -93,7 +93,7 @@ async function pollOnce(): Promise<void> {
     stale = false; // first successful network poll with real data — switch to normal interval
     const { newList, added, removed } = processUserlist(chaMy, prevList);
     prevList = newList;
-    emit({ type: "userlist", users: newList, added, removed });
+    await set("userlist", { users: newList, added, removed });
   } catch (e) {
     cclog("ulist-poll: poll error — " + (e as Error).message, "v3");
   }
@@ -142,7 +142,7 @@ export function startUlistPoll(intervalMs = 20000): void {
   if (seed.length > 0) {
     const { newList, added, removed } = processUserlist(seed, prevList);
     prevList = newList;
-    emit({ type: "userlist", users: newList, added, removed });
+    void set("userlist", { users: newList, added, removed });
   }
   pollAndReschedule(intervalMs);
   cclog("ulist-poll started — every ~" + intervalMs + " ms", "v3");

@@ -1019,18 +1019,6 @@
     return abbrev;
   }
 
-  // src/bus.ts
-  var listeners = /* @__PURE__ */ new Set();
-  function subscribe(fn) {
-    listeners.add(fn);
-    return () => {
-      listeners.delete(fn);
-    };
-  }
-  function emit(e) {
-    for (const fn of listeners) fn(e);
-  }
-
   // src/ulist-poll.ts
   var chatId = "";
   var chatSid = "";
@@ -1064,7 +1052,7 @@
       stale = false;
       const { newList, added, removed } = processUserlist(chaMy, prevList);
       prevList = newList;
-      emit({ type: "userlist", users: newList, added, removed });
+      await set("userlist", { users: newList, added, removed });
     } catch (e) {
       cclog("ulist-poll: poll error \u2014 " + e.message, "v3");
     }
@@ -1089,7 +1077,7 @@
     if (seed.length > 0) {
       const { newList, added, removed } = processUserlist(seed, prevList);
       prevList = newList;
-      emit({ type: "userlist", users: newList, added, removed });
+      void set("userlist", { users: newList, added, removed });
     }
     pollAndReschedule(intervalMs);
     cclog("ulist-poll started \u2014 every ~" + intervalMs + " ms", "v3");
@@ -1132,7 +1120,7 @@
       if (next.size === 0) return;
       const { added, removed } = diffGlobal(lastSnapshot, next);
       lastSnapshot = next;
-      emit({ type: "globalUserlist", channels: next, added, removed });
+      await set("globalUserlist", { channels: next, added, removed });
     } catch (e) {
       cclog("global-userlist: poll error \u2014 " + e.message, "v3");
     }
@@ -2230,19 +2218,18 @@
       pinnedCache = new Set(list);
       renderFromState();
     });
-    subscribe((e) => {
-      if (e.type === "userlist") {
-        lastChannelUsers = e.users;
-        renderFromState();
-      } else if (e.type === "globalUserlist") {
-        lastGlobalChannels = e.channels;
-        let total = 0;
-        for (const users of e.channels.values()) total += users.length;
-        globalTotal = total;
-        renderFromState();
-      }
+    react("userlist", (u) => {
+      lastChannelUsers = u.users;
+      renderFromState();
     });
-    cclog("sidebar mounted \u2014 subscribed to userlist + globalUserlist events", "v3");
+    react("globalUserlist", (g) => {
+      lastGlobalChannels = g.channels;
+      let total = 0;
+      for (const users of g.channels.values()) total += users.length;
+      globalTotal = total;
+      renderFromState();
+    });
+    cclog("sidebar mounted \u2014 reacts to userlist + globalUserlist store keys", "v3");
   }
 
   // src/stats.ts
