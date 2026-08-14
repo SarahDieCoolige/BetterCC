@@ -11,6 +11,16 @@
     background-color 0.4s ease-out;
 }
 
+/* Floor against upstream color clobbers. Inline scripts in the streamed HTML
+   reset body colors (intro body-reset, setbgcol), and some land asynchronously
+   (external scripts, timers) after our per-message re-apply already ran. A
+   stylesheet !important rule beats any non-important inline style whenever it
+   arrives; the vars still come from :root, so live theme changes keep working. */
+body {
+  background-color: var(--chatBackground) !important;
+  color: var(--chatText) !important;
+}
+
 html {
   scroll-behavior: smooth;
 }

@@ -14,7 +14,7 @@
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
-// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=7a7d02e8
+// @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=751b75c5
 //
 // @grant  GM_addStyle
@@ -195,6 +195,7 @@
   // src/chat.ts
   function addAutoscrollBanner(iframeDoc, iframeWin) {
     if (!iframeDoc || !iframeWin) return;
+    if (iframeDoc.getElementById("autoscroll-banner")) return;
     const scrollbanner = iframeDoc.createElement("div");
     scrollbanner.id = "autoscroll-banner";
     scrollbanner.textContent = "Zur\xFCck nach unten";
@@ -682,18 +683,25 @@
   // src/ws-hook.ts
   var upstreamChatoutConnect = null;
   var upstreamOnMessage = null;
-  var injected = false;
   var INJECTION_RETRY_MS = 50;
   var MAX_INJECTION_RETRIES = 50;
   var injectionRetries = 0;
+  var injectionScheduled = false;
   var _iframeMousedownBody = null;
   function injectIntoChatframe() {
     const doc = getChatDoc();
     const win = getChatWin();
     if (!doc || !win || !doc.body) {
-      if (injectionRetries++ < MAX_INJECTION_RETRIES) {
-        setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
+      if (injectionScheduled) return;
+      if (injectionRetries++ >= MAX_INJECTION_RETRIES) {
+        injectionRetries = 0;
+        return;
       }
+      injectionScheduled = true;
+      setTimeout(() => {
+        injectionScheduled = false;
+        injectIntoChatframe();
+      }, INJECTION_RETRY_MS);
       return;
     }
     injectionRetries = 0;
@@ -701,6 +709,7 @@
     if (iframeCss) {
       const style = doc.createElement("style");
       style.textContent = iframeCss;
+      style.setAttribute("data-bcc-iframe", "");
       if (doc.head) {
         doc.head.appendChild(style);
       } else {
@@ -732,14 +741,12 @@
         cclog("betterccOnWsMessage: upstream onmessage threw \u2014 " + e.message, "ws-hook");
       }
     }
-    if (!injected) {
-      injectIntoChatframe();
-      injected = true;
-    }
     const doc = getChatDoc();
-    if (doc && doc.body) {
+    if (doc && doc.querySelector("style[data-bcc-iframe]")) {
       doc.body.style.setProperty("background-color", "var(--chatBackground)");
       doc.body.style.setProperty("color", "var(--chatText)");
+    } else {
+      injectIntoChatframe();
     }
   }
   function betterccOnWsClose() {

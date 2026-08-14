@@ -2,6 +2,9 @@
 
 export function addAutoscrollBanner(iframeDoc: Document, iframeWin: Window): void {
   if (!iframeDoc || !iframeWin) return;
+  // Already present — re-injection after a full rewrite must not stack
+  // banners or scroll listeners.
+  if (iframeDoc.getElementById("autoscroll-banner")) return;
 
   const scrollbanner = iframeDoc.createElement("div");
   scrollbanner.id = "autoscroll-banner";

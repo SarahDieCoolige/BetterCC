@@ -9,44 +9,57 @@ export let upstreamChatoutConnect: any = null;
 // Stored upstream onmessage — called first inside our handler to preserve
 // all upstream behavior (contentDocument.write + SHIM_AUTH_DEAD detection).
 let upstreamOnMessage: ((ev: MessageEvent) => void) | null = null;
-// Tracks one-time first injection (replaces the chatframeReady latch).
-let injected = false;
 
-// ─── First injection ───────────────────────────────────────────────────
+// ─── Injection ─────────────────────────────────────────────────────────
 // contentDocument.write() creates the body synchronously, but getChatDoc()
 // can't see it until the current task yields. We retry on a short timer
-// until the body exists. Triggered by the first WS message (via
-// betterccOnWsMessage) — NOT by a blind poll, to avoid injecting into a
-// body that a subsequent contentDocument.open() will wipe.
+// until the body exists. Triggered from betterccOnWsMessage whenever our
+// style element is missing from the iframe (first message, or a later full
+// rewrite) — NOT by a blind poll, to avoid injecting into a body that a
+// subsequent contentDocument.open() will wipe.
 const INJECTION_RETRY_MS = 50;
 const MAX_INJECTION_RETRIES = 50;
 let injectionRetries = 0;
+// One retry chain at a time — two concurrent chains would both see the body
+// appear and double-inject (duplicate style, banner, listeners).
+let injectionScheduled = false;
 
 // Guard against duplicate mousedown listeners: track the last body element
 // we wired. On the same channel, doc.body is the same reference → skip.
-// On a channel transition, contentDocument.write() creates a new body →
-// the old listener dies with the old DOM, and we re-inject on the new one.
+// A full rewrite creates a new body → the old listener died with the old
+// DOM, and we re-wire the new one.
 let _iframeMousedownBody: HTMLElement | null = null;
 
-// Runs ONCE after the first WebSocket message populates the iframe.
+// (Re)builds the BetterCC layer inside the chatframe: iframe.css, theme vars,
+// autoscroll banner, interaction listener. Safe to call repeatedly; every
+// step is either idempotent or guarded.
 export function injectIntoChatframe(): void {
   const doc = getChatDoc();
   const win = getChatWin();
   if (!doc || !win || !doc.body) {
     // Body not parsed yet after upstream's contentDocument.write(). Retry
     // on a short timer — the parser builds <body> within a few ms.
-    if (injectionRetries++ < MAX_INJECTION_RETRIES) {
-      setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
+    if (injectionScheduled) return;
+    if (injectionRetries++ >= MAX_INJECTION_RETRIES) {
+      injectionRetries = 0; // give up this round; the next message re-triggers
+      return;
     }
+    injectionScheduled = true;
+    setTimeout(() => {
+      injectionScheduled = false;
+      injectIntoChatframe();
+    }, INJECTION_RETRY_MS);
     return;
   }
   injectionRetries = 0;
 
-  // 1) Inject iframe.css
+  // 1) Inject iframe.css. Tagged so betterccOnWsMessage can detect a full
+  //    rewrite (doc.open() wipes it) and re-inject on the next message.
   const iframeCss = GM_getResourceText("iframe_css");
   if (iframeCss) {
     const style = doc.createElement("style");
     style.textContent = iframeCss;
+    style.setAttribute("data-bcc-iframe", "");
     if (doc.head) {
       doc.head.appendChild(style);
     } else {
@@ -105,22 +118,23 @@ export function betterccOnWsMessage(ev: MessageEvent): void {
     }
   }
 
-  // 2. First-time injection (iframe.css + theme + autoscroll banner).
-  // injectIntoChatframe retries internally until the body is parsed.
-  if (!injected) {
-    injectIntoChatframe();
-    injected = true;
-  }
-
-  // 3. Re-apply body styles — THE FIX. Every message, always.
-  // Upstream's write may have executed inline scripts (setbgcol on channel
-  // transitions, or the body-style-reset script in a re-streamed channel
-  // intro) that clobber our theme. Re-applying here, synchronously in the
-  // same task before the browser paints, guarantees no flash.
+  // 2. (Re)inject when our iframe style is gone. The first message finds an
+  //    untouched iframe; a later full rewrite (doc.open() + write — the
+  //    restream scenario) wipes iframe.css, the :root vars, the banner and
+  //    the interaction listener. The missing style element is the signal;
+  //    injectIntoChatframe rebuilds everything and retries internally until
+  //    the new body is parsed.
+  // 3. Re-apply body styles — every message, always. Inline scripts in the
+  //    stream (setbgcol on sep transitions, the intro's body-reset script)
+  //    clobber them synchronously during the write above. Clobbers that
+  //    land asynchronously (external scripts, timers) are covered by the
+  //    !important floor in iframe.css.
   const doc = getChatDoc();
-  if (doc && doc.body) {
+  if (doc && doc.querySelector("style[data-bcc-iframe]")) {
     doc.body.style.setProperty("background-color", "var(--chatBackground)");
     doc.body.style.setProperty("color", "var(--chatText)");
+  } else {
+    injectIntoChatframe();
   }
 }
 
