@@ -286,11 +286,12 @@ function ensureContainers(sidebar: HTMLElement): void {
   channelSelect.addEventListener("change", () => {
     channelFace.textContent = channelSelect.value || "";
   });
-  // The native select updates via a store subscription (not a change event) when
-  // the channel is switched via /j. Sync the face here too.
-  subscribe((e) => {
-    if (e.type === "session" && e.session.channel && channelFace.isConnected) {
-      channelFace.textContent = e.session.channel;
+  // The native select updates via a store react when the channel is switched
+  // via /j. Sync the face here too. react fires immediately so the face
+  // gets the current channel at mount time.
+  react("session", (s) => {
+    if (s.channel && channelFace.isConnected) {
+      channelFace.textContent = s.channel;
     }
   });
   channelWrap.appendChild(channelFace);

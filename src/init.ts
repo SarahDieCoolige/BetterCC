@@ -43,8 +43,7 @@ import { mountStatsBar } from "./stats";
 import { initSession, getSession } from "./session";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
-import { subscribe, type BccEvent } from "./bus";
-import { initStore } from "./store";
+import { initStore, on } from "./store";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (deleted with ui.ts)
@@ -138,12 +137,11 @@ export async function initV3(): Promise<void> {
   neuterGetInfo();
   {
     let lastChannel = getSession().channel;
-    subscribe((e: BccEvent) => {
-      if (e.type !== "session") return;
-      if (e.session.authDead) {
+    on("session", (s) => {
+      if (s.authDead) {
         stopUlistPoll();
-      } else if (e.session.channel !== lastChannel) {
-        lastChannel = e.session.channel;
+      } else if (s.channel !== lastChannel) {
+        lastChannel = s.channel;
         refreshUlistNow();
       }
     });
@@ -156,8 +154,8 @@ export async function initV3(): Promise<void> {
   // so the sidebar is subscribed before the first "globalUserlist" event fires.
   // Stop polling when the session is dead — no point fetching aw.js.
   startPolling(5000);
-  subscribe((e: BccEvent) => {
-    if (e.type === "session" && e.session.authDead) stopPolling();
+  on("session", (s) => {
+    if (s.authDead) stopPolling();
   });
 
   // Mount the stats bar (Freunde Online / Anfragen / Nachrichten badges) at the

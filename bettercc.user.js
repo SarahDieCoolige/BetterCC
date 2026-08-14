@@ -1881,11 +1881,10 @@
   }
 
   // src/session.ts
-  var session;
   var timer = null;
   function initSession() {
     if (timer) clearInterval(timer);
-    session = {
+    const snapshot = {
       nick: getChatNick(),
       registered: getChatUi().includes("R"),
       guest: getChatUi().includes("h") && !getChatUi().includes("R"),
@@ -1894,22 +1893,30 @@
       channel: getChannel(),
       authDead: isAuthDead()
     };
-    emit({ type: "session", session: { ...session } });
-    let prevChannel = session.channel;
-    let prevAuthDead = session.authDead;
+    set("session", snapshot);
+    let prevChannel = snapshot.channel;
+    let prevAuthDead = snapshot.authDead;
     timer = setInterval(() => {
       const newChannel = getChannel();
       const newAuthDead = isAuthDead();
       if (newChannel !== prevChannel || newAuthDead !== prevAuthDead) {
-        prevChannel = session.channel = newChannel;
-        prevAuthDead = session.authDead = newAuthDead;
-        emit({ type: "session", session: { ...session } });
+        prevChannel = newChannel;
+        prevAuthDead = newAuthDead;
+        set("session", {
+          nick: getChatNick(),
+          registered: getChatUi().includes("R"),
+          guest: getChatUi().includes("h") && !getChatUi().includes("R"),
+          userId: getChatId(),
+          sessionId: getChatSid(),
+          channel: newChannel,
+          authDead: newAuthDead
+        });
       }
     }, 2e3);
-    cclog("session: init done \u2014 nick=" + session.nick + " channel=" + session.channel, "v3");
+    cclog("session: init done \u2014 nick=" + snapshot.nick + " channel=" + snapshot.channel, "v3");
   }
   function getSession() {
-    return session;
+    return get("session");
   }
 
   // src/channel-select.ts
@@ -1967,9 +1974,9 @@
     select.addEventListener("change", () => {
       sendCommand("/j " + select.value);
     });
-    subscribe((e) => {
-      if (e.type === "session" && e.session.channel) {
-        const lower = e.session.channel.toLowerCase();
+    react("session", (s) => {
+      if (s.channel) {
+        const lower = s.channel.toLowerCase();
         for (const opt of Array.from(select.options)) {
           if (opt.value.toLowerCase() === lower) {
             if (!opt.selected) opt.selected = true;
@@ -2136,9 +2143,9 @@
     channelSelect.addEventListener("change", () => {
       channelFace.textContent = channelSelect.value || "";
     });
-    subscribe((e) => {
-      if (e.type === "session" && e.session.channel && channelFace.isConnected) {
-        channelFace.textContent = e.session.channel;
+    react("session", (s) => {
+      if (s.channel && channelFace.isConnected) {
+        channelFace.textContent = s.channel;
       }
     });
     channelWrap.appendChild(channelFace);
@@ -3855,20 +3862,19 @@
     neuterGetInfo();
     {
       let lastChannel = getSession().channel;
-      subscribe((e) => {
-        if (e.type !== "session") return;
-        if (e.session.authDead) {
+      on("session", (s) => {
+        if (s.authDead) {
           stopUlistPoll();
-        } else if (e.session.channel !== lastChannel) {
-          lastChannel = e.session.channel;
+        } else if (s.channel !== lastChannel) {
+          lastChannel = s.channel;
           refreshUlistNow();
         }
       });
     }
     unsafeWindow.bettercc.refreshUlistNow = refreshUlistNow;
     startPolling(5e3);
-    subscribe((e) => {
-      if (e.type === "session" && e.session.authDead) stopPolling();
+    on("session", (s) => {
+      if (s.authDead) stopPolling();
     });
     mountStatsBar(document.querySelector(".bcc-sidebar"));
     mountInput();

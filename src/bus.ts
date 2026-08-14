@@ -10,13 +10,12 @@
 // fully unit-testable.
 
 // Re-export types that moved to store.ts (shim, dies in S7).
-export type { User, UserWithChannel, SessionState } from "./store";
+export type { User, UserWithChannel } from "./store";
 
-import type { UserWithChannel, SessionState } from "./store";
+import type { UserWithChannel } from "./store";
 
 /** Events the data layer emits. Open union so future concerns extend it. */
 export type BccEvent =
-  | { type: "session"; session: SessionState }
   | { type: "userlist"; users: import("./store").User[]; added: string[]; removed: string[] }
   | {
       type: "globalUserlist";
