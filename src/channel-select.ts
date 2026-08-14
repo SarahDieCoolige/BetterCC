@@ -15,7 +15,7 @@
 // Only the pure parser (parseChannels) is unit-tested; the DOM builder is
 // verified via the dev-server smoke (consistent with sidebar.ts / shell.ts).
 
-import { subscribe } from "./store";
+import { subscribe } from "./bus";
 import { getSession } from "./session";
 import { cclog } from "./utils";
 import { getChannelCategories, getChannelGroups, sendCommand } from "./upstream";

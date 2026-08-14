@@ -223,7 +223,7 @@ describe("ulist-poll loop", () => {
 
     // Subscribe before importing the poll module so any emit is observed.
     const userlistEvents: unknown[] = [];
-    const { subscribe } = await import("../src/store");
+    const { subscribe } = await import("../src/bus");
     const unsub = subscribe((e) => {
       if ((e as { type: string }).type === "userlist") userlistEvents.push(e);
     });

@@ -6,7 +6,7 @@
 // Save takes effect live without a reload.
 
 import { getConfig } from "./config";
-import { subscribe, type BccEvent } from "./store";
+import { subscribe, type BccEvent } from "./bus";
 
 let _sendOnEnter = true; // default true = Enter sends (today's behavior)
 let _hoverPreview = true; // default true = hover preview on (today's behavior)

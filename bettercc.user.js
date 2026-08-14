@@ -699,7 +699,7 @@
     await GM.setValue(getUserKey(key), value);
   }
 
-  // src/store.ts
+  // src/bus.ts
   var listeners = /* @__PURE__ */ new Set();
   function subscribe(fn) {
     listeners.add(fn);

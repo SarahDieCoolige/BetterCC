@@ -8,7 +8,7 @@
 // The sidebar (T7) subscribes for auth-dead context; the header channel label
 // (T6 → T4b) subscribes to update on channel changes.
 
-import { emit, type SessionState } from "./store";
+import { emit, type SessionState } from "./bus";
 import { cclog } from "./utils";
 import { getChatNick, getChannel, isAuthDead, getChatUi, getChatId, getChatSid } from "./upstream";
 

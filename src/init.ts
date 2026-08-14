@@ -47,7 +47,7 @@ import { initSession, getSession } from "./session";
 import { mountInput } from "./input";
 import { initConfigCache } from "./config-cache";
 import { mountFooter } from "./footer";
-import { subscribe, type BccEvent } from "./store";
+import { subscribe, type BccEvent } from "./bus";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (deleted with ui.ts)

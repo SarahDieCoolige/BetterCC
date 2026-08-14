@@ -18,7 +18,7 @@ import {
   findUserChannel,
   getLastSnapshot,
 } from "../src/global-userlist";
-import { subscribe, type BccEvent, type User } from "../src/store";
+import { subscribe, type BccEvent, type User } from "../src/bus";
 
 type GlobalEvent = Extract<BccEvent, { type: "globalUserlist" }>;
 

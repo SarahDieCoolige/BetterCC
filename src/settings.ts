@@ -10,7 +10,7 @@
 import { iconElement } from "./dom";
 import { getConfig, setConfig, type ConfigKey } from "./config";
 import { saveColor, setSchemeVersion } from "./theme";
-import { emit } from "./store";
+import { emit } from "./bus";
 import { cclog, getUserKey } from "./utils";
 import { COMMANDS } from "./commands";
 import { getChatNick, getChannel } from "./upstream";

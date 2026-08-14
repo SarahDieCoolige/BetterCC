@@ -27,7 +27,7 @@ import {
 } from "./scheme";
 import { applyThemeToIframe, getUserKey } from "./utils";
 import { getConfig, setConfig } from "./config";
-import { emit } from "./store";
+import { emit } from "./bus";
 
 // ─── Pure: the --bcc-* name map (spec §6.1) ───────────────────────────────
 

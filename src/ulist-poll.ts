@@ -12,7 +12,7 @@
 // classifier, etc.) import and call it without the poll module knowing.
 
 import { parseUserlist, diffUserlists } from "./userlist";
-import { emit, type User } from "./store";
+import { emit, type User } from "./bus";
 import { getChatId, getChatSid, getPChat, getChaMy } from "./upstream";
 import { cclog } from "./utils";
 

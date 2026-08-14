@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { setUserStore } from "../src/utils";
 import { initConfigCache, sendOnEnter, hoverPreview } from "../src/config-cache";
 import { setConfig } from "../src/config";
-import { emit } from "../src/store";
+import { emit } from "../src/bus";
 
 // ─── In-memory GM fake (same shape as tests/config.test.ts) ─────────────
 

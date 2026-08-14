@@ -18,7 +18,7 @@ import { getChatNick, sendCommand, leaveChat } from "./upstream";
 import { actionButton } from "./dom";
 import { updatePlaceholder } from "./input";
 import { openSettings } from "./settings";
-import { subscribe, type BccEvent } from "./store";
+import { subscribe, type BccEvent } from "./bus";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.

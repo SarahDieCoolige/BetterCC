@@ -11,7 +11,7 @@ import { buildPatchedHandler } from "./patched-handler";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
 import { sendOnEnter } from "./config-cache";
-import { subscribe, type BccEvent } from "./store";
+import { subscribe, type BccEvent } from "./bus";
 
 let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: ((...args: any[]) => any) | null = null;

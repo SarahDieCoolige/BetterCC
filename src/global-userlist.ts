@@ -12,7 +12,7 @@
 // seam in tests.
 
 import { parseAw } from "./userlist";
-import { emit, type User, type UserWithChannel } from "./store";
+import { emit, type User, type UserWithChannel } from "./bus";
 import { fetchAw } from "./upstream";
 import { cclog } from "./utils";
 

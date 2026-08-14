@@ -20,7 +20,7 @@
 // snapshot exists: N = current-channel users, M = all users across all
 // channels.
 
-import { subscribe, emit, type BccEvent, type User } from "./store";
+import { subscribe, emit, type BccEvent, type User } from "./bus";
 import { sortUsers, channelAbbrev } from "./userlist";
 import { getConfig, setConfig } from "./config";
 import { openUserPopup } from "./popup";
