@@ -3826,6 +3826,96 @@
     });
   }
 
+  // src/store.ts
+  var emptySession = {
+    nick: "",
+    registered: false,
+    guest: false,
+    userId: "",
+    sessionId: "",
+    channel: "",
+    authDead: false
+  };
+  var codecs = {
+    color: { encode: (v) => v, decode: (r) => r, default: "6AAED8", persisted: true },
+    scheme_v2: { encode: (v) => v, decode: (r) => r, default: false, persisted: true },
+    pinned: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
+    whisper: { encode: (v) => v, decode: (r) => r, default: "", persisted: true },
+    compact: {
+      encode: (v) => v ? "1" : "",
+      decode: (r) => r === "1",
+      default: false,
+      persisted: true
+    },
+    send_on_enter: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
+    hover_preview: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
+    ban: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
+    session: {
+      encode: (v) => v,
+      decode: () => emptySession,
+      default: emptySession,
+      persisted: false
+    },
+    userlist: {
+      encode: (v) => v,
+      decode: () => ({ users: [], added: [], removed: [] }),
+      default: { users: [], added: [], removed: [] },
+      persisted: false
+    },
+    globalUserlist: {
+      encode: (v) => v,
+      decode: () => ({ channels: /* @__PURE__ */ new Map(), added: [], removed: [] }),
+      default: { channels: /* @__PURE__ */ new Map(), added: [], removed: [] },
+      persisted: false
+    }
+  };
+  var initialized = false;
+  var mirror = {};
+  var subscribers = /* @__PURE__ */ new Map();
+  var listenerIds = [];
+  function notify(k, v) {
+    const set = subscribers.get(k);
+    if (!set) return;
+    for (const fn of set) fn(v);
+  }
+  async function initStore() {
+    if (initialized) throw new Error("initStore already called");
+    initialized = true;
+    for (const [key, codec] of Object.entries(codecs)) {
+      if (!codec.persisted) {
+        mirror[key] = codec.default;
+        continue;
+      }
+      try {
+        const raw = await GM.getValue(getUserKey(key));
+        mirror[key] = raw !== void 0 ? codec.decode(raw) : codec.default;
+      } catch {
+        cclog(`initStore: failed to read ${key}, using default`, "store");
+        mirror[key] = codec.default;
+      }
+    }
+    if (typeof GM_addValueChangeListener === "function") {
+      cclog("GM_addValueChangeListener available, registering reconciliation listeners", "store");
+      for (const [key, codec] of Object.entries(codecs)) {
+        if (!codec.persisted) continue;
+        const scopedKey = getUserKey(key);
+        const id = GM_addValueChangeListener(scopedKey, () => {
+          GM.getValue(scopedKey).then((raw) => {
+            const decoded = codec.decode(raw);
+            if (decoded === mirror[key]) return;
+            mirror[key] = decoded;
+            notify(key, decoded);
+          }).catch(() => {
+            cclog(`reconciliation: failed to re-read ${key}`, "store");
+          });
+        });
+        listenerIds.push(id);
+      }
+    } else {
+      cclog("GM_addValueChangeListener not available, cross-tab sync disabled", "store");
+    }
+  }
+
   // src/init.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
@@ -3839,7 +3929,8 @@
     unsafeWindow.get_info = function get_info() {
     };
   }
-  function initV3() {
+  async function initV3() {
+    await initStore();
     cclog("v3 init (parent-page rewrite, iteration 1)");
     const v3Css = GM_getResourceText("v3_css");
     if (v3Css) GM_addStyle(v3Css);

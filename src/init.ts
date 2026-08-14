@@ -48,6 +48,7 @@ import { mountInput } from "./input";
 import { initConfigCache } from "./config-cache";
 import { mountFooter } from "./footer";
 import { subscribe, type BccEvent } from "./bus";
+import { initStore } from "./store";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (deleted with ui.ts)
@@ -81,7 +82,11 @@ function neuterGetInfo(): void {
  * Called from src/index.ts after the same userStore setup the old path uses,
  * so both paths share the GM-storage key namespace via getUserKey().
  */
-export function initV3(): void {
+export async function initV3(): Promise<void> {
+  // Boot the sync store before anything else (spec §4).
+  // Must run after setUserStore() (derives user-scoped GM keys).
+  await initStore();
+
   cclog("v3 init (parent-page rewrite, iteration 1)");
 
   // Load the v3 stylesheet first so the shell paints with Grid layout from the
