@@ -11,7 +11,7 @@ import { setUserStore } from "../src/utils";
 // We import the store module at the top, but since it's a module-level singleton
 // we need to reset it between tests. The store exports a reset function for
 // testing only.
-import { initStore, get, set, on, react, _resetStoreForTesting } from "../src/store";
+import { initStore, get, set, on, react, snapshot, _resetStoreForTesting } from "../src/store";
 
 // ─── In-memory GM fake with listener registry ─────────────────────────────
 
@@ -613,5 +613,102 @@ describe("store — set always notifies even on equal values", () => {
     // Set to default value
     await set("color", "6AAED8");
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("snapshot()", () => {
+  let gm: ReturnType<typeof installGmFakeWithListeners>;
+
+  beforeEach(() => {
+    _resetStoreForTesting();
+    gm = installGmFakeWithListeners();
+  });
+
+  const allKeys = [
+    "color",
+    "scheme_v2",
+    "pinned",
+    "whisper",
+    "compact",
+    "send_on_enter",
+    "hover_preview",
+    "ban",
+    "session",
+    "userlist",
+    "globalUserlist",
+  ] as const;
+
+  it("returns a property for every registered key", async () => {
+    await initTestStore(gm);
+
+    const snap = snapshot();
+    for (const key of allKeys) {
+      expect(snap).toHaveProperty(key);
+    }
+    // No extra keys
+    expect(Object.keys(snap).sort()).toEqual([...allKeys].sort());
+  });
+
+  it("values match the store — set a few and compare", async () => {
+    await initTestStore(gm);
+
+    await set("color", "FF0000");
+    await set("pinned", ["alice", "bob"]);
+    await set("whisper", "charlie");
+    await set("compact", true);
+
+    const snap = snapshot();
+    expect(snap.color).toBe("FF0000");
+    expect(snap.pinned).toEqual(["alice", "bob"]);
+    expect(snap.whisper).toBe("charlie");
+    expect(snap.compact).toBe(true);
+  });
+
+  it("globalUserlist.channels (Map) comes back as a plain object via Object.fromEntries", async () => {
+    await initTestStore(gm);
+
+    // Populate the globalUserlist channels Map
+    const map = new Map<string, { name: string }[]>();
+    map.set("lobby", [{ name: "alice" }]);
+    map.set("test", [{ name: "bob" }]);
+    await set("globalUserlist", {
+      channels: map,
+      added: [],
+      removed: [],
+    });
+
+    const snap = snapshot();
+    // channels should be a plain object, not a Map
+    expect(snap.globalUserlist.channels).toEqual({
+      lobby: [{ name: "alice" }],
+      test: [{ name: "bob" }],
+    });
+    expect(snap.globalUserlist.channels).not.toBeInstanceOf(Map);
+  });
+
+  it("returned snapshot is safe to mutate — arrays and channels object are copies", async () => {
+    await initTestStore(gm);
+
+    await set("pinned", ["alice"]);
+    await set("ban", ["troll"]);
+    const map = new Map<string, { name: string }[]>([["room1", [{ name: "x" }]]]);
+    await set("globalUserlist", { channels: map, added: [], removed: [] });
+
+    const snap = snapshot();
+
+    // Mutate the snapshot's arrays
+    (snap.pinned as string[]).push("eve");
+    (snap.ban as string[]).push("griefer");
+    (snap.globalUserlist as any).channels.other = [{ name: "y" }];
+
+    // Store values must be unchanged
+    expect(get("pinned")).toEqual(["alice"]);
+    expect(get("ban")).toEqual(["troll"]);
+    expect(get("globalUserlist").channels.get("room1")).toEqual([{ name: "x" }]);
+    expect(get("globalUserlist").channels.has("other")).toBe(false);
+  });
+
+  it("throws before initStore", () => {
+    expect(() => snapshot()).toThrow("store not initialized");
   });
 });

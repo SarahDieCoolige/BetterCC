@@ -43,7 +43,7 @@ import { mountStatsBar } from "./stats";
 import { initSession, getSession } from "./session";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
-import { initStore, on } from "./store";
+import { initStore, on, snapshot } from "./store";
 
 /**
  * Neuter the upstream resize_fix path. The old cleanup() (deleted with ui.ts)
@@ -105,6 +105,7 @@ export async function initV3(): Promise<void> {
   // bettercc API here too — v3 owns its own (the old path's was inside the
   // deleted doColorStuff).
   (unsafeWindow.bettercc as any).reloadChat = reloadChat;
+  (unsafeWindow.bettercc as any).state = snapshot;
   buildShell();
 
   // Apply the saved theme (tier-0 per spec §5.3): the store is seeded at

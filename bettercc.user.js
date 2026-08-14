@@ -599,6 +599,28 @@
     render(get(k));
     return on(k, render);
   }
+  function snapshot() {
+    assertInit();
+    const result = {};
+    for (const key of Object.keys(codecs)) {
+      const v = mirror[key];
+      if (Array.isArray(v)) {
+        result[key] = [...v];
+        continue;
+      }
+      if (key === "globalUserlist" && v && typeof v === "object" && "channels" in v && v.channels instanceof Map) {
+        const gu = v;
+        result[key] = {
+          channels: Object.fromEntries(gu.channels),
+          added: [...gu.added],
+          removed: [...gu.removed]
+        };
+        continue;
+      }
+      result[key] = v;
+    }
+    return result;
+  }
 
   // src/theme.ts
   var BCC_ROLE_VARS = [
@@ -1872,7 +1894,7 @@
   var timer = null;
   function initSession() {
     if (timer) clearInterval(timer);
-    const snapshot = {
+    const snapshot2 = {
       nick: getChatNick(),
       registered: getChatUi().includes("R"),
       guest: getChatUi().includes("h") && !getChatUi().includes("R"),
@@ -1881,9 +1903,9 @@
       channel: getChannel(),
       authDead: isAuthDead()
     };
-    set("session", snapshot);
-    let prevChannel = snapshot.channel;
-    let prevAuthDead = snapshot.authDead;
+    set("session", snapshot2);
+    let prevChannel = snapshot2.channel;
+    let prevAuthDead = snapshot2.authDead;
     timer = setInterval(() => {
       const newChannel = getChannel();
       const newAuthDead = isAuthDead();
@@ -1901,7 +1923,7 @@
         });
       }
     }, 2e3);
-    cclog("session: init done \u2014 nick=" + snapshot.nick + " channel=" + snapshot.channel, "v3");
+    cclog("session: init done \u2014 nick=" + snapshot2.nick + " channel=" + snapshot2.channel, "v3");
   }
   function getSession() {
     return get("session");
@@ -3810,6 +3832,7 @@
     neuterResizeFix();
     initSession();
     unsafeWindow.bettercc.reloadChat = reloadChat;
+    unsafeWindow.bettercc.state = snapshot;
     buildShell();
     initTheme();
     unsafeWindow.bettercc.setTheme = applyCurrentScheme;

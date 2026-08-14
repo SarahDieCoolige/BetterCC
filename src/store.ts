@@ -263,6 +263,40 @@ export function react<K extends StoreKey>(k: K, render: (v: StateValue<K>) => vo
   return on(k, render);
 }
 
+// ─── Debug dump (spec §7, assumption A5) ──────────────────────────────
+
+/** Plain-object snapshot of the whole store. Safe to log/mutate — returns copies. */
+export function snapshot(): Record<string, unknown> {
+  assertInit();
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(codecs) as StoreKey[]) {
+    const v = mirror[key];
+    // Shallow-copy arrays so the caller can't mutate the store.
+    if (Array.isArray(v)) {
+      result[key] = [...v];
+      continue;
+    }
+    // globalUserlist.channels is a Map — convert to a plain object for readability.
+    if (
+      key === "globalUserlist" &&
+      v &&
+      typeof v === "object" &&
+      "channels" in v &&
+      (v as any).channels instanceof Map
+    ) {
+      const gu = v as Ephemeral["globalUserlist"];
+      result[key] = {
+        channels: Object.fromEntries(gu.channels),
+        added: [...gu.added],
+        removed: [...gu.removed],
+      };
+      continue;
+    }
+    result[key] = v;
+  }
+  return result;
+}
+
 // ─── Test-only reset ────────────────────────────────────────────────────
 
 /** Tear down the store singleton between tests. Not for production use. */
