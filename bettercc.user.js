@@ -2516,28 +2516,6 @@
     }
   }
 
-  // src/config.ts
-  var DEFAULTS = {
-    color: "6AAED8",
-    colorscheme: null,
-    // regenerated from color on load (theme bridge T3)
-    ban: [],
-    pinned: [],
-    whisper: "",
-    // "" = no superwhisper target
-    scheme_v2: false,
-    compact: "",
-    // "" = chatbar expanded; "1" = compact mode
-    send_on_enter: true,
-    // true = Enter sends (current behavior)
-    hover_preview: true
-    // true = hover preview on (current behavior)
-  };
-  async function getConfig(key, fallback) {
-    const def = fallback ?? DEFAULTS[key];
-    return await GM.getValue(getUserKey(key), def);
-  }
-
   // src/settings-helpers.ts
   function defaultDraft() {
     return {
@@ -2759,21 +2737,13 @@
     const shell = document.querySelector(".bcc-shell");
     if (!shell) return;
     openerEl = document.activeElement;
-    const [color, schemeV2, pinned, whisper, sendOnEnter, hoverPreview2] = await Promise.all([
-      getConfig("color", "6AAED8"),
-      getConfig("scheme_v2", false),
-      getConfig("pinned", []),
-      getConfig("whisper", ""),
-      getConfig("send_on_enter", true),
-      getConfig("hover_preview", true)
-    ]);
     const raw = {
-      color,
-      scheme_v2: schemeV2,
-      pinned,
-      whisper,
-      send_on_enter: sendOnEnter,
-      hover_preview: hoverPreview2
+      color: get("color"),
+      scheme_v2: get("scheme_v2"),
+      pinned: get("pinned"),
+      whisper: get("whisper"),
+      send_on_enter: get("send_on_enter"),
+      hover_preview: get("hover_preview")
     };
     loaded = draftFromConfig(raw);
     draft = draftFromConfig(raw);

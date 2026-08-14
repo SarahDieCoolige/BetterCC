@@ -251,7 +251,7 @@ export function mountInput(): void {
   (unsafeWindow.bettercc as any).superwhisper = superwhisper;
   (unsafeWindow.bettercc as any).prefillWhisper = prefillWhisper;
 
-  // Restore + live reaction: store react replaces the old getConfig boot-restore
+  // Restore + live reaction: store react replaces the old boot-restore
   // and the bus subscribe block. React's initial render handles both.
   react("whisper", (nick) => {
     currentWhisperNick = nick;

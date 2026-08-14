@@ -8,13 +8,12 @@
 // does not close them. Pure helpers live in settings-helpers.ts.
 
 import { iconElement } from "./dom";
-import { getConfig } from "./config";
+import { get, set as storeSet } from "./store";
 import { setColor, setSchemeVersion } from "./theme";
 import { cclog, getUserKey } from "./utils";
 import { COMMANDS } from "./commands";
 import { getChatNick, getChannel } from "./upstream";
 import { type BccColorScheme } from "./scheme-v1";
-import { set as storeSet } from "./store";
 import {
   type SettingsDraft,
   defaultDraft,
@@ -144,23 +143,14 @@ export async function openSettings(): Promise<void> {
   // Record the element that had focus before opening (for restore on close)
   openerEl = document.activeElement;
 
-  // Read the 6 managed keys into loaded + draft
-  const [color, schemeV2, pinned, whisper, sendOnEnter, hoverPreview] = await Promise.all([
-    getConfig("color", "6AAED8"),
-    getConfig("scheme_v2", false),
-    getConfig("pinned", []),
-    getConfig("whisper", ""),
-    getConfig("send_on_enter", true),
-    getConfig("hover_preview", true),
-  ]);
-
+  // Read the 6 managed keys from the sync store
   const raw = {
-    color,
-    scheme_v2: schemeV2,
-    pinned,
-    whisper,
-    send_on_enter: sendOnEnter,
-    hover_preview: hoverPreview,
+    color: get("color"),
+    scheme_v2: get("scheme_v2"),
+    pinned: get("pinned"),
+    whisper: get("whisper"),
+    send_on_enter: get("send_on_enter"),
+    hover_preview: get("hover_preview"),
   };
   loaded = draftFromConfig(raw);
   draft = draftFromConfig(raw);

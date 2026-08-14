@@ -138,7 +138,7 @@ export function pinnedEqual(a: string[], b: string[]): boolean {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Map raw config values (as read from getConfig) into a SettingsDraft.
+ * Map raw config values into a SettingsDraft.
  * Pins the pinned array so the caller can copy it independently.
  * Pure — no side effects, no GM_*, no DOM.
  */

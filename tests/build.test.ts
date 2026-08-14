@@ -76,13 +76,13 @@ describe("build output", () => {
     expect(content).not.toContain("jquery-3.5.1");
     expect(content).not.toContain("jquery-ui");
 
-    // ── Settings modal (T10): new config keys in KNOWN_KEYS ──────────────────
-    // send_on_enter and hover_preview must be present in the source module's
-    // KNOWN_KEYS array. We assert against the source file directly since
-    // KNOWN_KEYS is a const array and not a string literal in the bundle.
-    const configSource = readFileSync(resolve(import.meta.dirname, "../src/config.ts"), "utf-8");
-    expect(configSource).toContain('"send_on_enter"');
-    expect(configSource).toContain('"hover_preview"');
+    // ── Settings modal (T10): persisted config keys in the store codec table ──────
+    // send_on_enter and hover_preview must be present in the store's codec table.
+    // We assert against the source file directly since the keys are not string
+    // literals that survive bundling in a searchable way.
+    const storeSource = readFileSync(resolve(import.meta.dirname, "../src/store.ts"), "utf-8");
+    expect(storeSource).toContain("send_on_enter");
+    expect(storeSource).toContain("hover_preview");
 
     // ── user-image module ships its key exports (UI-1/UI-2) ────────────────
     // parseIdSearch + decodeIdPath + findExactRow + fetchIdRows + getUserPhoto are the
