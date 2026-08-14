@@ -583,9 +583,7 @@ function buildChatPanel(panel: HTMLElement): void {
   checkbox.addEventListener("change", () => {
     if (!draft) return;
     draft.sendOnEnter = checkbox.checked;
-    storeSet("send_on_enter", checkbox.checked).catch((e) =>
-      cclog("settings write failed: " + (e as Error).message, "v3"),
-    );
+    void storeSet("send_on_enter", checkbox.checked);
     updateRevertButton();
   });
 
@@ -623,9 +621,7 @@ function buildChatPanel(panel: HTMLElement): void {
   hoverCheckbox.addEventListener("change", () => {
     if (!draft) return;
     draft.hoverPreview = hoverCheckbox.checked;
-    storeSet("hover_preview", hoverCheckbox.checked).catch((e) =>
-      cclog("settings write failed: " + (e as Error).message, "v3"),
-    );
+    void storeSet("hover_preview", hoverCheckbox.checked);
     updateRevertButton();
   });
 

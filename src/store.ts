@@ -4,8 +4,7 @@
 // once at boot, written back on set. After initStore(), get() is sync and never
 // touches GM. Types moved here from bus.ts; bus.ts re-exports until S7 deletes it.
 
-import { getUserKey } from "./utils";
-import { cclog } from "./utils";
+import { getUserKey, cclog } from "./utils";
 
 // ─── Types (moved from bus.ts) ────────────────────────────────────────────
 
@@ -130,7 +129,17 @@ const codecs: { [K in StoreKey]: Codec<any> } = {
 let initialized = false;
 const mirror: Partial<{ [K in StoreKey]: any }> = {};
 const subscribers = new Map<StoreKey, Set<(v: any) => void>>();
-const listenerIds: number[] = [];
+
+// Persisted values are primitives or string[]; element-wise compare is enough.
+// Plain === breaks the echo no-op for arrays: GM serializes, so the re-read
+// after our own write returns a fresh array with equal content.
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  }
+  return false;
+}
 
 // ─── Internal helpers ────────────────────────────────────────────────────
 
@@ -174,12 +183,13 @@ export async function initStore(): Promise<void> {
     for (const [key, codec] of Object.entries(codecs) as [StoreKey, Codec<any>][]) {
       if (!codec.persisted) continue;
       const scopedKey = getUserKey(key);
-      const id = GM_addValueChangeListener(scopedKey, () => {
+      GM_addValueChangeListener(scopedKey, () => {
         // Never trust callback args beyond "key changed". Re-read from GM.
         GM.getValue(scopedKey)
           .then((raw: any) => {
-            const decoded = codec.decode(raw);
-            if (decoded === mirror[key]) return; // own write echo, or equal — no-op
+            // A deleted key converges to the default, same as boot seeding.
+            const decoded = raw !== undefined ? codec.decode(raw) : codec.default;
+            if (sameValue(decoded, mirror[key])) return; // echo, or equal — no-op
             mirror[key] = decoded;
             notify(key, decoded);
           })
@@ -188,7 +198,6 @@ export async function initStore(): Promise<void> {
             cclog(`reconciliation: failed to re-read ${key}`, "store");
           });
       });
-      listenerIds.push(id);
     }
   } else {
     cclog("GM_addValueChangeListener not available, cross-tab sync disabled", "store");
@@ -254,5 +263,4 @@ export function _resetStoreForTesting(): void {
     delete mirror[key];
   }
   subscribers.clear();
-  listenerIds.length = 0;
 }

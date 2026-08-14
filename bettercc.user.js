@@ -1376,7 +1376,13 @@
   var initialized = false;
   var mirror = {};
   var subscribers = /* @__PURE__ */ new Map();
-  var listenerIds = [];
+  function sameValue(a, b) {
+    if (a === b) return true;
+    if (Array.isArray(a) && Array.isArray(b)) {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+    return false;
+  }
   function assertInit() {
     if (!initialized) throw new Error("store not initialized");
   }
@@ -1406,17 +1412,16 @@
       for (const [key, codec] of Object.entries(codecs)) {
         if (!codec.persisted) continue;
         const scopedKey = getUserKey(key);
-        const id = GM_addValueChangeListener(scopedKey, () => {
+        GM_addValueChangeListener(scopedKey, () => {
           GM.getValue(scopedKey).then((raw) => {
-            const decoded = codec.decode(raw);
-            if (decoded === mirror[key]) return;
+            const decoded = raw !== void 0 ? codec.decode(raw) : codec.default;
+            if (sameValue(decoded, mirror[key])) return;
             mirror[key] = decoded;
             notify(key, decoded);
           }).catch(() => {
             cclog(`reconciliation: failed to re-read ${key}`, "store");
           });
         });
-        listenerIds.push(id);
       }
     } else {
       cclog("GM_addValueChangeListener not available, cross-tab sync disabled", "store");
@@ -3114,9 +3119,7 @@
     checkbox.addEventListener("change", () => {
       if (!draft) return;
       draft.sendOnEnter = checkbox.checked;
-      set("send_on_enter", checkbox.checked).catch(
-        (e) => cclog("settings write failed: " + e.message, "v3")
-      );
+      void set("send_on_enter", checkbox.checked);
       updateRevertButton();
     });
     field.appendChild(label);
@@ -3142,9 +3145,7 @@
     hoverCheckbox.addEventListener("change", () => {
       if (!draft) return;
       draft.hoverPreview = hoverCheckbox.checked;
-      set("hover_preview", hoverCheckbox.checked).catch(
-        (e) => cclog("settings write failed: " + e.message, "v3")
-      );
+      void set("hover_preview", hoverCheckbox.checked);
       updateRevertButton();
     });
     hoverField.appendChild(hoverLabel);

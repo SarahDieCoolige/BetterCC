@@ -455,6 +455,55 @@ describe("store — reconciliation (GM_addValueChangeListener)", () => {
     // The mirror already holds "6AAED8", so no notify
     expect(fn).not.toHaveBeenCalled();
   });
+
+  it("own array write echoes as no-op even when GM serializes (new references)", async () => {
+    await initTestStore(gm);
+    // Simulate real GM serialization: every write/read produces a fresh copy,
+    // so === on the re-read would never match the mirror.
+    const origSet = gm.store.set.bind(gm.store);
+    const origGet = gm.store.get.bind(gm.store);
+    gm.store.set = (key: string, val: unknown) => origSet(key, structuredClone(val));
+    gm.store.get = (key: string) => structuredClone(origGet(key));
+
+    const fn = vi.fn();
+    on("pinned", fn);
+
+    await set("pinned", ["alice", "bob"]);
+    await new Promise((r) => setTimeout(r, 0));
+
+    // One notify from set — the listener echo must not fire a second time
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(get("pinned")).toEqual(["alice", "bob"]);
+  });
+
+  it("foreign delete converges to the default without poisoning the mirror", async () => {
+    await initTestStore(gm);
+
+    await set("color", "FF0000");
+    const fn = vi.fn();
+    on("color", fn);
+
+    // Foreign tab deletes the key entirely
+    gm.fakeSetValue("color_testuser", undefined);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenLastCalledWith("6AAED8"); // default, not undefined
+    expect(get("color")).toBe("6AAED8");
+  });
+
+  it("foreign delete of an already-default key does not notify", async () => {
+    await initTestStore(gm);
+
+    const fn = vi.fn();
+    on("color", fn);
+
+    gm.fakeSetValue("color_testuser", undefined);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fn).not.toHaveBeenCalled();
+    expect(get("color")).toBe("6AAED8");
+  });
 });
 
 describe("store — feature-detect degradation (no listener API)", () => {
