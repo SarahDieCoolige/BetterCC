@@ -5,7 +5,6 @@
 // away-timer reset, and handles BetterCC commands + superwhisper.
 
 import { cclog, printHelp, printToChat } from "./utils";
-import { getConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { generateScheme } from "./scheme";
 import { buildPatchedHandler } from "./patched-handler";
@@ -116,15 +115,13 @@ async function doSubmit(whispernick?: string): Promise<void> {
         case "id":
           buildIdPopup(cmd.name || "");
           break;
-        case "pinned-list":
-          getConfig("pinned", []).then((list) =>
-            printToChat(
-              (list as string[]).length
-                ? "Angepinnt: " + (list as string[]).join(", ")
-                : "Keine angepinnten Benutzer.",
-            ),
+        case "pinned-list": {
+          const list = get("pinned") as string[];
+          printToChat(
+            list.length ? "Angepinnt: " + list.join(", ") : "Keine angepinnten Benutzer.",
           );
           break;
+        }
         case "color-info": {
           const hex = String(get("color")).replace(/^#/, "");
           const swatch =

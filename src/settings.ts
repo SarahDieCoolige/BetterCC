@@ -8,9 +8,8 @@
 // does not close them. Pure helpers live in settings-helpers.ts.
 
 import { iconElement } from "./dom";
-import { getConfig, setConfig, type ConfigKey } from "./config";
+import { getConfig } from "./config";
 import { setColor, setSchemeVersion } from "./theme";
-import { emit } from "./bus";
 import { cclog, getUserKey } from "./utils";
 import { COMMANDS } from "./commands";
 import { getChatNick, getChannel } from "./upstream";
@@ -51,21 +50,7 @@ const COLOR_PRESETS = [
 // Apply helpers — instant-write wrappers for individual controls
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Write a config key, then emit the change. Awaitable for batch applies. */
-async function emitConfig(key: ConfigKey, value: unknown): Promise<void> {
-  await setConfig(key, value);
-  emit({ type: "config", key });
-}
-
-/** Single-control write: fire-and-forget with a logged catch, so a failed GM
- *  write surfaces in the log instead of a silent unhandled rejection. */
-function writeConfig(key: ConfigKey, value: unknown): void {
-  emitConfig(key, value).catch((e) =>
-    cclog("settings write failed: " + (e as Error).message, "v3"),
-  );
-}
-
-/** Apply a color instantly: mirror in draft, regenerate + theme + emit. */
+/** Apply a color instantly: mirror in draft, regenerate + theme. */
 function applyColor(hex: string): void {
   if (!draft) return;
   draft.color = hex;
@@ -89,7 +74,7 @@ async function applyDiff(current: SettingsDraft, next: SettingsDraft): Promise<v
   if (current.sendOnEnter !== next.sendOnEnter) await storeSet("send_on_enter", next.sendOnEnter);
   if (current.hoverPreview !== next.hoverPreview)
     await storeSet("hover_preview", next.hoverPreview);
-  if (!pinnedEqual(current.pinned, next.pinned)) await emitConfig("pinned", next.pinned);
+  if (!pinnedEqual(current.pinned, next.pinned)) await storeSet("pinned", next.pinned);
   if (current.whisper !== next.whisper) await storeSet("whisper", next.whisper);
 }
 
@@ -675,7 +660,7 @@ function buildManagementPanel(panel: HTMLElement): void {
         if (!draft) return;
         draft.pinned = removePinned(draft.pinned, name);
         renderList();
-        writeConfig("pinned", draft.pinned);
+        void storeSet("pinned", draft.pinned);
         updateRevertButton();
       });
       li.appendChild(removeBtn);
@@ -705,7 +690,7 @@ function buildManagementPanel(panel: HTMLElement): void {
     draft.pinned = addPinned(draft.pinned, addInput.value);
     addInput.value = "";
     renderList();
-    writeConfig("pinned", draft.pinned);
+    void storeSet("pinned", draft.pinned);
     updateRevertButton();
   });
   addInput.addEventListener("keydown", (e: KeyboardEvent) => {

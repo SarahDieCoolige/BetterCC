@@ -26,13 +26,12 @@
 //   - Bild              → photo container in center (getUserPhoto + hover/pin preview)
 //   - ID (/id)          → wired (opens ID page in new window)
 
-import { type User, subscribe, type BccEvent } from "./bus";
+import { type User } from "./bus";
 import { encodeChatLink } from "./utils";
 import { getBettercc, sendCommand } from "./upstream";
 import { iconElement } from "./dom";
 import { getUserPhoto, evictImageCache, type UserImageResult } from "./user-image";
-import { getConfig } from "./config";
-import { get } from "./store";
+import { get, on } from "./store";
 import {
   dismissPreview,
   dismissAllPreviews,
@@ -319,18 +318,10 @@ export function openUserPopup(
   popup.appendChild(pinBtn);
 
   // Subscribe to store so the pin button stays in sync when
-  // togglePin in sidebar writes to GM (which emits "config").
-  unsubscribeStore = subscribe((e: BccEvent) => {
-    if (e.type === "config" && e.key === "pinned") {
-      // Re-read pinned list from source of truth and update pin button
-      getConfig("pinned", [])
-        .then((pinned: string[]) => {
-          if (!openPopup) return;
-          const nowPinned = pinned.includes(user.key);
-          updatePinButton(pinBtn, nowPinned);
-        })
-        .catch(() => {});
-    }
+  // togglePin in sidebar writes to the store.
+  unsubscribeStore = on("pinned", (pinned: string[]) => {
+    if (!openPopup) return;
+    updatePinButton(pinBtn, pinned.includes(user.key));
   });
 
   // Photo container (centered, 56×56)

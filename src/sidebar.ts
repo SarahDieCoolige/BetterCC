@@ -20,13 +20,13 @@
 // snapshot exists: N = current-channel users, M = all users across all
 // channels.
 
-import { subscribe, emit, type BccEvent, type User } from "./bus";
+import { subscribe, type BccEvent, type User } from "./bus";
 import { sortUsers, channelAbbrev } from "./userlist";
-import { getConfig, setConfig } from "./config";
 import { openUserPopup } from "./popup";
 import { cclog } from "./utils";
 import { buildChannelSelect } from "./channel-select";
 import { iconElement } from "./dom";
+import { get, set, react } from "./store";
 
 // ─── Pure helpers (exported for testing) ────────────────────────────────────
 
@@ -180,26 +180,15 @@ function buildRow(merged: MergedUser, badges: Map<string, string>): HTMLLIElemen
 
 let pinnedCache: Set<string> = new Set();
 
-async function refreshPinned(): Promise<void> {
-  const list = (await getConfig("pinned", [])) as string[];
-  pinnedCache = new Set(list);
-}
-
 async function togglePin(user: User): Promise<void> {
-  const list = (await getConfig("pinned", [])) as string[];
+  const list = [...(get("pinned") as string[])];
   const idx = list.indexOf(user.key);
   if (idx === -1) {
     list.push(user.key);
   } else {
     list.splice(idx, 1);
   }
-  await setConfig("pinned", list);
-  emit({ type: "config", key: "pinned" }); // notify subscribers
-  pinnedCache = new Set(list);
-  // Re-render from the last known sources. No rows are added or removed by a
-  // pin toggle — sortUsers + section placement move the row between
-  // pinned/regular, and the merge recomputes cross-channel membership.
-  renderFromState();
+  await set("pinned", list);
 }
 
 function handleRowClick(user: User, anchor: HTMLElement): void {
@@ -435,8 +424,9 @@ export function mountSidebar(): void {
 
   ensureContainers(sidebar as HTMLElement);
 
-  refreshPinned().catch(() => {
-    cclog("mountSidebar: failed to read pinned config", "v3");
+  react("pinned", (list: string[]) => {
+    pinnedCache = new Set(list);
+    renderFromState();
   });
 
   subscribe((e: BccEvent) => {
@@ -453,9 +443,6 @@ export function mountSidebar(): void {
       for (const users of e.channels.values()) total += users.length;
       globalTotal = total;
       renderFromState();
-    } else if (e.type === "config" && e.key === "pinned") {
-      // Settings Save wrote a new pinned list; re-read and re-render.
-      refreshPinned().then(() => renderFromState());
     }
   });
 
