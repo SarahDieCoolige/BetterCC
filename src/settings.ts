@@ -95,7 +95,7 @@ async function applyDiff(current: SettingsDraft, next: SettingsDraft): Promise<v
   if (current.hoverPreview !== next.hoverPreview)
     await storeSet("hover_preview", next.hoverPreview);
   if (!pinnedEqual(current.pinned, next.pinned)) await emitConfig("pinned", next.pinned);
-  if (current.whisper !== next.whisper) await emitConfig("whisper", next.whisper);
+  if (current.whisper !== next.whisper) await storeSet("whisper", next.whisper);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -770,7 +770,7 @@ function buildManagementPanel(panel: HTMLElement): void {
     draft.whisper = whisperInput.value.trim();
     whisperInput.value = "";
     refreshWhisperDisplay();
-    writeConfig("whisper", draft.whisper);
+    void storeSet("whisper", draft.whisper);
     updateRevertButton();
   });
   whisperInput.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -788,7 +788,7 @@ function buildManagementPanel(panel: HTMLElement): void {
     if (!draft) return;
     draft.whisper = "";
     refreshWhisperDisplay();
-    writeConfig("whisper", draft.whisper);
+    void storeSet("whisper", draft.whisper);
     updateRevertButton();
   });
 

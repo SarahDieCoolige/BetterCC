@@ -1450,6 +1450,19 @@
       }
     }
   }
+  function on(k, fn) {
+    assertInit();
+    if (!subscribers.has(k)) subscribers.set(k, /* @__PURE__ */ new Set());
+    const set2 = subscribers.get(k);
+    set2.add(fn);
+    return () => {
+      set2.delete(fn);
+    };
+  }
+  function react(k, render) {
+    render(get(k));
+    return on(k, render);
+  }
 
   // src/photo-preview.ts
   var previewByUser = /* @__PURE__ */ new Map();
@@ -2773,7 +2786,7 @@
     if (current.hoverPreview !== next.hoverPreview)
       await set("hover_preview", next.hoverPreview);
     if (!pinnedEqual(current.pinned, next.pinned)) await emitConfig("pinned", next.pinned);
-    if (current.whisper !== next.whisper) await emitConfig("whisper", next.whisper);
+    if (current.whisper !== next.whisper) await set("whisper", next.whisper);
   }
   var TABS = ["Erscheinungsbild", "Chat", "Verwaltung", "Daten", "Info", "Befehle"];
   var overlayEl2 = null;
@@ -3264,7 +3277,7 @@
       draft.whisper = whisperInput.value.trim();
       whisperInput.value = "";
       refreshWhisperDisplay();
-      writeConfig("whisper", draft.whisper);
+      void set("whisper", draft.whisper);
       updateRevertButton();
     });
     whisperInput.addEventListener("keydown", (e) => {
@@ -3281,7 +3294,7 @@
       if (!draft) return;
       draft.whisper = "";
       refreshWhisperDisplay();
-      writeConfig("whisper", draft.whisper);
+      void set("whisper", draft.whisper);
       updateRevertButton();
     });
     whisperAddRow.appendChild(whisperInput);
@@ -3635,22 +3648,9 @@
     textarea.setSelectionRange(end, end);
   }
   async function superwhisper(whispernick, toggle = true) {
-    const prevNick = await getConfig("whisper", "");
-    if (toggle && whispernick && prevNick.toLowerCase() === whispernick.toLowerCase() || !whispernick) {
-      await setConfig("whisper", "");
-      currentWhisperNick = "";
-      if (textarea) {
-        textarea.classList.remove("bcc-superwhisper");
-        updatePlaceholder();
-      }
-    } else {
-      await setConfig("whisper", whispernick);
-      currentWhisperNick = whispernick;
-      if (textarea) {
-        textarea.classList.add("bcc-superwhisper");
-        updatePlaceholder();
-      }
-    }
+    const cur = get("whisper");
+    const same = toggle && whispernick && cur.toLowerCase() === whispernick.toLowerCase();
+    await set("whisper", same || !whispernick ? "" : whispernick);
   }
   function mountInput() {
     const chatbar = document.querySelector(".bcc-chatbar");
@@ -3681,18 +3681,10 @@
     unsafeWindow.bettercc.superwhisper = superwhisper;
     unsafeWindow.bettercc.prefillWhisper = prefillWhisper;
     unsafeWindow.bettercc.updatePlaceholder = updatePlaceholder;
-    getConfig("whisper", "").then((nick) => {
-      const n = nick || "";
-      if (n) superwhisper(n, false);
-    });
-    subscribe((e) => {
-      if (e.type !== "config" || e.key !== "whisper") return;
-      getConfig("whisper", "").then((nick) => {
-        const n = nick || "";
-        currentWhisperNick = n;
-        if (textarea) textarea.classList.toggle("bcc-superwhisper", Boolean(n));
-        updatePlaceholder();
-      });
+    react("whisper", (nick) => {
+      currentWhisperNick = nick;
+      textarea?.classList.toggle("bcc-superwhisper", Boolean(nick));
+      updatePlaceholder();
     });
     if (textarea) textarea.focus();
     updatePlaceholder();

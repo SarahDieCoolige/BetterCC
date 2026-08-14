@@ -5,13 +5,12 @@
 // away-timer reset, and handles BetterCC commands + superwhisper.
 
 import { cclog, printHelp, printToChat } from "./utils";
-import { getConfig, setConfig } from "./config";
+import { getConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { buildPatchedHandler } from "./patched-handler";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
-import { get } from "./store";
-import { subscribe, type BccEvent } from "./bus";
+import { get, set, react } from "./store";
 
 let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: ((...args: any[]) => any) | null = null;
@@ -210,29 +209,9 @@ function prefillWhisper(nick: string): void {
 }
 
 async function superwhisper(whispernick: string, toggle = true): Promise<void> {
-  const prevNick = (await getConfig("whisper", "")) as string;
-
-  // Determine the new state: if toggling the same nick, or clearing, or empty.
-  if (
-    (toggle && whispernick && prevNick.toLowerCase() === whispernick.toLowerCase()) ||
-    !whispernick
-  ) {
-    // Clear whisper
-    await setConfig("whisper", "");
-    currentWhisperNick = "";
-
-    if (textarea) {
-      textarea.classList.remove("bcc-superwhisper");
-      updatePlaceholder();
-    }
-  } else {
-    await setConfig("whisper", whispernick);
-    currentWhisperNick = whispernick;
-    if (textarea) {
-      textarea.classList.add("bcc-superwhisper");
-      updatePlaceholder();
-    }
-  }
+  const cur = get("whisper");
+  const same = toggle && whispernick && cur.toLowerCase() === whispernick.toLowerCase();
+  await set("whisper", same || !whispernick ? "" : whispernick);
 }
 
 // ─── Mount ──────────────────────────────────────────────────────────────────
@@ -280,22 +259,12 @@ export function mountInput(): void {
   // Expose placeholder update for the compact toggle
   (unsafeWindow.bettercc as any).updatePlaceholder = updatePlaceholder;
 
-  // Restore any previously-set superwhisper
-  getConfig("whisper", "").then((nick) => {
-    const n = (nick as string) || "";
-    if (n) superwhisper(n, false);
-  });
-
-  // Live reaction: settings Save writes whisper directly; mirror what
-  // superwhisper() does to the textarea so placeholder + indicator update.
-  subscribe((e: BccEvent) => {
-    if (e.type !== "config" || e.key !== "whisper") return;
-    getConfig("whisper", "").then((nick) => {
-      const n = (nick as string) || "";
-      currentWhisperNick = n;
-      if (textarea) textarea.classList.toggle("bcc-superwhisper", Boolean(n));
-      updatePlaceholder();
-    });
+  // Restore + live reaction: store react replaces the old getConfig boot-restore
+  // and the bus subscribe block. React's initial render handles both.
+  react("whisper", (nick) => {
+    currentWhisperNick = nick;
+    textarea?.classList.toggle("bcc-superwhisper", Boolean(nick));
+    updatePlaceholder();
   });
 
   // Auto-focus the textarea so users can type immediately
