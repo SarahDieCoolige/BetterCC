@@ -10,7 +10,7 @@ import { classifyMessage, rewriteForWhisper } from "./commands";
 import { buildPatchedHandler } from "./patched-handler";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
-import { sendOnEnter } from "./config-cache";
+import { get } from "./store";
 import { subscribe, type BccEvent } from "./bus";
 
 let textarea: HTMLTextAreaElement | null = null;
@@ -256,7 +256,7 @@ export function mountInput(): void {
   textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
   textarea.placeholder = PLACEHOLDER_ALL;
   textarea.addEventListener("keydown", (e: KeyboardEvent) => {
-    if (e.key === "Enter" && shouldSendOnEnter(sendOnEnter(), e.shiftKey)) {
+    if (e.key === "Enter" && shouldSendOnEnter(get("send_on_enter"), e.shiftKey)) {
       e.preventDefault();
       doSubmit();
     }

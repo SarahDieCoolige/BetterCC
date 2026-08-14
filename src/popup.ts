@@ -32,7 +32,7 @@ import { getBettercc, sendCommand } from "./upstream";
 import { iconElement } from "./dom";
 import { getUserPhoto, evictImageCache, type UserImageResult } from "./user-image";
 import { getConfig } from "./config";
-import { hoverPreview } from "./config-cache";
+import { get } from "./store";
 import {
   dismissPreview,
   dismissAllPreviews,
@@ -483,7 +483,7 @@ export function openUserPopup(
   // Photo: hover = centered preview, click = toggle pin (stays open on mouseleave).
   // Hover: temporary preview. Click: pin/unpin.
   photoContainer.addEventListener("mouseenter", () => {
-    if (!hoverPreview()) return;
+    if (!get("hover_preview")) return;
     if (previewByUser.has(user.name)) return;
     const img = photoContainer.querySelector("img") as HTMLImageElement;
     if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {

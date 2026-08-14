@@ -15,6 +15,7 @@ import { cclog, getUserKey } from "./utils";
 import { COMMANDS } from "./commands";
 import { getChatNick, getChannel } from "./upstream";
 import { type BccColorScheme } from "./scheme-v1";
+import { set as storeSet } from "./store";
 import {
   type SettingsDraft,
   defaultDraft,
@@ -90,9 +91,9 @@ async function applyDiff(current: SettingsDraft, next: SettingsDraft): Promise<v
   if (current.color !== next.color)
     await saveColor(next.color, getUserKey("color"), getUserKey("colorscheme"));
   if (current.schemeV2 !== next.schemeV2) await setSchemeVersion(next.schemeV2);
-  if (current.sendOnEnter !== next.sendOnEnter) await emitConfig("send_on_enter", next.sendOnEnter);
+  if (current.sendOnEnter !== next.sendOnEnter) await storeSet("send_on_enter", next.sendOnEnter);
   if (current.hoverPreview !== next.hoverPreview)
-    await emitConfig("hover_preview", next.hoverPreview);
+    await storeSet("hover_preview", next.hoverPreview);
   if (!pinnedEqual(current.pinned, next.pinned)) await emitConfig("pinned", next.pinned);
   if (current.whisper !== next.whisper) await emitConfig("whisper", next.whisper);
 }
@@ -582,7 +583,9 @@ function buildChatPanel(panel: HTMLElement): void {
   checkbox.addEventListener("change", () => {
     if (!draft) return;
     draft.sendOnEnter = checkbox.checked;
-    writeConfig("send_on_enter", checkbox.checked);
+    storeSet("send_on_enter", checkbox.checked).catch((e) =>
+      cclog("settings write failed: " + (e as Error).message, "v3"),
+    );
     updateRevertButton();
   });
 
@@ -620,7 +623,9 @@ function buildChatPanel(panel: HTMLElement): void {
   hoverCheckbox.addEventListener("change", () => {
     if (!draft) return;
     draft.hoverPreview = hoverCheckbox.checked;
-    writeConfig("hover_preview", hoverCheckbox.checked);
+    storeSet("hover_preview", hoverCheckbox.checked).catch((e) =>
+      cclog("settings write failed: " + (e as Error).message, "v3"),
+    );
     updateRevertButton();
   });
 

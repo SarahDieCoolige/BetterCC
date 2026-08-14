@@ -1330,31 +1330,115 @@
     }
   }
 
-  // src/config-cache.ts
-  var _sendOnEnter = true;
-  var _hoverPreview = true;
-  async function initConfigCache() {
-    _sendOnEnter = await getConfig("send_on_enter", true);
-    _hoverPreview = await getConfig("hover_preview", true);
-  }
-  function sendOnEnter() {
-    return _sendOnEnter;
-  }
-  function hoverPreview() {
-    return _hoverPreview;
-  }
-  subscribe((e) => {
-    if (e.type !== "config") return;
-    if (e.key === "send_on_enter") {
-      void getConfig("send_on_enter", true).then((v) => {
-        _sendOnEnter = v;
-      });
-    } else if (e.key === "hover_preview") {
-      void getConfig("hover_preview", true).then((v) => {
-        _hoverPreview = v;
-      });
+  // src/store.ts
+  var emptySession = {
+    nick: "",
+    registered: false,
+    guest: false,
+    userId: "",
+    sessionId: "",
+    channel: "",
+    authDead: false
+  };
+  var codecs = {
+    color: { encode: (v) => v, decode: (r) => r, default: "6AAED8", persisted: true },
+    scheme_v2: { encode: (v) => v, decode: (r) => r, default: false, persisted: true },
+    pinned: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
+    whisper: { encode: (v) => v, decode: (r) => r, default: "", persisted: true },
+    compact: {
+      encode: (v) => v ? "1" : "",
+      decode: (r) => r === "1",
+      default: false,
+      persisted: true
+    },
+    send_on_enter: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
+    hover_preview: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
+    ban: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
+    session: {
+      encode: (v) => v,
+      decode: () => emptySession,
+      default: emptySession,
+      persisted: false
+    },
+    userlist: {
+      encode: (v) => v,
+      decode: () => ({ users: [], added: [], removed: [] }),
+      default: { users: [], added: [], removed: [] },
+      persisted: false
+    },
+    globalUserlist: {
+      encode: (v) => v,
+      decode: () => ({ channels: /* @__PURE__ */ new Map(), added: [], removed: [] }),
+      default: { channels: /* @__PURE__ */ new Map(), added: [], removed: [] },
+      persisted: false
     }
-  });
+  };
+  var initialized = false;
+  var mirror = {};
+  var subscribers = /* @__PURE__ */ new Map();
+  var listenerIds = [];
+  function assertInit() {
+    if (!initialized) throw new Error("store not initialized");
+  }
+  function notify(k, v) {
+    const set2 = subscribers.get(k);
+    if (!set2) return;
+    for (const fn of set2) fn(v);
+  }
+  async function initStore() {
+    if (initialized) throw new Error("initStore already called");
+    initialized = true;
+    for (const [key, codec] of Object.entries(codecs)) {
+      if (!codec.persisted) {
+        mirror[key] = codec.default;
+        continue;
+      }
+      try {
+        const raw = await GM.getValue(getUserKey(key));
+        mirror[key] = raw !== void 0 ? codec.decode(raw) : codec.default;
+      } catch {
+        cclog(`initStore: failed to read ${key}, using default`, "store");
+        mirror[key] = codec.default;
+      }
+    }
+    if (typeof GM_addValueChangeListener === "function") {
+      cclog("GM_addValueChangeListener available, registering reconciliation listeners", "store");
+      for (const [key, codec] of Object.entries(codecs)) {
+        if (!codec.persisted) continue;
+        const scopedKey = getUserKey(key);
+        const id = GM_addValueChangeListener(scopedKey, () => {
+          GM.getValue(scopedKey).then((raw) => {
+            const decoded = codec.decode(raw);
+            if (decoded === mirror[key]) return;
+            mirror[key] = decoded;
+            notify(key, decoded);
+          }).catch(() => {
+            cclog(`reconciliation: failed to re-read ${key}`, "store");
+          });
+        });
+        listenerIds.push(id);
+      }
+    } else {
+      cclog("GM_addValueChangeListener not available, cross-tab sync disabled", "store");
+    }
+  }
+  function get(k) {
+    assertInit();
+    return mirror[k];
+  }
+  async function set(k, v) {
+    assertInit();
+    const codec = codecs[k];
+    mirror[k] = v;
+    notify(k, v);
+    if (codec.persisted) {
+      try {
+        await GM.setValue(getUserKey(k), codec.encode(v));
+      } catch {
+        cclog(`set: failed to persist ${k}`, "store");
+      }
+    }
+  }
 
   // src/photo-preview.ts
   var previewByUser = /* @__PURE__ */ new Map();
@@ -1370,20 +1454,20 @@
     } catch {
     }
   }
-  var hoverPreview2 = null;
+  var hoverPreview = null;
   function dismissHover() {
-    if (!hoverPreview2) return;
+    if (!hoverPreview) return;
     let isPinned = false;
     for (const el of previewByUser.values()) {
-      if (el === hoverPreview2) {
+      if (el === hoverPreview) {
         isPinned = true;
         break;
       }
     }
     if (!isPinned) {
-      hoverPreview2.remove();
+      hoverPreview.remove();
     }
-    hoverPreview2 = null;
+    hoverPreview = null;
   }
   function dismissPreview(userName) {
     const box = previewByUser.get(userName);
@@ -1503,7 +1587,7 @@
       cy = window.innerHeight / 2;
       updateBox();
     });
-    hoverPreview2 = box;
+    hoverPreview = box;
     return box;
   }
   if (typeof document !== "undefined") {
@@ -1800,7 +1884,7 @@
     onResize = reposition;
     window.addEventListener("resize", onResize);
     photoContainer.addEventListener("mouseenter", () => {
-      if (!hoverPreview()) return;
+      if (!get("hover_preview")) return;
       if (previewByUser.has(user.name)) return;
       const img = photoContainer.querySelector("img");
       if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
@@ -2375,7 +2459,7 @@
         thumb.setAttribute("alt", "");
         if (showPreview) {
           thumb.addEventListener("mouseenter", () => {
-            if (!hoverPreview()) return;
+            if (!get("hover_preview")) return;
             const rect = thumb.getBoundingClientRect();
             buildPreviewBox(fullUrl, row.name, rect, searchTerm);
           });
@@ -2674,9 +2758,9 @@
     if (current.color !== next.color)
       await saveColor(next.color, getUserKey("color"), getUserKey("colorscheme"));
     if (current.schemeV2 !== next.schemeV2) await setSchemeVersion(next.schemeV2);
-    if (current.sendOnEnter !== next.sendOnEnter) await emitConfig("send_on_enter", next.sendOnEnter);
+    if (current.sendOnEnter !== next.sendOnEnter) await set("send_on_enter", next.sendOnEnter);
     if (current.hoverPreview !== next.hoverPreview)
-      await emitConfig("hover_preview", next.hoverPreview);
+      await set("hover_preview", next.hoverPreview);
     if (!pinnedEqual(current.pinned, next.pinned)) await emitConfig("pinned", next.pinned);
     if (current.whisper !== next.whisper) await emitConfig("whisper", next.whisper);
   }
@@ -2719,7 +2803,7 @@
     const shell = document.querySelector(".bcc-shell");
     if (!shell) return;
     openerEl = document.activeElement;
-    const [color, schemeV2, pinned, whisper, sendOnEnter2, hoverPreview3] = await Promise.all([
+    const [color, schemeV2, pinned, whisper, sendOnEnter, hoverPreview2] = await Promise.all([
       getConfig("color", "6AAED8"),
       getConfig("scheme_v2", false),
       getConfig("pinned", []),
@@ -2732,8 +2816,8 @@
       scheme_v2: schemeV2,
       pinned,
       whisper,
-      send_on_enter: sendOnEnter2,
-      hover_preview: hoverPreview3
+      send_on_enter: sendOnEnter,
+      hover_preview: hoverPreview2
     };
     loaded = draftFromConfig(raw);
     draft = draftFromConfig(raw);
@@ -3030,7 +3114,9 @@
     checkbox.addEventListener("change", () => {
       if (!draft) return;
       draft.sendOnEnter = checkbox.checked;
-      writeConfig("send_on_enter", checkbox.checked);
+      set("send_on_enter", checkbox.checked).catch(
+        (e) => cclog("settings write failed: " + e.message, "v3")
+      );
       updateRevertButton();
     });
     field.appendChild(label);
@@ -3056,7 +3142,9 @@
     hoverCheckbox.addEventListener("change", () => {
       if (!draft) return;
       draft.hoverPreview = hoverCheckbox.checked;
-      writeConfig("hover_preview", hoverCheckbox.checked);
+      set("hover_preview", hoverCheckbox.checked).catch(
+        (e) => cclog("settings write failed: " + e.message, "v3")
+      );
       updateRevertButton();
     });
     hoverField.appendChild(hoverLabel);
@@ -3570,7 +3658,7 @@
     textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
     textarea.placeholder = PLACEHOLDER_ALL;
     textarea.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && shouldSendOnEnter(sendOnEnter(), e.shiftKey)) {
+      if (e.key === "Enter" && shouldSendOnEnter(get("send_on_enter"), e.shiftKey)) {
         e.preventDefault();
         doSubmit();
       }
@@ -3826,96 +3914,6 @@
     });
   }
 
-  // src/store.ts
-  var emptySession = {
-    nick: "",
-    registered: false,
-    guest: false,
-    userId: "",
-    sessionId: "",
-    channel: "",
-    authDead: false
-  };
-  var codecs = {
-    color: { encode: (v) => v, decode: (r) => r, default: "6AAED8", persisted: true },
-    scheme_v2: { encode: (v) => v, decode: (r) => r, default: false, persisted: true },
-    pinned: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
-    whisper: { encode: (v) => v, decode: (r) => r, default: "", persisted: true },
-    compact: {
-      encode: (v) => v ? "1" : "",
-      decode: (r) => r === "1",
-      default: false,
-      persisted: true
-    },
-    send_on_enter: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
-    hover_preview: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
-    ban: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
-    session: {
-      encode: (v) => v,
-      decode: () => emptySession,
-      default: emptySession,
-      persisted: false
-    },
-    userlist: {
-      encode: (v) => v,
-      decode: () => ({ users: [], added: [], removed: [] }),
-      default: { users: [], added: [], removed: [] },
-      persisted: false
-    },
-    globalUserlist: {
-      encode: (v) => v,
-      decode: () => ({ channels: /* @__PURE__ */ new Map(), added: [], removed: [] }),
-      default: { channels: /* @__PURE__ */ new Map(), added: [], removed: [] },
-      persisted: false
-    }
-  };
-  var initialized = false;
-  var mirror = {};
-  var subscribers = /* @__PURE__ */ new Map();
-  var listenerIds = [];
-  function notify(k, v) {
-    const set = subscribers.get(k);
-    if (!set) return;
-    for (const fn of set) fn(v);
-  }
-  async function initStore() {
-    if (initialized) throw new Error("initStore already called");
-    initialized = true;
-    for (const [key, codec] of Object.entries(codecs)) {
-      if (!codec.persisted) {
-        mirror[key] = codec.default;
-        continue;
-      }
-      try {
-        const raw = await GM.getValue(getUserKey(key));
-        mirror[key] = raw !== void 0 ? codec.decode(raw) : codec.default;
-      } catch {
-        cclog(`initStore: failed to read ${key}, using default`, "store");
-        mirror[key] = codec.default;
-      }
-    }
-    if (typeof GM_addValueChangeListener === "function") {
-      cclog("GM_addValueChangeListener available, registering reconciliation listeners", "store");
-      for (const [key, codec] of Object.entries(codecs)) {
-        if (!codec.persisted) continue;
-        const scopedKey = getUserKey(key);
-        const id = GM_addValueChangeListener(scopedKey, () => {
-          GM.getValue(scopedKey).then((raw) => {
-            const decoded = codec.decode(raw);
-            if (decoded === mirror[key]) return;
-            mirror[key] = decoded;
-            notify(key, decoded);
-          }).catch(() => {
-            cclog(`reconciliation: failed to re-read ${key}`, "store");
-          });
-        });
-        listenerIds.push(id);
-      }
-    } else {
-      cclog("GM_addValueChangeListener not available, cross-tab sync disabled", "store");
-    }
-  }
-
   // src/init.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
@@ -3967,7 +3965,6 @@
       if (e.type === "session" && e.session.authDead) stopPolling();
     });
     mountStatsBar(document.querySelector(".bcc-sidebar"));
-    initConfigCache();
     mountInput();
     mountFooter();
   }
