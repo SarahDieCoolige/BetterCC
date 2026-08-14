@@ -1158,31 +1158,6 @@
     running2 = false;
   }
 
-  // src/config.ts
-  var DEFAULTS = {
-    color: "6AAED8",
-    colorscheme: null,
-    // regenerated from color on load (theme bridge T3)
-    ban: [],
-    pinned: [],
-    whisper: "",
-    // "" = no superwhisper target
-    scheme_v2: false,
-    compact: "",
-    // "" = chatbar expanded; "1" = compact mode
-    send_on_enter: true,
-    // true = Enter sends (current behavior)
-    hover_preview: true
-    // true = hover preview on (current behavior)
-  };
-  async function getConfig(key, fallback) {
-    const def = fallback ?? DEFAULTS[key];
-    return await GM.getValue(getUserKey(key), def);
-  }
-  async function setConfig(key, value) {
-    await GM.setValue(getUserKey(key), value);
-  }
-
   // src/dom.ts
   function iconElement(cls) {
     const i = document.createElement("i");
@@ -1757,15 +1732,9 @@
     popup.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
     const pinBtn = buildPin(isPinned, () => onTogglePin(user));
     popup.appendChild(pinBtn);
-    unsubscribeStore = subscribe((e) => {
-      if (e.type === "config" && e.key === "pinned") {
-        getConfig("pinned", []).then((pinned) => {
-          if (!openPopup) return;
-          const nowPinned = pinned.includes(user.key);
-          updatePinButton(pinBtn, nowPinned);
-        }).catch(() => {
-        });
-      }
+    unsubscribeStore = on("pinned", (pinned) => {
+      if (!openPopup) return;
+      updatePinButton(pinBtn, pinned.includes(user.key));
     });
     const photoContainer = buildPhotoContainer(user.name);
     popup.appendChild(photoContainer);
@@ -2105,22 +2074,15 @@
     return li;
   }
   var pinnedCache = /* @__PURE__ */ new Set();
-  async function refreshPinned() {
-    const list = await getConfig("pinned", []);
-    pinnedCache = new Set(list);
-  }
   async function togglePin(user) {
-    const list = await getConfig("pinned", []);
+    const list = [...get("pinned")];
     const idx = list.indexOf(user.key);
     if (idx === -1) {
       list.push(user.key);
     } else {
       list.splice(idx, 1);
     }
-    await setConfig("pinned", list);
-    emit({ type: "config", key: "pinned" });
-    pinnedCache = new Set(list);
-    renderFromState();
+    await set("pinned", list);
   }
   function handleRowClick(user, anchor) {
     openUserPopup(anchor, user, pinnedCache.has(user.key), (u) => {
@@ -2257,8 +2219,9 @@
     const sidebar = document.querySelector(".bcc-sidebar");
     if (!sidebar) return;
     ensureContainers(sidebar);
-    refreshPinned().catch(() => {
-      cclog("mountSidebar: failed to read pinned config", "v3");
+    react("pinned", (list) => {
+      pinnedCache = new Set(list);
+      renderFromState();
     });
     subscribe((e) => {
       if (e.type === "userlist") {
@@ -2270,8 +2233,6 @@
         for (const users of e.channels.values()) total += users.length;
         globalTotal = total;
         renderFromState();
-      } else if (e.type === "config" && e.key === "pinned") {
-        refreshPinned().then(() => renderFromState());
       }
     });
     cclog("sidebar mounted \u2014 subscribed to userlist + globalUserlist events", "v3");
@@ -2561,6 +2522,28 @@
     }
   }
 
+  // src/config.ts
+  var DEFAULTS = {
+    color: "6AAED8",
+    colorscheme: null,
+    // regenerated from color on load (theme bridge T3)
+    ban: [],
+    pinned: [],
+    whisper: "",
+    // "" = no superwhisper target
+    scheme_v2: false,
+    compact: "",
+    // "" = chatbar expanded; "1" = compact mode
+    send_on_enter: true,
+    // true = Enter sends (current behavior)
+    hover_preview: true
+    // true = hover preview on (current behavior)
+  };
+  async function getConfig(key, fallback) {
+    const def = fallback ?? DEFAULTS[key];
+    return await GM.getValue(getUserKey(key), def);
+  }
+
   // src/settings-helpers.ts
   function defaultDraft() {
     return {
@@ -2724,15 +2707,6 @@
     "3B3B58",
     "E7E2D3"
   ];
-  async function emitConfig(key, value) {
-    await setConfig(key, value);
-    emit({ type: "config", key });
-  }
-  function writeConfig(key, value) {
-    emitConfig(key, value).catch(
-      (e) => cclog("settings write failed: " + e.message, "v3")
-    );
-  }
   function applyColor(hex) {
     if (!draft) return;
     draft.color = hex;
@@ -2749,7 +2723,7 @@
     if (current.sendOnEnter !== next.sendOnEnter) await set("send_on_enter", next.sendOnEnter);
     if (current.hoverPreview !== next.hoverPreview)
       await set("hover_preview", next.hoverPreview);
-    if (!pinnedEqual(current.pinned, next.pinned)) await emitConfig("pinned", next.pinned);
+    if (!pinnedEqual(current.pinned, next.pinned)) await set("pinned", next.pinned);
     if (current.whisper !== next.whisper) await set("whisper", next.whisper);
   }
   var TABS = ["Erscheinungsbild", "Chat", "Verwaltung", "Daten", "Info", "Befehle"];
@@ -3168,7 +3142,7 @@
           if (!draft) return;
           draft.pinned = removePinned(draft.pinned, name);
           renderList();
-          writeConfig("pinned", draft.pinned);
+          void set("pinned", draft.pinned);
           updateRevertButton();
         });
         li.appendChild(removeBtn);
@@ -3192,7 +3166,7 @@
       draft.pinned = addPinned(draft.pinned, addInput.value);
       addInput.value = "";
       renderList();
-      writeConfig("pinned", draft.pinned);
+      void set("pinned", draft.pinned);
       updateRevertButton();
     });
     addInput.addEventListener("keydown", (e) => {
@@ -3550,13 +3524,13 @@
           case "id":
             buildIdPopup(cmd.name || "");
             break;
-          case "pinned-list":
-            getConfig("pinned", []).then(
-              (list) => printToChat(
-                list.length ? "Angepinnt: " + list.join(", ") : "Keine angepinnten Benutzer."
-              )
+          case "pinned-list": {
+            const list = get("pinned");
+            printToChat(
+              list.length ? "Angepinnt: " + list.join(", ") : "Keine angepinnten Benutzer."
             );
             break;
+          }
           case "color-info": {
             const hex = String(get("color")).replace(/^#/, "");
             const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + hex + ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
@@ -3640,20 +3614,18 @@
     unsafeWindow.bettercc.onSubmit = doSubmit;
     unsafeWindow.bettercc.superwhisper = superwhisper;
     unsafeWindow.bettercc.prefillWhisper = prefillWhisper;
-    unsafeWindow.bettercc.updatePlaceholder = updatePlaceholder;
     react("whisper", (nick) => {
       currentWhisperNick = nick;
       textarea?.classList.toggle("bcc-superwhisper", Boolean(nick));
       updatePlaceholder();
     });
+    react("compact", () => updatePlaceholder());
     if (textarea) textarea.focus();
-    updatePlaceholder();
     cclog("input mounted \u2014 textarea + whisper indicator + send contract", "v3");
   }
   function updatePlaceholder() {
     if (!textarea) return;
-    const chatbar = document.querySelector(".bcc-chatbar");
-    const compact = chatbar?.classList.contains("bcc-compact");
+    const compact = get("compact");
     if (currentWhisperNick) {
       textarea.placeholder = compact ? placeholderCompactFor(currentWhisperNick) : placeholderFor(currentWhisperNick);
     } else {
@@ -3820,7 +3792,7 @@
     btn.setAttribute("aria-label", btn.title);
     btn.querySelector("i").className = compact ? "fas fa-chevron-up" : "fas fa-chevron-down";
   }
-  function buildCompactToggle() {
+  function buildCompactToggle(chatbar) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "bcc-compact-toggle";
@@ -3828,12 +3800,11 @@
     btn.setAttribute("aria-label", "Chatbar komprimieren");
     btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
     btn.addEventListener("click", async () => {
-      const chatbar = document.querySelector(".bcc-chatbar");
-      if (!chatbar) return;
-      const compact = chatbar.classList.toggle("bcc-compact");
-      setToggleState(btn, compact);
-      updatePlaceholder();
-      await setConfig("compact", compact ? "1" : "");
+      void set("compact", !get("compact"));
+    });
+    react("compact", (on2) => {
+      chatbar.classList.toggle("bcc-compact", on2);
+      setToggleState(btn, on2);
     });
     return btn;
   }
@@ -3843,23 +3814,15 @@
     injectFontAwesome();
     const firstPill = chatbar.querySelector(".bcc-chat");
     if (firstPill) {
-      chatbar.insertBefore(buildCompactToggle(), firstPill);
+      chatbar.insertBefore(buildCompactToggle(chatbar), firstPill);
     } else {
-      chatbar.append(buildCompactToggle());
+      chatbar.append(buildCompactToggle(chatbar));
     }
     chatbar.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
     const headerReload = document.querySelector(".bcc-reload");
     if (headerReload) trackReloadButton(headerReload);
     patchSetStatus();
     cclog("footer mounted \u2014 pill groups + FA + setstatus patch", "v3");
-    getConfig("compact", "").then((v) => {
-      if (v) {
-        chatbar.classList.add("bcc-compact");
-        const toggle = chatbar.querySelector(".bcc-compact-toggle");
-        if (toggle) setToggleState(toggle, true);
-        updatePlaceholder();
-      }
-    });
   }
 
   // src/init.ts

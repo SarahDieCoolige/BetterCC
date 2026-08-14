@@ -13,12 +13,10 @@
 
 import { cclog, printHelp } from "./utils";
 import { setColor, toggleSchemeVersion } from "./theme";
-import { getConfig, setConfig } from "./config";
 import { getChatNick, sendCommand, leaveChat } from "./upstream";
 import { actionButton } from "./dom";
-import { updatePlaceholder } from "./input";
 import { openSettings } from "./settings";
-import { get, react } from "./store";
+import { get, set, react } from "./store";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.
@@ -259,8 +257,8 @@ function injectFontAwesome(): void {
 // ─── Compact-mode toggle ──────────────────────────────────────────────────
 // Small chevron at the left edge of the chatbar (before the textarea).
 // ▼ = collapse bar down (compact), ▲ = expand bar up.
-// Toggles .bcc-compact on the chatbar. State persisted to GM storage
-// (key compact_{user}) so it survives page refresh.
+// Toggles .bcc-compact on the chatbar via the store; react keeps the class,
+// chevron icon, and placeholder in sync.
 
 function setToggleState(btn: HTMLElement, compact: boolean): void {
   btn.title = compact ? "Chatbar erweitern" : "Chatbar komprimieren";
@@ -268,7 +266,7 @@ function setToggleState(btn: HTMLElement, compact: boolean): void {
   btn.querySelector("i")!.className = compact ? "fas fa-chevron-up" : "fas fa-chevron-down";
 }
 
-function buildCompactToggle(): HTMLElement {
+function buildCompactToggle(chatbar: Element): HTMLElement {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "bcc-compact-toggle";
@@ -277,12 +275,13 @@ function buildCompactToggle(): HTMLElement {
   btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
   btn.addEventListener("click", async () => {
-    const chatbar = document.querySelector(".bcc-chatbar");
-    if (!chatbar) return;
-    const compact = chatbar.classList.toggle("bcc-compact");
-    setToggleState(btn, compact);
-    updatePlaceholder();
-    await setConfig("compact", compact ? "1" : "");
+    void set("compact", !get("compact"));
+  });
+
+  // Sync class + chevron from store. Initial render handles boot restore.
+  react("compact", (on) => {
+    chatbar.classList.toggle("bcc-compact", on);
+    setToggleState(btn, on);
   });
 
   return btn;
@@ -299,9 +298,9 @@ export function mountFooter(): void {
   // Insert compact toggle between textarea and first pill.
   const firstPill = chatbar.querySelector(".bcc-chat") as HTMLElement | null;
   if (firstPill) {
-    chatbar.insertBefore(buildCompactToggle(), firstPill);
+    chatbar.insertBefore(buildCompactToggle(chatbar), firstPill);
   } else {
-    chatbar.append(buildCompactToggle());
+    chatbar.append(buildCompactToggle(chatbar));
   }
 
   // Append the pill groups AFTER the textarea (mountInput already put
@@ -315,14 +314,4 @@ export function mountFooter(): void {
   patchSetStatus();
 
   cclog("footer mounted — pill groups + FA + setstatus patch", "v3");
-
-  // Restore persisted compact state
-  getConfig("compact", "").then((v) => {
-    if (v) {
-      chatbar.classList.add("bcc-compact");
-      const toggle = chatbar.querySelector(".bcc-compact-toggle") as HTMLElement | null;
-      if (toggle) setToggleState(toggle, true);
-      updatePlaceholder();
-    }
-  });
 }

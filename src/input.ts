@@ -250,8 +250,6 @@ export function mountInput(): void {
   (unsafeWindow.bettercc as any).onSubmit = doSubmit;
   (unsafeWindow.bettercc as any).superwhisper = superwhisper;
   (unsafeWindow.bettercc as any).prefillWhisper = prefillWhisper;
-  // Expose placeholder update for the compact toggle
-  (unsafeWindow.bettercc as any).updatePlaceholder = updatePlaceholder;
 
   // Restore + live reaction: store react replaces the old getConfig boot-restore
   // and the bus subscribe block. React's initial render handles both.
@@ -261,21 +259,20 @@ export function mountInput(): void {
     updatePlaceholder();
   });
 
+  // Compact react: initial render sets the correct placeholder at mount time,
+  // and re-sets it whenever compact toggles (from footer or settings).
+  react("compact", () => updatePlaceholder());
+
   // Auto-focus the textarea so users can type immediately
   if (textarea) textarea.focus();
-
-  // Set initial placeholder — compact state is restored async in mountFooter,
-  // but call here so it's correct once the class lands.
-  updatePlaceholder();
 
   cclog("input mounted — textarea + whisper indicator + send contract", "v3");
 }
 
-/** Update the placeholder based on compact mode. Called by the toggle button. */
-export function updatePlaceholder(): void {
+/** Update the placeholder based on compact mode (reads from the store). */
+function updatePlaceholder(): void {
   if (!textarea) return;
-  const chatbar = document.querySelector(".bcc-chatbar");
-  const compact = chatbar?.classList.contains("bcc-compact");
+  const compact = get("compact");
   if (currentWhisperNick) {
     textarea.placeholder = compact
       ? placeholderCompactFor(currentWhisperNick)
