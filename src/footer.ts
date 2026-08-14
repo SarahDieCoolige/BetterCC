@@ -11,14 +11,14 @@
 //   3. Links pill     — upstream external: ID / forum / nick-color / help (2-col, 4 items)
 //   4. Exit           — red sign-out icon button (standalone, always last)
 
-import { cclog, getUserKey, printHelp } from "./utils";
-import { saveColor, toggleSchemeVersion, getSchemeVersion } from "./theme";
+import { cclog, printHelp } from "./utils";
+import { setColor, toggleSchemeVersion } from "./theme";
 import { getConfig, setConfig } from "./config";
 import { getChatNick, sendCommand, leaveChat } from "./upstream";
 import { actionButton } from "./dom";
 import { updatePlaceholder } from "./input";
 import { openSettings } from "./settings";
-import { subscribe, type BccEvent } from "./bus";
+import { get, react } from "./store";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.
@@ -116,30 +116,22 @@ function buildColorPicker(
 }
 
 /**
- * Local theme color picker. oninput regenerates the scheme via saveColor
- * (writes --bcc-* to .bcc-shell + mirrors into the iframe).
+ * Local theme color picker. oninput writes the color to the store;
+ * the store react (in initTheme) regenerates the scheme and applies it.
  * Seeds from the stored base color.
  */
 function buildColorSwatch(): HTMLElement {
   const picker = buildColorPicker("Thema-Farbe wählen", "bcc-color", "#6aaed8", (hex) => {
-    saveColor(hex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
-      cclog("color swatch: saveColor failed — " + (e as Error).message, "v3");
-    });
+    void setColor(hex);
   });
 
   const input = picker.querySelector("input")!;
 
-  // Sync the swatch from the stored color: once at mount, and again whenever
-  // the color changes elsewhere (settings modal) via the config bus.
-  const syncColor = () => {
-    getConfig("color", "6AAED8").then((hex) => {
-      input.value = "#" + String(hex).replace(/^#/, "");
-      picker.style.setProperty("--swatch-color", input.value);
-    });
-  };
-  syncColor();
-  subscribe((e: BccEvent) => {
-    if (e.type === "config" && e.key === "color") syncColor();
+  // Sync the swatch from the store: once at mount (react's initial render),
+  // and again whenever the color changes elsewhere (settings modal).
+  react("color", (hex) => {
+    input.value = "#" + String(hex).replace(/^#/, "");
+    picker.style.setProperty("--swatch-color", input.value);
   });
 
   return picker;
@@ -181,17 +173,14 @@ function buildBetterccPill(): HTMLElement {
   schemeToggle.type = "button";
   schemeToggle.className = "bcc-icon-btn";
   const updateToggle = () => {
-    const v2 = getSchemeVersion();
+    const v2 = get("scheme_v2");
     schemeToggle.title = v2 ? "Scheme v2 — klick für v1" : "Scheme v1 — klick für v2";
     schemeToggle.setAttribute("aria-label", schemeToggle.title);
     schemeToggle.innerHTML =
       '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
   };
-  updateToggle();
-  // Re-render when the scheme version changes elsewhere (settings modal).
-  subscribe((e: BccEvent) => {
-    if (e.type === "config" && e.key === "scheme_v2") updateToggle();
-  });
+  // Sync from store: initial render + re-render when scheme version changes elsewhere.
+  react("scheme_v2", updateToggle);
   schemeToggle.addEventListener("click", async (e) => {
     e.stopPropagation();
     schemeToggle.style.pointerEvents = "none";

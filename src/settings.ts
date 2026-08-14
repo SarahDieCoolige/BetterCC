@@ -9,7 +9,7 @@
 
 import { iconElement } from "./dom";
 import { getConfig, setConfig, type ConfigKey } from "./config";
-import { saveColor, setSchemeVersion } from "./theme";
+import { setColor, setSchemeVersion } from "./theme";
 import { emit } from "./bus";
 import { cclog, getUserKey } from "./utils";
 import { COMMANDS } from "./commands";
@@ -69,18 +69,14 @@ function writeConfig(key: ConfigKey, value: unknown): void {
 function applyColor(hex: string): void {
   if (!draft) return;
   draft.color = hex;
-  saveColor(hex, getUserKey("color"), getUserKey("colorscheme")).catch((e) =>
-    cclog("settings color apply failed: " + (e as Error).message, "v3"),
-  );
+  void setColor(hex);
 }
 
 /** Apply the scheme version instantly. */
 function applyScheme(v2: boolean): void {
   if (!draft) return;
   draft.schemeV2 = v2;
-  setSchemeVersion(v2).catch((e) =>
-    cclog("settings scheme apply failed: " + (e as Error).message, "v3"),
-  );
+  void setSchemeVersion(v2);
 }
 
 /** Apply only the fields that differ between `current` (the just-applied state)
@@ -88,8 +84,7 @@ function applyScheme(v2: boolean): void {
  *  follow-up Undo can't interleave; diffing avoids re-emitting unchanged keys,
  *  which would needlessly re-sync every subscriber. */
 async function applyDiff(current: SettingsDraft, next: SettingsDraft): Promise<void> {
-  if (current.color !== next.color)
-    await saveColor(next.color, getUserKey("color"), getUserKey("colorscheme"));
+  if (current.color !== next.color) await setColor(next.color);
   if (current.schemeV2 !== next.schemeV2) await setSchemeVersion(next.schemeV2);
   if (current.sendOnEnter !== next.sendOnEnter) await storeSet("send_on_enter", next.sendOnEnter);
   if (current.hoverPreview !== next.hoverPreview)

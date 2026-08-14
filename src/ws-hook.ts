@@ -2,6 +2,7 @@
 
 import { cclog, getChatDoc, getChatWin } from "./utils";
 import { addAutoscrollBanner } from "./chat";
+import { applyCurrentScheme } from "./theme";
 
 export let upstreamChatoutConnect: any = null;
 
@@ -58,9 +59,7 @@ export function injectIntoChatframe(): void {
   // 2) Apply saved theme — sets --chatBackground / --chatText on the iframe's
   // :root. Also override the body's inline white background (set by a <script>
   // in cpop_kylr.html) so the CSS variables actually paint the page.
-  if (typeof (unsafeWindow.bettercc as any)?.setTheme === "function") {
-    (unsafeWindow.bettercc as any).setTheme();
-  }
+  applyCurrentScheme();
   // Regardless of whether a user theme was loaded yet, override the upstream
   // inline white: the injected iframe.css already provides fallback
   // --chatBackground / --chatText on :root, so the body resolves those.

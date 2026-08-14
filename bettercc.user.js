@@ -221,211 +221,6 @@
     });
   }
 
-  // src/ws-hook.ts
-  var upstreamChatoutConnect = null;
-  var upstreamOnMessage = null;
-  var injected = false;
-  var INJECTION_RETRY_MS = 50;
-  var MAX_INJECTION_RETRIES = 50;
-  var injectionRetries = 0;
-  var _iframeMousedownBody = null;
-  function injectIntoChatframe() {
-    const doc = getChatDoc();
-    const win = getChatWin();
-    if (!doc || !win || !doc.body) {
-      if (injectionRetries++ < MAX_INJECTION_RETRIES) {
-        setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
-      }
-      return;
-    }
-    injectionRetries = 0;
-    const iframeCss = GM_getResourceText("iframe_css");
-    if (iframeCss) {
-      const style = doc.createElement("style");
-      style.textContent = iframeCss;
-      if (doc.head) {
-        doc.head.appendChild(style);
-      } else {
-        const head = doc.createElement("head");
-        head.appendChild(style);
-        doc.documentElement.insertBefore(head, doc.body);
-      }
-    }
-    if (typeof unsafeWindow.bettercc?.setTheme === "function") {
-      unsafeWindow.bettercc.setTheme();
-    }
-    doc.body.style.setProperty("background-color", "var(--chatBackground)");
-    doc.body.style.setProperty("color", "var(--chatText)");
-    addAutoscrollBanner(doc, win);
-    if (doc.body !== _iframeMousedownBody) {
-      _iframeMousedownBody = doc.body;
-      doc.body.addEventListener("mousedown", () => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-        window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
-      });
-    }
-    cclog("injectIntoChatframe: injection complete");
-  }
-  function betterccOnWsMessage(ev) {
-    if (typeof upstreamOnMessage === "function") {
-      try {
-        upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
-      } catch (e) {
-        cclog("betterccOnWsMessage: upstream onmessage threw \u2014 " + e.message, "ws-hook");
-      }
-    }
-    if (!injected) {
-      injectIntoChatframe();
-      injected = true;
-    }
-    const doc = getChatDoc();
-    if (doc && doc.body) {
-      doc.body.style.setProperty("background-color", "var(--chatBackground)");
-      doc.body.style.setProperty("color", "var(--chatText)");
-    }
-  }
-  function betterccOnWsClose() {
-  }
-  function attachWsListeners() {
-    if (unsafeWindow.chatout_ws) {
-      upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
-      unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
-      unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
-    }
-  }
-  function hookChatoutConnect() {
-    if (typeof unsafeWindow.chatout_connect === "function") {
-      upstreamChatoutConnect = unsafeWindow.chatout_connect;
-      unsafeWindow.chatout_connect = function() {
-        upstreamChatoutConnect.apply(this, arguments);
-        attachWsListeners();
-      };
-      attachWsListeners();
-    } else {
-      cclog("WARNING: chatout_connect not found \u2014 WebSocket hook failed");
-    }
-  }
-
-  // src/upstream.ts
-  function getChatNick() {
-    return String(unsafeWindow.chat_nick ?? "");
-  }
-  function getChannel() {
-    return String(unsafeWindow.chat_channel ?? "");
-  }
-  function isAuthDead() {
-    return !!unsafeWindow.chatout_auth_dead;
-  }
-  function getChatoutWs() {
-    return unsafeWindow.chatout_ws ?? null;
-  }
-  function getBettercc() {
-    return unsafeWindow.bettercc;
-  }
-  function getChatUi() {
-    return String(unsafeWindow.chat_ui ?? "");
-  }
-  function getChatId() {
-    return String(unsafeWindow.chat_id ?? "");
-  }
-  function getChatSid() {
-    return String(unsafeWindow.chat_sid ?? "");
-  }
-  function getPChat() {
-    return String(unsafeWindow.PCHAT ?? "");
-  }
-  function getChaMy() {
-    const v = unsafeWindow.cha_my;
-    return Array.isArray(v) ? v : [];
-  }
-  function getPAjax() {
-    return String(unsafeWindow.PAJAX ?? "");
-  }
-  function getAjax() {
-    return unsafeWindow.ajax;
-  }
-  function getChannelCategories() {
-    return unsafeWindow.ccc ?? [];
-  }
-  function getChannelGroups() {
-    return unsafeWindow.ccg ?? [];
-  }
-  function fetchAw() {
-    return new Promise((resolve, reject) => {
-      GM_xmlhttpRequest({
-        method: "GET",
-        url: "https://images.chatcity.de/script/aw.js?x=" + Date.now(),
-        onload: (resp) => resolve(resp.responseText),
-        onerror: (err) => reject(err)
-      });
-    });
-  }
-  function sendCommand(cmd) {
-    const w = unsafeWindow;
-    if (typeof w.com_set === "function") {
-      w.com_set(cmd);
-    } else {
-      cclog("sendCommand: com_set unavailable \u2014 dropped: " + cmd, "v3");
-    }
-  }
-  function leaveChat() {
-    sendCommand("/bye");
-    setTimeout(() => window.close(), 1e3);
-  }
-
-  // src/shell.ts
-  function buildShell() {
-    const chatframe = document.getElementById("chatframe");
-    const table = document.querySelector("table.c_tab");
-    if (!chatframe || !table) {
-      cclog("v3 shell: chatframe or table not found \u2014 aborting", "v3");
-      return false;
-    }
-    if (document.querySelector(".bcc-shell")) return true;
-    const hold = document.querySelector('form[name="hold"]');
-    const of = document.querySelector('form[name="OF"]');
-    if (hold) {
-      document.body.appendChild(hold);
-      hold.style.display = "none";
-    }
-    if (of) {
-      document.body.appendChild(of);
-      of.style.display = "none";
-    }
-    const shell = document.createElement("div");
-    shell.className = "bcc-shell";
-    const sidebar = document.createElement("aside");
-    sidebar.className = "bcc-sidebar";
-    sidebar.innerHTML = '<div class="bcc-sidebar-placeholder">Userlist (T7)</div>';
-    const main = document.createElement("main");
-    main.className = "bcc-main";
-    main.appendChild(chatframe);
-    const inputArea = document.createElement("div");
-    inputArea.className = "bcc-chatbar";
-    inputArea.innerHTML = '<div class="bcc-chatbar-placeholder">Chatbar (T8/T9)</div>';
-    shell.append(sidebar, main, inputArea);
-    document.body.appendChild(shell);
-    table.style.display = "none";
-    cclog("v3 shell built \u2014 chatframe moved, table hidden", "v3");
-    return true;
-  }
-  function reloadChat() {
-    if (isAuthDead()) {
-      cclog("reloadChat: auth_dead, doing full page reload", "v3");
-      location.reload();
-      return;
-    }
-    const ws = getChatoutWs();
-    if (ws) {
-      cclog("reloadChat: closing WS to trigger reconnect", "v3");
-      ws.close();
-    } else {
-      cclog("reloadChat: no WS \u2014 nothing to reconnect", "v3");
-    }
-  }
-
   // src/scheme-helpers.ts
   function toHex6(color) {
     return color.toHexString().slice(1).toUpperCase();
@@ -669,46 +464,140 @@
   function disableV2Scheme() {
     _v2 = false;
   }
-  function isV2Scheme() {
-    return _v2;
-  }
   var generateScheme3 = (base, opts) => _v2 ? generateScheme2(base, opts) : generateScheme(base, opts);
 
-  // src/config.ts
-  var DEFAULTS = {
-    color: "6AAED8",
-    colorscheme: null,
-    // regenerated from color on load (theme bridge T3)
-    ban: [],
-    pinned: [],
-    whisper: "",
-    // "" = no superwhisper target
-    scheme_v2: false,
-    compact: "",
-    // "" = chatbar expanded; "1" = compact mode
-    send_on_enter: true,
-    // true = Enter sends (current behavior)
-    hover_preview: true
-    // true = hover preview on (current behavior)
+  // src/store.ts
+  var emptySession = {
+    nick: "",
+    registered: false,
+    guest: false,
+    userId: "",
+    sessionId: "",
+    channel: "",
+    authDead: false
   };
-  async function getConfig(key, fallback) {
-    const def = fallback ?? DEFAULTS[key];
-    return await GM.getValue(getUserKey(key), def);
+  var codecs = {
+    color: { encode: (v) => v, decode: (r) => r, default: "6AAED8", persisted: true },
+    scheme_v2: { encode: (v) => v, decode: (r) => r, default: false, persisted: true },
+    pinned: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
+    whisper: { encode: (v) => v, decode: (r) => r, default: "", persisted: true },
+    compact: {
+      encode: (v) => v ? "1" : "",
+      decode: (r) => r === "1",
+      default: false,
+      persisted: true
+    },
+    send_on_enter: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
+    hover_preview: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
+    ban: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
+    session: {
+      encode: (v) => v,
+      decode: () => emptySession,
+      default: emptySession,
+      persisted: false
+    },
+    userlist: {
+      encode: (v) => v,
+      decode: () => ({ users: [], added: [], removed: [] }),
+      default: { users: [], added: [], removed: [] },
+      persisted: false
+    },
+    globalUserlist: {
+      encode: (v) => v,
+      decode: () => ({ channels: /* @__PURE__ */ new Map(), added: [], removed: [] }),
+      default: { channels: /* @__PURE__ */ new Map(), added: [], removed: [] },
+      persisted: false
+    }
+  };
+  var initialized = false;
+  var mirror = {};
+  var subscribers = /* @__PURE__ */ new Map();
+  function sameValue(a, b) {
+    if (a === b) return true;
+    if (Array.isArray(a) && Array.isArray(b)) {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+    return false;
   }
-  async function setConfig(key, value) {
-    await GM.setValue(getUserKey(key), value);
+  function assertInit() {
+    if (!initialized) throw new Error("store not initialized");
   }
-
-  // src/bus.ts
-  var listeners = /* @__PURE__ */ new Set();
-  function subscribe(fn) {
-    listeners.add(fn);
+  function notify(k, v) {
+    const set2 = subscribers.get(k);
+    if (!set2) return;
+    for (const fn of set2) {
+      try {
+        fn(v);
+      } catch (e) {
+        cclog(`render for "${k}" threw: ${e.message}`, "store");
+      }
+    }
+  }
+  async function initStore() {
+    if (initialized) throw new Error("initStore already called");
+    initialized = true;
+    for (const [key, codec] of Object.entries(codecs)) {
+      if (!codec.persisted) {
+        mirror[key] = codec.default;
+        continue;
+      }
+      try {
+        const raw = await GM.getValue(getUserKey(key));
+        mirror[key] = raw !== void 0 ? codec.decode(raw) : codec.default;
+      } catch {
+        cclog(`initStore: failed to read ${key}, using default`, "store");
+        mirror[key] = codec.default;
+      }
+    }
+    if (typeof GM_addValueChangeListener === "function") {
+      cclog("GM_addValueChangeListener available, registering reconciliation listeners", "store");
+      for (const [key, codec] of Object.entries(codecs)) {
+        if (!codec.persisted) continue;
+        const scopedKey = getUserKey(key);
+        GM_addValueChangeListener(scopedKey, () => {
+          GM.getValue(scopedKey).then((raw) => {
+            const decoded = raw !== void 0 ? codec.decode(raw) : codec.default;
+            if (sameValue(decoded, mirror[key])) return;
+            mirror[key] = decoded;
+            notify(key, decoded);
+          }).catch(() => {
+            cclog(`reconciliation: failed to re-read ${key}`, "store");
+          });
+        });
+      }
+    } else {
+      cclog("GM_addValueChangeListener not available, cross-tab sync disabled", "store");
+    }
+  }
+  function get(k) {
+    assertInit();
+    return mirror[k];
+  }
+  async function set(k, v) {
+    assertInit();
+    const codec = codecs[k];
+    mirror[k] = v;
+    notify(k, v);
+    if (codec.persisted) {
+      try {
+        await GM.setValue(getUserKey(k), codec.encode(v));
+      } catch {
+        cclog(`set: failed to persist ${k}`, "store");
+      }
+    }
+  }
+  function on(k, fn) {
+    assertInit();
+    if (!subscribers.has(k)) subscribers.set(k, /* @__PURE__ */ new Set());
+    const set2 = subscribers.get(k);
+    set2.add(fn);
     return () => {
-      listeners.delete(fn);
+      set2.delete(fn);
     };
   }
-  function emit(e) {
-    for (const fn of listeners) fn(e);
+  function react(k, render) {
+    render(get(k));
+    return on(k, render);
   }
 
   // src/theme.ts
@@ -740,13 +629,6 @@
     }
     return out;
   }
-  function schemeToStorage(scheme) {
-    return { ...scheme };
-  }
-  function matchesStoredBase(stored, baseHex) {
-    if (!stored || typeof stored.bgHex !== "string") return false;
-    return stored.bgHex.toUpperCase() === baseHex.toUpperCase();
-  }
   function applyScheme(scheme) {
     const target = document.querySelector(".bcc-shell");
     const root = target ?? document.documentElement;
@@ -755,43 +637,227 @@
     }
     applyThemeToIframe("#" + scheme.surface, "#" + scheme.text);
   }
-  async function saveColor(baseHex, colorKey, schemeKey) {
-    await GM.setValue(colorKey, baseHex);
-    const scheme = generateScheme3(baseHex);
-    await GM.setValue(schemeKey, schemeToStorage(scheme));
-    applyScheme(scheme);
-    emit({ type: "config", key: "color" });
-    return scheme;
-  }
-  async function loadTheme(colorKey, schemeKey, defaultBase = "6AAED8") {
-    const base = await GM.getValue(colorKey, defaultBase);
-    await GM.setValue(colorKey, base);
-    const stored = await GM.getValue(schemeKey, null);
-    if (matchesStoredBase(stored, base) && stored) {
-      applyScheme(stored);
-      return stored;
-    }
-    const scheme = generateScheme3(base);
-    await GM.setValue(schemeKey, schemeToStorage(scheme));
-    applyScheme(scheme);
-    return scheme;
-  }
-  async function setSchemeVersion(v2) {
-    await setConfig("scheme_v2", v2);
-    if (v2) enableV2Scheme();
+  function applyCurrentScheme() {
+    if (get("scheme_v2")) enableV2Scheme();
     else disableV2Scheme();
-    const base = await getConfig("color", "6AAED8");
-    const scheme = generateScheme3(base);
-    const schemeKey = getUserKey("colorscheme");
-    await GM.setValue(schemeKey, schemeToStorage(scheme));
+    const scheme = generateScheme3(get("color"));
     applyScheme(scheme);
-    emit({ type: "config", key: "scheme_v2" });
+  }
+  function initTheme() {
+    react("color", applyCurrentScheme);
+    react("scheme_v2", applyCurrentScheme);
+  }
+  async function setColor(hex) {
+    await set("color", hex);
   }
   function toggleSchemeVersion() {
-    return setSchemeVersion(!getSchemeVersion());
+    return setSchemeVersion(!get("scheme_v2"));
   }
-  function getSchemeVersion() {
-    return isV2Scheme();
+  async function setSchemeVersion(v2) {
+    await set("scheme_v2", v2);
+  }
+
+  // src/ws-hook.ts
+  var upstreamChatoutConnect = null;
+  var upstreamOnMessage = null;
+  var injected = false;
+  var INJECTION_RETRY_MS = 50;
+  var MAX_INJECTION_RETRIES = 50;
+  var injectionRetries = 0;
+  var _iframeMousedownBody = null;
+  function injectIntoChatframe() {
+    const doc = getChatDoc();
+    const win = getChatWin();
+    if (!doc || !win || !doc.body) {
+      if (injectionRetries++ < MAX_INJECTION_RETRIES) {
+        setTimeout(injectIntoChatframe, INJECTION_RETRY_MS);
+      }
+      return;
+    }
+    injectionRetries = 0;
+    const iframeCss = GM_getResourceText("iframe_css");
+    if (iframeCss) {
+      const style = doc.createElement("style");
+      style.textContent = iframeCss;
+      if (doc.head) {
+        doc.head.appendChild(style);
+      } else {
+        const head = doc.createElement("head");
+        head.appendChild(style);
+        doc.documentElement.insertBefore(head, doc.body);
+      }
+    }
+    applyCurrentScheme();
+    doc.body.style.setProperty("background-color", "var(--chatBackground)");
+    doc.body.style.setProperty("color", "var(--chatText)");
+    addAutoscrollBanner(doc, win);
+    if (doc.body !== _iframeMousedownBody) {
+      _iframeMousedownBody = doc.body;
+      doc.body.addEventListener("mousedown", () => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
+      });
+    }
+    cclog("injectIntoChatframe: injection complete");
+  }
+  function betterccOnWsMessage(ev) {
+    if (typeof upstreamOnMessage === "function") {
+      try {
+        upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
+      } catch (e) {
+        cclog("betterccOnWsMessage: upstream onmessage threw \u2014 " + e.message, "ws-hook");
+      }
+    }
+    if (!injected) {
+      injectIntoChatframe();
+      injected = true;
+    }
+    const doc = getChatDoc();
+    if (doc && doc.body) {
+      doc.body.style.setProperty("background-color", "var(--chatBackground)");
+      doc.body.style.setProperty("color", "var(--chatText)");
+    }
+  }
+  function betterccOnWsClose() {
+  }
+  function attachWsListeners() {
+    if (unsafeWindow.chatout_ws) {
+      upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
+      unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
+      unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
+    }
+  }
+  function hookChatoutConnect() {
+    if (typeof unsafeWindow.chatout_connect === "function") {
+      upstreamChatoutConnect = unsafeWindow.chatout_connect;
+      unsafeWindow.chatout_connect = function() {
+        upstreamChatoutConnect.apply(this, arguments);
+        attachWsListeners();
+      };
+      attachWsListeners();
+    } else {
+      cclog("WARNING: chatout_connect not found \u2014 WebSocket hook failed");
+    }
+  }
+
+  // src/upstream.ts
+  function getChatNick() {
+    return String(unsafeWindow.chat_nick ?? "");
+  }
+  function getChannel() {
+    return String(unsafeWindow.chat_channel ?? "");
+  }
+  function isAuthDead() {
+    return !!unsafeWindow.chatout_auth_dead;
+  }
+  function getChatoutWs() {
+    return unsafeWindow.chatout_ws ?? null;
+  }
+  function getBettercc() {
+    return unsafeWindow.bettercc;
+  }
+  function getChatUi() {
+    return String(unsafeWindow.chat_ui ?? "");
+  }
+  function getChatId() {
+    return String(unsafeWindow.chat_id ?? "");
+  }
+  function getChatSid() {
+    return String(unsafeWindow.chat_sid ?? "");
+  }
+  function getPChat() {
+    return String(unsafeWindow.PCHAT ?? "");
+  }
+  function getChaMy() {
+    const v = unsafeWindow.cha_my;
+    return Array.isArray(v) ? v : [];
+  }
+  function getPAjax() {
+    return String(unsafeWindow.PAJAX ?? "");
+  }
+  function getAjax() {
+    return unsafeWindow.ajax;
+  }
+  function getChannelCategories() {
+    return unsafeWindow.ccc ?? [];
+  }
+  function getChannelGroups() {
+    return unsafeWindow.ccg ?? [];
+  }
+  function fetchAw() {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: "https://images.chatcity.de/script/aw.js?x=" + Date.now(),
+        onload: (resp) => resolve(resp.responseText),
+        onerror: (err) => reject(err)
+      });
+    });
+  }
+  function sendCommand(cmd) {
+    const w = unsafeWindow;
+    if (typeof w.com_set === "function") {
+      w.com_set(cmd);
+    } else {
+      cclog("sendCommand: com_set unavailable \u2014 dropped: " + cmd, "v3");
+    }
+  }
+  function leaveChat() {
+    sendCommand("/bye");
+    setTimeout(() => window.close(), 1e3);
+  }
+
+  // src/shell.ts
+  function buildShell() {
+    const chatframe = document.getElementById("chatframe");
+    const table = document.querySelector("table.c_tab");
+    if (!chatframe || !table) {
+      cclog("v3 shell: chatframe or table not found \u2014 aborting", "v3");
+      return false;
+    }
+    if (document.querySelector(".bcc-shell")) return true;
+    const hold = document.querySelector('form[name="hold"]');
+    const of = document.querySelector('form[name="OF"]');
+    if (hold) {
+      document.body.appendChild(hold);
+      hold.style.display = "none";
+    }
+    if (of) {
+      document.body.appendChild(of);
+      of.style.display = "none";
+    }
+    const shell = document.createElement("div");
+    shell.className = "bcc-shell";
+    const sidebar = document.createElement("aside");
+    sidebar.className = "bcc-sidebar";
+    sidebar.innerHTML = '<div class="bcc-sidebar-placeholder">Userlist (T7)</div>';
+    const main = document.createElement("main");
+    main.className = "bcc-main";
+    main.appendChild(chatframe);
+    const inputArea = document.createElement("div");
+    inputArea.className = "bcc-chatbar";
+    inputArea.innerHTML = '<div class="bcc-chatbar-placeholder">Chatbar (T8/T9)</div>';
+    shell.append(sidebar, main, inputArea);
+    document.body.appendChild(shell);
+    table.style.display = "none";
+    cclog("v3 shell built \u2014 chatframe moved, table hidden", "v3");
+    return true;
+  }
+  function reloadChat() {
+    if (isAuthDead()) {
+      cclog("reloadChat: auth_dead, doing full page reload", "v3");
+      location.reload();
+      return;
+    }
+    const ws = getChatoutWs();
+    if (ws) {
+      cclog("reloadChat: closing WS to trigger reconnect", "v3");
+      ws.close();
+    } else {
+      cclog("reloadChat: no WS \u2014 nothing to reconnect", "v3");
+    }
   }
 
   // src/userlist.ts
@@ -953,6 +1019,18 @@
     return abbrev;
   }
 
+  // src/bus.ts
+  var listeners = /* @__PURE__ */ new Set();
+  function subscribe(fn) {
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  }
+  function emit(e) {
+    for (const fn of listeners) fn(e);
+  }
+
   // src/ulist-poll.ts
   var chatId = "";
   var chatSid = "";
@@ -1078,6 +1156,31 @@
     if (timerId2 !== void 0) clearTimeout(timerId2);
     timerId2 = void 0;
     running2 = false;
+  }
+
+  // src/config.ts
+  var DEFAULTS = {
+    color: "6AAED8",
+    colorscheme: null,
+    // regenerated from color on load (theme bridge T3)
+    ban: [],
+    pinned: [],
+    whisper: "",
+    // "" = no superwhisper target
+    scheme_v2: false,
+    compact: "",
+    // "" = chatbar expanded; "1" = compact mode
+    send_on_enter: true,
+    // true = Enter sends (current behavior)
+    hover_preview: true
+    // true = hover preview on (current behavior)
+  };
+  async function getConfig(key, fallback) {
+    const def = fallback ?? DEFAULTS[key];
+    return await GM.getValue(getUserKey(key), def);
+  }
+  async function setConfig(key, value) {
+    await GM.setValue(getUserKey(key), value);
   }
 
   // src/dom.ts
@@ -1328,140 +1431,6 @@
       }
       throw e;
     }
-  }
-
-  // src/store.ts
-  var emptySession = {
-    nick: "",
-    registered: false,
-    guest: false,
-    userId: "",
-    sessionId: "",
-    channel: "",
-    authDead: false
-  };
-  var codecs = {
-    color: { encode: (v) => v, decode: (r) => r, default: "6AAED8", persisted: true },
-    scheme_v2: { encode: (v) => v, decode: (r) => r, default: false, persisted: true },
-    pinned: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
-    whisper: { encode: (v) => v, decode: (r) => r, default: "", persisted: true },
-    compact: {
-      encode: (v) => v ? "1" : "",
-      decode: (r) => r === "1",
-      default: false,
-      persisted: true
-    },
-    send_on_enter: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
-    hover_preview: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
-    ban: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
-    session: {
-      encode: (v) => v,
-      decode: () => emptySession,
-      default: emptySession,
-      persisted: false
-    },
-    userlist: {
-      encode: (v) => v,
-      decode: () => ({ users: [], added: [], removed: [] }),
-      default: { users: [], added: [], removed: [] },
-      persisted: false
-    },
-    globalUserlist: {
-      encode: (v) => v,
-      decode: () => ({ channels: /* @__PURE__ */ new Map(), added: [], removed: [] }),
-      default: { channels: /* @__PURE__ */ new Map(), added: [], removed: [] },
-      persisted: false
-    }
-  };
-  var initialized = false;
-  var mirror = {};
-  var subscribers = /* @__PURE__ */ new Map();
-  function sameValue(a, b) {
-    if (a === b) return true;
-    if (Array.isArray(a) && Array.isArray(b)) {
-      return a.length === b.length && a.every((v, i) => v === b[i]);
-    }
-    return false;
-  }
-  function assertInit() {
-    if (!initialized) throw new Error("store not initialized");
-  }
-  function notify(k, v) {
-    const set2 = subscribers.get(k);
-    if (!set2) return;
-    for (const fn of set2) {
-      try {
-        fn(v);
-      } catch (e) {
-        cclog(`render for "${k}" threw: ${e.message}`, "store");
-      }
-    }
-  }
-  async function initStore() {
-    if (initialized) throw new Error("initStore already called");
-    initialized = true;
-    for (const [key, codec] of Object.entries(codecs)) {
-      if (!codec.persisted) {
-        mirror[key] = codec.default;
-        continue;
-      }
-      try {
-        const raw = await GM.getValue(getUserKey(key));
-        mirror[key] = raw !== void 0 ? codec.decode(raw) : codec.default;
-      } catch {
-        cclog(`initStore: failed to read ${key}, using default`, "store");
-        mirror[key] = codec.default;
-      }
-    }
-    if (typeof GM_addValueChangeListener === "function") {
-      cclog("GM_addValueChangeListener available, registering reconciliation listeners", "store");
-      for (const [key, codec] of Object.entries(codecs)) {
-        if (!codec.persisted) continue;
-        const scopedKey = getUserKey(key);
-        GM_addValueChangeListener(scopedKey, () => {
-          GM.getValue(scopedKey).then((raw) => {
-            const decoded = raw !== void 0 ? codec.decode(raw) : codec.default;
-            if (sameValue(decoded, mirror[key])) return;
-            mirror[key] = decoded;
-            notify(key, decoded);
-          }).catch(() => {
-            cclog(`reconciliation: failed to re-read ${key}`, "store");
-          });
-        });
-      }
-    } else {
-      cclog("GM_addValueChangeListener not available, cross-tab sync disabled", "store");
-    }
-  }
-  function get(k) {
-    assertInit();
-    return mirror[k];
-  }
-  async function set(k, v) {
-    assertInit();
-    const codec = codecs[k];
-    mirror[k] = v;
-    notify(k, v);
-    if (codec.persisted) {
-      try {
-        await GM.setValue(getUserKey(k), codec.encode(v));
-      } catch {
-        cclog(`set: failed to persist ${k}`, "store");
-      }
-    }
-  }
-  function on(k, fn) {
-    assertInit();
-    if (!subscribers.has(k)) subscribers.set(k, /* @__PURE__ */ new Set());
-    const set2 = subscribers.get(k);
-    set2.add(fn);
-    return () => {
-      set2.delete(fn);
-    };
-  }
-  function react(k, render) {
-    render(get(k));
-    return on(k, render);
   }
 
   // src/photo-preview.ts
@@ -2767,20 +2736,15 @@
   function applyColor(hex) {
     if (!draft) return;
     draft.color = hex;
-    saveColor(hex, getUserKey("color"), getUserKey("colorscheme")).catch(
-      (e) => cclog("settings color apply failed: " + e.message, "v3")
-    );
+    void setColor(hex);
   }
   function applyScheme2(v2) {
     if (!draft) return;
     draft.schemeV2 = v2;
-    setSchemeVersion(v2).catch(
-      (e) => cclog("settings scheme apply failed: " + e.message, "v3")
-    );
+    void setSchemeVersion(v2);
   }
   async function applyDiff(current, next) {
-    if (current.color !== next.color)
-      await saveColor(next.color, getUserKey("color"), getUserKey("colorscheme"));
+    if (current.color !== next.color) await setColor(next.color);
     if (current.schemeV2 !== next.schemeV2) await setSchemeVersion(next.schemeV2);
     if (current.sendOnEnter !== next.sendOnEnter) await set("send_on_enter", next.sendOnEnter);
     if (current.hoverPreview !== next.hoverPreview)
@@ -3593,35 +3557,31 @@
               )
             );
             break;
-          case "color-info":
-            getConfig("color", "").then((c) => {
-              const hex = String(c).replace(/^#/, "");
-              const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + hex + ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
-              printToChat("Thema-Farbe: " + swatch + "#" + hex);
-            });
+          case "color-info": {
+            const hex = String(get("color")).replace(/^#/, "");
+            const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + hex + ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+            printToChat("Thema-Farbe: " + swatch + "#" + hex);
             break;
-          case "scheme-info":
-            Promise.all([getConfig("scheme_v2", false), getConfig("colorscheme", null)]).then(
-              ([v2, scheme]) => {
-                const rows = [];
-                if (scheme) {
-                  for (const [k, v] of Object.entries(scheme)) {
-                    const hex = String(v).replace(/^#/, "");
-                    const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + hex + ';border-radius:4px;vertical-align:middle;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
-                    rows.push(
-                      '<tr><td style="padding:2px 8px 2px 0">' + swatch + '</td><td style="padding-right:6px">' + k + "</td><td>#" + hex + "</td></tr>"
-                    );
-                  }
-                }
-                rows.push(
-                  '<tr><td colspan="3" style="padding-top:6px;opacity:0.6">Generator: ' + (v2 ? "v2 (experimentell)" : "v1") + "</td></tr>"
-                );
-                printToChat(
-                  '<table style="border-collapse:collapse;font:inherit;color:inherit">' + rows.join("") + "</table>"
-                );
-              }
+          }
+          case "scheme-info": {
+            const v2 = get("scheme_v2");
+            const scheme = generateScheme3(get("color"));
+            const rows = [];
+            for (const [k, v] of Object.entries(scheme)) {
+              const hex = String(v).replace(/^#/, "");
+              const swatch = '<span style="display:inline-block;width:24px;height:24px;background:#' + hex + ';border-radius:4px;vertical-align:middle;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+              rows.push(
+                '<tr><td style="padding:2px 8px 2px 0">' + swatch + '</td><td style="padding-right:6px">' + k + "</td><td>#" + hex + "</td></tr>"
+              );
+            }
+            rows.push(
+              '<tr><td colspan="3" style="padding-top:6px;opacity:0.6">Generator: ' + (v2 ? "v2 (experimentell)" : "v1") + "</td></tr>"
+            );
+            printToChat(
+              '<table style="border-collapse:collapse;font:inherit;color:inherit">' + rows.join("") + "</table>"
             );
             break;
+          }
           case "settings":
             openSettings();
             break;
@@ -3757,20 +3717,12 @@
   }
   function buildColorSwatch() {
     const picker = buildColorPicker("Thema-Farbe w\xE4hlen", "bcc-color", "#6aaed8", (hex) => {
-      saveColor(hex, getUserKey("color"), getUserKey("colorscheme")).catch((e) => {
-        cclog("color swatch: saveColor failed \u2014 " + e.message, "v3");
-      });
+      void setColor(hex);
     });
     const input = picker.querySelector("input");
-    const syncColor = () => {
-      getConfig("color", "6AAED8").then((hex) => {
-        input.value = "#" + String(hex).replace(/^#/, "");
-        picker.style.setProperty("--swatch-color", input.value);
-      });
-    };
-    syncColor();
-    subscribe((e) => {
-      if (e.type === "config" && e.key === "color") syncColor();
+    react("color", (hex) => {
+      input.value = "#" + String(hex).replace(/^#/, "");
+      picker.style.setProperty("--swatch-color", input.value);
     });
     return picker;
   }
@@ -3799,15 +3751,12 @@
     schemeToggle.type = "button";
     schemeToggle.className = "bcc-icon-btn";
     const updateToggle = () => {
-      const v2 = getSchemeVersion();
+      const v2 = get("scheme_v2");
       schemeToggle.title = v2 ? "Scheme v2 \u2014 klick f\xFCr v1" : "Scheme v1 \u2014 klick f\xFCr v2";
       schemeToggle.setAttribute("aria-label", schemeToggle.title);
       schemeToggle.innerHTML = '<span style="font-size:10px;font-weight:700">' + (v2 ? "v2" : "v1") + "</span>";
     };
-    updateToggle();
-    subscribe((e) => {
-      if (e.type === "config" && e.key === "scheme_v2") updateToggle();
-    });
+    react("scheme_v2", updateToggle);
     schemeToggle.addEventListener("click", async (e) => {
       e.stopPropagation();
       schemeToggle.style.pointerEvents = "none";
@@ -3935,13 +3884,8 @@
     initSession();
     unsafeWindow.bettercc.reloadChat = reloadChat;
     buildShell();
-    const schemePromise = getConfig("scheme_v2").then((v2) => {
-      if (v2) enableV2Scheme();
-      return loadTheme(getUserKey("color"), getUserKey("colorscheme"));
-    });
-    unsafeWindow.bettercc.setTheme = function setTheme() {
-      schemePromise.then((scheme) => applyScheme(scheme));
-    };
+    initTheme();
+    unsafeWindow.bettercc.setTheme = applyCurrentScheme;
     hookChatoutConnect();
     mountSidebar();
     startUlistPoll(2e4);

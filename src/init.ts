@@ -26,19 +26,16 @@
 //     throws (AGENTS.md gotcha #6); the old path neutered it in cleanup().
 //     cleanup() lives in ui.ts (deletable bucket), so v3 inlines only this
 //     load-bearing subset rather than importing it (see neuterResizeFix).
-//   - loadTheme() — apply the saved color scheme to :root (tier-0, spec §5.3).
-//     The old path did this inside doColorStuff (deletable bucket); v3 calls
-//     the pure theme bridge (./theme, T3) instead. A v3 setTheme is exposed so
-//     ws-hook.ts's injectIntoChatframe re-applies the --bcc-* scheme (not the
-//     old --chatX engine) on reconnect.
+//   - initTheme() — apply the saved color scheme via the sync store (tier-0,
+//     spec §5.3). Registers store reacts so color/scheme_v2 changes re-apply
+//     automatically. The store is seeded sync at boot, so no promise is needed.
+//     applyCurrentScheme is exposed on the bettercc API so
+//     injectIntoChatframe re-applies on reconnect.
 
-import { cclog, getUserKey } from "./utils";
+import { cclog } from "./utils";
 import { hookChatoutConnect } from "./ws-hook";
 import { buildShell, reloadChat } from "./shell";
-import { loadTheme, applyScheme } from "./theme";
-import type { BccColorScheme } from "./scheme";
-import { enableV2Scheme } from "./scheme";
-import { getConfig } from "./config";
+import { initTheme, applyCurrentScheme } from "./theme";
 import { startUlistPoll, stopUlistPoll, refreshUlistNow } from "./ulist-poll";
 import { startPolling, stopPolling } from "./global-userlist";
 import { mountSidebar } from "./sidebar";
@@ -103,7 +100,7 @@ export async function initV3(): Promise<void> {
   initSession();
 
   // Build the Grid shell FIRST (moves #chatframe, hides the table, adds
-  // header). Must exist before loadTheme() below — applyScheme writes --bcc-*
+  // header). Must exist before initTheme() below — applyScheme writes --bcc-*
   // to .bcc-shell (not :root), so the shell has to be in the DOM or the first
   // theme apply would land on the wrong element. Expose reloadChat on the
   // bettercc API here too — v3 owns its own (the old path's was inside the
@@ -111,29 +108,13 @@ export async function initV3(): Promise<void> {
   (unsafeWindow.bettercc as any).reloadChat = reloadChat;
   buildShell();
 
-  // Apply the saved theme (tier-0 per spec §5.3): read color_{user}, regenerate
-  // or reuse the cached scheme, write --bcc-* to .bcc-shell. v3 calls the pure
-  // theme bridge (./theme) — the old path did this inside the deleted
-  // doColorStuff. Also expose a v3 setTheme so injectIntoChatframe's call to
-  // bettercc.setTheme() (ws-hook.ts) re-applies the --bcc-* scheme (not the
-  // old --chatX engine).
-  //
-  // Scheme-version preference (v1/v2) is awaited BEFORE loadTheme so the first
-  // generateScheme() delegates to the correct generator — otherwise a v2-
-  // preferring user gets a v1 first paint and it doesn't self-correct until
-  // they toggle (the scheme_v2 read resolved async after loadTheme ran).
-  //
-  // O4: hold the *promise*, not the resolved scheme, so a setTheme() call that
-  // races the initial load (e.g. a fast WS reconnect firing
-  // injectIntoChatframe → bettercc.setTheme before loadTheme resolves) awaits
-  // the pending scheme instead of silently no-op'ing on a null ref.
-  const schemePromise = getConfig("scheme_v2").then((v2) => {
-    if (v2) enableV2Scheme();
-    return loadTheme(getUserKey("color"), getUserKey("colorscheme"));
-  });
-  (unsafeWindow.bettercc as any).setTheme = function setTheme(): void {
-    schemePromise.then((scheme: BccColorScheme) => applyScheme(scheme));
-  };
+  // Apply the saved theme (tier-0 per spec §5.3): the store is seeded at
+  // initStore(), so initTheme() reads color + scheme_v2 synchronously,
+  // selects the generator, generates, and applies. No promise, no cache.
+  // Expose setTheme on the bettercc API so ws-hook.ts can re-apply on
+  // reconnect (kept for backward compat with the public API).
+  initTheme();
+  (unsafeWindow.bettercc as any).setTheme = applyCurrentScheme;
 
   // Attach the WS hook so iframe.css + theme mirror + autoscroll banner inject
   // on the first message (spec §3.3). The hook only attaches listeners to

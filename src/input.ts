@@ -7,6 +7,7 @@
 import { cclog, printHelp, printToChat } from "./utils";
 import { getConfig } from "./config";
 import { classifyMessage, rewriteForWhisper } from "./commands";
+import { generateScheme } from "./scheme";
 import { buildPatchedHandler } from "./patched-handler";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
@@ -124,51 +125,47 @@ async function doSubmit(whispernick?: string): Promise<void> {
             ),
           );
           break;
-        case "color-info":
-          getConfig("color", "").then((c) => {
-            const hex = String(c).replace(/^#/, "");
+        case "color-info": {
+          const hex = String(get("color")).replace(/^#/, "");
+          const swatch =
+            '<span style="display:inline-block;width:24px;height:24px;background:#' +
+            hex +
+            ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+          printToChat("Thema-Farbe: " + swatch + "#" + hex);
+          break;
+        }
+        case "scheme-info": {
+          const v2 = get("scheme_v2");
+          const scheme = generateScheme(get("color"));
+          const rows: string[] = [];
+          for (const [k, v] of Object.entries(scheme as unknown as Record<string, unknown>)) {
+            const hex = String(v).replace(/^#/, "");
             const swatch =
               '<span style="display:inline-block;width:24px;height:24px;background:#' +
               hex +
-              ';border-radius:4px;vertical-align:middle;margin:0 4px 0 2px;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
-            printToChat("Thema-Farbe: " + swatch + "#" + hex);
-          });
-          break;
-        case "scheme-info":
-          Promise.all([getConfig("scheme_v2", false), getConfig("colorscheme", null)]).then(
-            ([v2, scheme]) => {
-              const rows: string[] = [];
-              if (scheme) {
-                for (const [k, v] of Object.entries(scheme as Record<string, unknown>)) {
-                  const hex = String(v).replace(/^#/, "");
-                  const swatch =
-                    '<span style="display:inline-block;width:24px;height:24px;background:#' +
-                    hex +
-                    ';border-radius:4px;vertical-align:middle;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
-                  rows.push(
-                    '<tr><td style="padding:2px 8px 2px 0">' +
-                      swatch +
-                      '</td><td style="padding-right:6px">' +
-                      k +
-                      "</td><td>#" +
-                      hex +
-                      "</td></tr>",
-                  );
-                }
-              }
-              rows.push(
-                '<tr><td colspan="3" style="padding-top:6px;opacity:0.6">Generator: ' +
-                  (v2 ? "v2 (experimentell)" : "v1") +
-                  "</td></tr>",
-              );
-              printToChat(
-                '<table style="border-collapse:collapse;font:inherit;color:inherit">' +
-                  rows.join("") +
-                  "</table>",
-              );
-            },
+              ';border-radius:4px;vertical-align:middle;box-shadow:0 2px 4px rgba(0,0,0,0.25)"></span>';
+            rows.push(
+              '<tr><td style="padding:2px 8px 2px 0">' +
+                swatch +
+                '</td><td style="padding-right:6px">' +
+                k +
+                "</td><td>#" +
+                hex +
+                "</td></tr>",
+            );
+          }
+          rows.push(
+            '<tr><td colspan="3" style="padding-top:6px;opacity:0.6">Generator: ' +
+              (v2 ? "v2 (experimentell)" : "v1") +
+              "</td></tr>",
+          );
+          printToChat(
+            '<table style="border-collapse:collapse;font:inherit;color:inherit">' +
+              rows.join("") +
+              "</table>",
           );
           break;
+        }
         case "settings":
           openSettings();
           break;
