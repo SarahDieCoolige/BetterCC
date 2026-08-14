@@ -5,42 +5,22 @@
 // subscribe() and re-render their fragment on relevant events; the data layer
 // emits on session/userlist/config changes.
 //
-// No DOM/WS/GM dependencies — pure in-memory, fully unit-testable.
+// Types (User, UserWithChannel, SessionState) moved to store.ts; re-exported
+// here until S7 deletes this module. No DOM/WS/GM dependencies — pure in-memory,
+// fully unit-testable.
 
-/** A user as parsed from the upstream cha[]/cha_my[] arrays (spec §2.4). */
-export interface User {
-  name: string;
-  key: string; // name.toLowerCase(), used for storage lookups and comparisons
-  registered: boolean; // status contains "hR"
-  guest: boolean; // status contains "h"  (without R)
-  sep: boolean; // status contains "S"
-  away: boolean; // status contains "A"
-}
+// Re-export types that moved to store.ts (shim, dies in S7).
+export type { User, UserWithChannel, SessionState } from "./store";
 
-/** A user found in the global userlist (aw.js), with their channel. */
-export interface UserWithChannel {
-  user: User;
-  channel: string;
-}
-
-/** Session state read from unsafeWindow globals (spec §2.3). */
-export interface SessionState {
-  nick: string;
-  registered: boolean;
-  guest: boolean;
-  userId: string;
-  sessionId: string;
-  channel: string;
-  authDead: boolean;
-}
+import type { UserWithChannel, SessionState } from "./store";
 
 /** Events the data layer emits. Open union so future concerns extend it. */
 export type BccEvent =
   | { type: "session"; session: SessionState }
-  | { type: "userlist"; users: User[]; added: string[]; removed: string[] }
+  | { type: "userlist"; users: import("./store").User[]; added: string[]; removed: string[] }
   | {
       type: "globalUserlist";
-      channels: Map<string, User[]>; // full snapshot: channel → users
+      channels: Map<string, import("./store").User[]>; // full snapshot: channel → users
       added: UserWithChannel[]; // users that just came online (any channel)
       removed: UserWithChannel[]; // users that just went offline (any channel)
     }

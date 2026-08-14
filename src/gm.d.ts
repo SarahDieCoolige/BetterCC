@@ -23,6 +23,14 @@ declare function GM_addStyle(css: string): void;
 
 declare function GM_getResourceText(name: string): string | undefined;
 
+// Sync-grant forms for value change listeners (spec §6). The GM namespace
+// form already existed; these are the Tampermonkey global-scope equivalents.
+declare function GM_addValueChangeListener(
+  key: string,
+  callback: (key: string, oldValue: any, newValue: any, remote: boolean) => void,
+): number;
+declare function GM_removeValueChangeListener(id: number): void;
+
 declare var GM_info: {
   script: {
     version: string;
