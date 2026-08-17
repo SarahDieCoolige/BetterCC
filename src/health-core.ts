@@ -40,7 +40,10 @@ export type ConnEvent =
 
 // ─── Thresholds ────────────────────────────────────────────────────────────
 
-/** Connecting for longer than this = stuck. */
+/** Connecting for longer than this = stuck. Every failed retry fires a fresh
+ * close event and resets conn.since, so this only trips on a silent hang (a
+ * socket stuck mid-handshake, or upstream no longer retrying at all). Active
+ * retrying is the attempt badge's job, not the stuck banner's. */
 export const STUCK_MS = 30_000;
 
 /** No server echo after send for longer than this = zombie. */
