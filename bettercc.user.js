@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=c025fe02
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=52f3f575
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -3712,6 +3712,86 @@
     }
   }
 
+  // src/health-strings.ts
+  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
+  var STATUS_TEXT = {
+    connected: "verbunden",
+    connecting: "verbinde\u2026",
+    retry: "Versuch {n}",
+    authdead: "Session abgelaufen",
+    zombie: "reagiert nicht"
+  };
+  function statusButtonTitle(state) {
+    return STATUS_BUTTON_TITLE.replace("{state}", state);
+  }
+  function retryText(n) {
+    return STATUS_TEXT.retry.replace("{n}", String(n));
+  }
+
+  // src/status-button.ts
+  function buttonView(conn) {
+    if (conn.phase === "authdead") {
+      return {
+        icon: "fa-triangle-exclamation",
+        spinning: false,
+        badge: null,
+        stateText: STATUS_TEXT.authdead
+      };
+    }
+    if (conn.phase === "connected") {
+      return {
+        icon: "fa-sync",
+        spinning: false,
+        badge: null,
+        stateText: STATUS_TEXT.connected
+      };
+    }
+    if (conn.attempt >= 2) {
+      return {
+        icon: "fa-sync",
+        spinning: true,
+        badge: conn.attempt,
+        stateText: retryText(conn.attempt)
+      };
+    }
+    return {
+      icon: "fa-sync",
+      spinning: true,
+      badge: null,
+      stateText: STATUS_TEXT.connecting
+    };
+  }
+  function buildStatusButton() {
+    const btn = actionButton({ iconClass: "fa-sync", title: "Chat neu laden", onClick: reloadChat });
+    btn.classList.add("bcc-health-btn");
+    const badge = document.createElement("span");
+    badge.className = "bcc-health-badge";
+    badge.hidden = true;
+    btn.appendChild(badge);
+    let prev = null;
+    react("conn", (conn) => {
+      const view = buttonView(conn);
+      if (prev && view.icon === prev.icon && view.spinning === prev.spinning && view.badge === prev.badge && view.stateText === prev.stateText) {
+        return;
+      }
+      prev = view;
+      const icon = btn.querySelector("i");
+      icon.className = "fas " + view.icon;
+      icon.classList.toggle("bcc-health-spin", view.spinning);
+      icon.classList.toggle("bcc-health-down", view.icon === "fa-triangle-exclamation");
+      if (view.badge === null) {
+        badge.hidden = true;
+      } else {
+        badge.hidden = false;
+        badge.textContent = String(view.badge);
+      }
+      const title = statusButtonTitle(view.stateText);
+      btn.title = title;
+      btn.setAttribute("aria-label", title);
+    });
+    return btn;
+  }
+
   // src/footer.ts
   var reloadButtons = [];
   function trackReloadButton(btn) {
@@ -3744,9 +3824,7 @@
     return btn;
   }
   function buildReloadBtn() {
-    return iconBtn("fa-sync", "Chat neu laden", () => {
-      unsafeWindow.bettercc.reloadChat();
-    });
+    return buildStatusButton();
   }
   function buildColorPicker(title, name, defaultColor, onInput) {
     const wrap = document.createElement("label");
@@ -3781,7 +3859,7 @@
     const awayBtn = iconBtn("b2", "Away (/away)", () => sendCommand("/away"));
     const backBtn = iconBtn("b3", "Zur\xFCck (/awayoff)", () => sendCommand("/awayoff"));
     const autoscrollBtn = buildAutoscrollBtn();
-    const reloadBtn = trackReloadButton(buildReloadBtn());
+    const reloadBtn = buildReloadBtn();
     awayBtn.classList.add("bcc-keep");
     backBtn.classList.add("bcc-keep");
     autoscrollBtn.classList.add("bcc-keep");

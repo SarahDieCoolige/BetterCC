@@ -17,6 +17,7 @@ import { getChatNick, sendCommand, leaveChat } from "./upstream";
 import { actionButton } from "./dom";
 import { openSettings } from "./settings";
 import { get, set, react } from "./store";
+import { buildStatusButton } from "./status-button";
 
 // R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
 // (header + footer); track both so a status change is visible in both places.
@@ -77,9 +78,8 @@ function buildAutoscrollBtn(): HTMLButtonElement {
 }
 
 function buildReloadBtn(): HTMLButtonElement {
-  return iconBtn("fa-sync", "Chat neu laden", () => {
-    (unsafeWindow.bettercc as any).reloadChat();
-  });
+  // The status button owns its own appearance via the conn react.
+  return buildStatusButton();
 }
 
 /**
@@ -143,7 +143,7 @@ function buildChatPill(): HTMLElement {
   const awayBtn = iconBtn("b2", "Away (/away)", () => sendCommand("/away"));
   const backBtn = iconBtn("b3", "Zurück (/awayoff)", () => sendCommand("/awayoff"));
   const autoscrollBtn = buildAutoscrollBtn();
-  const reloadBtn = trackReloadButton(buildReloadBtn());
+  const reloadBtn = buildReloadBtn();
   awayBtn.classList.add("bcc-keep");
   backBtn.classList.add("bcc-keep");
   autoscrollBtn.classList.add("bcc-keep");

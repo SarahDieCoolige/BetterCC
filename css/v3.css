@@ -671,6 +671,49 @@
   text-shadow: 0 0 12px currentColor;
 }
 
+/* ─── Health status button (connection indicator on the chat pill reload btn) ─
+   The status button lives inside the chat pill and derives its appearance
+   from conn state: spin during connecting, red triangle on auth-dead, attempt
+   badge when retrying. All classes scoped under bcc-health-*. */
+
+.bcc-icon-btn.bcc-health-btn {
+  position: relative;
+}
+
+/* Spinning icon uses the warn color to signal reconnect in progress. */
+.bcc-health-btn .bcc-health-spin {
+  color: var(--bcc-warn);
+  animation: bcc-health-rotate 1s linear infinite;
+}
+
+/* Auth-dead state: danger color on the warning icon. */
+.bcc-health-btn .bcc-health-down {
+  color: var(--bcc-danger);
+}
+
+/* Attempt badge: small pill pinned to the button's top-right corner. */
+.bcc-health-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  padding: 1px 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  border-radius: 8px;
+  background: var(--bcc-warn);
+  color: #fff;
+  pointer-events: none;
+}
+
+@keyframes bcc-health-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* FontAwesome glyphs for the upstream-style buttons (b1..b16). The element
    carries both .bcc-icon-btn and the .bN class; the <i class="fas ..."> inside
    is replaced by a ::before so the bN glyph wins. */
