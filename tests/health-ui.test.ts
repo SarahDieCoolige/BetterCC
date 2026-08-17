@@ -9,7 +9,9 @@ import {
   shouldShowCritical,
   classifyBootError,
   buildErrorReport,
+  reasonCodeFor,
   bannerView,
+  type ReportFields,
 } from "../src/health-ui";
 import { offlineHintVisible } from "../src/input";
 import { DRAFT_KEY, saveDraft, takeDraft, type StorageLike } from "../src/input";
@@ -28,7 +30,6 @@ import {
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
   TOAST_COPIED,
-  STATE_UNAVAILABLE,
   BANNER_STUCK_TEXT,
   BANNER_OPTICS_TEXT,
   ACTION_RELOAD,
@@ -220,33 +221,81 @@ describe("classifyBootError", () => {
   });
 });
 
-// ─── 9. buildErrorReport (T6) ───────────────────────────────────────────────
+// ─── 9. Diagnostics payload (reworked: English, structured, sliced state) ────
+
+describe("reasonCodeFor", () => {
+  it("maps the structure reason to structure-changed", () => {
+    expect(reasonCodeFor(BOOT_REASON_STRUCTURE)).toBe("structure-changed");
+  });
+
+  it("maps the ws reason to ws-takeover", () => {
+    expect(reasonCodeFor(BOOT_REASON_WS)).toBe("ws-takeover");
+  });
+
+  it("maps anything else to unknown", () => {
+    expect(reasonCodeFor("irgendeine konkrete Fehlermeldung")).toBe("unknown");
+  });
+});
 
 describe("buildErrorReport", () => {
-  it("contains version, title, subject, detail, and state dump", () => {
-    const report = buildErrorReport("3.0.0", "Titel", "Subjekt", "line 42", '{"key":"val"}');
-    expect(report).toContain("BetterCC v3.0.0");
-    expect(report).toContain("Titel");
-    expect(report).toContain("Subjekt");
-    expect(report).toContain("line 42");
-    expect(report).toContain('{"key":"val"}');
+  const full: ReportFields = {
+    version: "3.11.0",
+    context: "boot",
+    reason: "structure-changed",
+    error: "TypeError: cannot read properties of null",
+    stack: "line1\nline2",
+    url: "https://www.chatcity.de/cpop.html",
+    userAgent: "Mozilla/5.0 test",
+    time: "2026-08-17T15:00:00.000Z",
+    state: {
+      conn: { phase: "connecting" },
+      bccHealth: { bootError: "x" },
+      freshness: { ulistAt: 1 },
+    },
+  };
+
+  it("emits key:value lines in a fixed order", () => {
+    const lines = buildErrorReport(full).split("\n");
+    expect(lines[0]).toBe("BetterCC v3.11.0");
+    expect(lines.slice(1)).toEqual([
+      "context: boot",
+      "reason: structure-changed",
+      "error: TypeError: cannot read properties of null",
+      "stack: line1",
+      "line2",
+      "url: https://www.chatcity.de/cpop.html",
+      "ua: Mozilla/5.0 test",
+      "time: 2026-08-17T15:00:00.000Z",
+      'conn: {"phase":"connecting"}',
+      'bccHealth: {"bootError":"x"}',
+      'freshness: {"ulistAt":1}',
+    ]);
   });
 
-  it("skips null detail", () => {
-    const report = buildErrorReport("3.0.0", "Titel", "Subjekt", null, '{"key":"val"}');
-    expect(report).not.toContain("null");
-    expect(report).toContain("BetterCC v3.0.0");
+  it("omits the error and stack lines when null", () => {
+    const report = buildErrorReport({ ...full, error: null, stack: null });
+    expect(report).not.toContain("error:");
+    expect(report).not.toContain("stack:");
+    expect(report).toContain("reason: structure-changed");
   });
 
-  it("uses STATE_UNAVAILABLE when stateDump is null", () => {
-    const report = buildErrorReport("3.0.0", "Titel", "Subjekt", null, null);
-    expect(report).toContain(STATE_UNAVAILABLE);
+  it("writes one compact JSON line per state key", () => {
+    const report = buildErrorReport(full);
+    expect(report).toContain('\nconn: {"phase":"connecting"}');
+    expect(report.split("\n").filter((l) => l.startsWith("conn:"))).toHaveLength(1);
   });
 
-  it("each field is on its own line (newline-separated)", () => {
-    const report = buildErrorReport("1.0", "T", "S", "D", "ST");
-    const lines = report.split("\n");
-    expect(lines.length).toBeGreaterThanOrEqual(4);
+  it("falls back to a single unavailable line when the store never initialized", () => {
+    const report = buildErrorReport({ ...full, state: null });
+    expect(report).toContain("state: unavailable");
+    expect(report).not.toContain("conn:");
+    expect(report).not.toContain("bccHealth:");
+    expect(report).not.toContain("freshness:");
+  });
+
+  it("contains no German words from the UI copy", () => {
+    const report = buildErrorReport({ ...full, reason: "unknown" });
+    expect(report).not.toMatch(/Zustand|könnte nicht starten|Seitenstruktur/);
   });
 });
 
@@ -295,10 +344,6 @@ describe("T6 health-strings conformance", () => {
 
   it("TOAST_COPIED matches verbatim", () => {
     expect(TOAST_COPIED).toBe("Kopiert.");
-  });
-
-  it("STATE_UNAVAILABLE matches verbatim", () => {
-    expect(STATE_UNAVAILABLE).toBe("Zustand nicht verf\u00fcgbar");
   });
 });
 

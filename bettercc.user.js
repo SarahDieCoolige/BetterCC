@@ -814,7 +814,6 @@
   var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
   var ACTION_COPY_ERROR = "Fehler kopieren";
   var TOAST_COPIED = "Kopiert.";
-  var STATE_UNAVAILABLE = "Zustand nicht verf\xFCgbar";
   var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
   var BANNER_OPTICS_TEXT = "BetterCC-Optik fehlt \u2014 Chat l\xE4uft normal";
   var ACTION_RELOAD = "Neu laden";
@@ -4060,19 +4059,46 @@
     if (err instanceof Error) return err.message;
     return String(err);
   }
-  function buildErrorReport(version, title, subject, detail, stateDump) {
-    const lines = [];
-    lines.push("BetterCC v" + version);
-    lines.push(title);
-    lines.push(subject);
-    if (detail !== null) lines.push(detail);
-    if (stateDump !== null) {
-      lines.push("Zustand:");
-      lines.push(stateDump);
+  function reasonCodeFor(reason) {
+    if (reason === BOOT_REASON_STRUCTURE) return "structure-changed";
+    if (reason === BOOT_REASON_WS) return "ws-takeover";
+    return "unknown";
+  }
+  function buildErrorReport(f) {
+    const lines = ["BetterCC v" + f.version, "context: " + f.context, "reason: " + f.reason];
+    if (f.error !== null) lines.push("error: " + f.error);
+    if (f.stack !== null) lines.push("stack: " + f.stack);
+    lines.push("url: " + f.url, "ua: " + f.userAgent, "time: " + f.time);
+    if (f.state === null) {
+      lines.push("state: unavailable");
     } else {
-      lines.push("Zustand: " + STATE_UNAVAILABLE);
+      lines.push(
+        "conn: " + JSON.stringify(f.state.conn),
+        "bccHealth: " + JSON.stringify(f.state.bccHealth),
+        "freshness: " + JSON.stringify(f.state.freshness)
+      );
     }
     return lines.join("\n");
+  }
+  function reportFields(context, reason, error, stack) {
+    let state = null;
+    try {
+      const s = snapshot();
+      state = { conn: s.conn, bccHealth: s.bccHealth, freshness: s.freshness };
+    } catch {
+      state = null;
+    }
+    return {
+      version: GM_info.script.version,
+      context,
+      reason,
+      error,
+      stack,
+      url: location.href,
+      userAgent: navigator.userAgent,
+      time: (/* @__PURE__ */ new Date()).toISOString(),
+      state
+    };
   }
   async function copyText(text) {
     try {
@@ -4218,23 +4244,16 @@
   }
   var bootCardShown = false;
   var bootCardDismissed = false;
-  function showBootCard(reason, detail) {
+  function showBootCard(reason, error, stack) {
     if (bootCardShown || bootCardDismissed) return;
     bootCardShown = true;
-    const title = CARD_BOOT_TITLE;
     const text = reason + "\n\n" + CARD_BOOT_RUNS_ON;
-    let stateDump = null;
-    try {
-      stateDump = JSON.stringify(snapshot(), null, 2);
-    } catch {
-      stateDump = null;
-    }
-    const overlay = buildShellLessCard(title, text, [
+    const overlay = buildShellLessCard(CARD_BOOT_TITLE, text, [
       {
         label: ACTION_COPY_DETAILS,
         onClick: () => {
           void copyText(
-            buildErrorReport(GM_info.script.version, title, reason, detail, stateDump)
+            buildErrorReport(reportFields("boot", reasonCodeFor(reason), error, stack))
           ).then((ok) => {
             if (ok) showCopiedToast();
             else cclog("copy failed", "health");
@@ -4254,8 +4273,9 @@
   function handleBootFailure(err) {
     const reason = classifyBootError(err);
     cclog("boot failure: " + reason, "health");
-    const detail = err instanceof Error ? err.stack || err.message : String(err);
-    showBootCard(reason, detail);
+    const error = err instanceof Error ? err.name + ": " + err.message : String(err);
+    const stack = err instanceof Error ? err.stack || null : null;
+    showBootCard(reason, error, stack);
     reportBootError(reason);
   }
   function buildBanner(text) {
@@ -4330,26 +4350,16 @@
     react("bccHealth", (h) => {
       const health = h;
       renderBanner();
-      if (health.bootError) showBootCard(health.bootError, null);
+      if (health.bootError) showBootCard(health.bootError, null, null);
       if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
       sendBrokenShown = true;
-      let stateDump = null;
-      try {
-        stateDump = JSON.stringify(snapshot(), null, 2);
-      } catch {
-        stateDump = null;
-      }
       const overlay = buildShellLessCard(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [
         {
           label: ACTION_COPY_ERROR,
           onClick: () => {
             void copyText(
               buildErrorReport(
-                GM_info.script.version,
-                CARD_SEND_BROKEN_TITLE,
-                health.sendPathBroken,
-                null,
-                stateDump
+                reportFields("send-path", "send-path-broken", health.sendPathBroken, null)
               )
             ).then((ok) => {
               if (ok) showCopiedToast();

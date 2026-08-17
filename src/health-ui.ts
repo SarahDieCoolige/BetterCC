@@ -18,6 +18,7 @@ import {
   ACTION_LATER,
   CARD_BOOT_TITLE,
   BOOT_REASON_STRUCTURE,
+  BOOT_REASON_WS,
   CARD_BOOT_RUNS_ON,
   ACTION_COPY_DETAILS,
   ACTION_CONTINUE_CHAT,
@@ -25,7 +26,6 @@ import {
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
   TOAST_COPIED,
-  STATE_UNAVAILABLE,
   BANNER_STUCK_TEXT,
   BANNER_OPTICS_TEXT,
   ACTION_RELOAD,
@@ -68,27 +68,71 @@ export function classifyBootError(err: unknown): string {
 
 // BOOT_REASON_WS stays unconsumed for now; hookChatoutConnect only logs a warning today.
 
-// ─── Error report builder (T6) ────────────────────────────────────────────────
+// ─── Diagnostics payload (reworked: English, structured, for bug reports) ────
 
-export function buildErrorReport(
-  version: string,
-  title: string,
-  subject: string,
-  detail: string | null,
-  stateDump: string | null,
-): string {
-  const lines: string[] = [];
-  lines.push("BetterCC v" + version);
-  lines.push(title);
-  lines.push(subject);
-  if (detail !== null) lines.push(detail);
-  if (stateDump !== null) {
-    lines.push("Zustand:");
-    lines.push(stateDump);
+/** Machine-readable reason code. The German strings are for the cards; the
+ * report stays English so a pasted payload is grep-able and unambiguous. */
+export function reasonCodeFor(reason: string): string {
+  if (reason === BOOT_REASON_STRUCTURE) return "structure-changed";
+  if (reason === BOOT_REASON_WS) return "ws-takeover";
+  return "unknown";
+}
+
+export interface ReportFields {
+  version: string;
+  context: string; // "boot" | "send-path"
+  reason: string;
+  error: string | null; // "Name: message" of the real error, never a translation
+  stack: string | null;
+  url: string;
+  userAgent: string;
+  time: string;
+  state: { conn: unknown; bccHealth: unknown; freshness: unknown } | null;
+}
+
+export function buildErrorReport(f: ReportFields): string {
+  const lines = ["BetterCC v" + f.version, "context: " + f.context, "reason: " + f.reason];
+  if (f.error !== null) lines.push("error: " + f.error);
+  if (f.stack !== null) lines.push("stack: " + f.stack);
+  lines.push("url: " + f.url, "ua: " + f.userAgent, "time: " + f.time);
+  if (f.state === null) {
+    lines.push("state: unavailable");
   } else {
-    lines.push("Zustand: " + STATE_UNAVAILABLE);
+    lines.push(
+      "conn: " + JSON.stringify(f.state.conn),
+      "bccHealth: " + JSON.stringify(f.state.bccHealth),
+      "freshness: " + JSON.stringify(f.state.freshness),
+    );
   }
   return lines.join("\n");
+}
+
+/** Gather the environment facts around an error. Store slice only: settings
+ * like color or pinned users are noise in a bug report. */
+function reportFields(
+  context: string,
+  reason: string,
+  error: string | null,
+  stack: string | null,
+): ReportFields {
+  let state: ReportFields["state"] = null;
+  try {
+    const s = snapshot() as Record<string, unknown>;
+    state = { conn: s.conn, bccHealth: s.bccHealth, freshness: s.freshness };
+  } catch {
+    state = null; // store may not be initialized if initStore itself threw
+  }
+  return {
+    version: GM_info.script.version,
+    context,
+    reason,
+    error,
+    stack,
+    url: location.href,
+    userAgent: navigator.userAgent,
+    time: new Date().toISOString(),
+    state,
+  };
 }
 
 // ─── Clipboard with fallback (T6) ────────────────────────────────────────────
@@ -273,25 +317,18 @@ function buildShellLessCard(title: string, text: string, actions: CardAction[]):
 let bootCardShown = false;
 let bootCardDismissed = false;
 
-function showBootCard(reason: string, detail: string | null): void {
+function showBootCard(reason: string, error: string | null, stack: string | null): void {
   if (bootCardShown || bootCardDismissed) return;
   bootCardShown = true;
 
-  const title = CARD_BOOT_TITLE;
   const text = reason + "\n\n" + CARD_BOOT_RUNS_ON;
-  let stateDump: string | null = null;
-  try {
-    stateDump = JSON.stringify(snapshot(), null, 2);
-  } catch {
-    stateDump = null;
-  }
 
-  const overlay = buildShellLessCard(title, text, [
+  const overlay = buildShellLessCard(CARD_BOOT_TITLE, text, [
     {
       label: ACTION_COPY_DETAILS,
       onClick: () => {
         void copyText(
-          buildErrorReport(GM_info.script.version, title, reason, detail, stateDump),
+          buildErrorReport(reportFields("boot", reasonCodeFor(reason), error, stack)),
         ).then((ok) => {
           if (ok) showCopiedToast();
           else cclog("copy failed", "health");
@@ -313,8 +350,9 @@ function showBootCard(reason: string, detail: string | null): void {
 export function handleBootFailure(err: unknown): void {
   const reason = classifyBootError(err);
   cclog("boot failure: " + reason, "health");
-  const detail = err instanceof Error ? err.stack || err.message : String(err);
-  showBootCard(reason, detail);
+  const error = err instanceof Error ? err.name + ": " + err.message : String(err);
+  const stack = err instanceof Error ? err.stack || null : null;
+  showBootCard(reason, error, stack);
   reportBootError(reason);
 }
 
@@ -412,17 +450,10 @@ export function mountHealthUi(): void {
 
     // Banner (injection-degraded) + B1 boot card from store latch.
     renderBanner();
-    if (health.bootError) showBootCard(health.bootError, null);
+    if (health.bootError) showBootCard(health.bootError, null, null);
 
     if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
     sendBrokenShown = true;
-
-    let stateDump: string | null = null;
-    try {
-      stateDump = JSON.stringify(snapshot(), null, 2);
-    } catch {
-      stateDump = null;
-    }
 
     const overlay = buildShellLessCard(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [
       {
@@ -430,11 +461,7 @@ export function mountHealthUi(): void {
         onClick: () => {
           void copyText(
             buildErrorReport(
-              GM_info.script.version,
-              CARD_SEND_BROKEN_TITLE,
-              health.sendPathBroken!,
-              null,
-              stateDump,
+              reportFields("send-path", "send-path-broken", health.sendPathBroken!, null),
             ),
           ).then((ok) => {
             if (ok) showCopiedToast();
