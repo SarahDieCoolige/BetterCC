@@ -636,6 +636,9 @@ describe("snapshot()", () => {
     "session",
     "userlist",
     "globalUserlist",
+    "conn",
+    "bccHealth",
+    "freshness",
   ] as const;
 
   it("returns a property for every registered key", async () => {
@@ -710,5 +713,43 @@ describe("snapshot()", () => {
 
   it("throws before initStore", () => {
     expect(() => snapshot()).toThrow("store not initialized");
+  });
+});
+
+describe("store — health-related ephemeral defaults", () => {
+  let gm: ReturnType<typeof installGmFakeWithListeners>;
+
+  beforeEach(() => {
+    _resetStoreForTesting();
+    gm = installGmFakeWithListeners();
+  });
+
+  it("conn defaults to initial connecting state", async () => {
+    await initTestStore(gm);
+
+    expect(get("conn")).toEqual({
+      phase: "connecting",
+      attempt: 0,
+      since: 0,
+      lastMessageAt: 0,
+      notice: "",
+    });
+  });
+
+  it("bccHealth defaults to all-clear", async () => {
+    await initTestStore(gm);
+
+    expect(get("bccHealth")).toEqual({
+      bootError: null,
+      sendPathBroken: null,
+      injectionDegraded: false,
+      signalsDegraded: false,
+    });
+  });
+
+  it("freshness defaults to zero stamps", async () => {
+    await initTestStore(gm);
+
+    expect(get("freshness")).toEqual({ ulistAt: 0, awAt: 0, statsAt: 0 });
   });
 });

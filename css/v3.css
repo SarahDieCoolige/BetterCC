@@ -37,6 +37,10 @@
      derived, large-text AA against the sidebar). Fallbacks only; the live values
      come from generateScheme so the indicators stay readable on any theme. */
   --bcc-text-away: #6b7780;
+  /* Semantic severity colors — fixed hues; schemes never regenerate these. */
+  --bcc-ok: #2f9e44;
+  --bcc-warn: #e8890c;
+  --bcc-danger: #e03131;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

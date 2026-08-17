@@ -5,6 +5,7 @@
 // touches GM.
 
 import { getUserKey, cclog } from "./utils";
+import type { ConnState, BccHealthState, FreshnessState } from "./health-core";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,9 @@ export type Ephemeral = {
     added: UserWithChannel[];
     removed: UserWithChannel[];
   };
+  conn: ConnState;
+  bccHealth: BccHealthState;
+  freshness: FreshnessState;
 };
 
 export type StoreKey = keyof Persisted | keyof Ephemeral;
@@ -120,6 +124,34 @@ const codecs: { [K in StoreKey]: Codec<any> } = {
     encode: (v) => v,
     decode: () => ({ channels: new Map(), added: [], removed: [] }),
     default: { channels: new Map(), added: [], removed: [] },
+    persisted: false,
+  },
+  conn: {
+    encode: (v) => v,
+    decode: () => ({ phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" }),
+    default: { phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" },
+    persisted: false,
+  },
+  bccHealth: {
+    encode: (v) => v,
+    decode: () => ({
+      bootError: null,
+      sendPathBroken: null,
+      injectionDegraded: false,
+      signalsDegraded: false,
+    }),
+    default: {
+      bootError: null,
+      sendPathBroken: null,
+      injectionDegraded: false,
+      signalsDegraded: false,
+    },
+    persisted: false,
+  },
+  freshness: {
+    encode: (v) => v,
+    decode: () => ({ ulistAt: 0, awAt: 0, statsAt: 0 }),
+    default: { ulistAt: 0, awAt: 0, statsAt: 0 },
     persisted: false,
   },
 };
