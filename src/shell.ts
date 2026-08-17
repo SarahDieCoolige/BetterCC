@@ -18,6 +18,7 @@
 
 import { cclog } from "./utils";
 import { isAuthDead, getChatoutWs } from "./upstream";
+import { stashDraft } from "./input";
 
 /**
  * Build the v3 shell: Grid container, moved chatframe, hidden table, header
@@ -91,6 +92,7 @@ export function buildShell(): boolean {
 export function reloadChat(): void {
   if (isAuthDead()) {
     cclog("reloadChat: auth_dead, doing full page reload", "v3");
+    stashDraft(); // draft survives the reload via sessionStorage
     location.reload();
     return;
   }

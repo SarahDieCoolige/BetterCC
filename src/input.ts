@@ -12,6 +12,30 @@ import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
 import { get, set, react } from "./store";
 
+// ─── Draft preservation (T5) ────────────────────────────────────────────────
+
+export interface StorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+export const DRAFT_KEY = "bcc_draft";
+
+/** Persist the draft; an empty draft clears the key so no stale text resurrects. */
+export function saveDraft(storage: StorageLike, value: string): void {
+  if (value.trim() === "") storage.removeItem(DRAFT_KEY);
+  else storage.setItem(DRAFT_KEY, value);
+}
+
+/** Read the draft once and clear it. Returns "" when none exists. */
+export function takeDraft(storage: StorageLike): string {
+  const v = storage.getItem(DRAFT_KEY);
+  if (v === null) return "";
+  storage.removeItem(DRAFT_KEY);
+  return v;
+}
+
 let textarea: HTMLTextAreaElement | null = null;
 let onSubmitOrig: ((...args: any[]) => any) | null = null;
 let currentWhisperNick = "";
@@ -236,6 +260,10 @@ export function mountInput(): void {
   });
   inputArea.appendChild(textarea);
 
+  // Restore any draft from the previous page (survives full reload via sessionStorage).
+  const draft = takeDraft(sessionStorage);
+  if (draft) textarea.value = draft;
+
   // ── Send contract — reuse the hold form's patched onsubmit (O1) ──────
   // buildPatchedHandler surfaces an upstream needle change as a thrown error
   // instead of silently dropping the /w away-timer reset (review O1).
@@ -280,4 +308,9 @@ function updatePlaceholder(): void {
   } else {
     textarea.placeholder = compact ? PLACEHOLDER_COMPACT_ALL : PLACEHOLDER_ALL;
   }
+}
+
+/** Stash the current textarea content. Called before a full page reload. */
+export function stashDraft(): void {
+  saveDraft(sessionStorage, textarea?.value ?? "");
 }

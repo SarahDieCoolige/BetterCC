@@ -44,6 +44,7 @@ import { initSession, getSession } from "./session";
 import { initHealth } from "./health";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
+import { mountHealthUi } from "./health-ui";
 import { initStore, on, snapshot } from "./store";
 
 /**
@@ -180,4 +181,7 @@ export async function initV3(): Promise<void> {
   // Mount the footer — pills (reload, autoscroll, help, settings stub, exit),
   // Font Awesome CDN, online count, and chatout_setstatus → reload button color.
   mountFooter();
+
+  // Critical surfaces react to conn; needs the shell DOM.
+  mountHealthUi();
 }
