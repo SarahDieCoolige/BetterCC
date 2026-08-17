@@ -217,7 +217,7 @@ describe("send-echo watchdog", () => {
     vi.resetModules();
   });
 
-  it("arm sets conn.lastSendAt > 0", async () => {
+  it("arm sets conn.pendingSendAt > 0", async () => {
     const health = await import("../src/health");
     const store = await import("../src/store");
 
@@ -227,7 +227,7 @@ describe("send-echo watchdog", () => {
     ws.emit("open");
 
     health.armSendEcho();
-    expect(store.get("conn").lastSendAt).toBeGreaterThan(0);
+    expect(store.get("conn").pendingSendAt).toBeGreaterThan(0);
   });
 
   it("disarm: arm, advance 9s, stampConnMessage, advance past 10s total → no zombie", async () => {
@@ -297,7 +297,7 @@ describe("send-echo watchdog", () => {
     expect(ui.zombie).toBe(true);
   });
 
-  it("healthy echo never fires: arm, advance 2s, stamp, advance 60s → no zombie, lastSendAt 0", async () => {
+  it("healthy echo never fires: arm, advance 2s, stamp, advance 60s → no zombie, pendingSendAt 0", async () => {
     const health = await import("../src/health");
     const store = await import("../src/store");
     const { deriveUiState } = await import("../src/health-core");
@@ -312,7 +312,7 @@ describe("send-echo watchdog", () => {
     vi.advanceTimersByTime(60_000);
 
     const conn = store.get("conn");
-    expect(conn.lastSendAt).toBe(0);
+    expect(conn.pendingSendAt).toBe(0);
 
     const ui = deriveUiState(
       conn,
@@ -320,5 +320,66 @@ describe("send-echo watchdog", () => {
       vi.getMockedSystemTime().getTime(),
     );
     expect(ui.zombie).toBe(false);
+  });
+
+  it("re-send after fire does not clear zombie: deadline stays, banner survives", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+    const { deriveUiState } = await import("../src/health-core");
+
+    const ws = new FakeWS();
+    health.attachConnListeners(ws as unknown as WebSocket);
+    ws.emit("open");
+
+    health.armSendEcho();
+    vi.advanceTimersByTime(10_001); // fire: zombie
+    const firstDeadline = store.get("conn").pendingSendAt;
+
+    // User sends again into the silent socket: no new deadline, no blink.
+    health.armSendEcho();
+    expect(store.get("conn").pendingSendAt).toBe(firstDeadline);
+    vi.advanceTimersByTime(5_000);
+
+    const ui = deriveUiState(
+      store.get("conn"),
+      { ulistAt: 0, awAt: 0, statsAt: 0 },
+      vi.getMockedSystemTime().getTime(),
+    );
+    expect(ui.zombie).toBe(true);
+
+    // Only an inbound message clears it.
+    health.stampConnMessage();
+    const after = deriveUiState(
+      store.get("conn"),
+      { ulistAt: 0, awAt: 0, statsAt: 0 },
+      vi.getMockedSystemTime().getTime(),
+    );
+    expect(after.zombie).toBe(false);
+  });
+
+  it("re-send before fire keeps the original deadline: fires at the first send's 10s", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+    const { deriveUiState } = await import("../src/health-core");
+
+    const ws = new FakeWS();
+    health.attachConnListeners(ws as unknown as WebSocket);
+    ws.emit("open");
+
+    health.armSendEcho();
+    vi.advanceTimersByTime(5_000);
+    health.armSendEcho(); // second send 5s in: must not reset the clock
+    const firstDeadline = store.get("conn").pendingSendAt;
+
+    // Another 5s = 10s past the FIRST send: zombie already fires here.
+    vi.advanceTimersByTime(5_001);
+    expect(store.get("conn").pendingSendAt).toBe(firstDeadline);
+
+    const ui = deriveUiState(
+      store.get("conn"),
+      { ulistAt: 0, awAt: 0, statsAt: 0 },
+      vi.getMockedSystemTime().getTime(),
+    );
+    expect(ui.zombie).toBe(true);
   });
 });

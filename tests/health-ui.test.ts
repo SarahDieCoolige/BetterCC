@@ -425,40 +425,40 @@ describe("bannerView", () => {
   });
 
   // Zombie (A5): connected + overdue send → zombie banner
-  it("returns zombie text when connected + lastSendAt overdue (> 10s)", () => {
+  it("returns zombie text when connected + pendingSendAt overdue (> 10s)", () => {
     const now = Date.now();
     const conn: ConnState = {
       phase: "connected",
       attempt: 0,
       since: now - 20_000,
       lastMessageAt: now - 20_000,
-      lastSendAt: now - 11_000,
+      pendingSendAt: now - 11_000,
       notice: "",
     };
     expect(bannerView(conn, false, now)).toBe(BANNER_ZOMBIE_TEXT);
   });
 
-  it("returns null when connected + lastSendAt within 10s", () => {
+  it("returns null when connected + pendingSendAt within 10s", () => {
     const now = Date.now();
     const conn: ConnState = {
       phase: "connected",
       attempt: 0,
       since: now - 20_000,
       lastMessageAt: now - 20_000,
-      lastSendAt: now - 5_000,
+      pendingSendAt: now - 5_000,
       notice: "",
     };
     expect(bannerView(conn, false, now)).toBeNull();
   });
 
-  it("returns null when connected + lastSendAt = 0 (no send)", () => {
+  it("returns null when connected + pendingSendAt = 0 (no send)", () => {
     const now = Date.now();
     const conn: ConnState = {
       phase: "connected",
       attempt: 0,
       since: now - 20_000,
       lastMessageAt: now - 20_000,
-      lastSendAt: 0,
+      pendingSendAt: 0,
       notice: "",
     };
     expect(bannerView(conn, false, now)).toBeNull();
@@ -471,7 +471,7 @@ describe("bannerView", () => {
       attempt: 0,
       since: now - 20_000,
       lastMessageAt: now - 20_000,
-      lastSendAt: now - 11_000,
+      pendingSendAt: now - 11_000,
       notice: "",
     };
     expect(bannerView(conn, true, now)).toBe(BANNER_ZOMBIE_TEXT);
@@ -484,7 +484,7 @@ describe("bannerView", () => {
       attempt: 1,
       since: now - 20_000,
       lastMessageAt: 0,
-      lastSendAt: now - 11_000,
+      pendingSendAt: now - 11_000,
       notice: "",
     };
     expect(bannerView(conn, false, now)).toBeNull();

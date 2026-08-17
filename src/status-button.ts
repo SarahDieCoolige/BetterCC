@@ -31,7 +31,7 @@ export function buttonView(conn: ConnState, now: number = Date.now()): ButtonVie
     };
   }
   if (conn.phase === "connected") {
-    if (conn.lastSendAt > 0 && now - conn.lastSendAt > ECHO_TIMEOUT_MS) {
+    if (conn.pendingSendAt > 0 && now - conn.pendingSendAt > ECHO_TIMEOUT_MS) {
       return {
         icon: "fa-triangle-exclamation",
         spinning: false,

@@ -52,8 +52,8 @@ export function bannerView(
 ): string | null {
   if (
     conn.phase === "connected" &&
-    conn.lastSendAt > 0 &&
-    now - conn.lastSendAt > ECHO_TIMEOUT_MS
+    conn.pendingSendAt > 0 &&
+    now - conn.pendingSendAt > ECHO_TIMEOUT_MS
   ) {
     return BANNER_ZOMBIE_TEXT;
   }

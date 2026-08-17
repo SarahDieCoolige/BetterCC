@@ -93,8 +93,12 @@ function clearEchoTimer(): void {
 }
 
 export function armSendEcho(): void {
-  clearEchoTimer();
+  // A send is already awaiting its echo: keep that deadline. Re-arming here
+  // would push the fire time back and blink the zombie banner away for
+  // another quiet window (the state stays zombie, nothing needs a timer).
+  if (get("conn").pendingSendAt > 0) return;
   applyConnEvent({ type: "send", at: Date.now() });
+  clearEchoTimer();
   echoTimer = setTimeout(() => {
     echoTimer = null;
     set("conn", { ...get("conn") });

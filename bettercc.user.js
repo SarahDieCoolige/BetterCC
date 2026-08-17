@@ -516,7 +516,7 @@
         attempt: 0,
         since: 0,
         lastMessageAt: 0,
-        lastSendAt: 0,
+        pendingSendAt: 0,
         notice: ""
       }),
       default: {
@@ -524,7 +524,7 @@
         attempt: 0,
         since: 0,
         lastMessageAt: 0,
-        lastSendAt: 0,
+        pendingSendAt: 0,
         notice: ""
       },
       persisted: false
@@ -739,21 +739,21 @@
     if (prev.phase === "authdead") return prev;
     switch (ev.type) {
       case "open":
-        return { ...prev, phase: "connected", attempt: 0, since: ev.at, lastSendAt: 0 };
+        return { ...prev, phase: "connected", attempt: 0, since: ev.at, pendingSendAt: 0 };
       case "close":
         return {
           ...prev,
           phase: "connecting",
           attempt: prev.attempt + 1,
           since: ev.at,
-          lastSendAt: 0
+          pendingSendAt: 0
         };
       case "authdead":
         return { ...prev, phase: "authdead", since: ev.at };
       case "message":
-        return { ...prev, lastMessageAt: ev.at, lastSendAt: 0 };
+        return { ...prev, lastMessageAt: ev.at, pendingSendAt: 0 };
       case "send":
-        return { ...prev, lastSendAt: ev.at };
+        return { ...prev, pendingSendAt: prev.pendingSendAt > 0 ? prev.pendingSendAt : ev.at };
       case "notice":
         return { ...prev, notice: ev.text };
     }
@@ -816,8 +816,9 @@
     }
   }
   function armSendEcho() {
-    clearEchoTimer();
+    if (get("conn").pendingSendAt > 0) return;
     applyConnEvent({ type: "send", at: Date.now() });
+    clearEchoTimer();
     echoTimer = setTimeout(() => {
       echoTimer = null;
       set("conn", { ...get("conn") });
@@ -3848,7 +3849,7 @@
       };
     }
     if (conn.phase === "connected") {
-      if (conn.lastSendAt > 0 && now - conn.lastSendAt > ECHO_TIMEOUT_MS) {
+      if (conn.pendingSendAt > 0 && now - conn.pendingSendAt > ECHO_TIMEOUT_MS) {
         return {
           icon: "fa-triangle-exclamation",
           spinning: false,
@@ -4101,7 +4102,7 @@
     return conn.phase === "authdead" && !dismissed;
   }
   function bannerView(conn, injectionDegraded, now) {
-    if (conn.phase === "connected" && conn.lastSendAt > 0 && now - conn.lastSendAt > ECHO_TIMEOUT_MS) {
+    if (conn.phase === "connected" && conn.pendingSendAt > 0 && now - conn.pendingSendAt > ECHO_TIMEOUT_MS) {
       return BANNER_ZOMBIE_TEXT;
     }
     if (injectionDegraded) return BANNER_OPTICS_TEXT;
