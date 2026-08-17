@@ -1,4 +1,4 @@
-// Tests for health-core.ts — pure connection-state machine and UI derivation.
+// Tests for health-core.ts: pure connection-state machine and UI derivation.
 //
 // Zero imports from the store, DOM, or upstream. Tests pin: full transition
 // table for nextConn (including authdead latch), deriveUiState boundaries,
@@ -73,7 +73,7 @@ describe("nextConn — open transitions", () => {
       { phase: "authdead", attempt: 5, since: 999, lastMessageAt: 800, notice: "dead" },
       at(1000),
     );
-    // authdead is terminal — open is ignored
+    // authdead is terminal, open is ignored
     expect(fromAuthdead.phase).toBe("authdead");
     expect(fromAuthdead.since).toBe(999);
   });

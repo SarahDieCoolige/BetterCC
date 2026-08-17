@@ -1,5 +1,5 @@
 // Tests for the health wiring module: attachConnListeners, stampConnMessage, initHealth.
-// Impure (WS listeners, store reads/writes) — tested at the boundary with a fake WS
+// Impure (WS listeners, store reads/writes), tested at the boundary with a fake WS
 // and the module-registry pattern from ulist-poll.test.ts.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -30,7 +30,7 @@ async function initTestStore() {
   return store;
 }
 
-// Minimal WS fake — no real networking, just event dispatch.
+// Minimal WS fake: no real networking, just event dispatch.
 class FakeWS {
   readyState = 0; // CONNECTING
   private listeners = new Map<string, Array<() => void>>();
@@ -111,7 +111,7 @@ describe("health wiring", () => {
     const store = await import("../src/store");
 
     const ws = new FakeWS();
-    ws.readyState = 1; // OPEN — the open event already fired before we attached
+    ws.readyState = 1; // OPEN; the open event already fired before we attached
     health.attachConnListeners(ws as unknown as WebSocket);
 
     const conn = store.get("conn");
@@ -163,7 +163,7 @@ describe("health wiring", () => {
   it("authDead already true at init: latches immediately without waiting for session change", async () => {
     const store = await import("../src/store");
 
-    // Set session with authDead true BEFORE initHealth — simulates
+    // Set session with authDead true BEFORE initHealth; simulates
     // initSession's initial set firing before the subscription exists.
     await store.set("session", {
       nick: "TestUser",

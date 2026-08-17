@@ -1,7 +1,7 @@
 // ─── Health wiring: drives the conn store key from real WebSocket events ───
 //
 // Impure counterpart to health-core. Sets facts, never renders. No DOM, no
-// unsafeWindow — the ws arrives as a parameter from ws-hook.
+// unsafeWindow; the ws arrives as a parameter from ws-hook.
 
 import { get, set, on } from "./store";
 import { cclog } from "./utils";
@@ -15,11 +15,7 @@ function applyConnEvent(ev: ConnEvent): void {
   set("conn", nextConn(prev, ev));
 }
 
-/**
- * Attach open/close listeners on the given WebSocket and drive the conn
- * store key. Idempotent per ws reference — safe to call on every
- * chatout_connect re-invocation.
- */
+/** Wire open/close on this ws into the conn store key. Idempotent per ws reference. */
 export function attachConnListeners(ws: WebSocket): void {
   if (ws === lastWs) return;
   lastWs = ws;
@@ -39,24 +35,20 @@ export function attachConnListeners(ws: WebSocket): void {
   }
 }
 
-/** Record a message arrival timestamp on the conn state. */
 export function stampConnMessage(): void {
   applyConnEvent({ type: "message", at: Date.now() });
 }
 
 /**
- * Subscribe to session changes for authDead detection, and check the
- * current snapshot at call time (initSession's initial set fires before
- * this subscription exists — the check catches it).
+ * Watch session for authDead. The init-time read matters: initSession's
+ * initial set fires before this subscription exists.
  */
 export function initHealth(): void {
-  // Init-time check: authDead may already be true when we get here.
   const cur = get("session");
   if (cur.authDead) {
     applyConnEvent({ type: "authdead", at: Date.now() });
   }
 
-  // React to future session changes.
   on("session", (s) => {
     if (s.authDead) {
       applyConnEvent({ type: "authdead", at: Date.now() });

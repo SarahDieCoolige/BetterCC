@@ -1,6 +1,6 @@
 // ─── Health core: connection state machine + UI derivation ────────────────
 //
-// Pure module — imports only the cadences leaf; nothing from store, DOM, or
+// Pure module: imports only the cadences leaf; nothing from store, DOM, or
 // upstream. The state machine models the WebSocket lifecycle; deriveUiState
 // turns current state into booleans the health bar / status strip can render.
 
@@ -52,12 +52,12 @@ export const STALE_FACTOR = 3;
 /** Floor for the stale threshold so short-poll sources aren't too noisy. */
 export const STALE_MIN_MS = 30_000;
 
-// Nominal poll intervals live in cadences.ts — single source shared with the
-// poll loops themselves.
+// Nominal poll intervals live in cadences.ts, shared with the poll loops
+// themselves.
 
 // ─── State machine ────────────────────────────────────────────────────────
 
-/** Advance connection state by one event. Authdead is terminal — nothing changes it. */
+/** Advance connection state by one event. Authdead is terminal: nothing changes it. */
 export function nextConn(prev: ConnState, ev: ConnEvent): ConnState {
   if (prev.phase === "authdead") return prev;
 
@@ -82,7 +82,7 @@ function staleThreshold(interval: number): number {
 }
 
 function isStale(stamp: number, now: number, interval: number): boolean {
-  if (stamp === 0) return false; // never succeeded — boot phase
+  if (stamp === 0) return false; // never succeeded: boot
   return now - stamp > staleThreshold(interval);
 }
 

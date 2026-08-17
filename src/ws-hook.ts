@@ -101,7 +101,7 @@ export function injectIntoChatframe(): void {
 }
 
 export function betterccOnWsMessage(ev: MessageEvent): void {
-  // 0. Stamp message arrival — a fact even if upstream's handler throws.
+  // 0. Stamp message arrival, a fact even if upstream's handler throws.
   stampConnMessage();
 
   // 1. Call upstream's handler first — preserves contentDocument.write(ev.data)

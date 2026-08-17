@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=b8cc9c52
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=c025fe02
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -710,11 +710,11 @@
 
   // src/cadences.ts
   var POLL_CADENCES = {
-    /** Current-channel userlist (ulist-poll.ts) — replaces upstream's 20s get_info timer. */
+    /** Current-channel userlist (ulist-poll.ts), replaces upstream's 20s get_info timer. */
     ulist: 2e4,
     /** Global userlist aw.js fetch (global-userlist.ts). */
     aw: 5e3,
-    /** Freunde stats fetch (stats.ts) — matches upstream cadence. */
+    /** Freunde stats fetch (stats.ts), matches upstream cadence. */
     stats: 1e4
   };
 

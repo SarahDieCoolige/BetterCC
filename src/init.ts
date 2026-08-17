@@ -99,10 +99,9 @@ export async function initV3(): Promise<void> {
   // label can read chat_channel for its initial value.
   initSession();
 
-  // Wire health detection: subscribes to session.authDead and the conn store key.
-  // After initStore (set would throw) and initSession (its initial snapshot feeds
-  // the authDead-at-boot check), before hookChatoutConnect (so the first
-  // attachWsListeners call already includes conn listeners).
+  // Conn wiring (ws events + session authDead). After initSession so the
+  // initial snapshot exists; before hookChatoutConnect so the first ws
+  // attach already carries conn listeners.
   initHealth();
 
   // Build the Grid shell FIRST (moves #chatframe, hides the table, adds
