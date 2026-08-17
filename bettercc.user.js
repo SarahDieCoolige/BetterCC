@@ -2462,7 +2462,7 @@
   var ACTION_COPY_ERROR = "Fehler kopieren";
   var TOAST_COPIED = "Kopiert.";
   var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
-  var BANNER_OPTICS_TEXT = "BetterCC-Optik fehlt \u2014 Chat l\xE4uft normal";
+  var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
   var ACTION_RELOAD = "Neu laden";
   var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
 

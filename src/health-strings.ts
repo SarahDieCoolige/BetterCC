@@ -45,6 +45,7 @@ export const TOAST_COPIED = "Kopiert.";
 
 // Warning banner + offline hint strings (T7).
 export const BANNER_STUCK_TEXT = "Verbindung h\u00e4ngt \u2014 seit \u00fcber 30 Sekunden";
-export const BANNER_OPTICS_TEXT = "BetterCC-Optik fehlt \u2014 Chat l\u00e4uft normal";
+export const BANNER_OPTICS_TEXT =
+  "Chat ohne BetterCC-Design \u2014 Senden l\u00e4uft normal, Neu laden behebt es";
 export const ACTION_RELOAD = "Neu laden";
 export const INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";

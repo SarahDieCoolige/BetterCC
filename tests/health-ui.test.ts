@@ -469,7 +469,9 @@ describe("T7 health-strings conformance", () => {
   });
 
   it("BANNER_OPTICS_TEXT matches verbatim (incl. em-dash escape)", () => {
-    expect(BANNER_OPTICS_TEXT).toBe("BetterCC-Optik fehlt \u2014 Chat l\u00e4uft normal");
+    expect(BANNER_OPTICS_TEXT).toBe(
+      "Chat ohne BetterCC-Design \u2014 Senden l\u00e4uft normal, Neu laden behebt es",
+    );
   });
 
   it("ACTION_RELOAD matches verbatim", () => {
