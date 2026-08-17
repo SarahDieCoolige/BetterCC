@@ -57,3 +57,17 @@ export function initHealth(): void {
 
   cclog("health wiring: init done", "health");
 }
+
+/** Latch a boot failure. Tolerates an uninitialized store: initStore itself may be what threw. */
+export function reportBootError(reason: string): void {
+  try {
+    set("bccHealth", { ...get("bccHealth"), bootError: reason });
+  } catch (e) {
+    cclog("reportBootError: store not up (" + (e as Error).message + ")", "health");
+  }
+}
+
+/** Latch a broken send path (patchAwayTimer needle changed upstream). */
+export function reportSendPathBroken(message: string): void {
+  set("bccHealth", { ...get("bccHealth"), sendPathBroken: message });
+}

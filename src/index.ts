@@ -13,6 +13,7 @@
 
 import { cclog, setUserStore } from "./utils";
 import { initV3 } from "./init";
+import { handleBootFailure } from "./health-ui";
 
 (function () {
   "use strict";
@@ -30,6 +31,6 @@ import { initV3 } from "./init";
     let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
     setUserStore(unsafeWindow.chat_nick, !!gast);
 
-    initV3();
+    initV3().catch(handleBootFailure);
   } // MAIN CHAT
 })();

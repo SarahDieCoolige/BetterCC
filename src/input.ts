@@ -8,6 +8,7 @@ import { cclog, printHelp, printToChat } from "./utils";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { generateScheme } from "./scheme";
 import { buildPatchedHandler } from "./patched-handler";
+import { reportSendPathBroken } from "./health";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
 import { get, set, react } from "./store";
@@ -272,6 +273,7 @@ export function mountInput(): void {
     onSubmitOrig = buildPatchedHandler(holdForm);
   } catch (e) {
     cclog("mountInput: " + (e as Error).message, "v3");
+    reportSendPathBroken((e as Error).message);
   }
 
   // Expose BetterCC API (same signatures as the old path)

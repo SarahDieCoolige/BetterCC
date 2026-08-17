@@ -769,6 +769,16 @@
     });
     cclog("health wiring: init done", "health");
   }
+  function reportBootError(reason) {
+    try {
+      set("bccHealth", { ...get("bccHealth"), bootError: reason });
+    } catch (e) {
+      cclog("reportBootError: store not up (" + e.message + ")", "health");
+    }
+  }
+  function reportSendPathBroken(message) {
+    set("bccHealth", { ...get("bccHealth"), sendPathBroken: message });
+  }
 
   // src/ws-hook.ts
   var upstreamChatoutConnect = null;
@@ -2579,6 +2589,7 @@
       onSubmitOrig = buildPatchedHandler(holdForm);
     } catch (e) {
       cclog("mountInput: " + e.message, "v3");
+      reportSendPathBroken(e.message);
     }
     unsafeWindow.bettercc.onSubmit = doSubmit;
     unsafeWindow.bettercc.superwhisper = superwhisper;
@@ -3748,6 +3759,16 @@
   var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
   var ACTION_PAGE_RELOAD = "Seite neu laden";
   var ACTION_LATER = "Sp\xE4ter";
+  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
+  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
+  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
+  var ACTION_COPY_DETAILS = "Details kopieren";
+  var ACTION_CONTINUE_CHAT = "Weiter chatten";
+  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
+  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
+  var ACTION_COPY_ERROR = "Fehler kopieren";
+  var TOAST_COPIED = "Kopiert.";
+  var STATE_UNAVAILABLE = "Zustand nicht verf\xFCgbar";
 
   // src/status-button.ts
   function buttonView(conn) {
@@ -4004,6 +4025,68 @@
   function shouldShowCritical(conn, dismissed) {
     return conn.phase === "authdead" && !dismissed;
   }
+  function classifyBootError(err) {
+    if (err instanceof TypeError) return BOOT_REASON_STRUCTURE;
+    if (err instanceof Error) return err.message;
+    return String(err);
+  }
+  function buildErrorReport(version, title, subject, detail, stateDump) {
+    const lines = [];
+    lines.push("BetterCC v" + version);
+    lines.push(title);
+    lines.push(subject);
+    if (detail !== null) lines.push(detail);
+    if (stateDump !== null) {
+      lines.push("Zustand:");
+      lines.push(stateDump);
+    } else {
+      lines.push("Zustand: " + STATE_UNAVAILABLE);
+    }
+    return lines.join("\n");
+  }
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      let ok;
+      try {
+        ok = document.execCommand("copy");
+      } catch {
+        ok = false;
+      }
+      ta.remove();
+      return ok;
+    }
+  }
+  function showCopiedToast() {
+    const el = document.createElement("div");
+    el.textContent = TOAST_COPIED;
+    Object.assign(el.style, {
+      position: "fixed",
+      left: "50%",
+      bottom: "90px",
+      transform: "translateX(-50%)",
+      background: "#26262b",
+      color: "#eee",
+      border: "1px solid rgba(255,255,255,0.25)",
+      borderRadius: "6px",
+      padding: "6px 14px",
+      fontFamily: "system-ui, sans-serif",
+      fontSize: "13px",
+      zIndex: "6001",
+      pointerEvents: "none"
+    });
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2e3);
+  }
   function buildCard(title, text, actions) {
     const card = document.createElement("div");
     card.className = "bcc-health-card";
@@ -4034,6 +4117,102 @@
     card.append(head, textEl, actionsEl);
     return card;
   }
+  function buildShellLessCard(title, text, actions) {
+    const overlay = document.createElement("div");
+    Object.assign(overlay.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "6000",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      pointerEvents: "none",
+      background: "rgba(0,0,0,0.45)"
+    });
+    const card = document.createElement("div");
+    Object.assign(card.style, {
+      pointerEvents: "auto",
+      maxWidth: "360px",
+      margin: "0 16px",
+      padding: "18px 20px",
+      background: "#26262b",
+      color: "#eee",
+      border: "1px solid rgba(255,255,255,0.25)",
+      borderRadius: "10px",
+      boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
+      fontFamily: "system-ui, sans-serif"
+    });
+    card.setAttribute("role", "alert");
+    card.setAttribute("aria-label", title);
+    const titleEl = document.createElement("div");
+    Object.assign(titleEl.style, {
+      fontSize: "15px",
+      fontWeight: "600",
+      marginBottom: "8px"
+    });
+    titleEl.textContent = title;
+    const textEl = document.createElement("div");
+    Object.assign(textEl.style, {
+      fontSize: "13px",
+      lineHeight: "1.5",
+      whiteSpace: "pre-line",
+      marginBottom: "14px",
+      color: "#ccc"
+    });
+    textEl.textContent = text;
+    const actionsEl = document.createElement("div");
+    Object.assign(actionsEl.style, {
+      display: "flex",
+      gap: "8px",
+      justifyContent: "flex-end"
+    });
+    for (const a of actions) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = a.label;
+      Object.assign(btn.style, {
+        background: "transparent",
+        color: "#eee",
+        border: "1px solid rgba(255,255,255,0.35)",
+        borderRadius: "6px",
+        padding: "6px 12px",
+        fontSize: "13px",
+        cursor: "pointer"
+      });
+      btn.addEventListener("click", a.onClick);
+      actionsEl.appendChild(btn);
+    }
+    card.append(titleEl, textEl, actionsEl);
+    overlay.appendChild(card);
+    return overlay;
+  }
+  function handleBootFailure(err) {
+    const reason = classifyBootError(err);
+    cclog("boot failure: " + reason, "health");
+    reportBootError(reason);
+    const detail = err instanceof Error ? err.stack || err.message : String(err);
+    let stateDump = null;
+    try {
+      stateDump = JSON.stringify(snapshot(), null, 2);
+    } catch {
+      stateDump = null;
+    }
+    const overlay = buildShellLessCard(CARD_BOOT_TITLE, reason + "\n\n" + CARD_BOOT_RUNS_ON, [
+      {
+        label: ACTION_COPY_DETAILS,
+        onClick: () => {
+          void copyText(
+            buildErrorReport(GM_info.script.version, CARD_BOOT_TITLE, reason, detail, stateDump)
+          ).then((ok) => {
+            if (ok) showCopiedToast();
+            else cclog("copy failed", "health");
+          });
+        }
+      },
+      { label: ACTION_CONTINUE_CHAT, onClick: () => overlay.remove() }
+    ]);
+    document.body.appendChild(overlay);
+  }
   function mountHealthUi() {
     let dismissed = false;
     let veil = null;
@@ -4056,6 +4235,46 @@
       if (main) {
         main.appendChild(veil);
       }
+    });
+    let sendBrokenShown = false;
+    let sendBrokenDismissed = false;
+    react("bccHealth", (h) => {
+      const health = h;
+      if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
+      sendBrokenShown = true;
+      let stateDump = null;
+      try {
+        stateDump = JSON.stringify(snapshot(), null, 2);
+      } catch {
+        stateDump = null;
+      }
+      const overlay = buildShellLessCard(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [
+        {
+          label: ACTION_COPY_ERROR,
+          onClick: () => {
+            void copyText(
+              buildErrorReport(
+                GM_info.script.version,
+                CARD_SEND_BROKEN_TITLE,
+                health.sendPathBroken,
+                null,
+                stateDump
+              )
+            ).then((ok) => {
+              if (ok) showCopiedToast();
+              else cclog("copy failed", "health");
+            });
+          }
+        },
+        {
+          label: ACTION_LATER,
+          onClick: () => {
+            sendBrokenDismissed = true;
+            overlay.remove();
+          }
+        }
+      ]);
+      document.body.appendChild(overlay);
     });
   }
 
@@ -4121,7 +4340,7 @@
       window.onbeforeunload = null;
       let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
       setUserStore(unsafeWindow.chat_nick, !!gast);
-      initV3();
+      initV3().catch(handleBootFailure);
     }
   })();
 })();
