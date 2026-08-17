@@ -41,6 +41,7 @@ import { startPolling, stopPolling } from "./global-userlist";
 import { mountSidebar } from "./sidebar";
 import { mountStatsBar } from "./stats";
 import { initSession, getSession } from "./session";
+import { initHealth } from "./health";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
 import { initStore, on, snapshot } from "./store";
@@ -97,6 +98,12 @@ export async function initV3(): Promise<void> {
   // auth-dead + channel every 2s). Must run before buildShell so the header
   // label can read chat_channel for its initial value.
   initSession();
+
+  // Wire health detection: subscribes to session.authDead and the conn store key.
+  // After initStore (set would throw) and initSession (its initial snapshot feeds
+  // the authDead-at-boot check), before hookChatoutConnect (so the first
+  // attachWsListeners call already includes conn listeners).
+  initHealth();
 
   // Build the Grid shell FIRST (moves #chatframe, hides the table, adds
   // header). Must exist before initTheme() below — applyScheme writes --bcc-*

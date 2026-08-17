@@ -3,6 +3,7 @@
 import { cclog, getChatDoc, getChatWin } from "./utils";
 import { addAutoscrollBanner } from "./chat";
 import { applyCurrentScheme } from "./theme";
+import { attachConnListeners, stampConnMessage } from "./health";
 
 export let upstreamChatoutConnect: any = null;
 
@@ -100,6 +101,9 @@ export function injectIntoChatframe(): void {
 }
 
 export function betterccOnWsMessage(ev: MessageEvent): void {
+  // 0. Stamp message arrival — a fact even if upstream's handler throws.
+  stampConnMessage();
+
   // 1. Call upstream's handler first — preserves contentDocument.write(ev.data)
   //    (which renders the message + executes inline scripts) and the
   //    SHIM_AUTH_DEAD detection. We must NOT skip this.
@@ -150,6 +154,7 @@ export function attachWsListeners(): void {
     upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
     unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
     unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
+    attachConnListeners(unsafeWindow.chatout_ws);
   }
 }
 

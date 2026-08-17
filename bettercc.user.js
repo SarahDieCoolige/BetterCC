@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=751b75c5
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=b8cc9c52
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -508,6 +508,34 @@
       decode: () => ({ channels: /* @__PURE__ */ new Map(), added: [], removed: [] }),
       default: { channels: /* @__PURE__ */ new Map(), added: [], removed: [] },
       persisted: false
+    },
+    conn: {
+      encode: (v) => v,
+      decode: () => ({ phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" }),
+      default: { phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" },
+      persisted: false
+    },
+    bccHealth: {
+      encode: (v) => v,
+      decode: () => ({
+        bootError: null,
+        sendPathBroken: null,
+        injectionDegraded: false,
+        signalsDegraded: false
+      }),
+      default: {
+        bootError: null,
+        sendPathBroken: null,
+        injectionDegraded: false,
+        signalsDegraded: false
+      },
+      persisted: false
+    },
+    freshness: {
+      encode: (v) => v,
+      decode: () => ({ ulistAt: 0, awAt: 0, statsAt: 0 }),
+      default: { ulistAt: 0, awAt: 0, statsAt: 0 },
+      persisted: false
     }
   };
   var initialized = false;
@@ -680,6 +708,68 @@
     await set("scheme_v2", v2);
   }
 
+  // src/cadences.ts
+  var POLL_CADENCES = {
+    /** Current-channel userlist (ulist-poll.ts) — replaces upstream's 20s get_info timer. */
+    ulist: 2e4,
+    /** Global userlist aw.js fetch (global-userlist.ts). */
+    aw: 5e3,
+    /** Freunde stats fetch (stats.ts) — matches upstream cadence. */
+    stats: 1e4
+  };
+
+  // src/health-core.ts
+  function nextConn(prev, ev) {
+    if (prev.phase === "authdead") return prev;
+    switch (ev.type) {
+      case "open":
+        return { ...prev, phase: "connected", attempt: 0, since: ev.at };
+      case "close":
+        return { ...prev, phase: "connecting", attempt: prev.attempt + 1, since: ev.at };
+      case "authdead":
+        return { ...prev, phase: "authdead", since: ev.at };
+      case "message":
+        return { ...prev, lastMessageAt: ev.at };
+      case "notice":
+        return { ...prev, notice: ev.text };
+    }
+  }
+
+  // src/health.ts
+  var lastWs = null;
+  function applyConnEvent(ev) {
+    const prev = get("conn");
+    set("conn", nextConn(prev, ev));
+  }
+  function attachConnListeners(ws) {
+    if (ws === lastWs) return;
+    lastWs = ws;
+    ws.addEventListener("open", () => {
+      applyConnEvent({ type: "open", at: Date.now() });
+    });
+    ws.addEventListener("close", () => {
+      applyConnEvent({ type: "close", at: Date.now() });
+    });
+    if (ws.readyState === WebSocket.OPEN) {
+      applyConnEvent({ type: "open", at: Date.now() });
+    }
+  }
+  function stampConnMessage() {
+    applyConnEvent({ type: "message", at: Date.now() });
+  }
+  function initHealth() {
+    const cur = get("session");
+    if (cur.authDead) {
+      applyConnEvent({ type: "authdead", at: Date.now() });
+    }
+    on("session", (s) => {
+      if (s.authDead) {
+        applyConnEvent({ type: "authdead", at: Date.now() });
+      }
+    });
+    cclog("health wiring: init done", "health");
+  }
+
   // src/ws-hook.ts
   var upstreamChatoutConnect = null;
   var upstreamOnMessage = null;
@@ -734,6 +824,7 @@
     cclog("injectIntoChatframe: injection complete");
   }
   function betterccOnWsMessage(ev) {
+    stampConnMessage();
     if (typeof upstreamOnMessage === "function") {
       try {
         upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
@@ -756,6 +847,7 @@
       upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
       unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
       unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
+      attachConnListeners(unsafeWindow.chatout_ws);
     }
   }
   function hookChatoutConnect() {
@@ -1096,7 +1188,7 @@
     const effectiveInterval = stale ? STALE_RETRY_MS : intervalMs;
     timerId = setTimeout(() => pollAndReschedule(intervalMs), effectiveInterval);
   }
-  function startUlistPoll(intervalMs = 2e4) {
+  function startUlistPoll(intervalMs = POLL_CADENCES.ulist) {
     chatId = getChatId();
     chatSid = getChatSid();
     pchatBase = getPChat();
@@ -1116,7 +1208,7 @@
     timerId = void 0;
     running = false;
   }
-  function refreshUlistNow(intervalMs = 2e4) {
+  function refreshUlistNow(intervalMs = POLL_CADENCES.ulist) {
     if (timerId !== void 0) clearTimeout(timerId);
     pollAndReschedule(intervalMs);
   }
@@ -1161,7 +1253,7 @@
       });
     }, intervalMs);
   }
-  function startPolling(intervalMs) {
+  function startPolling(intervalMs = POLL_CADENCES.aw) {
     if (running2) return;
     running2 = true;
     pollOnce2().finally(() => {
@@ -2301,7 +2393,6 @@
       url: () => "//www.chatcity.de/de/nc/index.html"
     }
   ];
-  var POLL_INTERVAL_MS = 1e4;
   var statsBar = null;
   var pollTimer = null;
   function buildStatsBar(nick) {
@@ -2370,7 +2461,7 @@
     const nick = getChatNick();
     parent.insertBefore(buildStatsBar(nick), parent.firstChild);
     pollOnce3();
-    pollTimer = window.setInterval(pollOnce3, POLL_INTERVAL_MS);
+    pollTimer = window.setInterval(pollOnce3, POLL_CADENCES.stats);
     window.addEventListener("beforeunload", () => {
       if (pollTimer !== null) window.clearInterval(pollTimer);
     });
@@ -3830,6 +3921,7 @@
     if (v3Css) GM_addStyle(v3Css);
     neuterResizeFix();
     initSession();
+    initHealth();
     unsafeWindow.bettercc.reloadChat = reloadChat;
     unsafeWindow.bettercc.state = snapshot;
     buildShell();
@@ -3837,7 +3929,7 @@
     unsafeWindow.bettercc.setTheme = applyCurrentScheme;
     hookChatoutConnect();
     mountSidebar();
-    startUlistPoll(2e4);
+    startUlistPoll();
     neuterGetInfo();
     {
       let lastChannel = getSession().channel;
@@ -3851,7 +3943,7 @@
       });
     }
     unsafeWindow.bettercc.refreshUlistNow = refreshUlistNow;
-    startPolling(5e3);
+    startPolling();
     on("session", (s) => {
       if (s.authDead) stopPolling();
     });
