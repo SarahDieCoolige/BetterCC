@@ -18,8 +18,12 @@ export interface ConnState {
   notice: string;
 }
 
+/** Machine codes for the latched boot error. The store carries these, never
+ * the German display strings (those live in health-strings + the card). */
+export type BootReasonCode = "structure-changed" | "ws-takeover" | "error";
+
 export interface BccHealthState {
-  bootError: string | null;
+  bootError: BootReasonCode | null;
   sendPathBroken: string | null;
   injectionDegraded: boolean;
   signalsDegraded: boolean;

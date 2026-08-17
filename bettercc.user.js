@@ -770,9 +770,9 @@
     });
     cclog("health wiring: init done", "health");
   }
-  function reportBootError(reason) {
+  function reportBootError(code) {
     try {
-      set("bccHealth", { ...get("bccHealth"), bootError: reason });
+      set("bccHealth", { ...get("bccHealth"), bootError: code });
     } catch (e) {
       cclog("reportBootError: store not up (" + e.message + ")", "health");
     }
@@ -784,40 +784,6 @@
     if (get("bccHealth").injectionDegraded === degraded) return;
     set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
   }
-
-  // src/health-strings.ts
-  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
-  var STATUS_TEXT = {
-    connected: "verbunden",
-    connecting: "verbinde\u2026",
-    retry: "Versuch {n}",
-    authdead: "Session abgelaufen",
-    zombie: "reagiert nicht"
-  };
-  function statusButtonTitle(state) {
-    return STATUS_BUTTON_TITLE.replace("{state}", state);
-  }
-  function retryText(n) {
-    return STATUS_TEXT.retry.replace("{n}", String(n));
-  }
-  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
-  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
-  var ACTION_PAGE_RELOAD = "Seite neu laden";
-  var ACTION_LATER = "Sp\xE4ter";
-  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
-  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
-  var BOOT_REASON_WS = "Chat-WebSocket konnte nicht \xFCbernommen werden.";
-  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
-  var ACTION_COPY_DETAILS = "Details kopieren";
-  var ACTION_CONTINUE_CHAT = "Weiter chatten";
-  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
-  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
-  var ACTION_COPY_ERROR = "Fehler kopieren";
-  var TOAST_COPIED = "Kopiert.";
-  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
-  var BANNER_OPTICS_TEXT = "BetterCC-Optik fehlt \u2014 Chat l\xE4uft normal";
-  var ACTION_RELOAD = "Neu laden";
-  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
 
   // src/ws-hook.ts
   var upstreamChatoutConnect = null;
@@ -911,7 +877,7 @@
       attachWsListeners();
     } else {
       cclog("WARNING: chatout_connect not found \u2014 WebSocket hook failed");
-      reportBootError(BOOT_REASON_WS);
+      reportBootError("ws-takeover");
     }
   }
 
@@ -2465,6 +2431,40 @@
       revertBtn.disabled = !isDirty(loaded, draft);
     }
   }
+
+  // src/health-strings.ts
+  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
+  var STATUS_TEXT = {
+    connected: "verbunden",
+    connecting: "verbinde\u2026",
+    retry: "Versuch {n}",
+    authdead: "Session abgelaufen",
+    zombie: "reagiert nicht"
+  };
+  function statusButtonTitle(state) {
+    return STATUS_BUTTON_TITLE.replace("{state}", state);
+  }
+  function retryText(n) {
+    return STATUS_TEXT.retry.replace("{n}", String(n));
+  }
+  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
+  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
+  var ACTION_PAGE_RELOAD = "Seite neu laden";
+  var ACTION_LATER = "Sp\xE4ter";
+  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
+  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
+  var BOOT_REASON_WS = "Chat-WebSocket konnte nicht \xFCbernommen werden.";
+  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
+  var ACTION_COPY_DETAILS = "Details kopieren";
+  var ACTION_CONTINUE_CHAT = "Weiter chatten";
+  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
+  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
+  var ACTION_COPY_ERROR = "Fehler kopieren";
+  var TOAST_COPIED = "Kopiert.";
+  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
+  var BANNER_OPTICS_TEXT = "BetterCC-Optik fehlt \u2014 Chat l\xE4uft normal";
+  var ACTION_RELOAD = "Neu laden";
+  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
 
   // src/input.ts
   var DRAFT_KEY = "bcc_draft";
@@ -4054,15 +4054,13 @@
     }
     return null;
   }
-  function classifyBootError(err) {
-    if (err instanceof TypeError) return BOOT_REASON_STRUCTURE;
-    if (err instanceof Error) return err.message;
-    return String(err);
+  function bootErrorCode(err) {
+    return err instanceof TypeError ? "structure-changed" : "error";
   }
-  function reasonCodeFor(reason) {
-    if (reason === BOOT_REASON_STRUCTURE) return "structure-changed";
-    if (reason === BOOT_REASON_WS) return "ws-takeover";
-    return "unknown";
+  function bootDisplayFor(code) {
+    if (code === "structure-changed") return BOOT_REASON_STRUCTURE;
+    if (code === "ws-takeover") return BOOT_REASON_WS;
+    return null;
   }
   function buildErrorReport(f) {
     const lines = ["BetterCC v" + f.version, "context: " + f.context, "reason: " + f.reason];
@@ -4244,17 +4242,15 @@
   }
   var bootCardShown = false;
   var bootCardDismissed = false;
-  function showBootCard(reason, error, stack) {
+  function showBootCard(code, display, error, stack) {
     if (bootCardShown || bootCardDismissed) return;
     bootCardShown = true;
-    const text = reason + "\n\n" + CARD_BOOT_RUNS_ON;
+    const text = display + "\n\n" + CARD_BOOT_RUNS_ON;
     const overlay = buildShellLessCard(CARD_BOOT_TITLE, text, [
       {
         label: ACTION_COPY_DETAILS,
         onClick: () => {
-          void copyText(
-            buildErrorReport(reportFields("boot", reasonCodeFor(reason), error, stack))
-          ).then((ok) => {
+          void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
             if (ok) showCopiedToast();
             else cclog("copy failed", "health");
           });
@@ -4271,12 +4267,13 @@
     document.body.appendChild(overlay);
   }
   function handleBootFailure(err) {
-    const reason = classifyBootError(err);
-    cclog("boot failure: " + reason, "health");
+    const code = bootErrorCode(err);
+    const display = err instanceof TypeError ? BOOT_REASON_STRUCTURE : err instanceof Error ? err.message : String(err);
+    cclog("boot failure: " + code + " (" + display + ")", "health");
     const error = err instanceof Error ? err.name + ": " + err.message : String(err);
     const stack = err instanceof Error ? err.stack || null : null;
-    showBootCard(reason, error, stack);
-    reportBootError(reason);
+    showBootCard(code, display, error, stack);
+    reportBootError(code);
   }
   function buildBanner(text) {
     const banner2 = document.createElement("div");
@@ -4350,7 +4347,10 @@
     react("bccHealth", (h) => {
       const health = h;
       renderBanner();
-      if (health.bootError) showBootCard(health.bootError, null, null);
+      if (health.bootError) {
+        const display = bootDisplayFor(health.bootError);
+        if (display) showBootCard(health.bootError, display, null, null);
+      }
       if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
       sendBrokenShown = true;
       const overlay = buildShellLessCard(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [

@@ -5,7 +5,7 @@
 
 import { get, set, on } from "./store";
 import { cclog } from "./utils";
-import { nextConn, type ConnEvent } from "./health-core";
+import { nextConn, type BootReasonCode, type ConnEvent } from "./health-core";
 
 // Track the last ws we attached listeners to, so we skip dupes.
 let lastWs: WebSocket | null = null;
@@ -59,9 +59,9 @@ export function initHealth(): void {
 }
 
 /** Latch a boot failure. Tolerates an uninitialized store: initStore itself may be what threw. */
-export function reportBootError(reason: string): void {
+export function reportBootError(code: BootReasonCode): void {
   try {
-    set("bccHealth", { ...get("bccHealth"), bootError: reason });
+    set("bccHealth", { ...get("bccHealth"), bootError: code });
   } catch (e) {
     cclog("reportBootError: store not up (" + (e as Error).message + ")", "health");
   }

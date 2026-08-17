@@ -9,7 +9,6 @@ import {
   reportBootError,
   reportInjectionDegraded,
 } from "./health";
-import { BOOT_REASON_WS } from "./health-strings";
 
 export let upstreamChatoutConnect: any = null;
 
@@ -176,7 +175,7 @@ export function hookChatoutConnect(): void {
     attachWsListeners();
   } else {
     cclog("WARNING: chatout_connect not found — WebSocket hook failed");
-    // B1 case: upstream WS creator missing. Latch so the boot card fires.
-    reportBootError(BOOT_REASON_WS);
+    // Upstream WS creator missing: latch the code so the boot card fires.
+    reportBootError("ws-takeover");
   }
 }

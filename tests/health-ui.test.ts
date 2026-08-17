@@ -7,9 +7,9 @@ import { resolve } from "node:path";
 import type { ConnState } from "../src/health-core";
 import {
   shouldShowCritical,
-  classifyBootError,
+  bootErrorCode,
+  bootDisplayFor,
   buildErrorReport,
-  reasonCodeFor,
   bannerView,
   type ReportFields,
 } from "../src/health-ui";
@@ -205,37 +205,37 @@ describe("DRAFT_KEY", () => {
   });
 });
 
-// ─── 8. classifyBootError (T6) ─────────────────────────────────────────────
+// ─── 8. boot error codes (store carries codes, not German strings) ──────────
 
-describe("classifyBootError", () => {
-  it("maps TypeError to BOOT_REASON_STRUCTURE", () => {
-    expect(classifyBootError(new TypeError("null is not an object"))).toBe(BOOT_REASON_STRUCTURE);
+describe("bootErrorCode", () => {
+  it("maps TypeError to structure-changed", () => {
+    expect(bootErrorCode(new TypeError("null is not an object"))).toBe("structure-changed");
   });
 
-  it("maps a generic Error to its message", () => {
-    expect(classifyBootError(new Error("boom"))).toBe("boom");
+  it("maps a generic Error to error", () => {
+    expect(bootErrorCode(new Error("boom"))).toBe("error");
   });
 
-  it("maps a thrown string to itself", () => {
-    expect(classifyBootError("oops")).toBe("oops");
+  it("maps a thrown string to error", () => {
+    expect(bootErrorCode("oops")).toBe("error");
+  });
+});
+
+describe("bootDisplayFor", () => {
+  it("maps structure-changed to the German card text", () => {
+    expect(bootDisplayFor("structure-changed")).toBe(BOOT_REASON_STRUCTURE);
+  });
+
+  it("maps ws-takeover to the German card text", () => {
+    expect(bootDisplayFor("ws-takeover")).toBe(BOOT_REASON_WS);
+  });
+
+  it("returns null for the generic error code (card comes from the live error)", () => {
+    expect(bootDisplayFor("error")).toBeNull();
   });
 });
 
 // ─── 9. Diagnostics payload (reworked: English, structured, sliced state) ────
-
-describe("reasonCodeFor", () => {
-  it("maps the structure reason to structure-changed", () => {
-    expect(reasonCodeFor(BOOT_REASON_STRUCTURE)).toBe("structure-changed");
-  });
-
-  it("maps the ws reason to ws-takeover", () => {
-    expect(reasonCodeFor(BOOT_REASON_WS)).toBe("ws-takeover");
-  });
-
-  it("maps anything else to unknown", () => {
-    expect(reasonCodeFor("irgendeine konkrete Fehlermeldung")).toBe("unknown");
-  });
-});
 
 describe("buildErrorReport", () => {
   const full: ReportFields = {
@@ -520,9 +520,9 @@ describe("T7 source wiring", () => {
     expect(src).toContain("reportInjectionDegraded(false)");
   });
 
-  it("ws-hook.ts contains reportBootError(BOOT_REASON_WS)", () => {
+  it("ws-hook.ts latches the ws-takeover code", () => {
     const src = readFileSync(resolve(srcDir, "ws-hook.ts"), "utf-8");
-    expect(src).toContain("reportBootError(BOOT_REASON_WS)");
+    expect(src).toContain('reportBootError("ws-takeover")');
   });
 
   it("input.ts contains INPUT_OFFLINE_HINT", () => {

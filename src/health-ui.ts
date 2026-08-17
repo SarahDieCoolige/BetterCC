@@ -30,7 +30,7 @@ import {
   BANNER_OPTICS_TEXT,
   ACTION_RELOAD,
 } from "./health-strings";
-import type { BccHealthState, ConnState } from "./health-core";
+import type { BccHealthState, BootReasonCode, ConnState } from "./health-core";
 import { STUCK_MS } from "./health-core";
 
 // ─── Pure decision (testable without DOM) ────────────────────────────────────
@@ -56,27 +56,24 @@ export function bannerView(
   return null;
 }
 
-// ─── Boot failure classification (T6) ──────────────────────────────────────────
+// ─── Boot failure classification (codes; display text stays in the view) ────
 
-/** Map a boot failure to the copy-list reason. TypeErrors are almost always
- * a null querySelector result, i.e. the page no longer looks like cpop. */
-export function classifyBootError(err: unknown): string {
-  if (err instanceof TypeError) return BOOT_REASON_STRUCTURE;
-  if (err instanceof Error) return err.message;
-  return String(err);
+/** Machine code for the store. TypeErrors are almost always a null
+ * querySelector result, i.e. the page no longer looks like cpop. */
+export function bootErrorCode(err: unknown): BootReasonCode {
+  return err instanceof TypeError ? "structure-changed" : "error";
 }
 
-// BOOT_REASON_WS stays unconsumed for now; hookChatoutConnect only logs a warning today.
+/** German card text for a store-latched code. The generic "error" code maps
+ * to null: its card is rendered by handleBootFailure from the live error; a
+ * later react can't recover that text from the code alone. */
+export function bootDisplayFor(code: string): string | null {
+  if (code === "structure-changed") return BOOT_REASON_STRUCTURE;
+  if (code === "ws-takeover") return BOOT_REASON_WS;
+  return null;
+}
 
 // ─── Diagnostics payload (reworked: English, structured, for bug reports) ────
-
-/** Machine-readable reason code. The German strings are for the cards; the
- * report stays English so a pasted payload is grep-able and unambiguous. */
-export function reasonCodeFor(reason: string): string {
-  if (reason === BOOT_REASON_STRUCTURE) return "structure-changed";
-  if (reason === BOOT_REASON_WS) return "ws-takeover";
-  return "unknown";
-}
 
 export interface ReportFields {
   version: string;
@@ -317,19 +314,22 @@ function buildShellLessCard(title: string, text: string, actions: CardAction[]):
 let bootCardShown = false;
 let bootCardDismissed = false;
 
-function showBootCard(reason: string, error: string | null, stack: string | null): void {
+function showBootCard(
+  code: string,
+  display: string,
+  error: string | null,
+  stack: string | null,
+): void {
   if (bootCardShown || bootCardDismissed) return;
   bootCardShown = true;
 
-  const text = reason + "\n\n" + CARD_BOOT_RUNS_ON;
+  const text = display + "\n\n" + CARD_BOOT_RUNS_ON;
 
   const overlay = buildShellLessCard(CARD_BOOT_TITLE, text, [
     {
       label: ACTION_COPY_DETAILS,
       onClick: () => {
-        void copyText(
-          buildErrorReport(reportFields("boot", reasonCodeFor(reason), error, stack)),
-        ).then((ok) => {
+        void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
           if (ok) showCopiedToast();
           else cclog("copy failed", "health");
         });
@@ -348,12 +348,18 @@ function showBootCard(reason: string, error: string | null, stack: string | null
 }
 
 export function handleBootFailure(err: unknown): void {
-  const reason = classifyBootError(err);
-  cclog("boot failure: " + reason, "health");
+  const code = bootErrorCode(err);
+  const display =
+    err instanceof TypeError
+      ? BOOT_REASON_STRUCTURE
+      : err instanceof Error
+        ? err.message
+        : String(err);
+  cclog("boot failure: " + code + " (" + display + ")", "health");
   const error = err instanceof Error ? err.name + ": " + err.message : String(err);
   const stack = err instanceof Error ? err.stack || null : null;
-  showBootCard(reason, error, stack);
-  reportBootError(reason);
+  showBootCard(code, display, error, stack);
+  reportBootError(code);
 }
 
 // ─── Banner builder + render (T7) ──────────────────────────────────────────
@@ -448,9 +454,13 @@ export function mountHealthUi(): void {
   react("bccHealth", (h) => {
     const health = h as BccHealthState;
 
-    // Banner (injection-degraded) + B1 boot card from store latch.
+    // Banner (injection-degraded) + B1 boot card from store latch. Generic
+    // "error" codes render nothing here: their card came from the live error.
     renderBanner();
-    if (health.bootError) showBootCard(health.bootError, null, null);
+    if (health.bootError) {
+      const display = bootDisplayFor(health.bootError);
+      if (display) showBootCard(health.bootError, display, null, null);
+    }
 
     if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
     sendBrokenShown = true;
