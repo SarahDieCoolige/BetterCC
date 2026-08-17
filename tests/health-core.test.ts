@@ -25,6 +25,7 @@ const INITIAL: ConnState = {
   attempt: 0,
   since: 0,
   lastMessageAt: 0,
+  lastSendAt: 0,
   notice: "",
 };
 
@@ -42,6 +43,9 @@ function msgEv(t: number): ConnEvent {
 }
 function noticeEv(text: string): ConnEvent {
   return { type: "notice", text };
+}
+function sendEv(t: number): ConnEvent {
+  return { type: "send", at: t };
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────
@@ -70,7 +74,14 @@ describe("nextConn — open transitions", () => {
 
   it("open from any previous phase goes connected", () => {
     const fromAuthdead = nextConn(
-      { phase: "authdead", attempt: 5, since: 999, lastMessageAt: 800, notice: "dead" },
+      {
+        phase: "authdead",
+        attempt: 5,
+        since: 999,
+        lastMessageAt: 800,
+        lastSendAt: 0,
+        notice: "dead",
+      },
       at(1000),
     );
     // authdead is terminal, open is ignored
@@ -82,7 +93,7 @@ describe("nextConn — open transitions", () => {
 describe("nextConn — close transitions", () => {
   it("close sets phase to connecting, increments attempt, stamps since", () => {
     const state = nextConn(
-      { phase: "connected", attempt: 0, since: 100, lastMessageAt: 200, notice: "" },
+      { phase: "connected", attempt: 0, since: 100, lastMessageAt: 200, lastSendAt: 0, notice: "" },
       ct(300),
     );
     expect(state.phase).toBe("connecting");
@@ -118,6 +129,7 @@ describe("nextConn — message transition", () => {
       attempt: 0,
       since: 100,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     const state = nextConn(prev, msgEv(500));
@@ -136,6 +148,7 @@ describe("nextConn — notice transition", () => {
       attempt: 2,
       since: 100,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "old",
     };
     const state = nextConn(prev, noticeEv("new notice"));
@@ -147,6 +160,68 @@ describe("nextConn — notice transition", () => {
   });
 });
 
+describe("nextConn — send transition", () => {
+  it("send sets lastSendAt to ev.at, phase unchanged", () => {
+    const prev = {
+      phase: "connected" as const,
+      attempt: 0,
+      since: 100,
+      lastMessageAt: 200,
+      lastSendAt: 0,
+      notice: "",
+    };
+    const state = nextConn(prev, sendEv(500));
+    expect(state.lastSendAt).toBe(500);
+    expect(state.phase).toBe("connected");
+    expect(state.since).toBe(100);
+    expect(state.lastMessageAt).toBe(200);
+  });
+});
+
+describe("nextConn — lastSendAt reset on message/open/close", () => {
+  it("message resets lastSendAt to 0", () => {
+    const prev = {
+      phase: "connected" as const,
+      attempt: 0,
+      since: 100,
+      lastMessageAt: 200,
+      lastSendAt: 500,
+      notice: "",
+    };
+    const state = nextConn(prev, msgEv(600));
+    expect(state.lastSendAt).toBe(0);
+    expect(state.lastMessageAt).toBe(600);
+  });
+
+  it("open resets lastSendAt to 0", () => {
+    const prev = {
+      phase: "connecting" as const,
+      attempt: 3,
+      since: 100,
+      lastMessageAt: 200,
+      lastSendAt: 500,
+      notice: "",
+    };
+    const state = nextConn(prev, at(700));
+    expect(state.lastSendAt).toBe(0);
+    expect(state.phase).toBe("connected");
+  });
+
+  it("close resets lastSendAt to 0", () => {
+    const prev = {
+      phase: "connected" as const,
+      attempt: 0,
+      since: 100,
+      lastMessageAt: 200,
+      lastSendAt: 500,
+      notice: "",
+    };
+    const state = nextConn(prev, ct(700));
+    expect(state.lastSendAt).toBe(0);
+    expect(state.phase).toBe("connecting");
+  });
+});
+
 describe("nextConn — authdead latch", () => {
   it("authdead sets phase to authdead and stamps since", () => {
     const prev = {
@@ -154,6 +229,7 @@ describe("nextConn — authdead latch", () => {
       attempt: 0,
       since: 100,
       lastMessageAt: 200,
+      lastSendAt: 0,
       notice: "",
     };
     const state = nextConn(prev, authEv(300));
@@ -166,7 +242,14 @@ describe("nextConn — authdead latch", () => {
 
   it("authdead is terminal — close after authdead returns unchanged", () => {
     const locked = nextConn(
-      { phase: "connected" as const, attempt: 0, since: 100, lastMessageAt: 200, notice: "" },
+      {
+        phase: "connected" as const,
+        attempt: 0,
+        since: 100,
+        lastMessageAt: 200,
+        lastSendAt: 0,
+        notice: "",
+      },
       authEv(300),
     );
     const afterClose = nextConn(locked, ct(400));
@@ -175,7 +258,14 @@ describe("nextConn — authdead latch", () => {
 
   it("authdead is terminal — open after authdead returns unchanged", () => {
     const locked = nextConn(
-      { phase: "connected" as const, attempt: 0, since: 100, lastMessageAt: 200, notice: "" },
+      {
+        phase: "connected" as const,
+        attempt: 0,
+        since: 100,
+        lastMessageAt: 200,
+        lastSendAt: 0,
+        notice: "",
+      },
       authEv(300),
     );
     const afterOpen = nextConn(locked, at(500));
@@ -184,7 +274,14 @@ describe("nextConn — authdead latch", () => {
 
   it("authdead is terminal — message after authdead returns unchanged", () => {
     const locked = nextConn(
-      { phase: "connected" as const, attempt: 0, since: 100, lastMessageAt: 200, notice: "" },
+      {
+        phase: "connected" as const,
+        attempt: 0,
+        since: 100,
+        lastMessageAt: 200,
+        lastSendAt: 0,
+        notice: "",
+      },
       authEv(300),
     );
     const afterMsg = nextConn(locked, msgEv(600));
@@ -193,7 +290,14 @@ describe("nextConn — authdead latch", () => {
 
   it("authdead is terminal — notice after authdead returns unchanged", () => {
     const locked = nextConn(
-      { phase: "connected" as const, attempt: 0, since: 100, lastMessageAt: 200, notice: "" },
+      {
+        phase: "connected" as const,
+        attempt: 0,
+        since: 100,
+        lastMessageAt: 200,
+        lastSendAt: 0,
+        notice: "",
+      },
       authEv(300),
     );
     const afterNotice = nextConn(locked, noticeEv("ignored"));
@@ -202,7 +306,14 @@ describe("nextConn — authdead latch", () => {
 
   it("authdead is terminal — second authdead returns unchanged", () => {
     const locked = nextConn(
-      { phase: "connected" as const, attempt: 0, since: 100, lastMessageAt: 200, notice: "" },
+      {
+        phase: "connected" as const,
+        attempt: 0,
+        since: 100,
+        lastMessageAt: 200,
+        lastSendAt: 0,
+        notice: "",
+      },
       authEv(300),
     );
     const afterSecond = nextConn(locked, authEv(700));
@@ -219,6 +330,7 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 1,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     // now - since = STUCK_MS exactly → not stuck (strict >)
@@ -232,6 +344,7 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 1,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 29_999);
@@ -244,6 +357,7 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 1,
       since: 1,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 30_002);
@@ -256,6 +370,7 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
@@ -268,6 +383,7 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
@@ -276,15 +392,17 @@ describe("deriveUiState — stuck detection", () => {
 });
 
 describe("deriveUiState — zombie detection", () => {
-  it("zombie when connected, send armed, and elapsed > ECHO_TIMEOUT_MS", () => {
+  it("zombie when connected, lastSendAt > 0, and elapsed > ECHO_TIMEOUT_MS", () => {
     const conn: ConnState = {
       phase: "connected",
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 1,
       notice: "",
     };
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 10_001, 0);
+    // lastSendAt=1, now=10_002 => elapsed=10_001 > 10_000
+    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 10_002);
     expect(result.zombie).toBe(true);
   });
 
@@ -294,33 +412,37 @@ describe("deriveUiState — zombie detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 1,
       notice: "",
     };
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, ECHO_TIMEOUT_MS, 0);
+    // lastSendAt=1, now=10_001 => elapsed=10_000 == ECHO_TIMEOUT_MS, strict >
+    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, ECHO_TIMEOUT_MS + 1);
     expect(result.zombie).toBe(false);
   });
 
-  it("not zombie when sendAt is undefined (not armed)", () => {
+  it("not zombie when lastSendAt is 0 (never sent)", () => {
     const conn: ConnState = {
       phase: "connected",
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
     expect(result.zombie).toBe(false);
   });
 
-  it("not zombie when phase is connecting", () => {
+  it("not zombie when phase is connecting (even with lastSendAt > 0)", () => {
     const conn: ConnState = {
       phase: "connecting",
       attempt: 1,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000, 0);
+    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
     expect(result.zombie).toBe(false);
   });
 });
@@ -332,6 +454,7 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     const freshness: FreshnessState = { ulistAt: 0, awAt: 0, statsAt: 0 };
@@ -347,6 +470,7 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     // ulist: interval=20_000, 3x=60_000, max(60_000, 30_000)=60_000
@@ -365,6 +489,7 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     // aw: interval=5_000, 3x=15_000, max(15_000, 30_000)=30_000
@@ -383,6 +508,7 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     // stats: interval=10_000, 3x=30_000, max(30_000, 30_000)=30_000
@@ -401,6 +527,7 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
+      lastSendAt: 0,
       notice: "",
     };
     // ulistAt and statsAt are stale, awAt is fresh

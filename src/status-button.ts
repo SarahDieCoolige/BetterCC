@@ -8,7 +8,7 @@ import { actionButton } from "./dom";
 import { react } from "./store";
 import { reloadChat } from "./shell";
 import { STATUS_TEXT, statusButtonTitle, retryText } from "./health-strings";
-import type { ConnState } from "./health-core";
+import { ECHO_TIMEOUT_MS, type ConnState } from "./health-core";
 
 // ─── View model ──────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ export interface ButtonView {
 
 // ─── Pure derivation ────────────────────────────────────────────────────────
 
-export function buttonView(conn: ConnState): ButtonView {
+export function buttonView(conn: ConnState, now: number = Date.now()): ButtonView {
   if (conn.phase === "authdead") {
     return {
       icon: "fa-triangle-exclamation",
@@ -31,6 +31,14 @@ export function buttonView(conn: ConnState): ButtonView {
     };
   }
   if (conn.phase === "connected") {
+    if (conn.lastSendAt > 0 && now - conn.lastSendAt > ECHO_TIMEOUT_MS) {
+      return {
+        icon: "fa-triangle-exclamation",
+        spinning: false,
+        badge: null,
+        stateText: STATUS_TEXT.zombie,
+      };
+    }
     return {
       icon: "fa-sync",
       spinning: false,

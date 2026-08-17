@@ -49,3 +49,6 @@ export const BANNER_OPTICS_TEXT =
   "Chat ohne BetterCC-Design \u2014 Senden l\u00e4uft normal, Neu laden behebt es";
 export const ACTION_RELOAD = "Neu laden";
 export const INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
+
+// Send-echo watchdog banner (A5, T8).
+export const BANNER_ZOMBIE_TEXT = "Chat reagiert nicht \u2014 Nachrichten kommen nicht an";

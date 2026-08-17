@@ -5,7 +5,7 @@
 
 import { get, set, on } from "./store";
 import { cclog } from "./utils";
-import { nextConn, type BootReasonCode, type ConnEvent } from "./health-core";
+import { nextConn, ECHO_TIMEOUT_MS, type BootReasonCode, type ConnEvent } from "./health-core";
 
 // Track the last ws we attached listeners to, so we skip dupes.
 let lastWs: WebSocket | null = null;
@@ -36,6 +36,7 @@ export function attachConnListeners(ws: WebSocket): void {
 }
 
 export function stampConnMessage(): void {
+  clearEchoTimer();
   applyConnEvent({ type: "message", at: Date.now() });
 }
 
@@ -77,4 +78,25 @@ export function reportSendPathBroken(message: string): void {
 export function reportInjectionDegraded(degraded: boolean): void {
   if (get("bccHealth").injectionDegraded === degraded) return;
   set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
+}
+
+// Send-echo watchdog (A5). Armed only by a real send; any inbound WS message
+// disarms it. On fire we re-write conn (same facts) so every reactive surface
+// re-derives past the threshold -- the store has no "time passed" event.
+let echoTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearEchoTimer(): void {
+  if (echoTimer !== null) {
+    clearTimeout(echoTimer);
+    echoTimer = null;
+  }
+}
+
+export function armSendEcho(): void {
+  clearEchoTimer();
+  applyConnEvent({ type: "send", at: Date.now() });
+  echoTimer = setTimeout(() => {
+    echoTimer = null;
+    set("conn", { ...get("conn") });
+  }, ECHO_TIMEOUT_MS);
 }

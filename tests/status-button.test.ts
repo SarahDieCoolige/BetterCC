@@ -105,6 +105,28 @@ describe("buttonView", () => {
     const b = buttonView(conn({ phase: "connecting", attempt: 0, since: 200 }));
     expect(a).toEqual(b);
   });
+
+  it("zombie: overdue send → triangle, not spinning, 'reagiert nicht'", () => {
+    const now = Date.now();
+    const view = buttonView(conn({ phase: "connected", lastSendAt: now - 11_000 }), now);
+    expect(view.icon).toBe("fa-triangle-exclamation");
+    expect(view.spinning).toBe(false);
+    expect(view.stateText).toBe("reagiert nicht");
+    expect(view.badge).toBe(null);
+  });
+
+  it("zombie: lastSendAt = 0 → normal connected view", () => {
+    const view = buttonView(conn({ phase: "connected", lastSendAt: 0 }));
+    expect(view.icon).toBe("fa-sync");
+    expect(view.stateText).toBe("verbunden");
+  });
+
+  it("zombie: before 10s → normal connected view", () => {
+    const now = Date.now();
+    const view = buttonView(conn({ phase: "connected", lastSendAt: now - 5_000 }), now);
+    expect(view.icon).toBe("fa-sync");
+    expect(view.stateText).toBe("verbunden");
+  });
 });
 
 // ─── health-strings conformance ────────────────────────────────────────────

@@ -8,7 +8,8 @@
 // command consumed the message (with no send).
 
 import { describe, it, expect } from "vitest";
-import { prepareMessage, shouldSendOnEnter } from "../src/input";
+import { prepareMessage, shouldSendOnEnter, sendBlocked } from "../src/input";
+import type { ConnState } from "../src/health-core";
 
 describe("prepareMessage — plain messages", () => {
   it("sends a non-command message as-is when no whisper is active", () => {
@@ -117,5 +118,45 @@ describe("prepareMessage — explicit whisper pass-through", () => {
       action: "send",
       message: "/me waves",
     });
+  });
+});
+
+// ─── sendBlocked (T8 pt4): hard gate while conn is not established ────────
+
+describe("sendBlocked", () => {
+  it("connecting blocks sending", () => {
+    const conn: ConnState = {
+      phase: "connecting",
+      attempt: 1,
+      since: 1,
+      lastMessageAt: 0,
+      lastSendAt: 0,
+      notice: "",
+    };
+    expect(sendBlocked(conn)).toBe(true);
+  });
+
+  it("authdead blocks sending", () => {
+    const conn: ConnState = {
+      phase: "authdead",
+      attempt: 0,
+      since: 1,
+      lastMessageAt: 0,
+      lastSendAt: 0,
+      notice: "",
+    };
+    expect(sendBlocked(conn)).toBe(true);
+  });
+
+  it("connected allows sending", () => {
+    const conn: ConnState = {
+      phase: "connected",
+      attempt: 0,
+      since: 1,
+      lastMessageAt: 1,
+      lastSendAt: 0,
+      notice: "",
+    };
+    expect(sendBlocked(conn)).toBe(false);
   });
 });

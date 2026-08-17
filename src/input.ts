@@ -8,7 +8,7 @@ import { cclog, printHelp, printToChat } from "./utils";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { generateScheme } from "./scheme";
 import { buildPatchedHandler } from "./patched-handler";
-import { reportSendPathBroken } from "./health";
+import { reportSendPathBroken, armSendEcho } from "./health";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
 import { get, set, react } from "./store";
@@ -41,6 +41,12 @@ export function takeDraft(storage: StorageLike): string {
 
 /** Offline hint shows whenever the connection is not established. Typing stays possible. */
 export function offlineHintVisible(conn: ConnState): boolean {
+  return conn.phase !== "connected";
+}
+
+/** Hard gate: sending is blocked while the connection is not established.
+ * Typing stays possible (the draft survives); the offline hint explains why. */
+export function sendBlocked(conn: ConnState): boolean {
   return conn.phase !== "connected";
 }
 
@@ -204,11 +210,16 @@ async function doSubmit(whispernick?: string): Promise<void> {
     return;
   }
 
+  // action === "send": hard gate while offline. The message stays in the
+  // textarea (draft survives); the offline hint is already visible.
+  if (sendBlocked(get("conn") as ConnState)) return;
+
   // action === "send": route through the patched upstream handler
   // (normalize, away-timer reset, delout → inf form).
   if (onSubmitOrig && decision.message) {
     (docHold.OUT1 as HTMLInputElement).value = decision.message;
     onSubmitOrig();
+    armSendEcho();
   }
   if (textarea) textarea.value = "";
 }

@@ -198,3 +198,127 @@ describe("health wiring", () => {
     expect(conn.attempt).toBe(0);
   });
 });
+
+// ─── Send-echo watchdog tests (A5, T8 pt3) ─────────────────────────────────
+//
+// These tests need fake timers because armSendEcho uses setTimeout.
+// vi.resetModules() in afterEach makes static imports stale, so we
+// import inside each test.
+
+describe("send-echo watchdog", () => {
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    await initTestStore();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    vi.resetModules();
+  });
+
+  it("arm sets conn.lastSendAt > 0", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+
+    // Put conn into connected phase first
+    const ws = new FakeWS();
+    health.attachConnListeners(ws as unknown as WebSocket);
+    ws.emit("open");
+
+    health.armSendEcho();
+    expect(store.get("conn").lastSendAt).toBeGreaterThan(0);
+  });
+
+  it("disarm: arm, advance 9s, stampConnMessage, advance past 10s total → no zombie", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+    const { deriveUiState } = await import("../src/health-core");
+
+    const ws = new FakeWS();
+    health.attachConnListeners(ws as unknown as WebSocket);
+    ws.emit("open");
+
+    health.armSendEcho();
+    vi.advanceTimersByTime(9_000);
+
+    // Inbound message disarms the timer
+    health.stampConnMessage();
+
+    // Track conn notifies: timer was cleared, so advancing past deadline
+    // must not produce an extra notify.
+    let notifyCount = 0;
+    store.on("conn", () => {
+      notifyCount++;
+    });
+
+    // Advance past the original 10s timeout
+    vi.advanceTimersByTime(2_000);
+
+    // Timer should have been cleared by stampConnMessage, so no extra notify
+    // from the timer firing. The stampConnMessage itself already notified.
+    expect(notifyCount).toBe(0);
+    const ui = deriveUiState(
+      store.get("conn"),
+      { ulistAt: 0, awAt: 0, statsAt: 0 },
+      vi.getMockedSystemTime().getTime(),
+    );
+    expect(ui.zombie).toBe(false);
+  });
+
+  it("fire: arm, register conn listener, advance past 10s → conn notified again, zombie", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+    const { deriveUiState } = await import("../src/health-core");
+
+    const ws = new FakeWS();
+    health.attachConnListeners(ws as unknown as WebSocket);
+    ws.emit("open");
+
+    health.armSendEcho();
+
+    let notifyCount = 0;
+    store.on("conn", () => {
+      notifyCount++;
+    });
+
+    // armSendEcho sets conn (1 notify). Advance past timeout → fire (1 more).
+    const countBefore = notifyCount;
+    vi.advanceTimersByTime(10_001);
+
+    // The timer fires and re-writes conn, triggering another notify
+    expect(notifyCount).toBeGreaterThan(countBefore);
+
+    const ui = deriveUiState(
+      store.get("conn"),
+      { ulistAt: 0, awAt: 0, statsAt: 0 },
+      vi.getMockedSystemTime().getTime(),
+    );
+    expect(ui.zombie).toBe(true);
+  });
+
+  it("healthy echo never fires: arm, advance 2s, stamp, advance 60s → no zombie, lastSendAt 0", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+    const { deriveUiState } = await import("../src/health-core");
+
+    const ws = new FakeWS();
+    health.attachConnListeners(ws as unknown as WebSocket);
+    ws.emit("open");
+
+    health.armSendEcho();
+    vi.advanceTimersByTime(2_000);
+    health.stampConnMessage();
+    vi.advanceTimersByTime(60_000);
+
+    const conn = store.get("conn");
+    expect(conn.lastSendAt).toBe(0);
+
+    const ui = deriveUiState(
+      conn,
+      { ulistAt: 0, awAt: 0, statsAt: 0 },
+      vi.getMockedSystemTime().getTime(),
+    );
+    expect(ui.zombie).toBe(false);
+  });
+});
