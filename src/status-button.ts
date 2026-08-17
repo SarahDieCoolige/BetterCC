@@ -59,7 +59,9 @@ export function buttonView(conn: ConnState): ButtonView {
 
 export function buildStatusButton(): HTMLButtonElement {
   const btn = actionButton({ iconClass: "fa-sync", title: "Chat neu laden", onClick: reloadChat });
-  btn.classList.add("bcc-health-btn");
+  // Same chrome as every pill button (transparent, borderless, 32x32); state
+  // colors live on the icon, never on the button.
+  btn.className = "bcc-icon-btn bcc-health-btn";
 
   const badge = document.createElement("span");
   badge.className = "bcc-health-badge";

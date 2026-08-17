@@ -3763,7 +3763,7 @@
   }
   function buildStatusButton() {
     const btn = actionButton({ iconClass: "fa-sync", title: "Chat neu laden", onClick: reloadChat });
-    btn.classList.add("bcc-health-btn");
+    btn.className = "bcc-icon-btn bcc-health-btn";
     const badge = document.createElement("span");
     badge.className = "bcc-health-badge";
     badge.hidden = true;
