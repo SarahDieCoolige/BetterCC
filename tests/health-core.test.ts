@@ -12,11 +12,11 @@ import {
   ECHO_TIMEOUT_MS,
   STALE_FACTOR,
   STALE_MIN_MS,
-  POLL_INTERVALS,
   type ConnState,
   type ConnEvent,
   type FreshnessState,
 } from "../src/health-core";
+import { POLL_CADENCES } from "../src/cadences";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -52,9 +52,9 @@ describe("health-core — threshold constants", () => {
     expect(ECHO_TIMEOUT_MS).toBe(10_000);
     expect(STALE_FACTOR).toBe(3);
     expect(STALE_MIN_MS).toBe(30_000);
-    expect(POLL_INTERVALS.ulist).toBe(20_000);
-    expect(POLL_INTERVALS.aw).toBe(5_000);
-    expect(POLL_INTERVALS.stats).toBe(20_000);
+    expect(POLL_CADENCES.ulist).toBe(20_000);
+    expect(POLL_CADENCES.aw).toBe(5_000);
+    expect(POLL_CADENCES.stats).toBe(10_000);
   });
 });
 
@@ -377,7 +377,7 @@ describe("deriveUiState — stale detection", () => {
     expect(r2.stale.aw).toBe(true);
   });
 
-  it("stats uses same logic as ulist (20_000 interval → 60_000 threshold)", () => {
+  it("stats uses the floor too (10_000 interval → 30_000 threshold)", () => {
     const conn: ConnState = {
       phase: "connected",
       attempt: 0,
@@ -385,10 +385,13 @@ describe("deriveUiState — stale detection", () => {
       lastMessageAt: 0,
       notice: "",
     };
-    const r1 = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 1 }, 60_001);
+    // stats: interval=10_000, 3x=30_000, max(30_000, 30_000)=30_000
+    // statsAt=1, now=30_001 → elapsed=30_000 → exactly threshold → not stale
+    const r1 = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 1 }, 30_001);
     expect(r1.stale.stats).toBe(false);
 
-    const r2 = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 1 }, 60_002);
+    // now=30_002 → elapsed=30_001 > 30_000 → stale
+    const r2 = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 1 }, 30_002);
     expect(r2.stale.stats).toBe(true);
   });
 

@@ -15,6 +15,7 @@ import { parseAw } from "./userlist";
 import { set, type User, type UserWithChannel } from "./store";
 import { fetchAw } from "./upstream";
 import { cclog } from "./utils";
+import { POLL_CADENCES } from "./cadences";
 
 let lastSnapshot: Map<string, User[]> = new Map();
 let timerId: ReturnType<typeof setTimeout> | undefined;
@@ -90,7 +91,7 @@ function scheduleNext(intervalMs: number): void {
  * Start the poll loop: immediate first fetch, then one cycle every intervalMs.
  * Starting while already running is a no-op.
  */
-export function startPolling(intervalMs: number): void {
+export function startPolling(intervalMs = POLL_CADENCES.aw): void {
   if (running) return;
   running = true;
   pollOnce().finally(() => {

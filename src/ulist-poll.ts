@@ -15,6 +15,7 @@ import { parseUserlist, diffUserlists } from "./userlist";
 import { set, type User } from "./store";
 import { getChatId, getChatSid, getPChat, getChaMy } from "./upstream";
 import { cclog } from "./utils";
+import { POLL_CADENCES } from "./cadences";
 
 let chatId = ""; // read ONCE at startUlistPoll — doesn't change per session
 let chatSid = "";
@@ -128,7 +129,7 @@ function scheduleNext(intervalMs: number): void {
  * Start the poll loop: read session data, immediate first fetch, then one cycle
  * every intervalMs. Starting while already running is a no-op.
  */
-export function startUlistPoll(intervalMs = 20000): void {
+export function startUlistPoll(intervalMs = POLL_CADENCES.ulist): void {
   chatId = getChatId();
   chatSid = getChatSid();
   pchatBase = getPChat();
@@ -160,7 +161,7 @@ export function stopUlistPoll(): void {
  * The extensibility seam: future triggers import and call this without the poll
  * module knowing about them. Phase 1's only caller is the /j channel-change sub.
  */
-export function refreshUlistNow(intervalMs = 20000): void {
+export function refreshUlistNow(intervalMs = POLL_CADENCES.ulist): void {
   if (timerId !== undefined) clearTimeout(timerId);
   pollAndReschedule(intervalMs);
 }

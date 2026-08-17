@@ -12,6 +12,7 @@
 
 import { cclog, encodeChatLink } from "./utils";
 import { getChatNick, getAjax, getPAjax } from "./upstream";
+import { POLL_CADENCES } from "./cadences";
 
 /** The three counts parsed from the chat_info_friends_nc.html response. */
 export interface Stats {
@@ -102,8 +103,6 @@ const BADGES: BadgeSpec[] = [
     url: () => "//www.chatcity.de/de/nc/index.html",
   },
 ];
-
-const POLL_INTERVAL_MS = 10000; // matches upstream cadence
 
 let statsBar: HTMLElement | null = null;
 let pollTimer: number | null = null;
@@ -204,7 +203,7 @@ export function mountStatsBar(parent: HTMLElement): void {
   parent.insertBefore(buildStatsBar(nick), parent.firstChild);
 
   pollOnce(); // immediate first paint, then on the interval
-  pollTimer = window.setInterval(pollOnce, POLL_INTERVAL_MS);
+  pollTimer = window.setInterval(pollOnce, POLL_CADENCES.stats);
   window.addEventListener("beforeunload", () => {
     if (pollTimer !== null) window.clearInterval(pollTimer);
   });

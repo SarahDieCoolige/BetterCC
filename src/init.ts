@@ -133,7 +133,7 @@ export async function initV3(): Promise<void> {
   // 20s get_info timer) is cleared — v3's poll replaces it.
   // Must be AFTER mountSidebar so the sidebar is subscribed before the
   // first "userlist" event fires.
-  startUlistPoll(20000);
+  startUlistPoll();
   neuterGetInfo();
   {
     let lastChannel = getSession().channel;
@@ -150,10 +150,11 @@ export async function initV3(): Promise<void> {
   // controls (and future callers) can trigger an immediate refresh.
   (unsafeWindow.bettercc as any).refreshUlistNow = refreshUlistNow;
 
-  // Start the global userlist poll (aw.js, every 5s). Must be AFTER mountSidebar
-  // so the sidebar is subscribed before the first "globalUserlist" event fires.
+  // Start the global userlist poll (aw.js, cadence from cadences.ts). Must be
+  // AFTER mountSidebar so the sidebar is subscribed before the first
+  // "globalUserlist" event fires.
   // Stop polling when the session is dead — no point fetching aw.js.
-  startPolling(5000);
+  startPolling();
   on("session", (s) => {
     if (s.authDead) stopPolling();
   });

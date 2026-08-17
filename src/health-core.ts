@@ -1,8 +1,10 @@
 // ─── Health core: connection state machine + UI derivation ────────────────
 //
-// Pure module — zero imports from store, DOM, or upstream. The state machine
-// models the WebSocket lifecycle; deriveUiState turns current state into
-// booleans the health bar / status strip can render.
+// Pure module — imports only the cadences leaf; nothing from store, DOM, or
+// upstream. The state machine models the WebSocket lifecycle; deriveUiState
+// turns current state into booleans the health bar / status strip can render.
+
+import { POLL_CADENCES } from "./cadences";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -50,12 +52,8 @@ export const STALE_FACTOR = 3;
 /** Floor for the stale threshold so short-poll sources aren't too noisy. */
 export const STALE_MIN_MS = 30_000;
 
-/** Nominal poll intervals for each data source. */
-export const POLL_INTERVALS = {
-  ulist: 20_000,
-  aw: 5_000,
-  stats: 20_000,
-} as const;
+// Nominal poll intervals live in cadences.ts — single source shared with the
+// poll loops themselves.
 
 // ─── State machine ────────────────────────────────────────────────────────
 
@@ -102,9 +100,9 @@ export function deriveUiState(
     stuck,
     zombie,
     stale: {
-      ulist: isStale(freshness.ulistAt, now, POLL_INTERVALS.ulist),
-      aw: isStale(freshness.awAt, now, POLL_INTERVALS.aw),
-      stats: isStale(freshness.statsAt, now, POLL_INTERVALS.stats),
+      ulist: isStale(freshness.ulistAt, now, POLL_CADENCES.ulist),
+      aw: isStale(freshness.awAt, now, POLL_CADENCES.aw),
+      stats: isStale(freshness.statsAt, now, POLL_CADENCES.stats),
     },
   };
 }
