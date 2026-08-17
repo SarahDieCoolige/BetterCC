@@ -71,3 +71,10 @@ export function reportBootError(reason: string): void {
 export function reportSendPathBroken(message: string): void {
   set("bccHealth", { ...get("bccHealth"), sendPathBroken: message });
 }
+
+/** Set/clear the injection-degraded flag. No-op when unchanged: every WS
+ * message runs the success path, an unconditional set would spam notifies. */
+export function reportInjectionDegraded(degraded: boolean): void {
+  if (get("bccHealth").injectionDegraded === degraded) return;
+  set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
+}

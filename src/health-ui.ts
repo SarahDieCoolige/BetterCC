@@ -6,7 +6,7 @@
 // only the card re-enables pointer events. Dismissing removes the veil but
 // NOT the latched conn state; the status button stays red until a real reload.
 
-import { react, snapshot } from "./store";
+import { react, snapshot, get } from "./store";
 import { reloadChat } from "./shell";
 import { iconElement } from "./dom";
 import { cclog } from "./utils";
@@ -26,14 +26,34 @@ import {
   ACTION_COPY_ERROR,
   TOAST_COPIED,
   STATE_UNAVAILABLE,
+  BANNER_STUCK_TEXT,
+  BANNER_OPTICS_TEXT,
+  ACTION_RELOAD,
 } from "./health-strings";
 import type { BccHealthState, ConnState } from "./health-core";
+import { STUCK_MS } from "./health-core";
 
 // ─── Pure decision (testable without DOM) ────────────────────────────────────
 
 /** Terminal states that warrant the veil + card. Dismissal is view state, never a store write. */
 export function shouldShowCritical(conn: ConnState, dismissed: boolean): boolean {
   return conn.phase === "authdead" && !dismissed;
+}
+
+// ─── Banner decision (T7) ──────────────────────────────────────────────────
+
+/** Which banner line to show, or null. Optics (B2) outranks stuck (A2):
+ * it persists, stuck is transient. */
+export function bannerView(
+  conn: ConnState,
+  injectionDegraded: boolean,
+  now: number,
+): string | null {
+  if (injectionDegraded) return BANNER_OPTICS_TEXT;
+  if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
+    return BANNER_STUCK_TEXT;
+  }
+  return null;
 }
 
 // ─── Boot failure classification (T6) ──────────────────────────────────────────
@@ -248,44 +268,117 @@ function buildShellLessCard(title: string, text: string, actions: CardAction[]):
 
 // ─── Boot failure entry point (T6) ───────────────────────────────────────────
 
-export function handleBootFailure(err: unknown): void {
-  const reason = classifyBootError(err);
-  cclog("boot failure: " + reason, "health");
-  reportBootError(reason);
+// Boot card shown-once latch (hoisted to module scope so handleBootFailure
+// and the bccHealth react share it).
+let bootCardShown = false;
+let bootCardDismissed = false;
 
-  const detail = err instanceof Error ? err.stack || err.message : String(err);
+function showBootCard(reason: string, detail: string | null): void {
+  if (bootCardShown || bootCardDismissed) return;
+  bootCardShown = true;
+
+  const title = CARD_BOOT_TITLE;
+  const text = reason + "\n\n" + CARD_BOOT_RUNS_ON;
   let stateDump: string | null = null;
   try {
     stateDump = JSON.stringify(snapshot(), null, 2);
   } catch {
-    stateDump = null; // store may not be initialized if initStore itself threw
+    stateDump = null;
   }
 
-  const overlay = buildShellLessCard(CARD_BOOT_TITLE, reason + "\n\n" + CARD_BOOT_RUNS_ON, [
+  const overlay = buildShellLessCard(title, text, [
     {
       label: ACTION_COPY_DETAILS,
       onClick: () => {
         void copyText(
-          buildErrorReport(GM_info.script.version, CARD_BOOT_TITLE, reason, detail, stateDump),
+          buildErrorReport(GM_info.script.version, title, reason, detail, stateDump),
         ).then((ok) => {
           if (ok) showCopiedToast();
           else cclog("copy failed", "health");
         });
       },
     },
-    { label: ACTION_CONTINUE_CHAT, onClick: () => overlay.remove() },
+    {
+      label: ACTION_CONTINUE_CHAT,
+      onClick: () => {
+        bootCardDismissed = true;
+        overlay.remove();
+      },
+    },
   ]);
 
   document.body.appendChild(overlay);
 }
 
+export function handleBootFailure(err: unknown): void {
+  const reason = classifyBootError(err);
+  cclog("boot failure: " + reason, "health");
+  const detail = err instanceof Error ? err.stack || err.message : String(err);
+  showBootCard(reason, detail);
+  reportBootError(reason);
+}
+
+// ─── Banner builder + render (T7) ──────────────────────────────────────────
+
+function buildBanner(text: string): HTMLElement {
+  const banner = document.createElement("div");
+  banner.className = "bcc-health-banner";
+  banner.setAttribute("role", "status");
+  const line = document.createElement("span");
+  line.textContent = text;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "bcc-health-banner-btn";
+  btn.textContent = ACTION_RELOAD;
+  btn.addEventListener("click", reloadChat);
+  banner.append(line, btn);
+  return banner;
+}
+
 // ─── Mount ───────────────────────────────────────────────────────────────────
+
+let banner: HTMLElement | null = null;
+let stuckTimer: number | null = null;
+
+function renderBanner(): void {
+  const text = bannerView(get("conn") as ConnState, get("bccHealth").injectionDegraded, Date.now());
+  if (!text) {
+    if (banner) {
+      banner.remove();
+      banner = null;
+    }
+    return;
+  }
+  // Same text already up: no DOM churn (fires on every conn message stamp).
+  if (banner && banner.querySelector("span")?.textContent === text) return;
+  banner?.remove();
+  banner = buildBanner(text);
+  const main = document.querySelector(".bcc-main");
+  if (main) main.prepend(banner);
+}
 
 export function mountHealthUi(): void {
   let dismissed = false;
   let veil: HTMLElement | null = null;
 
   react("conn", (conn) => {
+    // Stuck timer: check again when the stuck threshold would be reached;
+    // conn writes alone can't fire at a future time.
+    if (stuckTimer !== null) {
+      clearTimeout(stuckTimer);
+      stuckTimer = null;
+    }
+    const c = conn as ConnState;
+    if (c.phase === "connecting" && c.since > 0) {
+      const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
+      stuckTimer = window.setTimeout(() => {
+        stuckTimer = null;
+        renderBanner();
+      }, wait);
+    }
+    renderBanner();
+
+    // Authdead veil + card
     if (!shouldShowCritical(conn as ConnState, dismissed) || veil) return;
 
     const dismiss = () => {
@@ -316,6 +409,11 @@ export function mountHealthUi(): void {
   let sendBrokenDismissed = false;
   react("bccHealth", (h) => {
     const health = h as BccHealthState;
+
+    // Banner (injection-degraded) + B1 boot card from store latch.
+    renderBanner();
+    if (health.bootError) showBootCard(health.bootError, null);
+
     if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
     sendBrokenShown = true;
 

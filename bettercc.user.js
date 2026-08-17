@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=33489d57
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=bc31c7ad
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -719,6 +719,7 @@
   };
 
   // src/health-core.ts
+  var STUCK_MS = 3e4;
   function nextConn(prev, ev) {
     if (prev.phase === "authdead") return prev;
     switch (ev.type) {
@@ -779,6 +780,45 @@
   function reportSendPathBroken(message) {
     set("bccHealth", { ...get("bccHealth"), sendPathBroken: message });
   }
+  function reportInjectionDegraded(degraded) {
+    if (get("bccHealth").injectionDegraded === degraded) return;
+    set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
+  }
+
+  // src/health-strings.ts
+  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
+  var STATUS_TEXT = {
+    connected: "verbunden",
+    connecting: "verbinde\u2026",
+    retry: "Versuch {n}",
+    authdead: "Session abgelaufen",
+    zombie: "reagiert nicht"
+  };
+  function statusButtonTitle(state) {
+    return STATUS_BUTTON_TITLE.replace("{state}", state);
+  }
+  function retryText(n) {
+    return STATUS_TEXT.retry.replace("{n}", String(n));
+  }
+  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
+  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
+  var ACTION_PAGE_RELOAD = "Seite neu laden";
+  var ACTION_LATER = "Sp\xE4ter";
+  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
+  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
+  var BOOT_REASON_WS = "Chat-WebSocket konnte nicht \xFCbernommen werden.";
+  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
+  var ACTION_COPY_DETAILS = "Details kopieren";
+  var ACTION_CONTINUE_CHAT = "Weiter chatten";
+  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
+  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
+  var ACTION_COPY_ERROR = "Fehler kopieren";
+  var TOAST_COPIED = "Kopiert.";
+  var STATE_UNAVAILABLE = "Zustand nicht verf\xFCgbar";
+  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
+  var BANNER_OPTICS_TEXT = "BetterCC-Optik fehlt \u2014 Chat l\xE4uft normal";
+  var ACTION_RELOAD = "Neu laden";
+  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
 
   // src/ws-hook.ts
   var upstreamChatoutConnect = null;
@@ -795,6 +835,7 @@
       if (injectionScheduled) return;
       if (injectionRetries++ >= MAX_INJECTION_RETRIES) {
         injectionRetries = 0;
+        reportInjectionDegraded(true);
         return;
       }
       injectionScheduled = true;
@@ -831,6 +872,7 @@
         window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
       });
     }
+    reportInjectionDegraded(false);
     cclog("injectIntoChatframe: injection complete");
   }
   function betterccOnWsMessage(ev) {
@@ -870,6 +912,7 @@
       attachWsListeners();
     } else {
       cclog("WARNING: chatout_connect not found \u2014 WebSocket hook failed");
+      reportBootError(BOOT_REASON_WS);
     }
   }
 
@@ -2436,6 +2479,9 @@
     storage.removeItem(DRAFT_KEY);
     return v;
   }
+  function offlineHintVisible(conn) {
+    return conn.phase !== "connected";
+  }
   var textarea = null;
   var onSubmitOrig = null;
   var currentWhisperNick = "";
@@ -2582,6 +2628,13 @@
       }
     });
     inputArea.appendChild(textarea);
+    const offlineHint = document.createElement("div");
+    offlineHint.className = "bcc-offline-hint";
+    offlineHint.textContent = INPUT_OFFLINE_HINT;
+    inputArea.appendChild(offlineHint);
+    react("conn", (c) => {
+      offlineHint.classList.toggle("bcc-offline-visible", offlineHintVisible(c));
+    });
     const draft2 = takeDraft(sessionStorage);
     if (draft2) textarea.value = draft2;
     const holdForm = document.querySelector('form[name="hold"]');
@@ -3740,36 +3793,6 @@
     });
   }
 
-  // src/health-strings.ts
-  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
-  var STATUS_TEXT = {
-    connected: "verbunden",
-    connecting: "verbinde\u2026",
-    retry: "Versuch {n}",
-    authdead: "Session abgelaufen",
-    zombie: "reagiert nicht"
-  };
-  function statusButtonTitle(state) {
-    return STATUS_BUTTON_TITLE.replace("{state}", state);
-  }
-  function retryText(n) {
-    return STATUS_TEXT.retry.replace("{n}", String(n));
-  }
-  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
-  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
-  var ACTION_PAGE_RELOAD = "Seite neu laden";
-  var ACTION_LATER = "Sp\xE4ter";
-  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
-  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
-  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
-  var ACTION_COPY_DETAILS = "Details kopieren";
-  var ACTION_CONTINUE_CHAT = "Weiter chatten";
-  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
-  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
-  var ACTION_COPY_ERROR = "Fehler kopieren";
-  var TOAST_COPIED = "Kopiert.";
-  var STATE_UNAVAILABLE = "Zustand nicht verf\xFCgbar";
-
   // src/status-button.ts
   function buttonView(conn) {
     if (conn.phase === "authdead") {
@@ -4025,6 +4048,13 @@
   function shouldShowCritical(conn, dismissed) {
     return conn.phase === "authdead" && !dismissed;
   }
+  function bannerView(conn, injectionDegraded, now) {
+    if (injectionDegraded) return BANNER_OPTICS_TEXT;
+    if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
+      return BANNER_STUCK_TEXT;
+    }
+    return null;
+  }
   function classifyBootError(err) {
     if (err instanceof TypeError) return BOOT_REASON_STRUCTURE;
     if (err instanceof Error) return err.message;
@@ -4186,37 +4216,96 @@
     overlay.appendChild(card);
     return overlay;
   }
-  function handleBootFailure(err) {
-    const reason = classifyBootError(err);
-    cclog("boot failure: " + reason, "health");
-    reportBootError(reason);
-    const detail = err instanceof Error ? err.stack || err.message : String(err);
+  var bootCardShown = false;
+  var bootCardDismissed = false;
+  function showBootCard(reason, detail) {
+    if (bootCardShown || bootCardDismissed) return;
+    bootCardShown = true;
+    const title = CARD_BOOT_TITLE;
+    const text = reason + "\n\n" + CARD_BOOT_RUNS_ON;
     let stateDump = null;
     try {
       stateDump = JSON.stringify(snapshot(), null, 2);
     } catch {
       stateDump = null;
     }
-    const overlay = buildShellLessCard(CARD_BOOT_TITLE, reason + "\n\n" + CARD_BOOT_RUNS_ON, [
+    const overlay = buildShellLessCard(title, text, [
       {
         label: ACTION_COPY_DETAILS,
         onClick: () => {
           void copyText(
-            buildErrorReport(GM_info.script.version, CARD_BOOT_TITLE, reason, detail, stateDump)
+            buildErrorReport(GM_info.script.version, title, reason, detail, stateDump)
           ).then((ok) => {
             if (ok) showCopiedToast();
             else cclog("copy failed", "health");
           });
         }
       },
-      { label: ACTION_CONTINUE_CHAT, onClick: () => overlay.remove() }
+      {
+        label: ACTION_CONTINUE_CHAT,
+        onClick: () => {
+          bootCardDismissed = true;
+          overlay.remove();
+        }
+      }
     ]);
     document.body.appendChild(overlay);
+  }
+  function handleBootFailure(err) {
+    const reason = classifyBootError(err);
+    cclog("boot failure: " + reason, "health");
+    const detail = err instanceof Error ? err.stack || err.message : String(err);
+    showBootCard(reason, detail);
+    reportBootError(reason);
+  }
+  function buildBanner(text) {
+    const banner2 = document.createElement("div");
+    banner2.className = "bcc-health-banner";
+    banner2.setAttribute("role", "status");
+    const line = document.createElement("span");
+    line.textContent = text;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-health-banner-btn";
+    btn.textContent = ACTION_RELOAD;
+    btn.addEventListener("click", reloadChat);
+    banner2.append(line, btn);
+    return banner2;
+  }
+  var banner = null;
+  var stuckTimer = null;
+  function renderBanner() {
+    const text = bannerView(get("conn"), get("bccHealth").injectionDegraded, Date.now());
+    if (!text) {
+      if (banner) {
+        banner.remove();
+        banner = null;
+      }
+      return;
+    }
+    if (banner && banner.querySelector("span")?.textContent === text) return;
+    banner?.remove();
+    banner = buildBanner(text);
+    const main = document.querySelector(".bcc-main");
+    if (main) main.prepend(banner);
   }
   function mountHealthUi() {
     let dismissed = false;
     let veil = null;
     react("conn", (conn) => {
+      if (stuckTimer !== null) {
+        clearTimeout(stuckTimer);
+        stuckTimer = null;
+      }
+      const c = conn;
+      if (c.phase === "connecting" && c.since > 0) {
+        const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
+        stuckTimer = window.setTimeout(() => {
+          stuckTimer = null;
+          renderBanner();
+        }, wait);
+      }
+      renderBanner();
       if (!shouldShowCritical(conn, dismissed) || veil) return;
       const dismiss = () => {
         dismissed = true;
@@ -4240,6 +4329,8 @@
     let sendBrokenDismissed = false;
     react("bccHealth", (h) => {
       const health = h;
+      renderBanner();
+      if (health.bootError) showBootCard(health.bootError, null);
       if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
       sendBrokenShown = true;
       let stateDump = null;

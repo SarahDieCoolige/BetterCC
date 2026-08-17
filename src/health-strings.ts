@@ -43,3 +43,9 @@ export const CARD_SEND_BROKEN_TEXT =
 export const ACTION_COPY_ERROR = "Fehler kopieren";
 export const TOAST_COPIED = "Kopiert.";
 export const STATE_UNAVAILABLE = "Zustand nicht verf\u00fcgbar";
+
+// Warning banner + offline hint strings (T7).
+export const BANNER_STUCK_TEXT = "Verbindung h\u00e4ngt \u2014 seit \u00fcber 30 Sekunden";
+export const BANNER_OPTICS_TEXT = "BetterCC-Optik fehlt \u2014 Chat l\u00e4uft normal";
+export const ACTION_RELOAD = "Neu laden";
+export const INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";

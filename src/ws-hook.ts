@@ -3,7 +3,13 @@
 import { cclog, getChatDoc, getChatWin } from "./utils";
 import { addAutoscrollBanner } from "./chat";
 import { applyCurrentScheme } from "./theme";
-import { attachConnListeners, stampConnMessage } from "./health";
+import {
+  attachConnListeners,
+  stampConnMessage,
+  reportBootError,
+  reportInjectionDegraded,
+} from "./health";
+import { BOOT_REASON_WS } from "./health-strings";
 
 export let upstreamChatoutConnect: any = null;
 
@@ -43,6 +49,7 @@ export function injectIntoChatframe(): void {
     if (injectionScheduled) return;
     if (injectionRetries++ >= MAX_INJECTION_RETRIES) {
       injectionRetries = 0; // give up this round; the next message re-triggers
+      reportInjectionDegraded(true);
       return;
     }
     injectionScheduled = true;
@@ -97,6 +104,7 @@ export function injectIntoChatframe(): void {
     });
   }
 
+  reportInjectionDegraded(false);
   cclog("injectIntoChatframe: injection complete");
 }
 
@@ -168,5 +176,7 @@ export function hookChatoutConnect(): void {
     attachWsListeners();
   } else {
     cclog("WARNING: chatout_connect not found — WebSocket hook failed");
+    // B1 case: upstream WS creator missing. Latch so the boot card fires.
+    reportBootError(BOOT_REASON_WS);
   }
 }

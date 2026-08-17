@@ -12,6 +12,8 @@ import { reportSendPathBroken } from "./health";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
 import { get, set, react } from "./store";
+import type { ConnState } from "./health-core";
+import { INPUT_OFFLINE_HINT } from "./health-strings";
 
 // ─── Draft preservation (T5) ────────────────────────────────────────────────
 
@@ -35,6 +37,11 @@ export function takeDraft(storage: StorageLike): string {
   if (v === null) return "";
   storage.removeItem(DRAFT_KEY);
   return v;
+}
+
+/** Offline hint shows whenever the connection is not established. Typing stays possible. */
+export function offlineHintVisible(conn: ConnState): boolean {
+  return conn.phase !== "connected";
 }
 
 let textarea: HTMLTextAreaElement | null = null;
@@ -260,6 +267,16 @@ export function mountInput(): void {
     }
   });
   inputArea.appendChild(textarea);
+
+  // Offline hint: small warn label in the input area while conn is not
+  // connected. Purely informational; typing and sending stay possible.
+  const offlineHint = document.createElement("div");
+  offlineHint.className = "bcc-offline-hint";
+  offlineHint.textContent = INPUT_OFFLINE_HINT;
+  inputArea.appendChild(offlineHint);
+  react("conn", (c) => {
+    offlineHint.classList.toggle("bcc-offline-visible", offlineHintVisible(c as ConnState));
+  });
 
   // Restore any draft from the previous page (survives full reload via sessionStorage).
   const draft = takeDraft(sessionStorage);
