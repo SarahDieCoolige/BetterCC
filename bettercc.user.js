@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=9b8e44a9
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=a37e1d60
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -622,9 +622,9 @@
       set2.delete(fn);
     };
   }
-  function react(k, render) {
-    render(get(k));
-    return on(k, render);
+  function react(k, render2) {
+    render2(get(k));
+    return on(k, render2);
   }
   function snapshot() {
     assertInit();
@@ -2428,38 +2428,6 @@
     }
   }
 
-  // src/health-strings.ts
-  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
-  var STATUS_TEXT = {
-    connected: "verbunden",
-    connecting: "verbinde\u2026",
-    retry: "Versuch {n}",
-    authdead: "Session abgelaufen"
-  };
-  function statusButtonTitle(state) {
-    return STATUS_BUTTON_TITLE.replace("{state}", state);
-  }
-  function retryText(n) {
-    return STATUS_TEXT.retry.replace("{n}", String(n));
-  }
-  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
-  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
-  var ACTION_PAGE_RELOAD = "Seite neu laden";
-  var ACTION_LATER = "Sp\xE4ter";
-  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
-  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
-  var BOOT_REASON_WS = "Chat-WebSocket konnte nicht \xFCbernommen werden.";
-  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
-  var ACTION_COPY_DETAILS = "Details kopieren";
-  var ACTION_CONTINUE_CHAT = "Weiter chatten";
-  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
-  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
-  var ACTION_COPY_ERROR = "Fehler kopieren";
-  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
-  var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
-  var ACTION_RELOAD = "Neu laden";
-  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
-
   // src/input.ts
   var DRAFT_KEY = "bcc_draft";
   function saveDraft(storage, value) {
@@ -2471,9 +2439,6 @@
     if (v === null) return "";
     storage.removeItem(DRAFT_KEY);
     return v;
-  }
-  function offlineHintVisible(conn) {
-    return conn.phase !== "connected";
   }
   function sendBlocked(conn) {
     return conn.phase !== "connected";
@@ -2625,13 +2590,6 @@
       }
     });
     inputArea.appendChild(textarea);
-    const offlineHint = document.createElement("div");
-    offlineHint.className = "bcc-offline-hint";
-    offlineHint.textContent = INPUT_OFFLINE_HINT;
-    inputArea.appendChild(offlineHint);
-    react("conn", (c) => {
-      offlineHint.classList.toggle("bcc-offline-visible", offlineHintVisible(c));
-    });
     const draft2 = takeDraft(sessionStorage);
     if (draft2) textarea.value = draft2;
     const holdForm = document.querySelector('form[name="hold"]');
@@ -3790,6 +3748,38 @@
     });
   }
 
+  // src/health-strings.ts
+  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
+  var STATUS_TEXT = {
+    connected: "verbunden",
+    connecting: "verbinde\u2026",
+    retry: "Versuch {n}",
+    authdead: "Session abgelaufen"
+  };
+  function statusButtonTitle(state) {
+    return STATUS_BUTTON_TITLE.replace("{state}", state);
+  }
+  function retryText(n) {
+    return STATUS_TEXT.retry.replace("{n}", String(n));
+  }
+  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
+  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
+  var ACTION_PAGE_RELOAD = "Seite neu laden";
+  var ACTION_LATER = "Sp\xE4ter";
+  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
+  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
+  var BOOT_REASON_WS = "Chat-WebSocket konnte nicht \xFCbernommen werden.";
+  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
+  var ACTION_COPY_DETAILS = "Details kopieren";
+  var ACTION_CONTINUE_CHAT = "Weiter chatten";
+  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
+  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
+  var ACTION_COPY_ERROR = "Fehler kopieren";
+  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
+  var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
+  var ACTION_RELOAD = "Neu laden";
+  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
+
   // src/status-button.ts
   function buttonView(conn) {
     if (conn.phase === "authdead") {
@@ -4045,13 +4035,6 @@
   function shouldShowCritical(conn, dismissed) {
     return conn.phase === "authdead" && !dismissed;
   }
-  function bannerView(conn, injectionDegraded, now) {
-    if (injectionDegraded) return BANNER_OPTICS_TEXT;
-    if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
-      return BANNER_STUCK_TEXT;
-    }
-    return null;
-  }
   function bootErrorCode(err) {
     return err instanceof TypeError ? "structure-changed" : "error";
   }
@@ -4226,54 +4209,10 @@
     showBootCard(code, display, error, stack);
     reportBootError(code);
   }
-  function buildBanner(text) {
-    const banner2 = document.createElement("div");
-    banner2.className = "bcc-health-banner";
-    banner2.setAttribute("role", "status");
-    const line = document.createElement("span");
-    line.textContent = text;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-health-banner-btn";
-    btn.textContent = ACTION_RELOAD;
-    btn.addEventListener("click", reloadChat);
-    banner2.append(line, btn);
-    return banner2;
-  }
-  var banner = null;
-  var stuckTimer = null;
-  function renderBanner() {
-    const text = bannerView(get("conn"), get("bccHealth").injectionDegraded, Date.now());
-    if (!text) {
-      if (banner) {
-        banner.remove();
-        banner = null;
-      }
-      return;
-    }
-    if (banner && banner.querySelector("span")?.textContent === text) return;
-    banner?.remove();
-    banner = buildBanner(text);
-    const main = document.querySelector(".bcc-main");
-    if (main) main.prepend(banner);
-  }
   function mountHealthUi() {
     let dismissed = false;
     let veil = null;
     react("conn", (conn) => {
-      if (stuckTimer !== null) {
-        clearTimeout(stuckTimer);
-        stuckTimer = null;
-      }
-      const c = conn;
-      if (c.phase === "connecting" && c.since > 0) {
-        const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
-        stuckTimer = window.setTimeout(() => {
-          stuckTimer = null;
-          renderBanner();
-        }, wait);
-      }
-      renderBanner();
       if (!shouldShowCritical(conn, dismissed) || veil) return;
       const dismiss = () => {
         dismissed = true;
@@ -4297,7 +4236,6 @@
     let sendBrokenDismissed = false;
     react("bccHealth", (h) => {
       const health = h;
-      renderBanner();
       if (health.bootError) {
         const display = bootDisplayFor(health.bootError);
         if (display) showBootCard(health.bootError, display, null, null);
@@ -4329,6 +4267,82 @@
       );
       document.body.appendChild(overlay);
     });
+  }
+
+  // src/health-strip.ts
+  function stripView(conn, injectionDegraded, now, notice2) {
+    if (notice2 && now < notice2.until) {
+      return { text: notice2.text, color: notice2.color, reload: false };
+    }
+    if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
+      return { text: BANNER_STUCK_TEXT, color: null, reload: true };
+    }
+    if (injectionDegraded) {
+      return { text: BANNER_OPTICS_TEXT, color: null, reload: true };
+    }
+    if (conn.phase !== "connected") {
+      return { text: INPUT_OFFLINE_HINT, color: null, reload: false };
+    }
+    return null;
+  }
+  var notice = null;
+  var strip = null;
+  function render() {
+    if (!strip) return;
+    const view = stripView(
+      get("conn"),
+      get("bccHealth").injectionDegraded,
+      Date.now(),
+      notice
+    );
+    if (view === null) {
+      strip.classList.remove("bcc-strip-visible");
+      strip.replaceChildren();
+      delete strip.dataset.key;
+      return;
+    }
+    const key = view.text + "|" + (view.color ?? "");
+    if (strip.dataset.key === key) return;
+    strip.dataset.key = key;
+    strip.classList.add("bcc-strip-visible");
+    strip.replaceChildren();
+    const line = document.createElement("span");
+    line.textContent = view.text;
+    if (view.color) line.style.color = view.color;
+    strip.appendChild(line);
+    if (view.reload) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "bcc-strip-reload";
+      btn.textContent = ACTION_RELOAD;
+      btn.addEventListener("click", reloadChat);
+      strip.appendChild(btn);
+    }
+  }
+  var stuckTimer = null;
+  function mountHealthStrip() {
+    const chatbar = document.querySelector(".bcc-chatbar");
+    if (!chatbar) return;
+    strip = document.createElement("div");
+    strip.className = "bcc-health-strip";
+    chatbar.parentElement?.insertBefore(strip, chatbar);
+    react("conn", (conn) => {
+      if (stuckTimer !== null) {
+        clearTimeout(stuckTimer);
+        stuckTimer = null;
+      }
+      const c = conn;
+      if (c.phase === "connecting" && c.since > 0) {
+        const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
+        stuckTimer = window.setTimeout(() => {
+          stuckTimer = null;
+          render();
+        }, wait);
+      }
+      render();
+    });
+    react("bccHealth", () => render());
+    render();
   }
 
   // src/init.ts
@@ -4381,6 +4395,7 @@
     mountInput();
     mountFooter();
     mountHealthUi();
+    mountHealthStrip();
   }
 
   // src/index.ts

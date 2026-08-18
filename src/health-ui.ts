@@ -6,7 +6,7 @@
 // only the card re-enables pointer events. Dismissing removes the veil but
 // NOT the latched conn state; the status button stays red until a real reload.
 
-import { react, snapshot, get } from "./store";
+import { react, snapshot } from "./store";
 import { reloadChat } from "./shell";
 import { cclog } from "./utils";
 import { reportBootError } from "./health";
@@ -24,34 +24,14 @@ import {
   CARD_SEND_BROKEN_TITLE,
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
-  BANNER_STUCK_TEXT,
-  BANNER_OPTICS_TEXT,
-  ACTION_RELOAD,
 } from "./health-strings";
 import type { BccHealthState, BootReasonCode, ConnState } from "./health-core";
-import { STUCK_MS } from "./health-core";
 
 // ─── Pure decision (testable without DOM) ────────────────────────────────────
 
 /** Terminal states that warrant the veil + card. Dismissal is view state, never a store write. */
 export function shouldShowCritical(conn: ConnState, dismissed: boolean): boolean {
   return conn.phase === "authdead" && !dismissed;
-}
-
-// ─── Banner decision (T7) ──────────────────────────────────────────────────
-
-/** Which banner line to show, or null. Optics (B2) outranks stuck (A2):
- * it persists, stuck is transient. */
-export function bannerView(
-  conn: ConnState,
-  injectionDegraded: boolean,
-  now: number,
-): string | null {
-  if (injectionDegraded) return BANNER_OPTICS_TEXT;
-  if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
-    return BANNER_STUCK_TEXT;
-  }
-  return null;
 }
 
 // ─── Boot failure classification (codes; display text stays in the view) ────
@@ -303,67 +283,14 @@ export function handleBootFailure(err: unknown): void {
   reportBootError(code);
 }
 
-// ─── Banner builder + render (T7) ──────────────────────────────────────────
-
-function buildBanner(text: string): HTMLElement {
-  const banner = document.createElement("div");
-  banner.className = "bcc-health-banner";
-  banner.setAttribute("role", "status");
-  const line = document.createElement("span");
-  line.textContent = text;
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "bcc-health-banner-btn";
-  btn.textContent = ACTION_RELOAD;
-  btn.addEventListener("click", reloadChat);
-  banner.append(line, btn);
-  return banner;
-}
-
 // ─── Mount ───────────────────────────────────────────────────────────────────
-
-let banner: HTMLElement | null = null;
-let stuckTimer: number | null = null;
-
-function renderBanner(): void {
-  const text = bannerView(get("conn") as ConnState, get("bccHealth").injectionDegraded, Date.now());
-  if (!text) {
-    if (banner) {
-      banner.remove();
-      banner = null;
-    }
-    return;
-  }
-  // Same text already up: no DOM churn (fires on every conn message stamp).
-  if (banner && banner.querySelector("span")?.textContent === text) return;
-  banner?.remove();
-  banner = buildBanner(text);
-  const main = document.querySelector(".bcc-main");
-  if (main) main.prepend(banner);
-}
 
 export function mountHealthUi(): void {
   let dismissed = false;
   let veil: HTMLElement | null = null;
 
   react("conn", (conn) => {
-    // Stuck timer: check again when the stuck threshold would be reached;
-    // conn writes alone can't fire at a future time.
-    if (stuckTimer !== null) {
-      clearTimeout(stuckTimer);
-      stuckTimer = null;
-    }
-    const c = conn as ConnState;
-    if (c.phase === "connecting" && c.since > 0) {
-      const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
-      stuckTimer = window.setTimeout(() => {
-        stuckTimer = null;
-        renderBanner();
-      }, wait);
-    }
-    renderBanner();
-
-    // Authdead veil + card
+    // Authdead veil + card (warnings live in health-strip)
     if (!shouldShowCritical(conn as ConnState, dismissed) || veil) return;
 
     const dismiss = () => {
@@ -395,9 +322,8 @@ export function mountHealthUi(): void {
   react("bccHealth", (h) => {
     const health = h as BccHealthState;
 
-    // Banner (injection-degraded) + B1 boot card from store latch. Generic
-    // "error" codes render nothing here: their card came from the live error.
-    renderBanner();
+    // B1 boot card from the store latch. Generic "error" codes render
+    // nothing here: their card came from the live error.
     if (health.bootError) {
       const display = bootDisplayFor(health.bootError);
       if (display) showBootCard(health.bootError, display, null, null);

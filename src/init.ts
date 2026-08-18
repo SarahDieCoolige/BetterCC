@@ -45,6 +45,7 @@ import { initHealth } from "./health";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
 import { mountHealthUi } from "./health-ui";
+import { mountHealthStrip } from "./health-strip";
 import { initStore, on, snapshot } from "./store";
 
 /**
@@ -184,4 +185,5 @@ export async function initV3(): Promise<void> {
 
   // Critical surfaces react to conn; needs the shell DOM.
   mountHealthUi();
+  mountHealthStrip();
 }

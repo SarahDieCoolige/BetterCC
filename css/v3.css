@@ -1599,54 +1599,6 @@
   pointer-events: none;
 }
 
-/* ─── Warning banner (T7): slim amber bar at the top of the chat ──────────
-   Absolute overlay: no layout shift when it appears or clears. */
-.bcc-health-banner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 400; /* below the critical veil (500) */
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
-  background: var(--bcc-warn);
-  color: #1d1206;
-  font-size: 13px;
-}
-
-.bcc-health-banner-btn {
-  margin-left: auto;
-  background: transparent;
-  color: inherit;
-  border: 1px solid rgba(0, 0, 0, 0.4);
-  border-radius: 6px;
-  padding: 2px 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-/* ─── Offline hint (T7): small label in the input area while not connected */
-.bcc-input-area {
-  position: relative;
-}
-
-.bcc-offline-hint {
-  display: none;
-  position: absolute;
-  right: 10px;
-  bottom: 6px;
-  z-index: 2;
-  font-size: 11px;
-  color: var(--bcc-warn);
-  pointer-events: none;
-}
-
-.bcc-offline-hint.bcc-offline-visible {
-  display: block;
-}
-
 /* ─── Daten (Data) panel ─── */
 .bcc-data-row {
   display: flex;
@@ -1662,4 +1614,30 @@
   font-size: 12px;
   color: var(--bcc-accent-ban);
   margin-top: 4px;
+}
+
+/* ─── Notification strip: the single non-critical line, above the chatbar ── */
+.bcc-health-strip {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  background: var(--bcc-warn);
+  color: #1d1206;
+  font-size: 13px;
+}
+
+.bcc-health-strip.bcc-strip-visible {
+  display: flex;
+}
+
+.bcc-strip-reload {
+  margin-left: auto;
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
 }

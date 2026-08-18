@@ -10,10 +10,8 @@ import {
   bootErrorCode,
   bootDisplayFor,
   buildErrorReport,
-  bannerView,
   type ReportFields,
 } from "../src/health-ui";
-import { offlineHintVisible } from "../src/input";
 import { DRAFT_KEY, saveDraft, takeDraft, type StorageLike } from "../src/input";
 import {
   CARD_AUTHDEAD_TITLE,
@@ -61,7 +59,6 @@ describe("shouldShowCritical", () => {
     attempt: 0,
     since: 1,
     lastMessageAt: 0,
-    notice: "",
   };
 
   const connected: ConnState = {
@@ -69,7 +66,6 @@ describe("shouldShowCritical", () => {
     attempt: 0,
     since: 1,
     lastMessageAt: 1,
-    notice: "",
   };
 
   const connecting: ConnState = {
@@ -77,7 +73,6 @@ describe("shouldShowCritical", () => {
     attempt: 1,
     since: 1,
     lastMessageAt: 0,
-    notice: "",
   };
 
   it("returns true for authdead + not dismissed", () => {
@@ -106,7 +101,6 @@ describe("dismissal is view state only", () => {
       attempt: 0,
       since: 1,
       lastMessageAt: 0,
-      notice: "",
     };
 
     expect(shouldShowCritical(conn, false)).toBe(true);
@@ -362,94 +356,6 @@ describe("T6 source wiring", () => {
   });
 });
 
-// ─── 12. bannerView (T7) ──────────────────────────────────────────────────
-
-describe("bannerView", () => {
-  const connected: ConnState = {
-    phase: "connected",
-    attempt: 0,
-    since: 1,
-    lastMessageAt: 1,
-    notice: "",
-  };
-
-  const connecting: ConnState = {
-    phase: "connecting",
-    attempt: 1,
-    since: 1,
-    lastMessageAt: 0,
-    notice: "",
-  };
-
-  it("returns null when connected", () => {
-    expect(bannerView(connected, false, Date.now())).toBeNull();
-  });
-
-  it("returns null when connecting for 29s (below stuck threshold)", () => {
-    const now = Date.now();
-    const conn: ConnState = { ...connecting, since: now - 29_000 };
-    expect(bannerView(conn, false, now)).toBeNull();
-  });
-
-  it("returns stuck text when connecting for 31s (above stuck threshold)", () => {
-    const now = Date.now();
-    const conn: ConnState = { ...connecting, since: now - 31_000 };
-    expect(bannerView(conn, false, now)).toBe(BANNER_STUCK_TEXT);
-  });
-
-  it("returns null when connecting but since = 0", () => {
-    const conn: ConnState = { ...connecting, since: 0 };
-    expect(bannerView(conn, false, Date.now())).toBeNull();
-  });
-
-  it("returns optics text when injectionDegraded (even while connected)", () => {
-    expect(bannerView(connected, true, Date.now())).toBe(BANNER_OPTICS_TEXT);
-  });
-
-  it("optics wins when both stuck and injectionDegraded hold", () => {
-    const now = Date.now();
-    const conn: ConnState = { ...connecting, since: now - 31_000 };
-    expect(bannerView(conn, true, now)).toBe(BANNER_OPTICS_TEXT);
-  });
-});
-
-// ─── 13. offlineHintVisible (T7) ──────────────────────────────────────────
-
-describe("offlineHintVisible", () => {
-  it("returns false for connected", () => {
-    const conn: ConnState = {
-      phase: "connected",
-      attempt: 0,
-      since: 1,
-      lastMessageAt: 1,
-      notice: "",
-    };
-    expect(offlineHintVisible(conn)).toBe(false);
-  });
-
-  it("returns true for connecting", () => {
-    const conn: ConnState = {
-      phase: "connecting",
-      attempt: 1,
-      since: 1,
-      lastMessageAt: 0,
-      notice: "",
-    };
-    expect(offlineHintVisible(conn)).toBe(true);
-  });
-
-  it("returns true for authdead", () => {
-    const conn: ConnState = {
-      phase: "authdead",
-      attempt: 0,
-      since: 1,
-      lastMessageAt: 0,
-      notice: "",
-    };
-    expect(offlineHintVisible(conn)).toBe(true);
-  });
-});
-
 // ─── 14. T7 string conformance ─────────────────────────────────────────────
 
 describe("T7 health-strings conformance", () => {
@@ -469,30 +375,6 @@ describe("T7 health-strings conformance", () => {
 
   it("INPUT_OFFLINE_HINT matches verbatim (incl. em-dash escape)", () => {
     expect(INPUT_OFFLINE_HINT).toBe("Offline \u2014 Nachrichten gehen evtl. verloren");
-  });
-});
-
-// ─── 15. T7 CSS file assertions ───────────────────────────────────────────
-
-describe("T7 banner + offline hint CSS", () => {
-  const css = readFileSync(resolve(import.meta.dirname, "../css/v3.css"), "utf-8");
-
-  it("banner has position: absolute and var(--bcc-warn)", () => {
-    const match = css.match(/\.bcc-health-banner\s*\{([^}]*)\}/s);
-    expect(match).not.toBeNull();
-    expect(match![1]).toContain("position: absolute");
-    expect(match![1]).toContain("var(--bcc-warn)");
-  });
-
-  it("offline hint has pointer-events: none and display: none", () => {
-    const match = css.match(/\.bcc-offline-hint\s*\{([^}]*)\}/s);
-    expect(match).not.toBeNull();
-    expect(match![1]).toContain("pointer-events: none");
-    expect(match![1]).toContain("display: none");
-  });
-
-  it("bcc-offline-hint.bcc-offline-visible rule exists", () => {
-    expect(css).toContain(".bcc-offline-hint.bcc-offline-visible");
   });
 });
 
@@ -516,18 +398,13 @@ describe("T7 source wiring", () => {
     expect(src).toContain('reportBootError("ws-takeover")');
   });
 
-  it("input.ts contains INPUT_OFFLINE_HINT", () => {
-    const src = readFileSync(resolve(srcDir, "input.ts"), "utf-8");
+  it("health-strip.ts contains INPUT_OFFLINE_HINT", () => {
+    const src = readFileSync(resolve(srcDir, "health-strip.ts"), "utf-8");
     expect(src).toContain("INPUT_OFFLINE_HINT");
   });
 
-  it("health-ui.ts contains renderBanner()", () => {
-    const src = readFileSync(resolve(srcDir, "health-ui.ts"), "utf-8");
-    expect(src).toContain("renderBanner()");
-  });
-
-  it("health-ui.ts contains STUCK_MS", () => {
-    const src = readFileSync(resolve(srcDir, "health-ui.ts"), "utf-8");
-    expect(src).toContain("STUCK_MS");
+  it("init.ts mounts the strip", () => {
+    const src = readFileSync(resolve(srcDir, "init.ts"), "utf-8");
+    expect(src).toContain("mountHealthStrip()");
   });
 });
