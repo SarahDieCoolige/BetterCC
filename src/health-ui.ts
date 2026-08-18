@@ -24,7 +24,6 @@ import {
   CARD_SEND_BROKEN_TITLE,
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
-  TOAST_COPIED,
   BANNER_STUCK_TEXT,
   BANNER_OPTICS_TEXT,
   ACTION_RELOAD,
@@ -158,30 +157,6 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-// ─── Copied toast (T6) ───────────────────────────────────────────────────────
-
-function showCopiedToast(): void {
-  const el = document.createElement("div");
-  el.textContent = TOAST_COPIED;
-  Object.assign(el.style, {
-    position: "fixed",
-    left: "50%",
-    bottom: "90px",
-    transform: "translateX(-50%)",
-    background: "#26262b",
-    color: "#eee",
-    border: "1px solid rgba(255,255,255,0.25)",
-    borderRadius: "6px",
-    padding: "6px 14px",
-    fontFamily: "system-ui, sans-serif",
-    fontSize: "13px",
-    zIndex: "6001",
-    pointerEvents: "none",
-  });
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2000);
-}
-
 // ─── Card builder ────────────────────────────────────────────────────────────
 //
 // One card look for every critical (auth-dead, boot, send-path), inline-styled:
@@ -296,8 +271,7 @@ function showBootCard(
         label: ACTION_COPY_DETAILS,
         onClick: () => {
           void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
-            if (ok) showCopiedToast();
-            else cclog("copy failed", "health");
+            if (!ok) cclog("copy failed", "health");
           });
         },
       },
@@ -442,8 +416,7 @@ export function mountHealthUi(): void {
                 reportFields("send-path", "send-path-broken", health.sendPathBroken!, null),
               ),
             ).then((ok) => {
-              if (ok) showCopiedToast();
-              else cclog("copy failed", "health");
+              if (!ok) cclog("copy failed", "health");
             });
           },
         },

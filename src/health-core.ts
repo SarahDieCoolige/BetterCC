@@ -15,7 +15,6 @@ export interface ConnState {
   attempt: number;
   since: number;
   lastMessageAt: number;
-  notice: string;
 }
 
 /** Machine codes for the latched boot error. The store carries these, never
@@ -26,7 +25,6 @@ export interface BccHealthState {
   bootError: BootReasonCode | null;
   sendPathBroken: string | null;
   injectionDegraded: boolean;
-  signalsDegraded: boolean;
 }
 
 export interface FreshnessState {
@@ -39,8 +37,7 @@ export type ConnEvent =
   | { type: "open"; at: number }
   | { type: "close"; at: number }
   | { type: "authdead"; at: number }
-  | { type: "message"; at: number }
-  | { type: "notice"; text: string };
+  | { type: "message"; at: number };
 
 // ─── Thresholds ────────────────────────────────────────────────────────────
 
@@ -74,8 +71,6 @@ export function nextConn(prev: ConnState, ev: ConnEvent): ConnState {
       return { ...prev, phase: "authdead", since: ev.at };
     case "message":
       return { ...prev, lastMessageAt: ev.at };
-    case "notice":
-      return { ...prev, notice: ev.text };
   }
 }
 

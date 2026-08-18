@@ -29,7 +29,6 @@ import {
   CARD_SEND_BROKEN_TITLE,
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
-  TOAST_COPIED,
   BANNER_STUCK_TEXT,
   BANNER_OPTICS_TEXT,
   ACTION_RELOAD,
@@ -334,10 +333,6 @@ describe("T6 health-strings conformance", () => {
 
   it("ACTION_COPY_ERROR matches verbatim", () => {
     expect(ACTION_COPY_ERROR).toBe("Fehler kopieren");
-  });
-
-  it("TOAST_COPIED matches verbatim", () => {
-    expect(TOAST_COPIED).toBe("Kopiert.");
   });
 });
 

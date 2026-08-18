@@ -511,8 +511,8 @@
     },
     conn: {
       encode: (v) => v,
-      decode: () => ({ phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" }),
-      default: { phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" },
+      decode: () => ({ phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0 }),
+      default: { phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0 },
       persisted: false
     },
     bccHealth: {
@@ -520,14 +520,12 @@
       decode: () => ({
         bootError: null,
         sendPathBroken: null,
-        injectionDegraded: false,
-        signalsDegraded: false
+        injectionDegraded: false
       }),
       default: {
         bootError: null,
         sendPathBroken: null,
-        injectionDegraded: false,
-        signalsDegraded: false
+        injectionDegraded: false
       },
       persisted: false
     },
@@ -731,8 +729,6 @@
         return { ...prev, phase: "authdead", since: ev.at };
       case "message":
         return { ...prev, lastMessageAt: ev.at };
-      case "notice":
-        return { ...prev, notice: ev.text };
     }
   }
 
@@ -2459,7 +2455,6 @@
   var CARD_SEND_BROKEN_TITLE = "Senden defekt";
   var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
   var ACTION_COPY_ERROR = "Fehler kopieren";
-  var TOAST_COPIED = "Kopiert.";
   var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
   var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
   var ACTION_RELOAD = "Neu laden";
@@ -4123,27 +4118,6 @@
       return ok;
     }
   }
-  function showCopiedToast() {
-    const el = document.createElement("div");
-    el.textContent = TOAST_COPIED;
-    Object.assign(el.style, {
-      position: "fixed",
-      left: "50%",
-      bottom: "90px",
-      transform: "translateX(-50%)",
-      background: "#26262b",
-      color: "#eee",
-      border: "1px solid rgba(255,255,255,0.25)",
-      borderRadius: "6px",
-      padding: "6px 14px",
-      fontFamily: "system-ui, sans-serif",
-      fontSize: "13px",
-      zIndex: "6001",
-      pointerEvents: "none"
-    });
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 2e3);
-  }
   function buildCardEl(title, text, actions) {
     const card = document.createElement("div");
     Object.assign(card.style, {
@@ -4228,8 +4202,7 @@
           label: ACTION_COPY_DETAILS,
           onClick: () => {
             void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
-              if (ok) showCopiedToast();
-              else cclog("copy failed", "health");
+              if (!ok) cclog("copy failed", "health");
             });
           }
         },
@@ -4341,8 +4314,7 @@
                   reportFields("send-path", "send-path-broken", health.sendPathBroken, null)
                 )
               ).then((ok) => {
-                if (ok) showCopiedToast();
-                else cclog("copy failed", "health");
+                if (!ok) cclog("copy failed", "health");
               });
             }
           },

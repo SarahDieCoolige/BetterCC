@@ -732,7 +732,6 @@ describe("store — health-related ephemeral defaults", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     });
   });
 
@@ -743,7 +742,6 @@ describe("store — health-related ephemeral defaults", () => {
       bootError: null,
       sendPathBroken: null,
       injectionDegraded: false,
-      signalsDegraded: false,
     });
   });
 

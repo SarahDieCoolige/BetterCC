@@ -128,8 +128,8 @@ const codecs: { [K in StoreKey]: Codec<any> } = {
   },
   conn: {
     encode: (v) => v,
-    decode: () => ({ phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" }),
-    default: { phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" },
+    decode: () => ({ phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0 }),
+    default: { phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0 },
     persisted: false,
   },
   bccHealth: {
@@ -138,13 +138,11 @@ const codecs: { [K in StoreKey]: Codec<any> } = {
       bootError: null,
       sendPathBroken: null,
       injectionDegraded: false,
-      signalsDegraded: false,
     }),
     default: {
       bootError: null,
       sendPathBroken: null,
       injectionDegraded: false,
-      signalsDegraded: false,
     },
     persisted: false,
   },

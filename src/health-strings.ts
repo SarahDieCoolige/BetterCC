@@ -40,7 +40,6 @@ export const CARD_SEND_BROKEN_TITLE = "Senden defekt";
 export const CARD_SEND_BROKEN_TEXT =
   "ChatCity hat den Sendeweg ge\u00e4ndert. Hilft nur ein BetterCC-Update.";
 export const ACTION_COPY_ERROR = "Fehler kopieren";
-export const TOAST_COPIED = "Kopiert.";
 
 // Warning banner + offline hint strings (T7).
 export const BANNER_STUCK_TEXT = "Verbindung h\u00e4ngt \u2014 seit \u00fcber 30 Sekunden";

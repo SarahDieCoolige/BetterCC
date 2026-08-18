@@ -24,7 +24,6 @@ const INITIAL: ConnState = {
   attempt: 0,
   since: 0,
   lastMessageAt: 0,
-  notice: "",
 };
 
 function at(t: number): ConnEvent {
@@ -38,9 +37,6 @@ function authEv(t: number): ConnEvent {
 }
 function msgEv(t: number): ConnEvent {
   return { type: "message", at: t };
-}
-function noticeEv(text: string): ConnEvent {
-  return { type: "notice", text };
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────
@@ -73,7 +69,6 @@ describe("nextConn — open transitions", () => {
         attempt: 5,
         since: 999,
         lastMessageAt: 800,
-        notice: "dead",
       },
       at(1000),
     );
@@ -91,7 +86,6 @@ describe("nextConn — close transitions", () => {
         attempt: 0,
         since: 100,
         lastMessageAt: 200,
-        notice: "",
       },
       ct(300),
     );
@@ -128,32 +122,12 @@ describe("nextConn — message transition", () => {
       attempt: 0,
       since: 100,
       lastMessageAt: 0,
-      notice: "",
     };
     const state = nextConn(prev, msgEv(500));
     expect(state.lastMessageAt).toBe(500);
     expect(state.phase).toBe("connected");
     expect(state.attempt).toBe(0);
     expect(state.since).toBe(100);
-    expect(state.notice).toBe("");
-  });
-});
-
-describe("nextConn — notice transition", () => {
-  it("notice only sets the notice text, nothing else changes", () => {
-    const prev = {
-      phase: "connecting" as const,
-      attempt: 2,
-      since: 100,
-      lastMessageAt: 0,
-      notice: "old",
-    };
-    const state = nextConn(prev, noticeEv("new notice"));
-    expect(state.notice).toBe("new notice");
-    expect(state.phase).toBe("connecting");
-    expect(state.attempt).toBe(2);
-    expect(state.since).toBe(100);
-    expect(state.lastMessageAt).toBe(0);
   });
 });
 
@@ -164,7 +138,6 @@ describe("nextConn — authdead latch", () => {
       attempt: 0,
       since: 100,
       lastMessageAt: 200,
-      notice: "",
     };
     const state = nextConn(prev, authEv(300));
     expect(state.phase).toBe("authdead");
@@ -181,7 +154,6 @@ describe("nextConn — authdead latch", () => {
         attempt: 0,
         since: 100,
         lastMessageAt: 200,
-        notice: "",
       },
       authEv(300),
     );
@@ -196,7 +168,6 @@ describe("nextConn — authdead latch", () => {
         attempt: 0,
         since: 100,
         lastMessageAt: 200,
-        notice: "",
       },
       authEv(300),
     );
@@ -211,27 +182,11 @@ describe("nextConn — authdead latch", () => {
         attempt: 0,
         since: 100,
         lastMessageAt: 200,
-        notice: "",
       },
       authEv(300),
     );
     const afterMsg = nextConn(locked, msgEv(600));
     expect(afterMsg).toEqual(locked);
-  });
-
-  it("authdead is terminal — notice after authdead returns unchanged", () => {
-    const locked = nextConn(
-      {
-        phase: "connected" as const,
-        attempt: 0,
-        since: 100,
-        lastMessageAt: 200,
-        notice: "",
-      },
-      authEv(300),
-    );
-    const afterNotice = nextConn(locked, noticeEv("ignored"));
-    expect(afterNotice).toEqual(locked);
   });
 
   it("authdead is terminal — second authdead returns unchanged", () => {
@@ -241,7 +196,6 @@ describe("nextConn — authdead latch", () => {
         attempt: 0,
         since: 100,
         lastMessageAt: 200,
-        notice: "",
       },
       authEv(300),
     );
@@ -259,7 +213,6 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 1,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     // now - since = STUCK_MS exactly → not stuck (strict >)
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, STUCK_MS);
@@ -272,7 +225,6 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 1,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 29_999);
     expect(result.stuck).toBe(false);
@@ -284,7 +236,6 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 1,
       since: 1,
       lastMessageAt: 0,
-      notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 30_002);
     expect(result.stuck).toBe(true);
@@ -296,7 +247,6 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
     expect(result.stuck).toBe(false);
@@ -308,7 +258,6 @@ describe("deriveUiState — stuck detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
     expect(result.stuck).toBe(false);
@@ -322,7 +271,6 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     const freshness: FreshnessState = { ulistAt: 0, awAt: 0, statsAt: 0 };
     const result = deriveUiState(conn, freshness, 100_000);
@@ -337,7 +285,6 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     // ulist: interval=20_000, 3x=60_000, max(60_000, 30_000)=60_000
     // ulistAt is 0 → never stale, so test with a non-zero stamp
@@ -355,7 +302,6 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     // aw: interval=5_000, 3x=15_000, max(15_000, 30_000)=30_000
     // awAt=1, now=30_001 → elapsed=30_000 → exactly threshold → not stale
@@ -373,7 +319,6 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     // stats: interval=10_000, 3x=30_000, max(30_000, 30_000)=30_000
     // statsAt=1, now=30_001 → elapsed=30_000 → exactly threshold → not stale
@@ -391,7 +336,6 @@ describe("deriveUiState — stale detection", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      notice: "",
     };
     // ulistAt and statsAt are stale, awAt is fresh
     const freshness: FreshnessState = { ulistAt: 1, awAt: 10_000_000, statsAt: 1 };
