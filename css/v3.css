@@ -1616,15 +1616,26 @@
   margin-top: 4px;
 }
 
-/* ─── Notification strip: the single non-critical line, above the chatbar ── */
+/* ─── Notification strip: floating pill at the top of the chat area ──
+   Shows only transient/upstream + BetterCC-internal messages (never
+   connection state — that lives on the status button). Absolute: no layout
+   shift, never resizes the input or footer. */
 .bcc-health-strip {
   display: none;
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 350; /* below the critical veil (500) */
   align-items: center;
   gap: 10px;
-  padding: 4px 12px;
+  max-width: calc(100% - 24px);
+  padding: 6px 14px;
   background: var(--bcc-warn);
   color: #1d1206;
   font-size: 13px;
+  border-radius: 999px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 
 .bcc-health-strip.bcc-strip-visible {

@@ -242,6 +242,26 @@ describe("setstatus wrap", () => {
     expect(strip.currentStripNotice()?.color).toBeNull();
   });
 
+  it("connection-state texts are skipped (the button owns those)", async () => {
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+    const orig = vi.fn();
+    (globalThis as any).unsafeWindow.chatout_setstatus = orig;
+
+    health.initSetStatusWrap();
+    (globalThis as any).unsafeWindow.chatout_setstatus("Verbinde...", "#CC9900", false);
+    expect(strip.currentStripNotice()).toBeNull();
+
+    (globalThis as any).unsafeWindow.chatout_setstatus(
+      "Verbindung verloren - bitte Seite neu laden",
+      "#CC0000",
+      true,
+    );
+    expect(strip.currentStripNotice()).toBeNull();
+    // the original still ran for both
+    expect(orig).toHaveBeenCalledTimes(2);
+  });
+
   it("missing chatout_setstatus upstream: no-op, no crash", async () => {
     const health = await import("../src/health");
     const strip = await import("../src/health-strip");

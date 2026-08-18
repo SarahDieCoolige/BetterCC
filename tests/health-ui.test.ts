@@ -27,10 +27,8 @@ import {
   CARD_SEND_BROKEN_TITLE,
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
-  BANNER_STUCK_TEXT,
   BANNER_OPTICS_TEXT,
   ACTION_RELOAD,
-  INPUT_OFFLINE_HINT,
 } from "../src/health-strings";
 
 // ─── StorageLike fake (Map-backed, no real sessionStorage) ────────────────────
@@ -359,10 +357,6 @@ describe("T6 source wiring", () => {
 // ─── 14. T7 string conformance ─────────────────────────────────────────────
 
 describe("T7 health-strings conformance", () => {
-  it("BANNER_STUCK_TEXT matches verbatim (incl. em-dash escape)", () => {
-    expect(BANNER_STUCK_TEXT).toBe("Verbindung h\u00e4ngt \u2014 seit \u00fcber 30 Sekunden");
-  });
-
   it("BANNER_OPTICS_TEXT matches verbatim (incl. em-dash escape)", () => {
     expect(BANNER_OPTICS_TEXT).toBe(
       "Chat ohne BetterCC-Design \u2014 Senden l\u00e4uft normal, Neu laden behebt es",
@@ -371,10 +365,6 @@ describe("T7 health-strings conformance", () => {
 
   it("ACTION_RELOAD matches verbatim", () => {
     expect(ACTION_RELOAD).toBe("Neu laden");
-  });
-
-  it("INPUT_OFFLINE_HINT matches verbatim (incl. em-dash escape)", () => {
-    expect(INPUT_OFFLINE_HINT).toBe("Offline \u2014 Nachrichten gehen evtl. verloren");
   });
 });
 
@@ -398,9 +388,9 @@ describe("T7 source wiring", () => {
     expect(src).toContain('reportBootError("ws-takeover")');
   });
 
-  it("health-strip.ts contains INPUT_OFFLINE_HINT", () => {
+  it("health-strip.ts routes setstatus notices", () => {
     const src = readFileSync(resolve(srcDir, "health-strip.ts"), "utf-8");
-    expect(src).toContain("INPUT_OFFLINE_HINT");
+    expect(src).toContain("showStripNotice");
   });
 
   it("init.ts mounts the strip", () => {

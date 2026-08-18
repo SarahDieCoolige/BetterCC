@@ -81,10 +81,23 @@ export function reportInjectionDegraded(degraded: boolean): void {
   set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
 }
 
+/** Connection-state setstatus texts duplicate the status button. Only action
+ * errors (picshare, block, whisper) reach the strip. */
+function isConnectionStatus(text: string): boolean {
+  return (
+    text.startsWith("Verbinde") || // "Verbinde..."
+    text.startsWith("Verbindung") || // "Verbindung verloren / unterbrochen"
+    text === "Verbunden"
+  );
+}
+
 /** Route upstream chatout_setstatus texts into the notification strip
- * (verbatim, with the upstream color). These are action errors like picshare
- * rejections, invisible since the v3 shell hides the table they colored. */
+ * (verbatim, with the upstream color), skipping connection-state texts the
+ * status button already conveys. Action errors are invisible since the v3
+ * shell hides the table they used to color. */
 export function initSetStatusWrap(): void {
-  const ok = wrapSetStatus((text, color) => showStripNotice(text, color));
+  const ok = wrapSetStatus((text, color) => {
+    if (!isConnectionStatus(text)) showStripNotice(text, color);
+  });
   if (!ok) cclog("initSetStatusWrap: chatout_setstatus missing upstream", "health");
 }

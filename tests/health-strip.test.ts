@@ -5,71 +5,43 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { stripView, type StripNotice } from "../src/health-strip";
-import type { ConnState } from "../src/health-core";
 
-const connected: ConnState = {
-  phase: "connected",
-  attempt: 0,
-  since: 1,
-  lastMessageAt: 1,
-};
-
-const connecting: ConnState = {
-  phase: "connecting",
-  attempt: 1,
-  since: 1,
-  lastMessageAt: 0,
-};
-
-describe("stripView — healthy state", () => {
-  it("returns null when connected and nothing else is wrong", () => {
-    expect(stripView(connected, false, Date.now(), null)).toBeNull();
+describe("stripView — nothing to say", () => {
+  it("returns null when not degraded and no notice", () => {
+    expect(stripView(false, Date.now(), null)).toBeNull();
   });
 });
 
-describe("stripView — priority order", () => {
-  it("transient notice wins over everything while unexpired", () => {
+describe("stripView — transient notice", () => {
+  it("shows the notice verbatim while unexpired, no reload", () => {
     const now = Date.now();
-    const stuckConn = { ...connecting, since: now - 31_000 };
     const notice: StripNotice = { text: "Bild ist zu gross", color: "#cc0000", until: now + 1000 };
-    const view = stripView(stuckConn, true, now, notice);
+    const view = stripView(true, now, notice);
     expect(view?.text).toBe("Bild ist zu gross");
     expect(view?.color).toBe("#cc0000");
     expect(view?.reload).toBe(false);
   });
 
-  it("expired transient falls through to the persistent lines", () => {
+  it("expired notice falls through to the injection line", () => {
     const now = Date.now();
-    const notice: StripNotice = { text: "Bild ist zu gross", color: "#cc0000", until: now - 1 };
-    expect(stripView(connected, false, now, notice)).toBeNull();
-  });
-
-  it("stuck outranks injection degraded", () => {
-    const now = Date.now();
-    const conn = { ...connecting, since: now - 31_000 };
-    const view = stripView(conn, true, now, null);
-    expect(view?.text).toContain("h\u00e4ngt");
-    expect(view?.reload).toBe(true);
-  });
-
-  it("injection degraded shows with reload while connected", () => {
-    const view = stripView(connected, true, Date.now(), null);
+    const notice: StripNotice = { text: "Bild ist zu gross", color: null, until: now - 1 };
+    const view = stripView(true, now, notice);
     expect(view?.text).toContain("BetterCC-Design");
     expect(view?.reload).toBe(true);
   });
 
-  it("connecting below the stuck threshold shows the offline line, no reload", () => {
+  it("expired notice with nothing else wrong hides the strip", () => {
     const now = Date.now();
-    const conn = { ...connecting, since: now - 5_000 };
-    const view = stripView(conn, false, now, null);
-    expect(view?.text).toBe("Offline \u2014 Nachrichten gehen evtl. verloren");
-    expect(view?.reload).toBe(false);
+    const notice: StripNotice = { text: "Bild ist zu gross", color: null, until: now - 1 };
+    expect(stripView(false, now, notice)).toBeNull();
   });
+});
 
-  it("authdead shows the offline line too (the card owns the real message)", () => {
-    const conn: ConnState = { ...connected, phase: "authdead" as const };
-    const view = stripView(conn, false, Date.now(), null);
-    expect(view?.text).toContain("Offline");
+describe("stripView — injection degraded", () => {
+  it("shows the optics text with reload", () => {
+    const view = stripView(true, Date.now(), null);
+    expect(view?.text).toContain("BetterCC-Design");
+    expect(view?.reload).toBe(true);
   });
 });
 
@@ -80,6 +52,12 @@ describe("strip CSS", () => {
     const match = css.match(/\.bcc-health-strip\s*\{([^}]*)\}/s);
     expect(match).not.toBeNull();
     expect(match![1]).toContain("display: none");
+  });
+
+  it("absolute and pill-shaped (floats over the chat, no layout shift)", () => {
+    const match = css.match(/\.bcc-health-strip\s*\{([^}]*)\}/s);
+    expect(match![1]).toContain("position: absolute");
+    expect(match![1]).toContain("border-radius: 999px");
   });
 
   it("visible modifier switches to flex", () => {

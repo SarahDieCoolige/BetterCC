@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=a37e1d60
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=8a16280c
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -717,7 +717,6 @@
   };
 
   // src/health-core.ts
-  var STUCK_MS = 3e4;
   function nextConn(prev, ev) {
     if (prev.phase === "authdead") return prev;
     switch (ev.type) {
@@ -2568,25 +2567,17 @@
   var CARD_SEND_BROKEN_TITLE = "Senden defekt";
   var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
   var ACTION_COPY_ERROR = "Fehler kopieren";
-  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
   var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
   var ACTION_RELOAD = "Neu laden";
-  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
 
   // src/health-strip.ts
   var NOTICE_MS = 8e3;
-  function stripView(conn, injectionDegraded, now, notice2) {
+  function stripView(injectionDegraded, now, notice2) {
     if (notice2 && now < notice2.until) {
       return { text: notice2.text, color: notice2.color, reload: false };
     }
-    if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
-      return { text: BANNER_STUCK_TEXT, color: null, reload: true };
-    }
     if (injectionDegraded) {
       return { text: BANNER_OPTICS_TEXT, color: null, reload: true };
-    }
-    if (conn.phase !== "connected") {
-      return { text: INPUT_OFFLINE_HINT, color: null, reload: false };
     }
     return null;
   }
@@ -2605,12 +2596,7 @@
   }
   function render() {
     if (!strip) return;
-    const view = stripView(
-      get("conn"),
-      get("bccHealth").injectionDegraded,
-      Date.now(),
-      notice
-    );
+    const view = stripView(get("bccHealth").injectionDegraded, Date.now(), notice);
     if (view === null) {
       strip.classList.remove("bcc-strip-visible");
       strip.replaceChildren();
@@ -2635,28 +2621,12 @@
       strip.appendChild(btn);
     }
   }
-  var stuckTimer = null;
   function mountHealthStrip() {
-    const chatbar = document.querySelector(".bcc-chatbar");
-    if (!chatbar) return;
+    const main = document.querySelector(".bcc-main");
+    if (!main) return;
     strip = document.createElement("div");
     strip.className = "bcc-health-strip";
-    chatbar.parentElement?.insertBefore(strip, chatbar);
-    react("conn", (conn) => {
-      if (stuckTimer !== null) {
-        clearTimeout(stuckTimer);
-        stuckTimer = null;
-      }
-      const c = conn;
-      if (c.phase === "connecting" && c.since > 0) {
-        const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
-        stuckTimer = setTimeout(() => {
-          stuckTimer = null;
-          render();
-        }, wait);
-      }
-      render();
-    });
+    main.prepend(strip);
     react("bccHealth", () => render());
     render();
   }
@@ -2709,8 +2679,15 @@
     if (get("bccHealth").injectionDegraded === degraded) return;
     set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
   }
+  function isConnectionStatus(text) {
+    return text.startsWith("Verbinde") || // "Verbinde..."
+    text.startsWith("Verbindung") || // "Verbindung verloren / unterbrochen"
+    text === "Verbunden";
+  }
   function initSetStatusWrap() {
-    const ok = wrapSetStatus((text, color) => showStripNotice(text, color));
+    const ok = wrapSetStatus((text, color) => {
+      if (!isConnectionStatus(text)) showStripNotice(text, color);
+    });
     if (!ok) cclog("initSetStatusWrap: chatout_setstatus missing upstream", "health");
   }
 

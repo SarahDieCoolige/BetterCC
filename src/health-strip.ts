@@ -1,22 +1,15 @@
-// ─── Notification strip: the single non-critical message line ──────────────
+// ─── Notification strip: transient + BetterCC-internal messages only ────────
 //
-// One row directly above the chatbar, in-flow: when it appears the layout
-// makes room instead of covering chat content, and while everything is fine
-// it is display:none. Shows exactly one line, chosen by priority:
-// transient upstream notices (setstatus texts) > stuck > injection > offline.
+// A floating pill at the top of the chat area. It shows ONLY what the status
+// button doesn't already convey: upstream action errors (setstatus texts,
+// verbatim, transient) and injection failure (persistent). Connection state
+// stays on the button. Hidden entirely when there is nothing to say.
 
 import { react, get } from "./store";
 import { reloadChat } from "./shell";
-import {
-  BANNER_STUCK_TEXT,
-  BANNER_OPTICS_TEXT,
-  ACTION_RELOAD,
-  INPUT_OFFLINE_HINT,
-} from "./health-strings";
-import type { ConnState } from "./health-core";
-import { STUCK_MS } from "./health-core";
+import { BANNER_OPTICS_TEXT, ACTION_RELOAD } from "./health-strings";
 
-/** How long a transient notice stays up before the strip falls back. */
+/** How long a transient notice stays up before the strip hides again. */
 const NOTICE_MS = 8_000;
 
 export interface StripNotice {
@@ -31,9 +24,8 @@ export interface StripView {
   reload: boolean; // offer the [Neu laden] action
 }
 
-/** The one line to show right now, or null when everything is fine. */
+/** The one line to show right now, or null when there is nothing to say. */
 export function stripView(
-  conn: ConnState,
   injectionDegraded: boolean,
   now: number,
   notice: StripNotice | null,
@@ -41,14 +33,8 @@ export function stripView(
   if (notice && now < notice.until) {
     return { text: notice.text, color: notice.color, reload: false };
   }
-  if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
-    return { text: BANNER_STUCK_TEXT, color: null, reload: true };
-  }
   if (injectionDegraded) {
     return { text: BANNER_OPTICS_TEXT, color: null, reload: true };
-  }
-  if (conn.phase !== "connected") {
-    return { text: INPUT_OFFLINE_HINT, color: null, reload: false };
   }
   return null;
 }
@@ -74,8 +60,7 @@ export function showStripNotice(text: string, color: string | null): void {
   render();
 }
 
-/** The current transient notice, or null. Test/debug seam; the strip
- * derives everything from it. */
+/** The current transient notice, or null. Test/debug seam. */
 export function currentStripNotice(): StripNotice | null {
   return notice;
 }
@@ -84,19 +69,14 @@ export function currentStripNotice(): StripNotice | null {
 
 function render(): void {
   if (!strip) return;
-  const view = stripView(
-    get("conn") as ConnState,
-    get("bccHealth").injectionDegraded,
-    Date.now(),
-    notice,
-  );
+  const view = stripView(get("bccHealth").injectionDegraded, Date.now(), notice);
   if (view === null) {
     strip.classList.remove("bcc-strip-visible");
     strip.replaceChildren();
     delete strip.dataset.key;
     return;
   }
-  // Same line already up: no DOM churn (conn stamps refire renders constantly).
+  // Same line already up: no DOM churn.
   const key = view.text + "|" + (view.color ?? "");
   if (strip.dataset.key === key) return;
   strip.dataset.key = key;
@@ -118,32 +98,16 @@ function render(): void {
   }
 }
 
-// Stuck check needs a timer: conn writes alone can't fire at a future time.
-let stuckTimer: ReturnType<typeof setTimeout> | null = null;
-
 export function mountHealthStrip(): void {
-  const chatbar = document.querySelector(".bcc-chatbar");
-  if (!chatbar) return;
+  // Anchor to the chat area: a floating pill at its top, away from the
+  // input. Absolute, so it never resizes the textarea or the footer.
+  const main = document.querySelector(".bcc-main");
+  if (!main) return;
 
   strip = document.createElement("div");
   strip.className = "bcc-health-strip";
-  chatbar.parentElement?.insertBefore(strip, chatbar);
+  main.prepend(strip);
 
-  react("conn", (conn) => {
-    if (stuckTimer !== null) {
-      clearTimeout(stuckTimer);
-      stuckTimer = null;
-    }
-    const c = conn as ConnState;
-    if (c.phase === "connecting" && c.since > 0) {
-      const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
-      stuckTimer = setTimeout(() => {
-        stuckTimer = null;
-        render();
-      }, wait);
-    }
-    render();
-  });
   react("bccHealth", () => render());
   render();
 }
