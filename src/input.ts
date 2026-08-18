@@ -8,7 +8,7 @@ import { cclog, printHelp, printToChat } from "./utils";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { generateScheme } from "./scheme";
 import { buildPatchedHandler } from "./patched-handler";
-import { reportSendPathBroken, armSendEcho } from "./health";
+import { reportSendPathBroken } from "./health";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
 import { get, set, react } from "./store";
@@ -219,7 +219,6 @@ async function doSubmit(whispernick?: string): Promise<void> {
   if (onSubmitOrig && decision.message) {
     (docHold.OUT1 as HTMLInputElement).value = decision.message;
     onSubmitOrig();
-    armSendEcho();
   }
   if (textarea) textarea.value = "";
 }

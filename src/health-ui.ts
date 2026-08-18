@@ -28,11 +28,10 @@ import {
   TOAST_COPIED,
   BANNER_STUCK_TEXT,
   BANNER_OPTICS_TEXT,
-  BANNER_ZOMBIE_TEXT,
   ACTION_RELOAD,
 } from "./health-strings";
 import type { BccHealthState, BootReasonCode, ConnState } from "./health-core";
-import { STUCK_MS, ECHO_TIMEOUT_MS } from "./health-core";
+import { STUCK_MS } from "./health-core";
 
 // ─── Pure decision (testable without DOM) ────────────────────────────────────
 
@@ -43,20 +42,13 @@ export function shouldShowCritical(conn: ConnState, dismissed: boolean): boolean
 
 // ─── Banner decision (T7) ──────────────────────────────────────────────────
 
-/** Which banner line to show, or null. Zombie (A5) outranks optics (B2) because
- * possible message loss beats a cosmetic note; stuck and zombie are mutually exclusive by phase. */
+/** Which banner line to show, or null. Optics (B2) outranks stuck (A2):
+ * it persists, stuck is transient. */
 export function bannerView(
   conn: ConnState,
   injectionDegraded: boolean,
   now: number,
 ): string | null {
-  if (
-    conn.phase === "connected" &&
-    conn.pendingSendAt > 0 &&
-    now - conn.pendingSendAt > ECHO_TIMEOUT_MS
-  ) {
-    return BANNER_ZOMBIE_TEXT;
-  }
   if (injectionDegraded) return BANNER_OPTICS_TEXT;
   if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
     return BANNER_STUCK_TEXT;

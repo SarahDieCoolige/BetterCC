@@ -130,7 +130,6 @@ describe("sendBlocked", () => {
       attempt: 1,
       since: 1,
       lastMessageAt: 0,
-      pendingSendAt: 0,
       notice: "",
     };
     expect(sendBlocked(conn)).toBe(true);
@@ -142,7 +141,6 @@ describe("sendBlocked", () => {
       attempt: 0,
       since: 1,
       lastMessageAt: 0,
-      pendingSendAt: 0,
       notice: "",
     };
     expect(sendBlocked(conn)).toBe(true);
@@ -154,7 +152,6 @@ describe("sendBlocked", () => {
       attempt: 0,
       since: 1,
       lastMessageAt: 1,
-      pendingSendAt: 0,
       notice: "",
     };
     expect(sendBlocked(conn)).toBe(false);

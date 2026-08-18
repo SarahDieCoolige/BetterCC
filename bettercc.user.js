@@ -511,22 +511,8 @@
     },
     conn: {
       encode: (v) => v,
-      decode: () => ({
-        phase: "connecting",
-        attempt: 0,
-        since: 0,
-        lastMessageAt: 0,
-        pendingSendAt: 0,
-        notice: ""
-      }),
-      default: {
-        phase: "connecting",
-        attempt: 0,
-        since: 0,
-        lastMessageAt: 0,
-        pendingSendAt: 0,
-        notice: ""
-      },
+      decode: () => ({ phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" }),
+      default: { phase: "connecting", attempt: 0, since: 0, lastMessageAt: 0, notice: "" },
       persisted: false
     },
     bccHealth: {
@@ -734,26 +720,17 @@
 
   // src/health-core.ts
   var STUCK_MS = 3e4;
-  var ECHO_TIMEOUT_MS = 1e4;
   function nextConn(prev, ev) {
     if (prev.phase === "authdead") return prev;
     switch (ev.type) {
       case "open":
-        return { ...prev, phase: "connected", attempt: 0, since: ev.at, pendingSendAt: 0 };
+        return { ...prev, phase: "connected", attempt: 0, since: ev.at };
       case "close":
-        return {
-          ...prev,
-          phase: "connecting",
-          attempt: prev.attempt + 1,
-          since: ev.at,
-          pendingSendAt: 0
-        };
+        return { ...prev, phase: "connecting", attempt: prev.attempt + 1, since: ev.at };
       case "authdead":
         return { ...prev, phase: "authdead", since: ev.at };
       case "message":
-        return { ...prev, lastMessageAt: ev.at, pendingSendAt: 0 };
-      case "send":
-        return { ...prev, pendingSendAt: prev.pendingSendAt > 0 ? prev.pendingSendAt : ev.at };
+        return { ...prev, lastMessageAt: ev.at };
       case "notice":
         return { ...prev, notice: ev.text };
     }
@@ -779,7 +756,6 @@
     }
   }
   function stampConnMessage() {
-    clearEchoTimer();
     applyConnEvent({ type: "message", at: Date.now() });
   }
   function initHealth() {
@@ -807,22 +783,6 @@
   function reportInjectionDegraded(degraded) {
     if (get("bccHealth").injectionDegraded === degraded) return;
     set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
-  }
-  var echoTimer = null;
-  function clearEchoTimer() {
-    if (echoTimer !== null) {
-      clearTimeout(echoTimer);
-      echoTimer = null;
-    }
-  }
-  function armSendEcho() {
-    if (get("conn").pendingSendAt > 0) return;
-    applyConnEvent({ type: "send", at: Date.now() });
-    clearEchoTimer();
-    echoTimer = setTimeout(() => {
-      echoTimer = null;
-      set("conn", { ...get("conn") });
-    }, ECHO_TIMEOUT_MS);
   }
 
   // src/ws-hook.ts
@@ -2478,8 +2438,7 @@
     connected: "verbunden",
     connecting: "verbinde\u2026",
     retry: "Versuch {n}",
-    authdead: "Session abgelaufen",
-    zombie: "reagiert nicht"
+    authdead: "Session abgelaufen"
   };
   function statusButtonTitle(state) {
     return STATUS_BUTTON_TITLE.replace("{state}", state);
@@ -2505,7 +2464,6 @@
   var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
   var ACTION_RELOAD = "Neu laden";
   var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
-  var BANNER_ZOMBIE_TEXT = "Chat reagiert nicht \u2014 Nachrichten kommen nicht an";
 
   // src/input.ts
   var DRAFT_KEY = "bcc_draft";
@@ -2634,7 +2592,6 @@
     if (onSubmitOrig && decision.message) {
       docHold.OUT1.value = decision.message;
       onSubmitOrig();
-      armSendEcho();
     }
     if (textarea) textarea.value = "";
   }
@@ -3839,7 +3796,7 @@
   }
 
   // src/status-button.ts
-  function buttonView(conn, now = Date.now()) {
+  function buttonView(conn) {
     if (conn.phase === "authdead") {
       return {
         icon: "fa-triangle-exclamation",
@@ -3849,14 +3806,6 @@
       };
     }
     if (conn.phase === "connected") {
-      if (conn.pendingSendAt > 0 && now - conn.pendingSendAt > ECHO_TIMEOUT_MS) {
-        return {
-          icon: "fa-triangle-exclamation",
-          spinning: false,
-          badge: null,
-          stateText: STATUS_TEXT.zombie
-        };
-      }
       return {
         icon: "fa-sync",
         spinning: false,
@@ -4102,9 +4051,6 @@
     return conn.phase === "authdead" && !dismissed;
   }
   function bannerView(conn, injectionDegraded, now) {
-    if (conn.phase === "connected" && conn.pendingSendAt > 0 && now - conn.pendingSendAt > ECHO_TIMEOUT_MS) {
-      return BANNER_ZOMBIE_TEXT;
-    }
     if (injectionDegraded) return BANNER_OPTICS_TEXT;
     if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
       return BANNER_STUCK_TEXT;

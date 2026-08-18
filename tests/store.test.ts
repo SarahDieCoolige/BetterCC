@@ -732,7 +732,6 @@ describe("store — health-related ephemeral defaults", () => {
       attempt: 0,
       since: 0,
       lastMessageAt: 0,
-      pendingSendAt: 0,
       notice: "",
     });
   });
