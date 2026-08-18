@@ -19,16 +19,6 @@ import { openSettings } from "./settings";
 import { get, set, react } from "./store";
 import { buildStatusButton } from "./status-button";
 
-// R3: chatout_setstatus colors EVERY reload button. v3 has two reload buttons
-// (header + footer); track both so a status change is visible in both places.
-const reloadButtons: HTMLElement[] = [];
-
-/** Register a reload button so setstatus colors it. Call at build time. */
-function trackReloadButton(btn: HTMLElement): HTMLElement {
-  reloadButtons.push(btn);
-  return btn;
-}
-
 // ─── Button factories ──────────────────────────────────────────────────────
 
 /**
@@ -226,21 +216,6 @@ function buildExitBtn(): HTMLElement {
   return btn;
 }
 
-// ─── chatout_setstatus patch (connection → reload button color) ────────────
-
-function patchSetStatus(): void {
-  const w = unsafeWindow as any;
-  if (typeof w.chatout_setstatus !== "function") return;
-  const orig = w.chatout_setstatus;
-  w.chatout_setstatus = function (text: string, color: string, bold: boolean) {
-    for (const btn of reloadButtons) {
-      btn.style.color = color || "#888";
-      btn.title = "Chat neu laden — " + text;
-    }
-    orig.call(this, text, color, bold);
-  };
-}
-
 // ─── Font Awesome CDN injection ────────────────────────────────────────────
 
 function injectFontAwesome(): void {
@@ -304,11 +279,5 @@ export function mountFooter(): void {
   // .bcc-input-area first; it's flex:1 so these sit to its right).
   chatbar.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
 
-  // R3: also track the header reload button so setstatus colors it too.
-  const headerReload = document.querySelector(".bcc-reload") as HTMLElement | null;
-  if (headerReload) trackReloadButton(headerReload);
-
-  patchSetStatus();
-
-  cclog("footer mounted — pill groups + FA + setstatus patch", "v3");
+  cclog("footer mounted — pill groups + FA", "v3");
 }

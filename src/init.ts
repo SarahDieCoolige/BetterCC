@@ -41,7 +41,7 @@ import { startPolling, stopPolling } from "./global-userlist";
 import { mountSidebar } from "./sidebar";
 import { mountStatsBar } from "./stats";
 import { initSession, getSession } from "./session";
-import { initHealth } from "./health";
+import { initHealth, initSetStatusWrap } from "./health";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
 import { mountHealthUi } from "./health-ui";
@@ -186,4 +186,5 @@ export async function initV3(): Promise<void> {
   // Critical surfaces react to conn; needs the shell DOM.
   mountHealthUi();
   mountHealthStrip();
+  initSetStatusWrap();
 }

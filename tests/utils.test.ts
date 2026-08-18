@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getUserKey, setUserStore, printToChat, printHelp } from "../src/utils";
 
 /** Parse a .bcc-chat-msg div from its HTML string into a fake element. */
@@ -51,20 +51,14 @@ describe("setUserStore", () => {
 });
 
 describe("printHelp", () => {
-  // printHelp must route through printToChat (in-chat), not desktop
-  // notifications (ccnotify/GM_notification). We set up a minimal fake
-  // document with a chatframe so printToChat can append to it, then verify
-  // the help text appears in the chat body — and that GM_notification is
-  // NOT called.
+  // printHelp must route through printToChat (in-chat). We set up a minimal
+  // fake document with a chatframe so printToChat can append to it, then
+  // verify the help text appears in the chat body.
 
   let fakeBody: any;
   const originalDocument = globalThis.document;
-  let gmNotifySpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    gmNotifySpy = vi.fn();
-    (globalThis as any).GM_notification = gmNotifySpy;
-
     fakeBody = {
       _children: [] as any[],
       appendChild(el: any) {
@@ -105,9 +99,6 @@ describe("printHelp", () => {
 
   it("routes help output to chat (printToChat) instead of a desktop notification", () => {
     printHelp();
-
-    // Desktop notification must NOT fire.
-    expect(gmNotifySpy).not.toHaveBeenCalled();
 
     // A chat message div must have been appended.
     const divs = fakeBody.querySelectorAll("div.bcc-chat-msg");

@@ -198,3 +198,56 @@ describe("health wiring", () => {
     expect(conn.attempt).toBe(0);
   });
 });
+
+// ─── setstatus wrap (T9) ─────────────────────────────────────────────────────
+
+describe("setstatus wrap", () => {
+  beforeEach(async () => {
+    await initTestStore();
+    (globalThis as any).unsafeWindow = {};
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).unsafeWindow;
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it("forwards setstatus texts verbatim to the strip, then calls the original", async () => {
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+    const orig = vi.fn();
+    (globalThis as any).unsafeWindow.chatout_setstatus = orig;
+
+    health.initSetStatusWrap();
+    (globalThis as any).unsafeWindow.chatout_setstatus(
+      "Bild ist zu gross (max. 5 MB).",
+      "#cc0000",
+      false,
+    );
+
+    expect(strip.currentStripNotice()?.text).toBe("Bild ist zu gross (max. 5 MB).");
+    expect(strip.currentStripNotice()?.color).toBe("#cc0000");
+    expect(orig).toHaveBeenCalledWith("Bild ist zu gross (max. 5 MB).", "#cc0000", false);
+  });
+
+  it("passes a null color through as null", async () => {
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+    (globalThis as any).unsafeWindow.chatout_setstatus = vi.fn();
+
+    health.initSetStatusWrap();
+    (globalThis as any).unsafeWindow.chatout_setstatus("irgendein Text", "", false);
+
+    expect(strip.currentStripNotice()?.color).toBeNull();
+  });
+
+  it("missing chatout_setstatus upstream: no-op, no crash", async () => {
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+    delete (globalThis as any).unsafeWindow.chatout_setstatus;
+
+    expect(() => health.initSetStatusWrap()).not.toThrow();
+    expect(strip.currentStripNotice()).toBeNull();
+  });
+});

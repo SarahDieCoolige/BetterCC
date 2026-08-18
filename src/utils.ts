@@ -22,24 +22,6 @@ export function printHelp(): void {
   printToChat(text);
 }
 
-/** Wrap GM_notification. VM doesn't expose GM.notification as a callable
- * function (only GM_notification works), so we use the legacy global. */
-export function ccnotify(message: string, title = "", tag = "", timeout = 3000): void {
-  const opts = {
-    title: "BetterCC " + title,
-    text: message,
-    tag: tag,
-    timeout: timeout,
-    onclick: () => {
-      (window.event as Event)?.preventDefault();
-      cclog("Notification clicked.");
-      window.focus();
-    },
-  };
-
-  GM_notification(opts);
-}
-
 // ─── Iframe access ───
 // Always use these — they return null if the iframe isn't ready. Never access
 // chatframe.contentDocument directly.

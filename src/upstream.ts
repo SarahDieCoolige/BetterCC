@@ -109,6 +109,23 @@ export function sendCommand(cmd: string): void {
   }
 }
 
+// ── Wraps — intercept upstream functions. Callback keeps this module free of
+// feature imports; the caller decides what a text means.
+
+/** Wrap chatout_setstatus: cb receives every (text, color) the page emits,
+ *  then the original runs untouched. Returns false when the fn is missing
+ *  upstream (nothing wrapped). */
+export function wrapSetStatus(cb: (text: string, color: string | null) => void): boolean {
+  const w = unsafeWindow as any;
+  if (typeof w.chatout_setstatus !== "function") return false;
+  const orig = w.chatout_setstatus;
+  w.chatout_setstatus = function (text: string, color: string, bold: boolean) {
+    cb(String(text), color || null);
+    orig.call(this, text, color, bold);
+  };
+  return true;
+}
+
 /** Leave the chat — send /bye, then close the window after 1s. */
 export function leaveChat(): void {
   sendCommand("/bye");

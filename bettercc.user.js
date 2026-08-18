@@ -732,151 +732,6 @@
     }
   }
 
-  // src/health.ts
-  var lastWs = null;
-  function applyConnEvent(ev) {
-    const prev = get("conn");
-    set("conn", nextConn(prev, ev));
-  }
-  function attachConnListeners(ws) {
-    if (ws === lastWs) return;
-    lastWs = ws;
-    ws.addEventListener("open", () => {
-      applyConnEvent({ type: "open", at: Date.now() });
-    });
-    ws.addEventListener("close", () => {
-      applyConnEvent({ type: "close", at: Date.now() });
-    });
-    if (ws.readyState === WebSocket.OPEN) {
-      applyConnEvent({ type: "open", at: Date.now() });
-    }
-  }
-  function stampConnMessage() {
-    applyConnEvent({ type: "message", at: Date.now() });
-  }
-  function initHealth() {
-    const cur = get("session");
-    if (cur.authDead) {
-      applyConnEvent({ type: "authdead", at: Date.now() });
-    }
-    on("session", (s) => {
-      if (s.authDead) {
-        applyConnEvent({ type: "authdead", at: Date.now() });
-      }
-    });
-    cclog("health wiring: init done", "health");
-  }
-  function reportBootError(code) {
-    try {
-      set("bccHealth", { ...get("bccHealth"), bootError: code });
-    } catch (e) {
-      cclog("reportBootError: store not up (" + e.message + ")", "health");
-    }
-  }
-  function reportSendPathBroken(message) {
-    set("bccHealth", { ...get("bccHealth"), sendPathBroken: message });
-  }
-  function reportInjectionDegraded(degraded) {
-    if (get("bccHealth").injectionDegraded === degraded) return;
-    set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
-  }
-
-  // src/ws-hook.ts
-  var upstreamChatoutConnect = null;
-  var upstreamOnMessage = null;
-  var INJECTION_RETRY_MS = 50;
-  var MAX_INJECTION_RETRIES = 50;
-  var injectionRetries = 0;
-  var injectionScheduled = false;
-  var _iframeMousedownBody = null;
-  function injectIntoChatframe() {
-    const doc = getChatDoc();
-    const win = getChatWin();
-    if (!doc || !win || !doc.body) {
-      if (injectionScheduled) return;
-      if (injectionRetries++ >= MAX_INJECTION_RETRIES) {
-        injectionRetries = 0;
-        reportInjectionDegraded(true);
-        return;
-      }
-      injectionScheduled = true;
-      setTimeout(() => {
-        injectionScheduled = false;
-        injectIntoChatframe();
-      }, INJECTION_RETRY_MS);
-      return;
-    }
-    injectionRetries = 0;
-    const iframeCss = GM_getResourceText("iframe_css");
-    if (iframeCss) {
-      const style = doc.createElement("style");
-      style.textContent = iframeCss;
-      style.setAttribute("data-bcc-iframe", "");
-      if (doc.head) {
-        doc.head.appendChild(style);
-      } else {
-        const head = doc.createElement("head");
-        head.appendChild(style);
-        doc.documentElement.insertBefore(head, doc.body);
-      }
-    }
-    applyCurrentScheme();
-    doc.body.style.setProperty("background-color", "var(--chatBackground)");
-    doc.body.style.setProperty("color", "var(--chatText)");
-    addAutoscrollBanner(doc, win);
-    if (doc.body !== _iframeMousedownBody) {
-      _iframeMousedownBody = doc.body;
-      doc.body.addEventListener("mousedown", () => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-        window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
-      });
-    }
-    reportInjectionDegraded(false);
-    cclog("injectIntoChatframe: injection complete");
-  }
-  function betterccOnWsMessage(ev) {
-    stampConnMessage();
-    if (typeof upstreamOnMessage === "function") {
-      try {
-        upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
-      } catch (e) {
-        cclog("betterccOnWsMessage: upstream onmessage threw \u2014 " + e.message, "ws-hook");
-      }
-    }
-    const doc = getChatDoc();
-    if (doc && doc.querySelector("style[data-bcc-iframe]")) {
-      doc.body.style.setProperty("background-color", "var(--chatBackground)");
-      doc.body.style.setProperty("color", "var(--chatText)");
-    } else {
-      injectIntoChatframe();
-    }
-  }
-  function betterccOnWsClose() {
-  }
-  function attachWsListeners() {
-    if (unsafeWindow.chatout_ws) {
-      upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
-      unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
-      unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
-      attachConnListeners(unsafeWindow.chatout_ws);
-    }
-  }
-  function hookChatoutConnect() {
-    if (typeof unsafeWindow.chatout_connect === "function") {
-      upstreamChatoutConnect = unsafeWindow.chatout_connect;
-      unsafeWindow.chatout_connect = function() {
-        upstreamChatoutConnect.apply(this, arguments);
-        attachWsListeners();
-      };
-      attachWsListeners();
-    } else {
-      cclog("WARNING: chatout_connect not found \u2014 WebSocket hook failed");
-      reportBootError("ws-takeover");
-    }
-  }
-
   // src/upstream.ts
   function getChatNick() {
     return String(unsafeWindow.chat_nick ?? "");
@@ -938,6 +793,16 @@
     } else {
       cclog("sendCommand: com_set unavailable \u2014 dropped: " + cmd, "v3");
     }
+  }
+  function wrapSetStatus(cb) {
+    const w = unsafeWindow;
+    if (typeof w.chatout_setstatus !== "function") return false;
+    const orig = w.chatout_setstatus;
+    w.chatout_setstatus = function(text, color, bold) {
+      cb(String(text), color || null);
+      orig.call(this, text, color, bold);
+    };
+    return true;
   }
   function leaveChat() {
     sendCommand("/bye");
@@ -2676,6 +2541,275 @@
     }
   }
 
+  // src/health-strings.ts
+  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
+  var STATUS_TEXT = {
+    connected: "verbunden",
+    connecting: "verbinde\u2026",
+    retry: "Versuch {n}",
+    authdead: "Session abgelaufen"
+  };
+  function statusButtonTitle(state) {
+    return STATUS_BUTTON_TITLE.replace("{state}", state);
+  }
+  function retryText(n) {
+    return STATUS_TEXT.retry.replace("{n}", String(n));
+  }
+  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
+  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
+  var ACTION_PAGE_RELOAD = "Seite neu laden";
+  var ACTION_LATER = "Sp\xE4ter";
+  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
+  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
+  var BOOT_REASON_WS = "Chat-WebSocket konnte nicht \xFCbernommen werden.";
+  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
+  var ACTION_COPY_DETAILS = "Details kopieren";
+  var ACTION_CONTINUE_CHAT = "Weiter chatten";
+  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
+  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
+  var ACTION_COPY_ERROR = "Fehler kopieren";
+  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
+  var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
+  var ACTION_RELOAD = "Neu laden";
+  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
+
+  // src/health-strip.ts
+  var NOTICE_MS = 8e3;
+  function stripView(conn, injectionDegraded, now, notice2) {
+    if (notice2 && now < notice2.until) {
+      return { text: notice2.text, color: notice2.color, reload: false };
+    }
+    if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
+      return { text: BANNER_STUCK_TEXT, color: null, reload: true };
+    }
+    if (injectionDegraded) {
+      return { text: BANNER_OPTICS_TEXT, color: null, reload: true };
+    }
+    if (conn.phase !== "connected") {
+      return { text: INPUT_OFFLINE_HINT, color: null, reload: false };
+    }
+    return null;
+  }
+  var notice = null;
+  var noticeTimer = null;
+  var strip = null;
+  function showStripNotice(text, color) {
+    notice = { text, color, until: Date.now() + NOTICE_MS };
+    if (noticeTimer !== null) clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => {
+      noticeTimer = null;
+      notice = null;
+      render();
+    }, NOTICE_MS);
+    render();
+  }
+  function render() {
+    if (!strip) return;
+    const view = stripView(
+      get("conn"),
+      get("bccHealth").injectionDegraded,
+      Date.now(),
+      notice
+    );
+    if (view === null) {
+      strip.classList.remove("bcc-strip-visible");
+      strip.replaceChildren();
+      delete strip.dataset.key;
+      return;
+    }
+    const key = view.text + "|" + (view.color ?? "");
+    if (strip.dataset.key === key) return;
+    strip.dataset.key = key;
+    strip.classList.add("bcc-strip-visible");
+    strip.replaceChildren();
+    const line = document.createElement("span");
+    line.textContent = view.text;
+    if (view.color) line.style.color = view.color;
+    strip.appendChild(line);
+    if (view.reload) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "bcc-strip-reload";
+      btn.textContent = ACTION_RELOAD;
+      btn.addEventListener("click", reloadChat);
+      strip.appendChild(btn);
+    }
+  }
+  var stuckTimer = null;
+  function mountHealthStrip() {
+    const chatbar = document.querySelector(".bcc-chatbar");
+    if (!chatbar) return;
+    strip = document.createElement("div");
+    strip.className = "bcc-health-strip";
+    chatbar.parentElement?.insertBefore(strip, chatbar);
+    react("conn", (conn) => {
+      if (stuckTimer !== null) {
+        clearTimeout(stuckTimer);
+        stuckTimer = null;
+      }
+      const c = conn;
+      if (c.phase === "connecting" && c.since > 0) {
+        const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
+        stuckTimer = setTimeout(() => {
+          stuckTimer = null;
+          render();
+        }, wait);
+      }
+      render();
+    });
+    react("bccHealth", () => render());
+    render();
+  }
+
+  // src/health.ts
+  var lastWs = null;
+  function applyConnEvent(ev) {
+    const prev = get("conn");
+    set("conn", nextConn(prev, ev));
+  }
+  function attachConnListeners(ws) {
+    if (ws === lastWs) return;
+    lastWs = ws;
+    ws.addEventListener("open", () => {
+      applyConnEvent({ type: "open", at: Date.now() });
+    });
+    ws.addEventListener("close", () => {
+      applyConnEvent({ type: "close", at: Date.now() });
+    });
+    if (ws.readyState === WebSocket.OPEN) {
+      applyConnEvent({ type: "open", at: Date.now() });
+    }
+  }
+  function stampConnMessage() {
+    applyConnEvent({ type: "message", at: Date.now() });
+  }
+  function initHealth() {
+    const cur = get("session");
+    if (cur.authDead) {
+      applyConnEvent({ type: "authdead", at: Date.now() });
+    }
+    on("session", (s) => {
+      if (s.authDead) {
+        applyConnEvent({ type: "authdead", at: Date.now() });
+      }
+    });
+    cclog("health wiring: init done", "health");
+  }
+  function reportBootError(code) {
+    try {
+      set("bccHealth", { ...get("bccHealth"), bootError: code });
+    } catch (e) {
+      cclog("reportBootError: store not up (" + e.message + ")", "health");
+    }
+  }
+  function reportSendPathBroken(message) {
+    set("bccHealth", { ...get("bccHealth"), sendPathBroken: message });
+  }
+  function reportInjectionDegraded(degraded) {
+    if (get("bccHealth").injectionDegraded === degraded) return;
+    set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
+  }
+  function initSetStatusWrap() {
+    const ok = wrapSetStatus((text, color) => showStripNotice(text, color));
+    if (!ok) cclog("initSetStatusWrap: chatout_setstatus missing upstream", "health");
+  }
+
+  // src/ws-hook.ts
+  var upstreamChatoutConnect = null;
+  var upstreamOnMessage = null;
+  var INJECTION_RETRY_MS = 50;
+  var MAX_INJECTION_RETRIES = 50;
+  var injectionRetries = 0;
+  var injectionScheduled = false;
+  var _iframeMousedownBody = null;
+  function injectIntoChatframe() {
+    const doc = getChatDoc();
+    const win = getChatWin();
+    if (!doc || !win || !doc.body) {
+      if (injectionScheduled) return;
+      if (injectionRetries++ >= MAX_INJECTION_RETRIES) {
+        injectionRetries = 0;
+        reportInjectionDegraded(true);
+        return;
+      }
+      injectionScheduled = true;
+      setTimeout(() => {
+        injectionScheduled = false;
+        injectIntoChatframe();
+      }, INJECTION_RETRY_MS);
+      return;
+    }
+    injectionRetries = 0;
+    const iframeCss = GM_getResourceText("iframe_css");
+    if (iframeCss) {
+      const style = doc.createElement("style");
+      style.textContent = iframeCss;
+      style.setAttribute("data-bcc-iframe", "");
+      if (doc.head) {
+        doc.head.appendChild(style);
+      } else {
+        const head = doc.createElement("head");
+        head.appendChild(style);
+        doc.documentElement.insertBefore(head, doc.body);
+      }
+    }
+    applyCurrentScheme();
+    doc.body.style.setProperty("background-color", "var(--chatBackground)");
+    doc.body.style.setProperty("color", "var(--chatText)");
+    addAutoscrollBanner(doc, win);
+    if (doc.body !== _iframeMousedownBody) {
+      _iframeMousedownBody = doc.body;
+      doc.body.addEventListener("mousedown", () => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        window.dispatchEvent(new CustomEvent("bcc-iframe-interaction"));
+      });
+    }
+    reportInjectionDegraded(false);
+    cclog("injectIntoChatframe: injection complete");
+  }
+  function betterccOnWsMessage(ev) {
+    stampConnMessage();
+    if (typeof upstreamOnMessage === "function") {
+      try {
+        upstreamOnMessage.call(unsafeWindow.chatout_ws, ev);
+      } catch (e) {
+        cclog("betterccOnWsMessage: upstream onmessage threw \u2014 " + e.message, "ws-hook");
+      }
+    }
+    const doc = getChatDoc();
+    if (doc && doc.querySelector("style[data-bcc-iframe]")) {
+      doc.body.style.setProperty("background-color", "var(--chatBackground)");
+      doc.body.style.setProperty("color", "var(--chatText)");
+    } else {
+      injectIntoChatframe();
+    }
+  }
+  function betterccOnWsClose() {
+  }
+  function attachWsListeners() {
+    if (unsafeWindow.chatout_ws) {
+      upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
+      unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
+      unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
+      attachConnListeners(unsafeWindow.chatout_ws);
+    }
+  }
+  function hookChatoutConnect() {
+    if (typeof unsafeWindow.chatout_connect === "function") {
+      upstreamChatoutConnect = unsafeWindow.chatout_connect;
+      unsafeWindow.chatout_connect = function() {
+        upstreamChatoutConnect.apply(this, arguments);
+        attachWsListeners();
+      };
+      attachWsListeners();
+    } else {
+      cclog("WARNING: chatout_connect not found \u2014 WebSocket hook failed");
+      reportBootError("ws-takeover");
+    }
+  }
+
   // src/userlist.ts
   function parseUserlist(chaMy) {
     const users = [];
@@ -3748,38 +3882,6 @@
     });
   }
 
-  // src/health-strings.ts
-  var STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
-  var STATUS_TEXT = {
-    connected: "verbunden",
-    connecting: "verbinde\u2026",
-    retry: "Versuch {n}",
-    authdead: "Session abgelaufen"
-  };
-  function statusButtonTitle(state) {
-    return STATUS_BUTTON_TITLE.replace("{state}", state);
-  }
-  function retryText(n) {
-    return STATUS_TEXT.retry.replace("{n}", String(n));
-  }
-  var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
-  var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
-  var ACTION_PAGE_RELOAD = "Seite neu laden";
-  var ACTION_LATER = "Sp\xE4ter";
-  var CARD_BOOT_TITLE = "BetterCC konnte nicht starten";
-  var BOOT_REASON_STRUCTURE = "Unerwartete Seitenstruktur \u2014 vermutlich hat ChatCity etwas ge\xE4ndert.";
-  var BOOT_REASON_WS = "Chat-WebSocket konnte nicht \xFCbernommen werden.";
-  var CARD_BOOT_RUNS_ON = "Der Chat l\xE4uft weiter \u2014 nur ohne BetterCC.";
-  var ACTION_COPY_DETAILS = "Details kopieren";
-  var ACTION_CONTINUE_CHAT = "Weiter chatten";
-  var CARD_SEND_BROKEN_TITLE = "Senden defekt";
-  var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
-  var ACTION_COPY_ERROR = "Fehler kopieren";
-  var BANNER_STUCK_TEXT = "Verbindung h\xE4ngt \u2014 seit \xFCber 30 Sekunden";
-  var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
-  var ACTION_RELOAD = "Neu laden";
-  var INPUT_OFFLINE_HINT = "Offline \u2014 Nachrichten gehen evtl. verloren";
-
   // src/status-button.ts
   function buttonView(conn) {
     if (conn.phase === "authdead") {
@@ -3845,11 +3947,6 @@
   }
 
   // src/footer.ts
-  var reloadButtons = [];
-  function trackReloadButton(btn) {
-    reloadButtons.push(btn);
-    return btn;
-  }
   function iconBtn(iconClass, title, onClick) {
     const btn = actionButton({ iconClass, title, onClick });
     const isBnClass = /^b\d+$/.test(iconClass);
@@ -3974,18 +4071,6 @@
     btn.classList.add("bcc-danger");
     return btn;
   }
-  function patchSetStatus() {
-    const w = unsafeWindow;
-    if (typeof w.chatout_setstatus !== "function") return;
-    const orig = w.chatout_setstatus;
-    w.chatout_setstatus = function(text, color, bold) {
-      for (const btn of reloadButtons) {
-        btn.style.color = color || "#888";
-        btn.title = "Chat neu laden \u2014 " + text;
-      }
-      orig.call(this, text, color, bold);
-    };
-  }
   function injectFontAwesome() {
     if (document.querySelector('link[href*="fontawesome"]')) return;
     const link = document.createElement("link");
@@ -4025,10 +4110,7 @@
       chatbar.append(buildCompactToggle(chatbar));
     }
     chatbar.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
-    const headerReload = document.querySelector(".bcc-reload");
-    if (headerReload) trackReloadButton(headerReload);
-    patchSetStatus();
-    cclog("footer mounted \u2014 pill groups + FA + setstatus patch", "v3");
+    cclog("footer mounted \u2014 pill groups + FA", "v3");
   }
 
   // src/health-ui.ts
@@ -4269,82 +4351,6 @@
     });
   }
 
-  // src/health-strip.ts
-  function stripView(conn, injectionDegraded, now, notice2) {
-    if (notice2 && now < notice2.until) {
-      return { text: notice2.text, color: notice2.color, reload: false };
-    }
-    if (conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS) {
-      return { text: BANNER_STUCK_TEXT, color: null, reload: true };
-    }
-    if (injectionDegraded) {
-      return { text: BANNER_OPTICS_TEXT, color: null, reload: true };
-    }
-    if (conn.phase !== "connected") {
-      return { text: INPUT_OFFLINE_HINT, color: null, reload: false };
-    }
-    return null;
-  }
-  var notice = null;
-  var strip = null;
-  function render() {
-    if (!strip) return;
-    const view = stripView(
-      get("conn"),
-      get("bccHealth").injectionDegraded,
-      Date.now(),
-      notice
-    );
-    if (view === null) {
-      strip.classList.remove("bcc-strip-visible");
-      strip.replaceChildren();
-      delete strip.dataset.key;
-      return;
-    }
-    const key = view.text + "|" + (view.color ?? "");
-    if (strip.dataset.key === key) return;
-    strip.dataset.key = key;
-    strip.classList.add("bcc-strip-visible");
-    strip.replaceChildren();
-    const line = document.createElement("span");
-    line.textContent = view.text;
-    if (view.color) line.style.color = view.color;
-    strip.appendChild(line);
-    if (view.reload) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "bcc-strip-reload";
-      btn.textContent = ACTION_RELOAD;
-      btn.addEventListener("click", reloadChat);
-      strip.appendChild(btn);
-    }
-  }
-  var stuckTimer = null;
-  function mountHealthStrip() {
-    const chatbar = document.querySelector(".bcc-chatbar");
-    if (!chatbar) return;
-    strip = document.createElement("div");
-    strip.className = "bcc-health-strip";
-    chatbar.parentElement?.insertBefore(strip, chatbar);
-    react("conn", (conn) => {
-      if (stuckTimer !== null) {
-        clearTimeout(stuckTimer);
-        stuckTimer = null;
-      }
-      const c = conn;
-      if (c.phase === "connecting" && c.since > 0) {
-        const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
-        stuckTimer = window.setTimeout(() => {
-          stuckTimer = null;
-          render();
-        }, wait);
-      }
-      render();
-    });
-    react("bccHealth", () => render());
-    render();
-  }
-
   // src/init.ts
   function neuterResizeFix() {
     unsafeWindow.resize_fix = function resize_fix() {
@@ -4396,6 +4402,7 @@
     mountFooter();
     mountHealthUi();
     mountHealthStrip();
+    initSetStatusWrap();
   }
 
   // src/index.ts

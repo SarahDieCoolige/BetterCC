@@ -1,11 +1,13 @@
 // ─── Health wiring: drives the conn store key from real WebSocket events ───
 //
-// Impure counterpart to health-core. Sets facts, never renders. No DOM, no
-// unsafeWindow; the ws arrives as a parameter from ws-hook.
+// Impure counterpart to health-core. Sets facts, never renders; upstream
+// access goes through upstream.ts. The ws arrives as a parameter from ws-hook.
 
 import { get, set, on } from "./store";
 import { cclog } from "./utils";
 import { nextConn, type BootReasonCode, type ConnEvent } from "./health-core";
+import { showStripNotice } from "./health-strip";
+import { wrapSetStatus } from "./upstream";
 
 // Track the last ws we attached listeners to, so we skip dupes.
 let lastWs: WebSocket | null = null;
@@ -77,4 +79,12 @@ export function reportSendPathBroken(message: string): void {
 export function reportInjectionDegraded(degraded: boolean): void {
   if (get("bccHealth").injectionDegraded === degraded) return;
   set("bccHealth", { ...get("bccHealth"), injectionDegraded: degraded });
+}
+
+/** Route upstream chatout_setstatus texts into the notification strip
+ * (verbatim, with the upstream color). These are action errors like picshare
+ * rejections, invisible since the v3 shell hides the table they colored. */
+export function initSetStatusWrap(): void {
+  const ok = wrapSetStatus((text, color) => showStripNotice(text, color));
+  if (!ok) cclog("initSetStatusWrap: chatout_setstatus missing upstream", "health");
 }

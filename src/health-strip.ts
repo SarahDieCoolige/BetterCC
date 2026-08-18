@@ -58,7 +58,7 @@ export function stripView(
 // Module state on purpose: an 8-second display message is view state, not a
 // store fact. The setstatus wrap calls showStripNotice from health.ts.
 let notice: StripNotice | null = null;
-let noticeTimer: number | null = null;
+let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 let strip: HTMLElement | null = null;
 
 /** Show a transient line (upstream status text, verbatim). One at a time;
@@ -66,12 +66,18 @@ let strip: HTMLElement | null = null;
 export function showStripNotice(text: string, color: string | null): void {
   notice = { text, color, until: Date.now() + NOTICE_MS };
   if (noticeTimer !== null) clearTimeout(noticeTimer);
-  noticeTimer = window.setTimeout(() => {
+  noticeTimer = setTimeout(() => {
     noticeTimer = null;
     notice = null;
     render();
   }, NOTICE_MS);
   render();
+}
+
+/** The current transient notice, or null. Test/debug seam; the strip
+ * derives everything from it. */
+export function currentStripNotice(): StripNotice | null {
+  return notice;
 }
 
 // ─── Render ──────────────────────────────────────────────────────────────────
@@ -113,7 +119,7 @@ function render(): void {
 }
 
 // Stuck check needs a timer: conn writes alone can't fire at a future time.
-let stuckTimer: number | null = null;
+let stuckTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function mountHealthStrip(): void {
   const chatbar = document.querySelector(".bcc-chatbar");
@@ -131,7 +137,7 @@ export function mountHealthStrip(): void {
     const c = conn as ConnState;
     if (c.phase === "connecting" && c.since > 0) {
       const wait = Math.max(0, STUCK_MS - (Date.now() - c.since));
-      stuckTimer = window.setTimeout(() => {
+      stuckTimer = setTimeout(() => {
         stuckTimer = null;
         render();
       }, wait);
