@@ -8,7 +8,6 @@
 
 import { react, snapshot, get } from "./store";
 import { reloadChat } from "./shell";
-import { iconElement } from "./dom";
 import { cclog } from "./utils";
 import { reportBootError } from "./health";
 import {
@@ -184,67 +183,17 @@ function showCopiedToast(): void {
 }
 
 // ─── Card builder ────────────────────────────────────────────────────────────
+//
+// One card look for every critical (auth-dead, boot, send-path), inline-styled:
+// it must render even when .bcc-shell and theme vars don't exist (boot
+// failures), so the themed variant never existed long-term.
 
 interface CardAction {
   label: string;
-  primary?: boolean;
   onClick: () => void;
 }
 
-function buildCard(title: string, text: string, actions: CardAction[]): HTMLElement {
-  const card = document.createElement("div");
-  card.className = "bcc-health-card";
-  card.setAttribute("role", "alert");
-  card.setAttribute("aria-label", title);
-
-  // Head row: icon + title
-  const head = document.createElement("div");
-  head.className = "bcc-health-card-head";
-  const icon = iconElement("fa-triangle-exclamation");
-  icon.classList.add("bcc-health-card-icon");
-  const titleEl = document.createElement("div");
-  titleEl.className = "bcc-health-card-title";
-  titleEl.textContent = title;
-  head.append(icon, titleEl);
-
-  // Body text
-  const textEl = document.createElement("div");
-  textEl.className = "bcc-health-card-text";
-  textEl.textContent = text;
-
-  // Actions
-  const actionsEl = document.createElement("div");
-  actionsEl.className = "bcc-health-card-actions";
-  for (const a of actions) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-health-card-btn";
-    if (a.primary) btn.classList.add("bcc-health-card-primary");
-    btn.textContent = a.label;
-    btn.addEventListener("click", a.onClick);
-    actionsEl.appendChild(btn);
-  }
-
-  card.append(head, textEl, actionsEl);
-  return card;
-}
-
-// ─── Shell-less card builder (T6) ────────────────────────────────────────────
-// Inline-styled: renders even when .bcc-shell and theme vars don't exist.
-
-function buildShellLessCard(title: string, text: string, actions: CardAction[]): HTMLElement {
-  const overlay = document.createElement("div");
-  Object.assign(overlay.style, {
-    position: "fixed",
-    inset: "0",
-    zIndex: "6000",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    pointerEvents: "none",
-    background: "rgba(0,0,0,0.45)",
-  });
-
+function buildCardEl(title: string, text: string, actions: CardAction[]): HTMLElement {
   const card = document.createElement("div");
   Object.assign(card.style, {
     pointerEvents: "auto",
@@ -303,6 +252,22 @@ function buildShellLessCard(title: string, text: string, actions: CardAction[]):
   }
 
   card.append(titleEl, textEl, actionsEl);
+  return card;
+}
+
+/** Fixed dim overlay hosting a card. Clicks pass through except on the card. */
+function cardOverlay(card: HTMLElement): HTMLElement {
+  const overlay = document.createElement("div");
+  Object.assign(overlay.style, {
+    position: "fixed",
+    inset: "0",
+    zIndex: "6000",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none",
+    background: "rgba(0,0,0,0.45)",
+  });
   overlay.appendChild(card);
   return overlay;
 }
@@ -325,24 +290,26 @@ function showBootCard(
 
   const text = display + "\n\n" + CARD_BOOT_RUNS_ON;
 
-  const overlay = buildShellLessCard(CARD_BOOT_TITLE, text, [
-    {
-      label: ACTION_COPY_DETAILS,
-      onClick: () => {
-        void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
-          if (ok) showCopiedToast();
-          else cclog("copy failed", "health");
-        });
+  const overlay = cardOverlay(
+    buildCardEl(CARD_BOOT_TITLE, text, [
+      {
+        label: ACTION_COPY_DETAILS,
+        onClick: () => {
+          void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
+            if (ok) showCopiedToast();
+            else cclog("copy failed", "health");
+          });
+        },
       },
-    },
-    {
-      label: ACTION_CONTINUE_CHAT,
-      onClick: () => {
-        bootCardDismissed = true;
-        overlay.remove();
+      {
+        label: ACTION_CONTINUE_CHAT,
+        onClick: () => {
+          bootCardDismissed = true;
+          overlay.remove();
+        },
       },
-    },
-  ]);
+    ]),
+  );
 
   document.body.appendChild(overlay);
 }
@@ -434,8 +401,8 @@ export function mountHealthUi(): void {
     veil = document.createElement("div");
     veil.className = "bcc-health-veil";
     veil.appendChild(
-      buildCard(CARD_AUTHDEAD_TITLE, CARD_AUTHDEAD_TEXT, [
-        { label: ACTION_PAGE_RELOAD, primary: true, onClick: reloadChat },
+      buildCardEl(CARD_AUTHDEAD_TITLE, CARD_AUTHDEAD_TEXT, [
+        { label: ACTION_PAGE_RELOAD, onClick: reloadChat },
         { label: ACTION_LATER, onClick: dismiss },
       ]),
     );
@@ -465,28 +432,30 @@ export function mountHealthUi(): void {
     if (!health.sendPathBroken || sendBrokenShown || sendBrokenDismissed) return;
     sendBrokenShown = true;
 
-    const overlay = buildShellLessCard(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [
-      {
-        label: ACTION_COPY_ERROR,
-        onClick: () => {
-          void copyText(
-            buildErrorReport(
-              reportFields("send-path", "send-path-broken", health.sendPathBroken!, null),
-            ),
-          ).then((ok) => {
-            if (ok) showCopiedToast();
-            else cclog("copy failed", "health");
-          });
+    const overlay = cardOverlay(
+      buildCardEl(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [
+        {
+          label: ACTION_COPY_ERROR,
+          onClick: () => {
+            void copyText(
+              buildErrorReport(
+                reportFields("send-path", "send-path-broken", health.sendPathBroken!, null),
+              ),
+            ).then((ok) => {
+              if (ok) showCopiedToast();
+              else cclog("copy failed", "health");
+            });
+          },
         },
-      },
-      {
-        label: ACTION_LATER,
-        onClick: () => {
-          sendBrokenDismissed = true;
-          overlay.remove();
+        {
+          label: ACTION_LATER,
+          onClick: () => {
+            sendBrokenDismissed = true;
+            overlay.remove();
+          },
         },
-      },
-    ]);
+      ]),
+    );
 
     document.body.appendChild(overlay);
   });

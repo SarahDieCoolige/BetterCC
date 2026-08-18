@@ -158,7 +158,7 @@ describe("empty/whitespace draft removes stale key", () => {
 
 // ─── 5. CSS file assertions ─────────────────────────────────────────────────
 
-describe("veil + card CSS", () => {
+describe("veil CSS", () => {
   const css = readFileSync(resolve(import.meta.dirname, "../css/v3.css"), "utf-8");
 
   it("veil has pointer-events: none", () => {
@@ -166,12 +166,6 @@ describe("veil + card CSS", () => {
     const veilMatch = css.match(/\.bcc-health-veil\s*\{([^}]*)\}/s);
     expect(veilMatch).not.toBeNull();
     expect(veilMatch![1]).toContain("pointer-events: none");
-  });
-
-  it("card has pointer-events: auto", () => {
-    const cardMatch = css.match(/\.bcc-health-card\s*\{([^}]*)\}/s);
-    expect(cardMatch).not.toBeNull();
-    expect(cardMatch![1]).toContain("pointer-events: auto");
   });
 });
 

@@ -1599,64 +1599,6 @@
   pointer-events: none;
 }
 
-.bcc-health-card {
-  pointer-events: auto;
-  max-width: 360px;
-  margin: 0 16px;
-  padding: 16px 18px;
-  border-radius: 10px;
-  border: 1px solid var(--bcc-border);
-  background: var(--bcc-surface-raised);
-  color: var(--bcc-text-raised);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  font-size: 13px;
-}
-
-.bcc-health-card-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.bcc-health-card-icon {
-  color: var(--bcc-danger);
-  font-size: 18px;
-}
-
-.bcc-health-card-title {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.bcc-health-card-text {
-  line-height: 1.45;
-  margin-bottom: 14px;
-}
-
-.bcc-health-card-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.bcc-health-card-btn {
-  font: inherit;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--bcc-border);
-  background: transparent;
-  color: var(--bcc-text-raised);
-  cursor: pointer;
-}
-
-.bcc-health-card-btn.bcc-health-card-primary {
-  border-color: var(--bcc-danger);
-  background: var(--bcc-danger);
-  color: #fff;
-  font-weight: 700;
-}
-
 /* ─── Warning banner (T7): slim amber bar at the top of the chat ──────────
    Absolute overlay: no layout shift when it appears or clears. */
 .bcc-health-banner {
