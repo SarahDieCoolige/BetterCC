@@ -6,7 +6,6 @@
 // stays on the button. Hidden entirely when there is nothing to say.
 
 import { react, get } from "./store";
-import { reloadChat } from "./shell";
 import { BANNER_OPTICS_TEXT, ACTION_RELOAD } from "./health-strings";
 
 /** How long a transient notice stays up before the strip hides again. */
@@ -93,12 +92,18 @@ function render(): void {
     btn.type = "button";
     btn.className = "bcc-strip-reload";
     btn.textContent = ACTION_RELOAD;
-    btn.addEventListener("click", reloadChat);
+    btn.addEventListener("click", reloadAction);
     strip.appendChild(btn);
   }
 }
 
-export function mountHealthStrip(): void {
+// Injected at mount (init.ts passes reloadChat): keeps this module free of a
+// shell import, which would close an import cycle through input and health.
+let reloadAction: () => void = () => {};
+
+export function mountHealthStrip(onReload: () => void): void {
+  reloadAction = onReload;
+
   // Anchor to the chat area: a floating pill at its top, away from the
   // input. Absolute, so it never resizes the textarea or the footer.
   const main = document.querySelector(".bcc-main");

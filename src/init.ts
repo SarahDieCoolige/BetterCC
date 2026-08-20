@@ -185,6 +185,6 @@ export async function initV3(): Promise<void> {
 
   // Critical surfaces react to conn; needs the shell DOM.
   mountHealthUi();
-  mountHealthStrip();
+  mountHealthStrip(reloadChat);
   initSetStatusWrap();
 }

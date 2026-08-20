@@ -395,6 +395,6 @@ describe("T7 source wiring", () => {
 
   it("init.ts mounts the strip", () => {
     const src = readFileSync(resolve(srcDir, "init.ts"), "utf-8");
-    expect(src).toContain("mountHealthStrip()");
+    expect(src).toContain("mountHealthStrip(reloadChat)");
   });
 });
