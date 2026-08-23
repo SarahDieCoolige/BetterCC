@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=8a16280c
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=88a4dac8
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -717,6 +717,8 @@
   };
 
   // src/health-core.ts
+  var STALE_FACTOR = 3;
+  var STALE_MIN_MS = 3e4;
   function nextConn(prev, ev) {
     if (prev.phase === "authdead") return prev;
     switch (ev.type) {
@@ -729,6 +731,40 @@
       case "message":
         return { ...prev, lastMessageAt: ev.at };
     }
+  }
+  function staleThreshold(interval) {
+    return Math.max(interval * STALE_FACTOR, STALE_MIN_MS);
+  }
+  function staleMarkers(freshness, now) {
+    const staleAge = (stamp, interval) => stamp > 0 && now - stamp > staleThreshold(interval) ? now - stamp : null;
+    return {
+      ulist: staleAge(freshness.ulistAt, POLL_CADENCES.ulist),
+      aw: staleAge(freshness.awAt, POLL_CADENCES.aw),
+      stats: staleAge(freshness.statsAt, POLL_CADENCES.stats)
+    };
+  }
+  function nextStaleChange(freshness, now) {
+    let next = null;
+    const consider = (t) => {
+      if (t > now && (next === null || t < next)) next = t;
+    };
+    const sources = [
+      [freshness.ulistAt, POLL_CADENCES.ulist],
+      [freshness.awAt, POLL_CADENCES.aw],
+      [freshness.statsAt, POLL_CADENCES.stats]
+    ];
+    for (const [stamp, interval] of sources) {
+      if (stamp === 0) continue;
+      consider(stamp + staleThreshold(interval));
+      const elapsed = now - stamp;
+      const elapsedMinutes = Math.floor(elapsed / 6e4);
+      consider(stamp + (elapsedMinutes + 1) * 6e4);
+      const elapsedSeconds = Math.floor(elapsed / 1e3);
+      if (elapsed > staleThreshold(interval) && elapsedSeconds < 60) {
+        consider(stamp + (elapsedSeconds + 1) * 1e3);
+      }
+    }
+    return next;
   }
 
   // src/health-strings.ts
@@ -760,6 +796,14 @@
   var ACTION_COPY_ERROR = "Fehler kopieren";
   var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
   var ACTION_RELOAD = "Neu laden";
+  var STALE_LABEL_ULIST = "Nutzerliste";
+  var STALE_LABEL_AW = "Globale Nutzerliste";
+  var STALE_LABEL_STATS = "Statistiken";
+  function staleText(label, ageMs) {
+    const secs = Math.floor(ageMs / 1e3);
+    const ago = secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
+    return label + " \u2014 zuletzt aktualisiert vor " + ago;
+  }
 
   // src/health-strip.ts
   var NOTICE_MS = 8e3;
@@ -920,6 +964,9 @@
     if (ws.readyState === WebSocket.OPEN) {
       applyConnEvent({ type: "open", at: Date.now() });
     }
+  }
+  function stampFreshness(source) {
+    set("freshness", { ...get("freshness"), [source]: Date.now() });
   }
   function stampConnMessage() {
     applyConnEvent({ type: "message", at: Date.now() });
@@ -2983,6 +3030,7 @@
       const { newList, added, removed } = processUserlist(chaMy, prevList);
       prevList = newList;
       await set("userlist", { users: newList, added, removed });
+      stampFreshness("ulistAt");
     } catch (e) {
       cclog("ulist-poll: poll error \u2014 " + e.message, "v3");
     }
@@ -3008,6 +3056,7 @@
       const { newList, added, removed } = processUserlist(seed, prevList);
       prevList = newList;
       void set("userlist", { users: newList, added, removed });
+      stampFreshness("ulistAt");
     }
     pollAndReschedule(intervalMs);
     cclog("ulist-poll started \u2014 every ~" + intervalMs + " ms", "v3");
@@ -3051,6 +3100,7 @@
       const { added, removed } = diffGlobal(lastSnapshot, next);
       lastSnapshot = next;
       await set("globalUserlist", { channels: next, added, removed });
+      stampFreshness("awAt");
     } catch (e) {
       cclog("global-userlist: poll error \u2014 " + e.message, "v3");
     }
@@ -3841,7 +3891,11 @@
       new ajax(pajax + "chat_info_friends_nc.html", {
         onComplete: (transport) => {
           try {
-            renderStats(parseStats(transport?.responseText ?? ""));
+            const parsed = parseStats(transport?.responseText ?? "");
+            if (parsed !== null) {
+              renderStats(parsed);
+              stampFreshness("statsAt");
+            }
           } catch (e) {
             cclog("stats: parse failed \u2014 " + e.message, "v3");
           }
@@ -4330,6 +4384,62 @@
       document.body.appendChild(overlay);
     });
   }
+  function buildStaleMarker() {
+    const span = document.createElement("span");
+    span.className = "bcc-stale-marker";
+    const icon = document.createElement("i");
+    icon.className = "fas fa-clock";
+    icon.setAttribute("aria-hidden", "true");
+    span.appendChild(icon);
+    return span;
+  }
+  function renderStaleMarkers(ulistEl, awEl, statsEl, f) {
+    const m = staleMarkers(f, Date.now());
+    setMarker(ulistEl, m.ulist, STALE_LABEL_ULIST);
+    setMarker(awEl, m.aw, STALE_LABEL_AW);
+    setMarker(statsEl, m.stats, STALE_LABEL_STATS);
+    armRefresh(ulistEl, awEl, statsEl, f);
+  }
+  function setMarker(el, ageMs, label) {
+    const stale2 = ageMs !== null;
+    const title = stale2 ? staleText(label, ageMs) : null;
+    if (el.classList.contains("bcc-stale-visible") === stale2 && el.title === (title ?? "")) {
+      return;
+    }
+    el.classList.toggle("bcc-stale-visible", stale2);
+    if (title === null) {
+      el.removeAttribute("title");
+      el.removeAttribute("aria-label");
+    } else {
+      el.title = title;
+      el.setAttribute("aria-label", title);
+    }
+  }
+  var refreshTimer = null;
+  function armRefresh(ulistEl, awEl, statsEl, f) {
+    if (refreshTimer !== null) clearTimeout(refreshTimer);
+    refreshTimer = null;
+    const at = nextStaleChange(f, Date.now());
+    if (at === null) return;
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
+      renderStaleMarkers(ulistEl, awEl, statsEl, f);
+    }, at - Date.now());
+  }
+  function mountStaleMarkers() {
+    const onlineRow = document.querySelector(".bcc-online-row");
+    const statsBar2 = document.querySelector(".bcc-stats");
+    const ulistMarker = buildStaleMarker();
+    const awMarker = buildStaleMarker();
+    const statsMarker = buildStaleMarker();
+    onlineRow?.append(ulistMarker, awMarker);
+    statsBar2?.appendChild(statsMarker);
+    react(
+      "freshness",
+      (f) => renderStaleMarkers(ulistMarker, awMarker, statsMarker, f)
+    );
+    renderStaleMarkers(ulistMarker, awMarker, statsMarker, get("freshness"));
+  }
 
   // src/init.ts
   function neuterResizeFix() {
@@ -4383,6 +4493,7 @@
     mountHealthUi();
     mountHealthStrip(reloadChat);
     initSetStatusWrap();
+    mountStaleMarkers();
   }
 
   // src/index.ts

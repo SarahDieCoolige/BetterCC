@@ -37,6 +37,12 @@ export function attachConnListeners(ws: WebSocket): void {
   }
 }
 
+/** Stamp a freshness source after a successful poll cycle. Poll modules
+ * call this on success only; stamp 0 = never succeeded = boot exclusion. */
+export function stampFreshness(source: "ulistAt" | "awAt" | "statsAt"): void {
+  set("freshness", { ...get("freshness"), [source]: Date.now() });
+}
+
 export function stampConnMessage(): void {
   applyConnEvent({ type: "message", at: Date.now() });
 }

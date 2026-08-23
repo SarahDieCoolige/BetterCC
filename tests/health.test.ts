@@ -271,3 +271,52 @@ describe("setstatus wrap", () => {
     expect(strip.currentStripNotice()).toBeNull();
   });
 });
+
+// ─── T10 freshness stamps ──────────────────────────────────────────────────
+
+describe("stampFreshness", () => {
+  beforeEach(async () => {
+    await initTestStore();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it("stamps ulistAt and leaves awAt/statsAt at 0", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+
+    health.stampFreshness("ulistAt");
+
+    const f = store.get("freshness");
+    expect(f.ulistAt).toBeGreaterThan(0);
+    expect(f.awAt).toBe(0);
+    expect(f.statsAt).toBe(0);
+  });
+
+  it("stamps awAt and leaves ulistAt/statsAt at 0", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+
+    health.stampFreshness("awAt");
+
+    const f = store.get("freshness");
+    expect(f.awAt).toBeGreaterThan(0);
+    expect(f.ulistAt).toBe(0);
+    expect(f.statsAt).toBe(0);
+  });
+
+  it("stamps statsAt and leaves ulistAt/awAt at 0", async () => {
+    const health = await import("../src/health");
+    const store = await import("../src/store");
+
+    health.stampFreshness("statsAt");
+
+    const f = store.get("freshness");
+    expect(f.statsAt).toBeGreaterThan(0);
+    expect(f.ulistAt).toBe(0);
+    expect(f.awAt).toBe(0);
+  });
+});

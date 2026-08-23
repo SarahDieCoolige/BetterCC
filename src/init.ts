@@ -44,7 +44,7 @@ import { initSession, getSession } from "./session";
 import { initHealth, initSetStatusWrap } from "./health";
 import { mountInput } from "./input";
 import { mountFooter } from "./footer";
-import { mountHealthUi } from "./health-ui";
+import { mountHealthUi, mountStaleMarkers } from "./health-ui";
 import { mountHealthStrip } from "./health-strip";
 import { initStore, on, snapshot } from "./store";
 
@@ -187,4 +187,5 @@ export async function initV3(): Promise<void> {
   mountHealthUi();
   mountHealthStrip(reloadChat);
   initSetStatusWrap();
+  mountStaleMarkers();
 }

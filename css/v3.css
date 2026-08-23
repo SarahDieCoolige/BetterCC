@@ -1652,3 +1652,21 @@
   font-size: 12px;
   cursor: pointer;
 }
+
+/* ─── Staleness markers (T10): tiny muted hover-only indicators ───────
+   Class-based visibility like the strip: an author display on the base
+   rule would defeat the hidden attribute, so display:none is the default
+   and the visible modifier turns it on. */
+.bcc-stale-marker {
+  display: none;
+  align-items: center;
+  margin-left: 6px;
+  color: var(--bcc-warn);
+  opacity: 0.75;
+  font-size: 11px;
+  cursor: help;
+}
+
+.bcc-stale-marker.bcc-stale-visible {
+  display: inline-flex;
+}

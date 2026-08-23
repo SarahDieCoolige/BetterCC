@@ -16,6 +16,7 @@ import { set, type User } from "./store";
 import { getChatId, getChatSid, getPChat, getChaMy } from "./upstream";
 import { cclog } from "./utils";
 import { POLL_CADENCES } from "./cadences";
+import { stampFreshness } from "./health";
 
 let chatId = ""; // read ONCE at startUlistPoll — doesn't change per session
 let chatSid = "";
@@ -95,6 +96,7 @@ async function pollOnce(): Promise<void> {
     const { newList, added, removed } = processUserlist(chaMy, prevList);
     prevList = newList;
     await set("userlist", { users: newList, added, removed });
+    stampFreshness("ulistAt");
   } catch (e) {
     cclog("ulist-poll: poll error — " + (e as Error).message, "v3");
   }
@@ -144,6 +146,7 @@ export function startUlistPoll(intervalMs = POLL_CADENCES.ulist): void {
     const { newList, added, removed } = processUserlist(seed, prevList);
     prevList = newList;
     void set("userlist", { users: newList, added, removed });
+    stampFreshness("ulistAt");
   }
   pollAndReschedule(intervalMs);
   cclog("ulist-poll started — every ~" + intervalMs + " ms", "v3");

@@ -29,6 +29,10 @@ import {
   ACTION_COPY_ERROR,
   BANNER_OPTICS_TEXT,
   ACTION_RELOAD,
+  STALE_LABEL_ULIST,
+  STALE_LABEL_AW,
+  STALE_LABEL_STATS,
+  staleText,
 } from "../src/health-strings";
 
 // ─── StorageLike fake (Map-backed, no real sessionStorage) ────────────────────
@@ -368,6 +372,22 @@ describe("T7 health-strings conformance", () => {
   });
 });
 
+// ─── Stale marker CSS (class-based visibility) ──────────────────────────────
+
+describe("stale marker CSS", () => {
+  const css = readFileSync(resolve(import.meta.dirname, "../css/v3.css"), "utf-8");
+
+  it("base rule hides the marker (author display beats the hidden attribute)", () => {
+    const match = css.match(/\.bcc-stale-marker\s*\{([^}]*)\}/s);
+    expect(match).not.toBeNull();
+    expect(match![1]).toContain("display: none");
+  });
+
+  it("visible modifier switches it on", () => {
+    expect(css).toContain(".bcc-stale-marker.bcc-stale-visible");
+  });
+});
+
 // ─── 16. T7 source wiring assertions ──────────────────────────────────────
 
 describe("T7 source wiring", () => {
@@ -396,5 +416,25 @@ describe("T7 source wiring", () => {
   it("init.ts mounts the strip", () => {
     const src = readFileSync(resolve(srcDir, "init.ts"), "utf-8");
     expect(src).toContain("mountHealthStrip(reloadChat)");
+  });
+});
+
+// ─── T10 stale marker string conformance ───────────────────────────────────
+
+describe("T10 stale strings conformance", () => {
+  it("staleText under a minute counts seconds", () => {
+    expect(staleText(STALE_LABEL_STATS, 42_000)).toBe(
+      "Statistiken \u2014 zuletzt aktualisiert vor 42 s",
+    );
+  });
+
+  it("staleText from a minute on counts minutes", () => {
+    expect(staleText(STALE_LABEL_ULIST, 5 * 60_000)).toBe(
+      "Nutzerliste \u2014 zuletzt aktualisiert vor 5 min",
+    );
+  });
+
+  it("the global userlist label names the aw feed", () => {
+    expect(STALE_LABEL_AW).toBe("Globale Nutzerliste");
   });
 });

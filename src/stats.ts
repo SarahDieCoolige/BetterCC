@@ -13,6 +13,7 @@
 import { cclog, encodeChatLink } from "./utils";
 import { getChatNick, getAjax, getPAjax } from "./upstream";
 import { POLL_CADENCES } from "./cadences";
+import { stampFreshness } from "./health";
 
 /** The three counts parsed from the chat_info_friends_nc.html response. */
 export interface Stats {
@@ -179,7 +180,11 @@ function pollOnce(): void {
     new ajax(pajax + "chat_info_friends_nc.html", {
       onComplete: (transport: any) => {
         try {
-          renderStats(parseStats(transport?.responseText ?? ""));
+          const parsed = parseStats(transport?.responseText ?? "");
+          if (parsed !== null) {
+            renderStats(parsed);
+            stampFreshness("statsAt");
+          }
         } catch (e) {
           cclog("stats: parse failed — " + (e as Error).message, "v3");
         }

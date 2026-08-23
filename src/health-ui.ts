@@ -6,7 +6,7 @@
 // only the card re-enables pointer events. Dismissing removes the veil but
 // NOT the latched conn state; the status button stays red until a real reload.
 
-import { react, snapshot } from "./store";
+import { react, snapshot, get } from "./store";
 import { reloadChat } from "./shell";
 import { cclog } from "./utils";
 import { reportBootError } from "./health";
@@ -358,4 +358,88 @@ export function mountHealthUi(): void {
 
     document.body.appendChild(overlay);
   });
+}
+
+// ─── T10 stale markers ─────────────────────────────────────────────────────
+
+import { staleMarkers, nextStaleChange, type FreshnessState } from "./health-core";
+import { staleText, STALE_LABEL_ULIST, STALE_LABEL_AW, STALE_LABEL_STATS } from "./health-strings";
+
+// ─── mountStaleMarkers ─────────────────────────────────────────────────────
+
+function buildStaleMarker(): HTMLSpanElement {
+  const span = document.createElement("span");
+  span.className = "bcc-stale-marker";
+  const icon = document.createElement("i");
+  icon.className = "fas fa-clock";
+  icon.setAttribute("aria-hidden", "true");
+  span.appendChild(icon);
+  return span;
+}
+
+function renderStaleMarkers(
+  ulistEl: HTMLSpanElement,
+  awEl: HTMLSpanElement,
+  statsEl: HTMLSpanElement,
+  f: FreshnessState,
+): void {
+  const m = staleMarkers(f, Date.now());
+  setMarker(ulistEl, m.ulist, STALE_LABEL_ULIST);
+  setMarker(awEl, m.aw, STALE_LABEL_AW);
+  setMarker(statsEl, m.stats, STALE_LABEL_STATS);
+  armRefresh(ulistEl, awEl, statsEl, f);
+}
+
+function setMarker(el: HTMLSpanElement, ageMs: number | null, label: string): void {
+  const stale = ageMs !== null;
+  const title = stale ? staleText(label, ageMs!) : null;
+  if (el.classList.contains("bcc-stale-visible") === stale && el.title === (title ?? "")) {
+    return; // no DOM churn
+  }
+  el.classList.toggle("bcc-stale-visible", stale);
+  if (title === null) {
+    el.removeAttribute("title");
+    el.removeAttribute("aria-label");
+  } else {
+    el.title = title;
+    el.setAttribute("aria-label", title);
+  }
+}
+
+// One refresh timer covers all markers: re-renders at the next instant any
+// marker's visibility or age can change. Failing polls write nothing to the
+// store, so this schedule is the only thing that advances a stale display.
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function armRefresh(
+  ulistEl: HTMLSpanElement,
+  awEl: HTMLSpanElement,
+  statsEl: HTMLSpanElement,
+  f: FreshnessState,
+): void {
+  if (refreshTimer !== null) clearTimeout(refreshTimer);
+  refreshTimer = null;
+  const at = nextStaleChange(f, Date.now());
+  if (at === null) return;
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+    renderStaleMarkers(ulistEl, awEl, statsEl, f);
+  }, at - Date.now());
+}
+
+export function mountStaleMarkers(): void {
+  const onlineRow = document.querySelector(".bcc-online-row");
+  const statsBar = document.querySelector(".bcc-stats");
+  const ulistMarker = buildStaleMarker();
+  const awMarker = buildStaleMarker();
+  const statsMarker = buildStaleMarker();
+  // Both userlist markers sit in the online row: the global list has no
+  // chrome of its own (pinned rows are its only visible product).
+  onlineRow?.append(ulistMarker, awMarker);
+  statsBar?.appendChild(statsMarker);
+
+  react("freshness", (f) =>
+    renderStaleMarkers(ulistMarker, awMarker, statsMarker, f as FreshnessState),
+  );
+  renderStaleMarkers(ulistMarker, awMarker, statsMarker, get("freshness"));
 }

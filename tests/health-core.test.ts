@@ -1,19 +1,18 @@
 // Tests for health-core.ts: pure connection-state machine and UI derivation.
 //
 // Zero imports from the store, DOM, or upstream. Tests pin: full transition
-// table for nextConn (including authdead latch), deriveUiState boundaries,
+// table for nextConn (including authdead latch), staleMarkers boundaries,
 // and threshold constants.
 
 import { describe, it, expect } from "vitest";
 import {
   nextConn,
-  deriveUiState,
-  STUCK_MS,
+  staleMarkers,
+  nextStaleChange,
   STALE_FACTOR,
   STALE_MIN_MS,
   type ConnState,
   type ConnEvent,
-  type FreshnessState,
 } from "../src/health-core";
 import { POLL_CADENCES } from "../src/cadences";
 
@@ -43,7 +42,6 @@ function msgEv(t: number): ConnEvent {
 
 describe("health-core — threshold constants", () => {
   it("exports expected values", () => {
-    expect(STUCK_MS).toBe(30_000);
     expect(STALE_FACTOR).toBe(3);
     expect(STALE_MIN_MS).toBe(30_000);
     expect(POLL_CADENCES.ulist).toBe(20_000);
@@ -204,144 +202,77 @@ describe("nextConn — authdead latch", () => {
   });
 });
 
-// ─── deriveUiState ───────────────────────────────────────────────────────
+// ─── staleMarkers ────────────────────────────────────────────────────────
 
-describe("deriveUiState — stuck detection", () => {
-  it("not stuck when connecting for exactly STUCK_MS (boundary)", () => {
-    const conn: ConnState = {
-      phase: "connecting",
-      attempt: 1,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    // now - since = STUCK_MS exactly → not stuck (strict >)
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, STUCK_MS);
-    expect(result.stuck).toBe(false);
+describe("staleMarkers — boundaries", () => {
+  it("stamp 0 (never succeeded) is never stale — boot exclusion", () => {
+    const result = staleMarkers({ ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
+    expect(result.ulist).toBeNull();
+    expect(result.aw).toBeNull();
+    expect(result.stats).toBeNull();
   });
 
-  it("not stuck at 29_999 ms", () => {
-    const conn: ConnState = {
-      phase: "connecting",
-      attempt: 1,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 29_999);
-    expect(result.stuck).toBe(false);
+  it("ulist stale only past max(3x interval, 30s), strict >", () => {
+    // ulist interval 20s → threshold 60s; elapsed exactly 60s is not stale
+    expect(staleMarkers({ ulistAt: 1, awAt: 0, statsAt: 0 }, 60_001).ulist).toBeNull();
+    expect(staleMarkers({ ulistAt: 1, awAt: 0, statsAt: 0 }, 60_002).ulist).toBe(60_001);
   });
 
-  it("stuck at 30_001 ms (just past STUCK_MS)", () => {
-    const conn: ConnState = {
-      phase: "connecting",
-      attempt: 1,
-      since: 1,
-      lastMessageAt: 0,
-    };
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 30_002);
-    expect(result.stuck).toBe(true);
+  it("aw uses the 30s floor (3x 5s = 15s < 30s)", () => {
+    expect(staleMarkers({ ulistAt: 0, awAt: 1, statsAt: 0 }, 30_001).aw).toBeNull();
+    expect(staleMarkers({ ulistAt: 0, awAt: 1, statsAt: 0 }, 30_002).aw).toBe(30_001);
   });
 
-  it("not stuck when since is 0 (never started connecting)", () => {
-    const conn: ConnState = {
-      phase: "connecting",
-      attempt: 0,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
-    expect(result.stuck).toBe(false);
+  it("stats uses the floor too (3x 10s = 30s)", () => {
+    expect(staleMarkers({ ulistAt: 0, awAt: 0, statsAt: 1 }, 30_001).stats).toBeNull();
+    expect(staleMarkers({ ulistAt: 0, awAt: 0, statsAt: 1 }, 30_002).stats).toBe(30_001);
   });
 
-  it("not stuck when phase is connected", () => {
-    const conn: ConnState = {
-      phase: "connected",
-      attempt: 0,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    const result = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000);
-    expect(result.stuck).toBe(false);
+  it("ulist and aw go stale independently — each marker shows its own age", () => {
+    // ulist age 2 min, aw age 1 min: no merge, both ages in ms
+    const m = staleMarkers({ ulistAt: 1, awAt: 60_001, statsAt: 0 }, 120_001);
+    expect(m.ulist).toBe(120_000);
+    expect(m.aw).toBe(60_000);
   });
 });
 
-describe("deriveUiState — stale detection", () => {
-  it("stamp 0 (never succeeded) is never stale — boot exclusion", () => {
-    const conn: ConnState = {
-      phase: "connected",
-      attempt: 0,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    const freshness: FreshnessState = { ulistAt: 0, awAt: 0, statsAt: 0 };
-    const result = deriveUiState(conn, freshness, 100_000);
-    expect(result.stale.ulist).toBe(false);
-    expect(result.stale.aw).toBe(false);
-    expect(result.stale.stats).toBe(false);
+// ─── nextStaleChange ─────────────────────────────────────────────────────
+
+describe("nextStaleChange", () => {
+  it("no stamps scheduled: null (boot exclusion)", () => {
+    expect(nextStaleChange({ ulistAt: 0, awAt: 0, statsAt: 0 }, 100_000)).toBeNull();
   });
 
-  it("stale at exactly max(interval * STALE_FACTOR, STALE_MIN_MS) + 1", () => {
-    const conn: ConnState = {
-      phase: "connected",
-      attempt: 0,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    // ulist: interval=20_000, 3x=60_000, max(60_000, 30_000)=60_000
-    // ulistAt is 0 → never stale, so test with a non-zero stamp
-    const result2 = deriveUiState(conn, { ulistAt: 1, awAt: 1, statsAt: 1 }, 60_001);
-    // now=60_001, stamp=1 → elapsed=60_000 → exactly threshold → not stale (strict >)
-    expect(result2.stale.ulist).toBe(false);
-
-    const result3 = deriveUiState(conn, { ulistAt: 1, awAt: 1, statsAt: 1 }, 60_002);
-    expect(result3.stale.ulist).toBe(true);
+  it("before stale: the threshold crossing is the next change", () => {
+    // ulistAt=1, threshold 60s → crossing at 60_001
+    expect(nextStaleChange({ ulistAt: 1, awAt: 0, statsAt: 0 }, 10_000)).toBe(60_001);
   });
 
-  it("aw uses STALE_MIN_MS because 5_000*3=15_000 < 30_000", () => {
-    const conn: ConnState = {
-      phase: "connected",
-      attempt: 0,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    // aw: interval=5_000, 3x=15_000, max(15_000, 30_000)=30_000
-    // awAt=1, now=30_001 → elapsed=30_000 → exactly threshold → not stale
-    const r1 = deriveUiState(conn, { ulistAt: 0, awAt: 1, statsAt: 0 }, 30_001);
-    expect(r1.stale.aw).toBe(false);
-
-    // now=30_002 → elapsed=30_001 > 30_000 → stale
-    const r2 = deriveUiState(conn, { ulistAt: 0, awAt: 1, statsAt: 0 }, 30_002);
-    expect(r2.stale.aw).toBe(true);
+  it("crossing already passed: the next change is the age tick, not null", () => {
+    // ulistAt=1 went stale at 60_001; at now=70_000 age is 1, ticks to 2 at 120_001
+    expect(nextStaleChange({ ulistAt: 1, awAt: 0, statsAt: 0 }, 70_000)).toBe(120_001);
   });
 
-  it("stats uses the floor too (10_000 interval → 30_000 threshold)", () => {
-    const conn: ConnState = {
-      phase: "connected",
-      attempt: 0,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    // stats: interval=10_000, 3x=30_000, max(30_000, 30_000)=30_000
-    // statsAt=1, now=30_001 → elapsed=30_000 → exactly threshold → not stale
-    const r1 = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 1 }, 30_001);
-    expect(r1.stale.stats).toBe(false);
-
-    // now=30_002 → elapsed=30_001 > 30_000 → stale
-    const r2 = deriveUiState(conn, { ulistAt: 0, awAt: 0, statsAt: 1 }, 30_002);
-    expect(r2.stale.stats).toBe(true);
+  it("REGRESSION: once stale, second boundaries keep the sub-minute age moving", () => {
+    // awAt=1 went stale at 30_001; at now=45_000 the tooltip reads "vor 44 s"
+    // and must tick every second, not wait out the minute.
+    expect(nextStaleChange({ ulistAt: 0, awAt: 1, statsAt: 0 }, 45_000)).toBe(45_001);
   });
 
-  it("all three sources stale independently", () => {
-    const conn: ConnState = {
-      phase: "connected",
-      attempt: 0,
-      since: 0,
-      lastMessageAt: 0,
-    };
-    // ulistAt and statsAt are stale, awAt is fresh
-    const freshness: FreshnessState = { ulistAt: 1, awAt: 10_000_000, statsAt: 1 };
-    const result = deriveUiState(conn, freshness, 100_000);
-    expect(result.stale.ulist).toBe(true);
-    expect(result.stale.aw).toBe(false);
-    expect(result.stale.stats).toBe(true);
+  it("the last second boundary is the minute flip at stamp+60s", () => {
+    // at 59.5s the next tick lands on 60s: "59 s" → "1 min", same instant for
+    // both the second and the minute schedule
+    expect(nextStaleChange({ ulistAt: 0, awAt: 1, statsAt: 0 }, 59_500)).toBe(60_001);
+  });
+
+  it("minute tick lands on the NEXT boundary, not the one just passed", () => {
+    // aw stale since 30_001; at now=61_000 the age is already 1, next tick 2
+    // is at stamp+120_000 — no more second ticks once the age reads in minutes
+    expect(nextStaleChange({ ulistAt: 0, awAt: 1, statsAt: 0 }, 61_000)).toBe(120_001);
+  });
+
+  it("earliest event wins across sources", () => {
+    // ulist crossing at 60_001, stats crossing at 30_001
+    expect(nextStaleChange({ ulistAt: 1, awAt: 0, statsAt: 1 }, 10_000)).toBe(30_001);
   });
 });

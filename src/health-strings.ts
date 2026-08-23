@@ -45,3 +45,16 @@ export const ACTION_COPY_ERROR = "Fehler kopieren";
 export const BANNER_OPTICS_TEXT =
   "Chat ohne BetterCC-Design \u2014 Senden l\u00e4uft normal, Neu laden behebt es";
 export const ACTION_RELOAD = "Neu laden";
+
+// Staleness marker tooltips (T10). Hover-only; the markers carry no text.
+// Factual copy: the clock icon signals staleness, the tooltip just states
+// how long ago the last successful refresh was.
+export const STALE_LABEL_ULIST = "Nutzerliste";
+export const STALE_LABEL_AW = "Globale Nutzerliste";
+export const STALE_LABEL_STATS = "Statistiken";
+
+export function staleText(label: string, ageMs: number): string {
+  const secs = Math.floor(ageMs / 1000);
+  const ago = secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
+  return label + " \u2014 zuletzt aktualisiert vor " + ago;
+}

@@ -16,6 +16,7 @@ import { set, type User, type UserWithChannel } from "./store";
 import { fetchAw } from "./upstream";
 import { cclog } from "./utils";
 import { POLL_CADENCES } from "./cadences";
+import { stampFreshness } from "./health";
 
 let lastSnapshot: Map<string, User[]> = new Map();
 let timerId: ReturnType<typeof setTimeout> | undefined;
@@ -74,6 +75,7 @@ async function pollOnce(): Promise<void> {
     const { added, removed } = diffGlobal(lastSnapshot, next);
     lastSnapshot = next;
     await set("globalUserlist", { channels: next, added, removed });
+    stampFreshness("awAt");
   } catch (e) {
     cclog("global-userlist: poll error — " + (e as Error).message, "v3");
   }

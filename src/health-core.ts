@@ -1,8 +1,8 @@
-// ─── Health core: connection state machine + UI derivation ────────────────
+// ─── Health core: connection state machine + staleness derivation ───────────
 //
 // Pure module: imports only the cadences leaf; nothing from store, DOM, or
-// upstream. The state machine models the WebSocket lifecycle; deriveUiState
-// turns current state into booleans the health bar / status strip can render.
+// upstream. The state machine models the WebSocket lifecycle; the stale
+// helpers turn freshness stamps into marker view models.
 
 import { POLL_CADENCES } from "./cadences";
 
@@ -41,12 +41,6 @@ export type ConnEvent =
 
 // ─── Thresholds ────────────────────────────────────────────────────────────
 
-/** Connecting for longer than this = stuck. Every failed retry fires a fresh
- * close event and resets conn.since, so this only trips on a silent hang (a
- * socket stuck mid-handshake, or upstream no longer retrying at all). Active
- * retrying is the attempt badge's job, not the stuck banner's. */
-export const STUCK_MS = 30_000;
-
 /** Stale threshold = max(interval * factor, STALE_MIN_MS). */
 export const STALE_FACTOR = 3;
 
@@ -74,30 +68,61 @@ export function nextConn(prev: ConnState, ev: ConnEvent): ConnState {
   }
 }
 
-// ─── UI derivation ────────────────────────────────────────────────────────
+// ─── Staleness derivation ────────────────────────────────────────────────────
 
-function staleThreshold(interval: number): number {
+/** Stale threshold in ms for a poll interval. */
+export function staleThreshold(interval: number): number {
   return Math.max(interval * STALE_FACTOR, STALE_MIN_MS);
 }
 
-function isStale(stamp: number, now: number, interval: number): boolean {
-  if (stamp === 0) return false; // never succeeded: boot
-  return now - stamp > staleThreshold(interval);
+export interface StaleView {
+  /** Channel userlist marker: age in ms, or null when fresh. */
+  ulist: number | null;
+  /** Global userlist (aw.js) marker: age in ms, or null when fresh. */
+  aw: number | null;
+  /** Stats marker: age in ms, or null when fresh. */
+  stats: number | null;
 }
 
-export function deriveUiState(
-  conn: ConnState,
-  freshness: FreshnessState,
-  now: number,
-): { stuck: boolean; stale: { ulist: boolean; aw: boolean; stats: boolean } } {
-  const stuck = conn.phase === "connecting" && conn.since > 0 && now - conn.since > STUCK_MS;
-
+/** Marker view models: age in ms when a marker should show, else null.
+ * One marker per source; the two userlists are different feeds and never
+ * merge. Stamp 0 = never succeeded = boot exclusion. */
+export function staleMarkers(freshness: FreshnessState, now: number): StaleView {
+  const staleAge = (stamp: number, interval: number) =>
+    stamp > 0 && now - stamp > staleThreshold(interval) ? now - stamp : null;
   return {
-    stuck,
-    stale: {
-      ulist: isStale(freshness.ulistAt, now, POLL_CADENCES.ulist),
-      aw: isStale(freshness.awAt, now, POLL_CADENCES.aw),
-      stats: isStale(freshness.statsAt, now, POLL_CADENCES.stats),
-    },
+    ulist: staleAge(freshness.ulistAt, POLL_CADENCES.ulist),
+    aw: staleAge(freshness.awAt, POLL_CADENCES.aw),
+    stats: staleAge(freshness.statsAt, POLL_CADENCES.stats),
   };
+}
+
+/** Next epoch at which any marker's visibility or displayed age can change,
+ * or null when nothing is scheduled. Before a source goes stale that is its
+ * threshold crossing (marker appears); once stale, whole-second boundaries
+ * while the age still reads in seconds, then whole-minute boundaries after.
+ * Failing polls write nothing, so renders rely on this schedule instead of
+ * store events. */
+export function nextStaleChange(freshness: FreshnessState, now: number): number | null {
+  let next: number | null = null;
+  const consider = (t: number) => {
+    if (t > now && (next === null || t < next)) next = t;
+  };
+  const sources: Array<[number, number]> = [
+    [freshness.ulistAt, POLL_CADENCES.ulist],
+    [freshness.awAt, POLL_CADENCES.aw],
+    [freshness.statsAt, POLL_CADENCES.stats],
+  ];
+  for (const [stamp, interval] of sources) {
+    if (stamp === 0) continue;
+    consider(stamp + staleThreshold(interval));
+    const elapsed = now - stamp;
+    const elapsedMinutes = Math.floor(elapsed / 60_000);
+    consider(stamp + (elapsedMinutes + 1) * 60_000);
+    const elapsedSeconds = Math.floor(elapsed / 1000);
+    if (elapsed > staleThreshold(interval) && elapsedSeconds < 60) {
+      consider(stamp + (elapsedSeconds + 1) * 1000);
+    }
+  }
+  return next;
 }
