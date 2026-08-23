@@ -468,6 +468,10 @@
   var generateScheme3 = (base, opts) => _v2 ? generateScheme2(base, opts) : generateScheme(base, opts);
 
   // src/store.ts
+  var isString = (v) => typeof v === "string";
+  var isBoolean = (v) => typeof v === "boolean";
+  var isStringArray = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
+  var isHexColor = (v) => typeof v === "string" && /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
   var emptySession = {
     nick: "",
     registered: false,
@@ -478,19 +482,62 @@
     authDead: false
   };
   var codecs = {
-    color: { encode: (v) => v, decode: (r) => r, default: "6AAED8", persisted: true },
-    scheme_v2: { encode: (v) => v, decode: (r) => r, default: false, persisted: true },
-    pinned: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
-    whisper: { encode: (v) => v, decode: (r) => r, default: "", persisted: true },
+    color: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: "6AAED8",
+      persisted: true,
+      valid: isHexColor
+    },
+    scheme_v2: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: false,
+      persisted: true,
+      valid: isBoolean
+    },
+    pinned: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: [],
+      persisted: true,
+      valid: isStringArray
+    },
+    whisper: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: "",
+      persisted: true,
+      valid: isString
+    },
     compact: {
       encode: (v) => v ? "1" : "",
       decode: (r) => r === "1",
       default: false,
-      persisted: true
+      persisted: true,
+      valid: isBoolean
     },
-    send_on_enter: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
-    hover_preview: { encode: (v) => v, decode: (r) => r, default: true, persisted: true },
-    ban: { encode: (v) => v, decode: (r) => r, default: [], persisted: true },
+    send_on_enter: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: true,
+      persisted: true,
+      valid: isBoolean
+    },
+    hover_preview: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: true,
+      persisted: true,
+      valid: isBoolean
+    },
+    ban: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: [],
+      persisted: true,
+      valid: isStringArray
+    },
     session: {
       encode: (v) => v,
       decode: () => emptySession,
@@ -520,12 +567,16 @@
       decode: () => ({
         bootError: null,
         sendPathBroken: null,
-        injectionDegraded: false
+        injectionDegraded: false,
+        invalidSettings: [],
+        persistFailed: false
       }),
       default: {
         bootError: null,
         sendPathBroken: null,
-        injectionDegraded: false
+        injectionDegraded: false,
+        invalidSettings: [],
+        persistFailed: false
       },
       persisted: false
     },
@@ -563,6 +614,7 @@
   async function initStore() {
     if (initialized) throw new Error("initStore already called");
     initialized = true;
+    const invalidKeys = [];
     for (const [key, codec] of Object.entries(codecs)) {
       if (!codec.persisted) {
         mirror[key] = codec.default;
@@ -570,11 +622,25 @@
       }
       try {
         const raw = await GM.getValue(getUserKey(key));
-        mirror[key] = raw !== void 0 ? codec.decode(raw) : codec.default;
+        if (raw === void 0) {
+          mirror[key] = codec.default;
+          continue;
+        }
+        const decoded = codec.decode(raw);
+        if (codec.valid && !codec.valid(decoded)) {
+          cclog(`initStore: corrupt stored ${key}, using default`, "store");
+          mirror[key] = codec.default;
+          invalidKeys.push({ key, value: raw });
+        } else {
+          mirror[key] = decoded;
+        }
       } catch {
         cclog(`initStore: failed to read ${key}, using default`, "store");
         mirror[key] = codec.default;
       }
+    }
+    if (invalidKeys.length > 0) {
+      mirror.bccHealth = { ...mirror.bccHealth, invalidSettings: invalidKeys };
     }
     if (typeof GM_addValueChangeListener === "function") {
       cclog("GM_addValueChangeListener available, registering reconciliation listeners", "store");
@@ -583,7 +649,11 @@
         const scopedKey = getUserKey(key);
         GM_addValueChangeListener(scopedKey, () => {
           GM.getValue(scopedKey).then((raw) => {
-            const decoded = raw !== void 0 ? codec.decode(raw) : codec.default;
+            let decoded = raw !== void 0 ? codec.decode(raw) : codec.default;
+            if (codec.valid && !codec.valid(decoded)) {
+              cclog(`reconciliation: invalid stored ${key}, using default`, "store");
+              decoded = codec.default;
+            }
             if (sameValue(decoded, mirror[key])) return;
             mirror[key] = decoded;
             notify(key, decoded);
@@ -603,6 +673,10 @@
   async function set(k, v) {
     assertInit();
     const codec = codecs[k];
+    if (codec.persisted && codec.valid && !codec.valid(v)) {
+      cclog(`set: rejected invalid value for ${k}`, "store");
+      return;
+    }
     mirror[k] = v;
     notify(k, v);
     if (codec.persisted) {
@@ -610,6 +684,10 @@
         await GM.setValue(getUserKey(k), codec.encode(v));
       } catch {
         cclog(`set: failed to persist ${k}`, "store");
+        if (!mirror.bccHealth.persistFailed) {
+          mirror.bccHealth = { ...mirror.bccHealth, persistFailed: true };
+          notify("bccHealth", mirror.bccHealth);
+        }
       }
     }
   }
@@ -804,6 +882,16 @@
     const ago = secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
     return label + " \u2014 zuletzt aktualisiert vor " + ago;
   }
+  function invalidSettingsText(entries) {
+    const parts = entries.map((e) => e.key + ": " + formatStoredValue(e.value));
+    const noun = entries.length === 1 ? "Ung\xFCltige Einstellung" : "Ung\xFCltige Einstellungen";
+    return noun + " \u2014 " + parts.join(", ");
+  }
+  function formatStoredValue(value) {
+    const s = JSON.stringify(value) ?? String(value);
+    return s.length > 40 ? s.slice(0, 39) + "\u2026" : s;
+  }
+  var PERSIST_FAILED_TEXT = "Speichern fehlgeschlagen \u2014 gilt nur bis zum Neuladen.";
 
   // src/health-strip.ts
   var NOTICE_MS = 8e3;
@@ -1007,6 +1095,20 @@
       if (!isConnectionStatus(text)) showStripNotice(text, color);
     });
     if (!ok) cclog("initSetStatusWrap: chatout_setstatus missing upstream", "health");
+  }
+  var invalidNoticeShown = false;
+  var persistNoticeShown = false;
+  function initSettingsNotices() {
+    react("bccHealth", (h) => {
+      if (h.invalidSettings.length > 0 && !invalidNoticeShown) {
+        invalidNoticeShown = true;
+        showStripNotice(invalidSettingsText(h.invalidSettings), null);
+      }
+      if (h.persistFailed && !persistNoticeShown) {
+        persistNoticeShown = true;
+        showStripNotice(PERSIST_FAILED_TEXT, null);
+      }
+    });
   }
 
   // src/ws-hook.ts
@@ -4492,6 +4594,7 @@
     mountFooter();
     mountHealthUi();
     mountHealthStrip(reloadChat);
+    initSettingsNotices();
     initSetStatusWrap();
     mountStaleMarkers();
   }

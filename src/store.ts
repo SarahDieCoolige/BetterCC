@@ -5,7 +5,7 @@
 // touches GM.
 
 import { getUserKey, cclog } from "./utils";
-import type { ConnState, BccHealthState, FreshnessState } from "./health-core";
+import type { ConnState, BccHealthState, FreshnessState, InvalidSetting } from "./health-core";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -82,7 +82,21 @@ type Codec<V> = {
   decode: (raw: unknown) => V;
   default: V;
   persisted: boolean;
+  /** Boot/reconciliation guard: a decoded value that fails it is corrupt,
+   * falls back to the default (and at boot lands in bccHealth.invalidSettings). */
+  valid?: (v: any) => boolean;
 };
+
+const isString = (v: unknown): v is string => typeof v === "string";
+const isBoolean = (v: unknown): v is boolean => typeof v === "boolean";
+const isStringArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((x) => typeof x === "string");
+
+/** Colors are hex, 3 or 6 digits, optional #, any case. A plain string
+ * check is not enough: garbage like "C9A227Q" renders black instead of
+ * tripping the invalid-settings notice. */
+const isHexColor = (v: unknown): v is string =>
+  typeof v === "string" && /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
 
 const emptySession: SessionState = {
   nick: "",
@@ -95,19 +109,62 @@ const emptySession: SessionState = {
 };
 
 const codecs: { [K in StoreKey]: Codec<any> } = {
-  color: { encode: (v) => v, decode: (r) => r as string, default: "6AAED8", persisted: true },
-  scheme_v2: { encode: (v) => v, decode: (r) => r as boolean, default: false, persisted: true },
-  pinned: { encode: (v) => v, decode: (r) => r as string[], default: [], persisted: true },
-  whisper: { encode: (v) => v, decode: (r) => r as string, default: "", persisted: true },
+  color: {
+    encode: (v) => v,
+    decode: (r) => r as string,
+    default: "6AAED8",
+    persisted: true,
+    valid: isHexColor,
+  },
+  scheme_v2: {
+    encode: (v) => v,
+    decode: (r) => r as boolean,
+    default: false,
+    persisted: true,
+    valid: isBoolean,
+  },
+  pinned: {
+    encode: (v) => v,
+    decode: (r) => r as string[],
+    default: [],
+    persisted: true,
+    valid: isStringArray,
+  },
+  whisper: {
+    encode: (v) => v,
+    decode: (r) => r as string,
+    default: "",
+    persisted: true,
+    valid: isString,
+  },
   compact: {
     encode: (v: boolean) => (v ? "1" : ""),
     decode: (r) => r === "1",
     default: false,
     persisted: true,
+    valid: isBoolean,
   },
-  send_on_enter: { encode: (v) => v, decode: (r) => r as boolean, default: true, persisted: true },
-  hover_preview: { encode: (v) => v, decode: (r) => r as boolean, default: true, persisted: true },
-  ban: { encode: (v) => v, decode: (r) => r as string[], default: [], persisted: true },
+  send_on_enter: {
+    encode: (v) => v,
+    decode: (r) => r as boolean,
+    default: true,
+    persisted: true,
+    valid: isBoolean,
+  },
+  hover_preview: {
+    encode: (v) => v,
+    decode: (r) => r as boolean,
+    default: true,
+    persisted: true,
+    valid: isBoolean,
+  },
+  ban: {
+    encode: (v) => v,
+    decode: (r) => r as string[],
+    default: [],
+    persisted: true,
+    valid: isStringArray,
+  },
   session: {
     encode: (v) => v,
     decode: () => emptySession,
@@ -138,11 +195,15 @@ const codecs: { [K in StoreKey]: Codec<any> } = {
       bootError: null,
       sendPathBroken: null,
       injectionDegraded: false,
+      invalidSettings: [] as InvalidSetting[],
+      persistFailed: false,
     }),
     default: {
       bootError: null,
       sendPathBroken: null,
       injectionDegraded: false,
+      invalidSettings: [] as InvalidSetting[],
+      persistFailed: false,
     },
     persisted: false,
   },
@@ -199,6 +260,10 @@ export async function initStore(): Promise<void> {
   if (initialized) throw new Error("initStore already called");
   initialized = true;
 
+  // Persisted keys whose stored value failed validation at boot; feeds the D4
+  // invalid-settings notice.
+  const invalidKeys: InvalidSetting[] = [];
+
   // Seed persisted keys from GM (silent, no notifies)
   for (const [key, codec] of Object.entries(codecs) as [StoreKey, Codec<any>][]) {
     if (!codec.persisted) {
@@ -208,11 +273,31 @@ export async function initStore(): Promise<void> {
     try {
       const raw = await GM.getValue(getUserKey(key));
       // raw is undefined when nothing is stored — use default
-      mirror[key] = raw !== undefined ? codec.decode(raw) : codec.default;
+      if (raw === undefined) {
+        mirror[key] = codec.default;
+        continue;
+      }
+      const decoded = codec.decode(raw);
+      // A value that decodes to the wrong shape is corrupt: fall back to the
+      // default and collect the key. A rejected read (the catch below) is a
+      // storage error, not corrupt data: it defaults without collecting.
+      if (codec.valid && !codec.valid(decoded)) {
+        cclog(`initStore: corrupt stored ${key}, using default`, "store");
+        mirror[key] = codec.default;
+        invalidKeys.push({ key, value: raw });
+      } else {
+        mirror[key] = decoded;
+      }
     } catch {
       cclog(`initStore: failed to read ${key}, using default`, "store");
       mirror[key] = codec.default;
     }
+  }
+
+  // Fold boot resets into bccHealth, still silent: the strip's react reads
+  // the fact at mount time, which is the D4 queueing.
+  if (invalidKeys.length > 0) {
+    mirror.bccHealth = { ...mirror.bccHealth, invalidSettings: invalidKeys };
   }
 
   // Register out-of-band reconciliation listeners (spec §6)
@@ -227,7 +312,13 @@ export async function initStore(): Promise<void> {
         GM.getValue(scopedKey)
           .then((raw: any) => {
             // A deleted key converges to the default, same as boot seeding.
-            const decoded = raw !== undefined ? codec.decode(raw) : codec.default;
+            // A cross-tab write of garbage converges too (never collected:
+            // invalidSettings is a boot-only fact).
+            let decoded = raw !== undefined ? codec.decode(raw) : codec.default;
+            if (codec.valid && !codec.valid(decoded)) {
+              cclog(`reconciliation: invalid stored ${key}, using default`, "store");
+              decoded = codec.default;
+            }
             if (sameValue(decoded, mirror[key])) return; // echo, or equal — no-op
             mirror[key] = decoded;
             notify(key, decoded);
@@ -251,11 +342,19 @@ export function get<K extends StoreKey>(k: K): StateValue<K> {
 
 /**
  * Mirror → notify → persist. Ordering is load-bearing.
- * Returns a promise that resolves when GM persistence settles.
+ * An invalid value never enters the system: the write is rejected whole
+ * (mirror keeps the old value, nothing persists). Types make this
+ * near-unreachable; dynamic paths like the settings import are the real
+ * guard target. Returns a promise that resolves when GM persistence settles.
  */
 export async function set<K extends StoreKey>(k: K, v: StateValue<K>): Promise<void> {
   assertInit();
   const codec = codecs[k];
+
+  if (codec.persisted && codec.valid && !codec.valid(v)) {
+    cclog(`set: rejected invalid value for ${k}`, "store");
+    return;
+  }
 
   // 1. mirror
   mirror[k] = v;
@@ -269,6 +368,13 @@ export async function set<K extends StoreKey>(k: K, v: StateValue<K>): Promise<v
       await GM.setValue(getUserKey(k), codec.encode(v));
     } catch {
       cclog(`set: failed to persist ${k}`, "store");
+      // Latch the D4 fact for the strip. Direct mirror + notify, not set():
+      // bccHealth is ephemeral so there is no re-persist, and the latch guard
+      // keeps repeat failures from notifying again.
+      if (!mirror.bccHealth.persistFailed) {
+        mirror.bccHealth = { ...mirror.bccHealth, persistFailed: true };
+        notify("bccHealth", mirror.bccHealth);
+      }
     }
   }
 }

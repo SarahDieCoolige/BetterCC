@@ -21,10 +21,20 @@ export interface ConnState {
  * the German display strings (those live in health-strings + the card). */
 export type BootReasonCode = "structure-changed" | "ws-takeover" | "error";
 
+/** A persisted key whose stored value failed validation at boot, with the
+ * raw garbage value (shown verbatim in the notice). */
+export interface InvalidSetting {
+  key: string;
+  value: unknown;
+}
+
 export interface BccHealthState {
   bootError: BootReasonCode | null;
   sendPathBroken: string | null;
   injectionDegraded: boolean;
+  invalidSettings: InvalidSetting[];
+  /** A set() persist to GM failed; latched until reload (D4). */
+  persistFailed: boolean;
 }
 
 export interface FreshnessState {

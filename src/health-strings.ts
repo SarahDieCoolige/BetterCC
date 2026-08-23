@@ -4,6 +4,8 @@
 // Components import from here and never invent wording.
 // "Neu laden" = WS-bounce reloadChat; "Seite neu laden" = full page reload.
 
+import type { InvalidSetting } from "./health-core";
+
 export const STATUS_BUTTON_TITLE = "Chat neu laden \u2014 {state}";
 
 export const STATUS_TEXT = {
@@ -58,3 +60,21 @@ export function staleText(label: string, ageMs: number): string {
   const ago = secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
   return label + " \u2014 zuletzt aktualisiert vor " + ago;
 }
+
+// D4 settings notices (T11), riding the strip's transient slot. Invalid
+// stored values are NOT written back or repaired: the notice names the raw
+// key and the garbage value verbatim, the session runs on defaults until
+// the user changes the setting.
+export function invalidSettingsText(entries: InvalidSetting[]): string {
+  const parts = entries.map((e) => e.key + ": " + formatStoredValue(e.value));
+  const noun = entries.length === 1 ? "Ung\u00fcltige Einstellung" : "Ung\u00fcltige Einstellungen";
+  return noun + " \u2014 " + parts.join(", ");
+}
+
+/** JSON form, capped so a huge garbage value cannot blow up the pill. */
+function formatStoredValue(value: unknown): string {
+  const s = JSON.stringify(value) ?? String(value);
+  return s.length > 40 ? s.slice(0, 39) + "\u2026" : s;
+}
+
+export const PERSIST_FAILED_TEXT = "Speichern fehlgeschlagen \u2014 gilt nur bis zum Neuladen.";

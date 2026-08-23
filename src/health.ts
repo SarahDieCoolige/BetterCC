@@ -3,10 +3,11 @@
 // Impure counterpart to health-core. Sets facts, never renders; upstream
 // access goes through upstream.ts. The ws arrives as a parameter from ws-hook.
 
-import { get, set, on } from "./store";
+import { get, set, on, react } from "./store";
 import { cclog } from "./utils";
 import { nextConn, type BootReasonCode, type ConnEvent } from "./health-core";
 import { showStripNotice } from "./health-strip";
+import { invalidSettingsText, PERSIST_FAILED_TEXT } from "./health-strings";
 import { wrapSetStatus } from "./upstream";
 
 // Track the last ws we attached listeners to, so we skip dupes.
@@ -106,4 +107,25 @@ export function initSetStatusWrap(): void {
     if (!isConnectionStatus(text)) showStripNotice(text, color);
   });
   if (!ok) cclog("initSetStatusWrap: chatout_setstatus missing upstream", "health");
+}
+
+// D4 settings notices: the facts stay latched in bccHealth, the notices show
+// once each.
+let invalidNoticeShown = false;
+let persistNoticeShown = false;
+
+/** Wire invalid-settings + persist-failure facts to the strip's transient
+ * slot. Call after the strip is mounted so the 8s window starts at first
+ * render. */
+export function initSettingsNotices(): void {
+  react("bccHealth", (h) => {
+    if (h.invalidSettings.length > 0 && !invalidNoticeShown) {
+      invalidNoticeShown = true;
+      showStripNotice(invalidSettingsText(h.invalidSettings), null);
+    }
+    if (h.persistFailed && !persistNoticeShown) {
+      persistNoticeShown = true;
+      showStripNotice(PERSIST_FAILED_TEXT, null);
+    }
+  });
 }

@@ -46,6 +46,7 @@ function installGmFake() {
   // Expose the listener registry so tests can simulate foreign writes
   return {
     store,
+    fake,
     listeners,
     fakeSetValue: (key: string, val: unknown) => {
       const old = store.get(key);
@@ -742,6 +743,8 @@ describe("store — health-related ephemeral defaults", () => {
       bootError: null,
       sendPathBroken: null,
       injectionDegraded: false,
+      invalidSettings: [],
+      persistFailed: false,
     });
   });
 
@@ -749,5 +752,199 @@ describe("store — health-related ephemeral defaults", () => {
     await initTestStore(gm);
 
     expect(get("freshness")).toEqual({ ulistAt: 0, awAt: 0, statsAt: 0 });
+  });
+});
+
+// ─── T11: codec validation at boot + persist-failure latch ──────────────────
+
+describe("store: T11 codec validation at boot", () => {
+  let gm: ReturnType<typeof installGmFakeWithListeners>;
+
+  beforeEach(() => {
+    _resetStoreForTesting();
+    gm = installGmFakeWithListeners();
+    setUserStore("TestUser", false);
+  });
+
+  it("corrupt color (number instead of string) falls back to default and collects the key", async () => {
+    gm.store.set("color_testuser", 42);
+
+    await initStore();
+
+    expect(get("color")).toBe("6AAED8");
+    expect(get("bccHealth").invalidSettings).toEqual([{ key: "color", value: 42 }]);
+  });
+
+  it("REGRESSION: non-hex color string (user-typed garbage) is invalid, not black", async () => {
+    gm.store.set("color_testuser", "C9A227Q");
+
+    await initStore();
+
+    expect(get("color")).toBe("6AAED8");
+    expect(get("bccHealth").invalidSettings).toEqual([{ key: "color", value: "C9A227Q" }]);
+  });
+
+  it("legit hex color variants all pass validation", async () => {
+    for (const value of ["6AAED8", "#0a1a2a", "#ABC", "abc123", "#abc123"]) {
+      _resetStoreForTesting();
+      gm = installGmFakeWithListeners();
+      setUserStore("TestUser", false);
+      gm.store.set("color_testuser", value);
+
+      await initStore();
+
+      expect(get("color")).toBe(value);
+      expect(get("bccHealth").invalidSettings).toEqual([]);
+    }
+  });
+
+  it("corrupt pinned (string instead of array) falls back to default and collects the key", async () => {
+    gm.store.set("pinned_testuser", "not-an-array");
+
+    await initStore();
+
+    expect(get("pinned")).toEqual([]);
+    expect(get("bccHealth").invalidSettings).toEqual([{ key: "pinned", value: "not-an-array" }]);
+  });
+
+  it("corrupt ban (array of non-strings) falls back to default and collects the key", async () => {
+    gm.store.set("ban_testuser", [123, 456]);
+
+    await initStore();
+
+    expect(get("ban")).toEqual([]);
+    expect(get("bccHealth").invalidSettings).toEqual([{ key: "ban", value: [123, 456] }]);
+  });
+
+  it("multiple corrupt keys are all collected", async () => {
+    gm.store.set("color_testuser", 42);
+    gm.store.set("pinned_testuser", "bad");
+
+    await initStore();
+
+    const invalid = get("bccHealth").invalidSettings;
+    expect(invalid).toContainEqual({ key: "color", value: 42 });
+    expect(invalid).toContainEqual({ key: "pinned", value: "bad" });
+    expect(invalid.length).toBe(2);
+  });
+
+  it("healthy values leave invalidSettings empty", async () => {
+    gm.store.set("color_testuser", "FF0000");
+    gm.store.set("pinned_testuser", ["alice"]);
+
+    await initStore();
+
+    expect(get("color")).toBe("FF0000");
+    expect(get("pinned")).toEqual(["alice"]);
+    expect(get("bccHealth").invalidSettings).toEqual([]);
+  });
+
+  it("a rejected GM.getValue (read error) does NOT collect the key", async () => {
+    const origGet = gm.fake.getValue.bind(gm.fake);
+    gm.fake.getValue = (key: string) => {
+      if (key === "scheme_v2_testuser") return Promise.reject(new Error("read fail"));
+      return origGet(key);
+    };
+
+    await initStore();
+
+    // Should use default, but NOT be in invalidSettings (read failed, not corrupt)
+    expect(get("scheme_v2")).toBe(false);
+    expect(get("bccHealth").invalidSettings).toEqual([]);
+  });
+
+  it("undefined stored value (never written) is treated as default, not corrupt", async () => {
+    // color_testuser not in GM at all → GM.getValue returns undefined
+    await initStore();
+
+    expect(get("color")).toBe("6AAED8");
+    expect(get("bccHealth").invalidSettings).toEqual([]);
+  });
+});
+
+describe("store: T11 persist-failure latch", () => {
+  let gm: ReturnType<typeof installGmFakeWithListeners>;
+
+  beforeEach(() => {
+    _resetStoreForTesting();
+    gm = installGmFakeWithListeners();
+  });
+
+  it("GM.setValue reject latches persistFailed to true", async () => {
+    await initTestStore(gm);
+
+    // Make setValue reject
+    gm.fake.setValue = () => Promise.reject(new Error("disk full"));
+
+    await set("color", "FF0000");
+
+    expect(get("bccHealth").persistFailed).toBe(true);
+  });
+
+  it("latch does not notify again on a second failing set", async () => {
+    await initTestStore(gm);
+
+    const fn = vi.fn();
+    on("bccHealth", fn);
+
+    gm.fake.setValue = () => Promise.reject(new Error("disk full"));
+
+    await set("color", "FF0000");
+    const countAfterFirst = fn.mock.calls.length;
+
+    await set("whisper", "bob");
+    // persistFailed was already true; no extra notify
+    expect(fn.mock.calls.length).toBe(countAfterFirst);
+    expect(get("bccHealth").persistFailed).toBe(true);
+  });
+
+  it("persistFailed defaults to false", async () => {
+    await initTestStore(gm);
+
+    expect(get("bccHealth").persistFailed).toBe(false);
+  });
+
+  it("invalidSettings defaults to empty array", async () => {
+    await initTestStore(gm);
+
+    expect(get("bccHealth").invalidSettings).toEqual([]);
+  });
+});
+
+describe("store: write guard rejects invalid values whole", () => {
+  let gm: ReturnType<typeof installGmFakeWithListeners>;
+
+  beforeEach(async () => {
+    _resetStoreForTesting();
+    gm = installGmFakeWithListeners();
+    setUserStore("TestUser", false);
+    await initTestStore(gm);
+  });
+
+  it("invalid color write is a no-op: mirror and GM keep the old value", async () => {
+    await set("color", "FF0000");
+
+    // types block this at compile time; imports are the runtime target
+    await set("color", 42 as any);
+
+    expect(get("color")).toBe("FF0000");
+    expect(gm.store.get("color_testuser")).toBe("FF0000");
+  });
+
+  it("partially invalid array write is rejected whole", async () => {
+    await set("pinned", ["alice"]);
+
+    await set("pinned", ["bob", 123] as any);
+
+    expect(get("pinned")).toEqual(["alice"]);
+  });
+
+  it("rejected write does not notify", async () => {
+    const fn = vi.fn();
+    on("pinned", fn);
+
+    await set("pinned", [42] as any);
+
+    expect(fn.mock.calls.length).toBe(0);
   });
 });

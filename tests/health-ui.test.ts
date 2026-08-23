@@ -33,6 +33,8 @@ import {
   STALE_LABEL_AW,
   STALE_LABEL_STATS,
   staleText,
+  invalidSettingsText,
+  PERSIST_FAILED_TEXT,
 } from "../src/health-strings";
 
 // ─── StorageLike fake (Map-backed, no real sessionStorage) ────────────────────
@@ -416,6 +418,41 @@ describe("T7 source wiring", () => {
   it("init.ts mounts the strip", () => {
     const src = readFileSync(resolve(srcDir, "init.ts"), "utf-8");
     expect(src).toContain("mountHealthStrip(reloadChat)");
+  });
+});
+
+// ─── T11 D4 settings-notice string conformance ────────────────────────────
+
+describe("T11 settings-strings conformance", () => {
+  it("invalidSettingsText shows raw key and value for one entry", () => {
+    expect(invalidSettingsText([{ key: "color", value: "C9A227Q" }])).toBe(
+      'Ung\u00fcltige Einstellung \u2014 color: "C9A227Q"',
+    );
+  });
+
+  it("invalidSettingsText joins multiple entries as key: value pairs", () => {
+    expect(
+      invalidSettingsText([
+        { key: "color", value: "C9A227Q" },
+        { key: "pinned", value: "not-an-array" },
+      ]),
+    ).toBe('Ung\u00fcltige Einstellungen \u2014 color: "C9A227Q", pinned: "not-an-array"');
+  });
+
+  it("non-string values render in JSON form", () => {
+    expect(invalidSettingsText([{ key: "color", value: 42 }])).toBe(
+      "Ung\u00fcltige Einstellung \u2014 color: 42",
+    );
+  });
+
+  it("a huge garbage value is capped", () => {
+    const text = invalidSettingsText([{ key: "whisper", value: "x".repeat(300) }]);
+    expect(text.endsWith("\u2026")).toBe(true);
+    expect(text.length).toBeLessThan(80);
+  });
+
+  it("PERSIST_FAILED_TEXT is pinned verbatim", () => {
+    expect(PERSIST_FAILED_TEXT).toBe("Speichern fehlgeschlagen \u2014 gilt nur bis zum Neuladen.");
   });
 });
 

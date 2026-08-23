@@ -320,3 +320,82 @@ describe("stampFreshness", () => {
     expect(f.awAt).toBe(0);
   });
 });
+
+// ─── T11 settings notices wiring ─────────────────────────────────────────────
+
+describe("initSettingsNotices", () => {
+  beforeEach(async () => {
+    await initTestStore();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it("shows the reset notice when invalidSettings is seeded", async () => {
+    const store = await import("../src/store");
+    await store.set("bccHealth", {
+      ...store.get("bccHealth"),
+      invalidSettings: [{ key: "color", value: 42 }],
+    });
+
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+
+    health.initSettingsNotices();
+
+    const notice = strip.currentStripNotice();
+    expect(notice).not.toBeNull();
+    expect(notice!.text).toContain("color: 42");
+  });
+
+  it("shows the persist-failed notice when persistFailed is seeded", async () => {
+    const store = await import("../src/store");
+    await store.set("bccHealth", {
+      ...store.get("bccHealth"),
+      persistFailed: true,
+    });
+
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+
+    health.initSettingsNotices();
+
+    const notice = strip.currentStripNotice();
+    expect(notice).not.toBeNull();
+    expect(notice!.text).toContain("Speichern fehlgeschlagen");
+  });
+
+  it("does not re-show a reset notice on a later bccHealth write (shown-once)", async () => {
+    const store = await import("../src/store");
+    await store.set("bccHealth", {
+      ...store.get("bccHealth"),
+      invalidSettings: [{ key: "color", value: 42 }],
+    });
+
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+
+    health.initSettingsNotices();
+    const firstText = strip.currentStripNotice()?.text;
+
+    // Write bccHealth again; the notice should NOT re-show
+    await store.set("bccHealth", { ...store.get("bccHealth") });
+    const secondText = strip.currentStripNotice()?.text;
+
+    // The strip should still show the same notice (timer from the first show)
+    // or nothing; it should NOT have been called again with a new notice.
+    // Since the 8s timer hasn't expired, the original notice persists.
+    expect(secondText).toBe(firstText);
+  });
+
+  it("does nothing when both invalidSettings is empty and persistFailed is false", async () => {
+    const health = await import("../src/health");
+    const strip = await import("../src/health-strip");
+
+    health.initSettingsNotices();
+
+    expect(strip.currentStripNotice()).toBeNull();
+  });
+});
