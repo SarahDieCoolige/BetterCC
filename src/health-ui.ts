@@ -227,6 +227,13 @@ function cardOverlay(card: HTMLElement): HTMLElement {
   return overlay;
 }
 
+/** Copy a diagnostics report; failures land in the log (no toast UI). */
+function copyReport(fields: ReportFields): void {
+  void copyText(buildErrorReport(fields)).then((ok) => {
+    if (!ok) cclog("copy failed", "health");
+  });
+}
+
 // ─── Boot failure entry point (T6) ───────────────────────────────────────────
 
 // Boot card shown-once latch (hoisted to module scope so handleBootFailure
@@ -249,11 +256,7 @@ function showBootCard(
     buildCardEl(CARD_BOOT_TITLE, text, [
       {
         label: ACTION_COPY_DETAILS,
-        onClick: () => {
-          void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
-            if (!ok) cclog("copy failed", "health");
-          });
-        },
+        onClick: () => copyReport(reportFields("boot", code, error, stack)),
       },
       {
         label: ACTION_CONTINUE_CHAT,
@@ -270,12 +273,9 @@ function showBootCard(
 
 export function handleBootFailure(err: unknown): void {
   const code = bootErrorCode(err);
-  const display =
-    err instanceof TypeError
-      ? BOOT_REASON_STRUCTURE
-      : err instanceof Error
-        ? err.message
-        : String(err);
+  // Known codes carry their approved text; the generic code can only show
+  // the live error, which a later react can't recover.
+  const display = bootDisplayFor(code) ?? (err instanceof Error ? err.message : String(err));
   cclog("boot failure: " + code + " (" + display + ")", "health");
   const error = err instanceof Error ? err.name + ": " + err.message : String(err);
   const stack = err instanceof Error ? err.stack || null : null;
@@ -336,15 +336,8 @@ export function mountHealthUi(): void {
       buildCardEl(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [
         {
           label: ACTION_COPY_ERROR,
-          onClick: () => {
-            void copyText(
-              buildErrorReport(
-                reportFields("send-path", "send-path-broken", health.sendPathBroken!, null),
-              ),
-            ).then((ok) => {
-              if (!ok) cclog("copy failed", "health");
-            });
-          },
+          onClick: () =>
+            copyReport(reportFields("send-path", "send-path-broken", health.sendPathBroken!, null)),
         },
         {
           label: ACTION_LATER,

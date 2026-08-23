@@ -53,16 +53,13 @@ export function stampConnMessage(): void {
  * initial set fires before this subscription exists.
  */
 export function initHealth(): void {
-  const cur = get("session");
-  if (cur.authDead) {
-    applyConnEvent({ type: "authdead", at: Date.now() });
-  }
-
-  on("session", (s) => {
-    if (s.authDead) {
+  const applyAuthDead = () => {
+    if (get("session").authDead) {
       applyConnEvent({ type: "authdead", at: Date.now() });
     }
-  });
+  };
+  applyAuthDead();
+  on("session", applyAuthDead);
 
   cclog("health wiring: init done", "health");
 }

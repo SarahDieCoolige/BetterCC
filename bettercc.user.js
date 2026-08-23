@@ -1060,15 +1060,13 @@
     applyConnEvent({ type: "message", at: Date.now() });
   }
   function initHealth() {
-    const cur = get("session");
-    if (cur.authDead) {
-      applyConnEvent({ type: "authdead", at: Date.now() });
-    }
-    on("session", (s) => {
-      if (s.authDead) {
+    const applyAuthDead = () => {
+      if (get("session").authDead) {
         applyConnEvent({ type: "authdead", at: Date.now() });
       }
-    });
+    };
+    applyAuthDead();
+    on("session", applyAuthDead);
     cclog("health wiring: init done", "health");
   }
   function reportBootError(code) {
@@ -1183,13 +1181,10 @@
       injectIntoChatframe();
     }
   }
-  function betterccOnWsClose() {
-  }
   function attachWsListeners() {
     if (unsafeWindow.chatout_ws) {
       upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
       unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
-      unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
       attachConnListeners(unsafeWindow.chatout_ws);
     }
   }
@@ -4391,6 +4386,11 @@
     overlay.appendChild(card);
     return overlay;
   }
+  function copyReport(fields) {
+    void copyText(buildErrorReport(fields)).then((ok) => {
+      if (!ok) cclog("copy failed", "health");
+    });
+  }
   var bootCardShown = false;
   var bootCardDismissed = false;
   function showBootCard(code, display, error, stack) {
@@ -4401,11 +4401,7 @@
       buildCardEl(CARD_BOOT_TITLE, text, [
         {
           label: ACTION_COPY_DETAILS,
-          onClick: () => {
-            void copyText(buildErrorReport(reportFields("boot", code, error, stack))).then((ok) => {
-              if (!ok) cclog("copy failed", "health");
-            });
-          }
+          onClick: () => copyReport(reportFields("boot", code, error, stack))
         },
         {
           label: ACTION_CONTINUE_CHAT,
@@ -4420,7 +4416,7 @@
   }
   function handleBootFailure(err) {
     const code = bootErrorCode(err);
-    const display = err instanceof TypeError ? BOOT_REASON_STRUCTURE : err instanceof Error ? err.message : String(err);
+    const display = bootDisplayFor(code) ?? (err instanceof Error ? err.message : String(err));
     cclog("boot failure: " + code + " (" + display + ")", "health");
     const error = err instanceof Error ? err.name + ": " + err.message : String(err);
     const stack = err instanceof Error ? err.stack || null : null;
@@ -4464,15 +4460,7 @@
         buildCardEl(CARD_SEND_BROKEN_TITLE, CARD_SEND_BROKEN_TEXT, [
           {
             label: ACTION_COPY_ERROR,
-            onClick: () => {
-              void copyText(
-                buildErrorReport(
-                  reportFields("send-path", "send-path-broken", health.sendPathBroken, null)
-                )
-              ).then((ok) => {
-                if (!ok) cclog("copy failed", "health");
-              });
-            }
+            onClick: () => copyReport(reportFields("send-path", "send-path-broken", health.sendPathBroken, null))
           },
           {
             label: ACTION_LATER,

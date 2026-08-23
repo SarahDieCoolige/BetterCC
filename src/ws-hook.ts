@@ -149,10 +149,6 @@ export function betterccOnWsMessage(ev: MessageEvent): void {
   }
 }
 
-export function betterccOnWsClose(): void {
-  // Upstream handles reconnect automatically.
-}
-
 export function attachWsListeners(): void {
   if (unsafeWindow.chatout_ws) {
     // Store upstream's onmessage, then replace with ours.
@@ -160,7 +156,6 @@ export function attachWsListeners(): void {
     // SHIM_AUTH_DEAD detection), then re-apply iframe theme.
     upstreamOnMessage = unsafeWindow.chatout_ws.onmessage;
     unsafeWindow.chatout_ws.onmessage = betterccOnWsMessage;
-    unsafeWindow.chatout_ws.addEventListener("close", betterccOnWsClose);
     attachConnListeners(unsafeWindow.chatout_ws);
   }
 }
