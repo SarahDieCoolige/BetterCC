@@ -20,7 +20,6 @@ import { cclog, getUserKey } from "./utils";
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 export const HISTORY_MAX = 50;
-export const ENTRY_MAX = 1023;
 export const DRAFT_DEBOUNCE_MS = 500;
 
 const STRUCTURE_KEY_BASE = "bcc_input_history";
@@ -72,12 +71,13 @@ export function currentText(s: HistoryState): string {
 }
 
 /**
- * Record a submitted text. Prepend unless the text is already in the ring:
- * duplicates (consecutive or recalled-from-older) collapse in place — the
- * entry keeps its position, nothing bubbles to the front.
+ * Record a submitted text VERBATIM — the ring doubles as the recovery path
+ * for daemon-swallowed over-length sends, so entries are never truncated;
+ * only the count is bounded. Prepend unless the text is already in the
+ * ring: duplicates collapse in place, nothing bubbles to the front.
  */
 export function pushEntry(entries: string[], text: string): string[] {
-  const t = text.trim().slice(0, ENTRY_MAX);
+  const t = text.trim();
   if (t === "" || entries.includes(t)) return entries;
   return [t, ...entries].slice(0, HISTORY_MAX);
 }

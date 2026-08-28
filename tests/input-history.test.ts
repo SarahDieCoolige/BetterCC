@@ -9,7 +9,6 @@
 import { describe, expect, it } from "vitest";
 import {
   DRAFT_DEBOUNCE_MS,
-  ENTRY_MAX,
   HISTORY_MAX,
   LEGACY_DRAFT_KEY,
   currentText,
@@ -122,9 +121,9 @@ describe("input-history — pushEntry", () => {
     expect(pushEntry([], "  hi  ")).toEqual(["hi"]);
   });
 
-  it("truncates entries to ENTRY_MAX", () => {
-    const long = "x".repeat(ENTRY_MAX + 10);
-    expect(pushEntry([], long)).toEqual(["x".repeat(ENTRY_MAX)]);
+  it("stores over-length text verbatim (recovery path for swallowed sends)", () => {
+    const long = "x".repeat(1500);
+    expect(pushEntry([], long)).toEqual([long]);
   });
 
   it("displaces the oldest beyond HISTORY_MAX", () => {
@@ -138,7 +137,6 @@ describe("input-history — pushEntry", () => {
 
   it("pins the constants the spec names", () => {
     expect(HISTORY_MAX).toBe(50);
-    expect(ENTRY_MAX).toBe(1023);
     expect(DRAFT_DEBOUNCE_MS).toBe(500);
     expect(LEGACY_DRAFT_KEY).toBe("bcc_draft");
   });

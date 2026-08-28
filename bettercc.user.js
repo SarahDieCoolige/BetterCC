@@ -3818,7 +3818,6 @@
 
   // src/input-history.ts
   var HISTORY_MAX = 50;
-  var ENTRY_MAX = 1023;
   var DRAFT_DEBOUNCE_MS = 500;
   var STRUCTURE_KEY_BASE = "bcc_input_history";
   var LEGACY_DRAFT_KEY = "bcc_draft";
@@ -3840,7 +3839,7 @@
     return s.position === 0 ? s.draft : s.entries[s.position - 1] ?? s.draft;
   }
   function pushEntry(entries, text) {
-    const t = text.trim().slice(0, ENTRY_MAX);
+    const t = text.trim();
     if (t === "" || entries.includes(t)) return entries;
     return [t, ...entries].slice(0, HISTORY_MAX);
   }
