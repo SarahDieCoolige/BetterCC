@@ -80,7 +80,16 @@ function neuterGetInfo(): void {
  * Called from src/index.ts after the same userStore setup the old path uses,
  * so both paths share the GM-storage key namespace via getUserKey().
  */
+// One boot per page: a second initV3 would stack react() subscriptions and
+// remount every surface (only buildShell and session guard their own slice).
+// Latched before the first await so concurrent calls can't both pass; boot
+// failures have no retry path, so the latch never resets.
+let booted = false;
+
 export async function initV3(): Promise<void> {
+  if (booted) return;
+  booted = true;
+
   // Boot the sync store before anything else (spec §4).
   // Must run after setUserStore() (derives user-scoped GM keys).
   await initStore();

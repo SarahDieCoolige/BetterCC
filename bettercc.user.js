@@ -4670,7 +4670,10 @@
     unsafeWindow.get_info = function get_info() {
     };
   }
+  var booted = false;
   async function initV3() {
+    if (booted) return;
+    booted = true;
     await initStore();
     cclog("v3 init (parent-page rewrite, iteration 1)");
     const v3Css = GM_getResourceText("v3_css");
