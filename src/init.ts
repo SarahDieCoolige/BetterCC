@@ -179,8 +179,8 @@ export async function initV3(): Promise<void> {
   // send_on_enter is read from the store (seeded at initStore above).
   mountInput();
 
-  // Mount the footer — pills (reload, autoscroll, help, settings stub, exit),
-  // Font Awesome CDN, online count, and chatout_setstatus → reload button color.
+  // Mount the footer — pills (reload, autoscroll, help, settings, exit),
+  // Font Awesome CDN, and the online count.
   mountFooter();
 
   // Critical surfaces react to conn; needs the shell DOM.
