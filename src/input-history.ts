@@ -35,6 +35,9 @@ export interface StorageLike {
 }
 
 // ─── Pure core — recall state machine ──────────────────────────────────────
+//
+// No-op transitions return the SAME state reference — handleRecallKey uses
+// that as its "key not consumed" signal (pinned by the same-ref tests).
 
 export interface HistoryState {
   /** 0 = draft slot, 1..entries.length = history (1 = newest). */
@@ -131,7 +134,6 @@ export function restoreState(storage: StorageLike, structureKey: string): Histor
 
 let state: HistoryState = { position: 0, draft: "", entries: [] };
 let structureKey = "";
-let getBoxText: () => string = () => "";
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 
 function persist(): void {
@@ -151,13 +153,12 @@ function cancelDraftTimer(): void {
  * is safe, unlike an async GM write). Returns the draft for the textarea.
  */
 export function initInputHistory(getBox: () => string): string {
-  getBoxText = getBox;
   structureKey = getUserKey(STRUCTURE_KEY_BASE);
   state = restoreState(sessionStorage, structureKey);
   window.addEventListener("pagehide", () => {
     if (state.position !== 0) return; // recall views never persist (inv. 2)
     cancelDraftTimer();
-    state.draft = getBoxText();
+    state.draft = getBox();
     persist();
   });
   return state.draft;
@@ -172,25 +173,28 @@ export function handleRecallKey(e: KeyboardEvent, boxText: string): string | nul
   if (e.isComposing) return null;
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key === "ArrowUp") {
-    if (state.entries.length === 0 || state.position >= state.entries.length) return null;
     const leavingDraft = state.position === 0;
-    state = recallUp(state, boxText);
+    const next = recallUp(state, boxText);
+    if (next === state) return null;
+    state = next;
     if (leavingDraft) {
-      // Park-flush: the draft leaves through slot 0 immediately (inv. 1),
-      // and any pending debounce write of older text is superseded.
+      // Park-flush: the draft left through slot 0 immediately (inv. 1),
+      // superseding any pending debounce write of older text.
       cancelDraftTimer();
       persist();
     }
     return currentText(state);
   }
   if (mod && e.key === "ArrowDown") {
-    if (state.position === 0) return null;
-    state = recallDown(state);
+    const next = recallDown(state);
+    if (next === state) return null;
+    state = next;
     return currentText(state);
   }
   if (e.key === "Escape") {
-    if (state.position === 0) return null;
-    state = recallEscape(state);
+    const next = recallEscape(state);
+    if (next === state) return null;
+    state = next;
     return currentText(state);
   }
   return null;

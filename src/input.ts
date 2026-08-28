@@ -263,11 +263,11 @@ export function mountInput(): void {
     }
   });
   box.addEventListener("input", () => onDraftInput(box.value));
-  inputArea.appendChild(textarea);
+  inputArea.appendChild(box);
 
   // Boot the input history (draft slot + ring) for this user in this
   // tab; slot 0's draft is whatever survived the last reload.
-  textarea.value = initInputHistory(() => textarea?.value ?? "");
+  box.value = initInputHistory(() => box.value);
 
   // ── Send contract — reuse the hold form's patched onsubmit (O1) ──────
   // buildPatchedHandler surfaces an upstream needle change as a thrown error

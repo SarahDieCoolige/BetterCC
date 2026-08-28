@@ -3882,7 +3882,6 @@
   }
   var state = { position: 0, draft: "", entries: [] };
   var structureKey = "";
-  var getBoxText = () => "";
   var draftTimer = null;
   function persist() {
     sessionStorage.setItem(structureKey, serializeStructure(state.draft, state.entries));
@@ -3894,13 +3893,12 @@
     }
   }
   function initInputHistory(getBox) {
-    getBoxText = getBox;
     structureKey = getUserKey(STRUCTURE_KEY_BASE);
     state = restoreState(sessionStorage, structureKey);
     window.addEventListener("pagehide", () => {
       if (state.position !== 0) return;
       cancelDraftTimer();
-      state.draft = getBoxText();
+      state.draft = getBox();
       persist();
     });
     return state.draft;
@@ -3909,9 +3907,10 @@
     if (e.isComposing) return null;
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key === "ArrowUp") {
-      if (state.entries.length === 0 || state.position >= state.entries.length) return null;
       const leavingDraft = state.position === 0;
-      state = recallUp(state, boxText);
+      const next = recallUp(state, boxText);
+      if (next === state) return null;
+      state = next;
       if (leavingDraft) {
         cancelDraftTimer();
         persist();
@@ -3919,13 +3918,15 @@
       return currentText(state);
     }
     if (mod && e.key === "ArrowDown") {
-      if (state.position === 0) return null;
-      state = recallDown(state);
+      const next = recallDown(state);
+      if (next === state) return null;
+      state = next;
       return currentText(state);
     }
     if (e.key === "Escape") {
-      if (state.position === 0) return null;
-      state = recallEscape(state);
+      const next = recallEscape(state);
+      if (next === state) return null;
+      state = next;
       return currentText(state);
     }
     return null;
@@ -4108,8 +4109,8 @@
       }
     });
     box.addEventListener("input", () => onDraftInput(box.value));
-    inputArea.appendChild(textarea);
-    textarea.value = initInputHistory(() => textarea?.value ?? "");
+    inputArea.appendChild(box);
+    box.value = initInputHistory(() => box.value);
     const holdForm = document.querySelector('form[name="hold"]');
     try {
       onSubmitOrig = buildPatchedHandler(holdForm);

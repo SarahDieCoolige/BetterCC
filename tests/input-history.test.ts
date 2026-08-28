@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  DRAFT_DEBOUNCE_MS,
   ENTRY_MAX,
   HISTORY_MAX,
   LEGACY_DRAFT_KEY,
@@ -138,6 +139,7 @@ describe("input-history — pushEntry", () => {
   it("pins the constants the spec names", () => {
     expect(HISTORY_MAX).toBe(50);
     expect(ENTRY_MAX).toBe(1023);
+    expect(DRAFT_DEBOUNCE_MS).toBe(500);
     expect(LEGACY_DRAFT_KEY).toBe("bcc_draft");
   });
 });
