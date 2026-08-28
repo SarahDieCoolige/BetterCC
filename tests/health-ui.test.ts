@@ -1,4 +1,5 @@
-// Tests for T5: veil + card + auth-dead + draft preservation.
+// Tests for T5: veil + card + auth-dead (draft preservation moved to
+// tests/input-history.test.ts with the IH feature).
 // Pure-function + file-content assertions only; no DOM/jsdom.
 
 import { describe, it, expect } from "vitest";
@@ -12,7 +13,6 @@ import {
   buildErrorReport,
   type ReportFields,
 } from "../src/health-ui";
-import { DRAFT_KEY, saveDraft, takeDraft, type StorageLike } from "../src/input";
 import {
   CARD_AUTHDEAD_TITLE,
   CARD_AUTHDEAD_TEXT,
@@ -36,24 +36,6 @@ import {
   invalidSettingsText,
   PERSIST_FAILED_TEXT,
 } from "../src/health-strings";
-
-// ─── StorageLike fake (Map-backed, no real sessionStorage) ────────────────────
-
-class FakeStorage implements StorageLike {
-  private data = new Map<string, string>();
-
-  getItem(key: string): string | null {
-    return this.data.has(key) ? this.data.get(key)! : null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.data.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.data.delete(key);
-  }
-}
 
 // ─── 1. shouldShowCritical truth table ────────────────────────────────────────
 
@@ -118,41 +100,6 @@ describe("dismissal is view state only", () => {
   });
 });
 
-// ─── 3. Draft roundtrip ───────────────────────────────────────────────────
-
-describe("draft roundtrip", () => {
-  it("saveDraft then takeDraft returns the value", () => {
-    const s = new FakeStorage();
-    saveDraft(s, "hallo");
-    expect(takeDraft(s)).toBe("hallo");
-  });
-
-  it("second takeDraft returns empty (cleared on read)", () => {
-    const s = new FakeStorage();
-    saveDraft(s, "hallo");
-    takeDraft(s); // consume
-    expect(takeDraft(s)).toBe("");
-  });
-});
-
-// ─── 4. Empty/whitespace draft removes stale key ──────────────────────────────
-
-describe("empty/whitespace draft removes stale key", () => {
-  it("saving empty string clears the key", () => {
-    const s = new FakeStorage();
-    saveDraft(s, "alt");
-    saveDraft(s, "");
-    expect(takeDraft(s)).toBe("");
-  });
-
-  it("saving whitespace clears the key", () => {
-    const s = new FakeStorage();
-    saveDraft(s, "alt");
-    saveDraft(s, "  ");
-    expect(takeDraft(s)).toBe("");
-  });
-});
-
 // ─── 5. CSS file assertions ─────────────────────────────────────────────────
 
 describe("veil CSS", () => {
@@ -185,14 +132,6 @@ describe("health-strings conformance", () => {
 
   it("has the later action label", () => {
     expect(ACTION_LATER).toBe("Sp\u00e4ter");
-  });
-});
-
-// ─── 7. Draft key constant ──────────────────────────────────────────────────
-
-describe("DRAFT_KEY", () => {
-  it("equals bcc_draft", () => {
-    expect(DRAFT_KEY).toBe("bcc_draft");
   });
 });
 

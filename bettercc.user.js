@@ -853,8 +853,8 @@
     retry: "Versuch {n}",
     authdead: "Session abgelaufen"
   };
-  function statusButtonTitle(state) {
-    return STATUS_BUTTON_TITLE.replace("{state}", state);
+  function statusButtonTitle(state2) {
+    return STATUS_BUTTON_TITLE.replace("{state}", state2);
   }
   function retryText(n) {
     return STATUS_TEXT.retry.replace("{n}", String(n));
@@ -1202,21 +1202,370 @@
     }
   }
 
-  // src/patched-handler.ts
-  var AWAY_TIMER_NEEDLE = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){';
-  var AWAY_TIMER_REPLACEMENT = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){';
-  function patchAwayTimer(onSubmitOrigStr) {
-    if (!onSubmitOrigStr.includes(AWAY_TIMER_NEEDLE)) {
-      throw new Error(
-        `patchAwayTimer: upstream onsubmit needle not found \u2014 the away-timer condition changed upstream; "/w" messages will no longer reset the away timer. Inspect the hold form's onsubmit and update AWAY_TIMER_NEEDLE.`
-      );
+  // src/shell.ts
+  function buildShell() {
+    const chatframe = document.getElementById("chatframe");
+    const table = document.querySelector("table.c_tab");
+    if (!chatframe || !table) {
+      cclog("v3 shell: chatframe or table not found \u2014 aborting", "v3");
+      return false;
     }
-    return onSubmitOrigStr.replace(AWAY_TIMER_NEEDLE, AWAY_TIMER_REPLACEMENT);
+    if (document.querySelector(".bcc-shell")) return true;
+    const hold = document.querySelector('form[name="hold"]');
+    const of = document.querySelector('form[name="OF"]');
+    if (hold) {
+      document.body.appendChild(hold);
+      hold.style.display = "none";
+    }
+    if (of) {
+      document.body.appendChild(of);
+      of.style.display = "none";
+    }
+    const shell = document.createElement("div");
+    shell.className = "bcc-shell";
+    const sidebar = document.createElement("aside");
+    sidebar.className = "bcc-sidebar";
+    sidebar.innerHTML = '<div class="bcc-sidebar-placeholder">Userlist (T7)</div>';
+    const main = document.createElement("main");
+    main.className = "bcc-main";
+    main.appendChild(chatframe);
+    const inputArea = document.createElement("div");
+    inputArea.className = "bcc-chatbar";
+    inputArea.innerHTML = '<div class="bcc-chatbar-placeholder">Chatbar (T8/T9)</div>';
+    shell.append(sidebar, main, inputArea);
+    document.body.appendChild(shell);
+    table.style.display = "none";
+    cclog("v3 shell built \u2014 chatframe moved, table hidden", "v3");
+    return true;
   }
-  function buildPatchedHandler(holdForm) {
-    const raw = holdForm?.getAttribute("onsubmit") || "";
-    if (!raw) return null;
-    return new Function(patchAwayTimer(raw));
+  function reloadChat() {
+    if (isAuthDead()) {
+      cclog("reloadChat: auth_dead, doing full page reload", "v3");
+      location.reload();
+      return;
+    }
+    const ws = getChatoutWs();
+    if (ws) {
+      cclog("reloadChat: closing WS to trigger reconnect", "v3");
+      ws.close();
+    } else {
+      cclog("reloadChat: no WS \u2014 nothing to reconnect", "v3");
+    }
+  }
+
+  // src/userlist.ts
+  function parseUserlist(chaMy) {
+    const users = [];
+    for (let i = 0; i + 1 < chaMy.length; i += 2) {
+      const name = chaMy[i];
+      if (name === "") break;
+      const status = chaMy[i + 1] ?? "";
+      users.push(decodeStatus(name, status));
+    }
+    return users;
+  }
+  function decodeStatus(name, status) {
+    const registered = status.includes("R");
+    const guest = status.includes("h") && !registered;
+    return {
+      name,
+      key: name.toLowerCase(),
+      registered,
+      guest,
+      sep: status.includes("S"),
+      away: status.includes("A")
+    };
+  }
+  function diffUserlists(oldList, newList) {
+    const oldNames = new Set(oldList.map((u) => u.name));
+    const newNames = new Set(newList.map((u) => u.name));
+    const added = [];
+    const removed = [];
+    for (const u of newList) if (!oldNames.has(u.name)) added.push(u.name);
+    for (const u of oldList) if (!newNames.has(u.name)) removed.push(u.name);
+    return { added, removed };
+  }
+  var LOCALE = "de";
+  var SORT_OPTS = {
+    sensitivity: "base",
+    collation: "phonebk"
+  };
+  function sortUsers(users, pinned) {
+    const cmp = new Intl.Collator(LOCALE, SORT_OPTS);
+    return [...users].sort((a, b) => {
+      const pa = pinned.has(a.key) ? 0 : 1;
+      const pb = pinned.has(b.key) ? 0 : 1;
+      return pa - pb || cmp.compare(a.name, b.name);
+    });
+  }
+  var STRING_LITERAL = /"((?:[^"\\]|\\.)*)"/g;
+  function parseAw(raw) {
+    const channels = /* @__PURE__ */ new Map();
+    const arrayStart = raw.indexOf("new Array(");
+    if (arrayStart === -1) return channels;
+    const body = raw.slice(arrayStart);
+    const literals = body.match(STRING_LITERAL);
+    if (!literals) return channels;
+    for (let i = 0; i + 2 < literals.length; i += 3) {
+      const channel = literals[i].slice(1, -1);
+      if (channel === "") break;
+      channels.set(channel, parseAwUsers(literals[i + 2].slice(1, -1)));
+    }
+    return channels;
+  }
+  function parseAwUsers(raw) {
+    const users = [];
+    for (const entry of raw.split(" ")) {
+      if (entry === "") continue;
+      users.push(decodeAwEntry(entry));
+    }
+    return users;
+  }
+  function decodeAwEntry(entry) {
+    const guestMatch = entry.match(/\^(\d+)$/);
+    const name = guestMatch ? entry.slice(0, guestMatch.index) : entry;
+    return {
+      name,
+      key: name.toLowerCase(),
+      registered: false,
+      guest: guestMatch !== null,
+      sep: false,
+      away: false
+    };
+  }
+  function channelAbbrev(name, index) {
+    const hadHyphens = name.includes("-");
+    const stripped = name.replace(/-/g, "");
+    switch (stripped.toLowerCase()) {
+      case "mod":
+        return "MOD";
+      case "zauberwald":
+        return "Zaub";
+      case "bizarretalk":
+        return "BizT";
+      case "herzklopfen":
+        return "HerzK";
+      case "knuddelecke":
+        return "KnudE";
+      case "hexensabbat":
+        return "HexS";
+      case "bluemchensex":
+        return "Bluem";
+      case "manstreet":
+        return "ManS";
+      case "fortysomething":
+        return "Forty";
+      case "trauminsel":
+        return "Traum";
+      case "streikchannel":
+        return "Streik";
+      case "goldenfifty":
+        return "Golden";
+      case "herzschmerz":
+        return "HerzS";
+      case "nerdkultur":
+        return "NerdK";
+      case "query":
+        return "Query";
+      case "gaycruising":
+        return "Gay";
+      case "womencorner":
+        return "WoCo";
+      case "erorsp":
+        return "EroR";
+      case "erotik":
+        return "Ero";
+      case "erotik2":
+        return "Ero2";
+      case "erotik3":
+        return "Ero3";
+      case "erotik4":
+        return "Ero4";
+      case "registriert":
+        return "Reg";
+      case "chatcity":
+        return "CC";
+      case "international":
+        return "Intl";
+      case "baklava":
+        return "Bak";
+    }
+    if (stripped.length <= 3) return stripped;
+    let abbrev;
+    if (!hadHyphens) {
+      const internalCaps = stripped.slice(1).replace(/[^A-Z]/g, "");
+      if (internalCaps.length > 0) {
+        abbrev = stripped[0].toUpperCase() + stripped[1].toLowerCase() + internalCaps;
+      } else {
+        abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
+      }
+    } else {
+      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
+    }
+    const digitMatch = stripped.match(/(\d+)$/);
+    if (digitMatch) {
+      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 2).toLowerCase() + digitMatch[1];
+    }
+    if (index > 0 && index < stripped.length - 2) {
+      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3 + index).toLowerCase();
+    }
+    return abbrev;
+  }
+
+  // src/ulist-poll.ts
+  var chatId = "";
+  var chatSid = "";
+  var pchatBase = "";
+  var prevList = [];
+  var timerId;
+  var running = false;
+  var stale = true;
+  function parseUlistResponse(text) {
+    const decl = text.match(/var\s+cha_my\s*=\s*new\s+Array\([\s\S]*?\)\s*;/);
+    if (!decl) return [];
+    try {
+      const fn = new Function(`${decl[0]} return cha_my;`);
+      return fn();
+    } catch {
+      return [];
+    }
+  }
+  function processUserlist(chaMy, prev) {
+    const newList = parseUserlist(chaMy);
+    const { added, removed } = diffUserlists(prev, newList);
+    return { newList, added, removed };
+  }
+  async function pollOnce() {
+    try {
+      const url = pchatBase + "/ulist?AKTION=j&ID=" + chatId + "&SID=" + chatSid + "&x=" + Math.random();
+      const resp = await fetch(url);
+      const text = await resp.text();
+      const chaMy = parseUlistResponse(text);
+      if (!chaMy.some((s) => s !== "")) return;
+      stale = false;
+      const { newList, added, removed } = processUserlist(chaMy, prevList);
+      prevList = newList;
+      await set("userlist", { users: newList, added, removed });
+      stampFreshness("ulistAt");
+    } catch (e) {
+      cclog("ulist-poll: poll error \u2014 " + e.message, "v3");
+    }
+  }
+  var STALE_RETRY_MS = 2e3;
+  function pollAndReschedule(intervalMs) {
+    pollOnce().finally(() => {
+      if (running) scheduleNext(intervalMs);
+    });
+  }
+  function scheduleNext(intervalMs) {
+    const effectiveInterval = stale ? STALE_RETRY_MS : intervalMs;
+    timerId = setTimeout(() => pollAndReschedule(intervalMs), effectiveInterval);
+  }
+  function startUlistPoll(intervalMs = POLL_CADENCES.ulist) {
+    chatId = getChatId();
+    chatSid = getChatSid();
+    pchatBase = getPChat();
+    if (running) return;
+    running = true;
+    const seed = getChaMy();
+    if (seed.length > 0) {
+      const { newList, added, removed } = processUserlist(seed, prevList);
+      prevList = newList;
+      void set("userlist", { users: newList, added, removed });
+      stampFreshness("ulistAt");
+    }
+    pollAndReschedule(intervalMs);
+    cclog("ulist-poll started \u2014 every ~" + intervalMs + " ms", "v3");
+  }
+  function stopUlistPoll() {
+    if (timerId !== void 0) clearTimeout(timerId);
+    timerId = void 0;
+    running = false;
+  }
+  function refreshUlistNow(intervalMs = POLL_CADENCES.ulist) {
+    if (timerId !== void 0) clearTimeout(timerId);
+    pollAndReschedule(intervalMs);
+  }
+
+  // src/global-userlist.ts
+  var lastSnapshot = /* @__PURE__ */ new Map();
+  var timerId2;
+  var running2 = false;
+  function diffGlobal(prev, next) {
+    const added = [];
+    const removed = [];
+    for (const [channel, users] of next) {
+      const prevKeys = new Set((prev.get(channel) ?? []).map((u) => u.key));
+      for (const user of users) {
+        if (!prevKeys.has(user.key)) added.push({ user, channel });
+      }
+    }
+    for (const [channel, users] of prev) {
+      const nextKeys = new Set((next.get(channel) ?? []).map((u) => u.key));
+      for (const user of users) {
+        if (!nextKeys.has(user.key)) removed.push({ user, channel });
+      }
+    }
+    return { added, removed };
+  }
+  async function pollOnce2() {
+    try {
+      const raw = await fetchAw();
+      const next = parseAw(raw);
+      if (next.size === 0) return;
+      const { added, removed } = diffGlobal(lastSnapshot, next);
+      lastSnapshot = next;
+      await set("globalUserlist", { channels: next, added, removed });
+      stampFreshness("awAt");
+    } catch (e) {
+      cclog("global-userlist: poll error \u2014 " + e.message, "v3");
+    }
+  }
+  function scheduleNext2(intervalMs) {
+    timerId2 = setTimeout(() => {
+      pollOnce2().finally(() => {
+        if (running2) scheduleNext2(intervalMs);
+      });
+    }, intervalMs);
+  }
+  function startPolling(intervalMs = POLL_CADENCES.aw) {
+    if (running2) return;
+    running2 = true;
+    pollOnce2().finally(() => {
+      if (running2) scheduleNext2(intervalMs);
+    });
+    cclog("global userlist poll started \u2014 aw.js every ~" + intervalMs + " ms", "v3");
+  }
+  function stopPolling() {
+    if (timerId2 !== void 0) clearTimeout(timerId2);
+    timerId2 = void 0;
+    running2 = false;
+  }
+
+  // src/dom.ts
+  function iconElement(cls) {
+    const i = document.createElement("i");
+    i.className = "fas " + cls;
+    i.setAttribute("aria-hidden", "true");
+    return i;
+  }
+  function actionButton(opts) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.title = opts.title;
+    btn.setAttribute("aria-label", opts.title);
+    if (opts.iconClass) btn.appendChild(iconElement(opts.iconClass));
+    if (opts.label) {
+      const text = document.createElement("span");
+      text.className = "bcc-action-label";
+      text.textContent = opts.label;
+      btn.appendChild(text);
+    }
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      opts.onClick();
+    });
+    return btn;
   }
 
   // src/user-image.ts
@@ -1607,30 +1956,811 @@
     });
   }
 
-  // src/dom.ts
-  function iconElement(cls) {
-    const i = document.createElement("i");
-    i.className = "fas " + cls;
-    i.setAttribute("aria-hidden", "true");
-    return i;
+  // src/popup.ts
+  function nickToHue(nick) {
+    let sum = 0;
+    for (let i = 0; i < nick.length; i++) {
+      sum += nick.charCodeAt(i);
+    }
+    return sum % 360;
   }
-  function actionButton(opts) {
+  var openPopup = null;
+  var onOutsideClick = null;
+  var currentUser = null;
+  var unsubscribeStore = null;
+  var popupAnchor = null;
+  var onResize = null;
+  function closePopup() {
+    if (!openPopup) return;
+    openPopup.remove();
+    openPopup = null;
+    currentUser = null;
+    popupAnchor = null;
+    document.removeEventListener("keydown", onKeydown, true);
+    window.removeEventListener("bcc-iframe-interaction", onIframeInteraction);
+    if (onOutsideClick) {
+      document.removeEventListener("click", onOutsideClick);
+      onOutsideClick = null;
+    }
+    if (unsubscribeStore) {
+      unsubscribeStore();
+      unsubscribeStore = null;
+    }
+    if (onResize) {
+      window.removeEventListener("resize", onResize);
+      onResize = null;
+    }
+  }
+  function onKeydown(e) {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      closePopup();
+      dismissAllPreviews();
+    }
+  }
+  function onIframeInteraction() {
+    if (openPopup) closePopup();
+  }
+  function copyToClipboard(el, text) {
+    const originalText = el.textContent ?? text;
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        showCopyFeedback(el, originalText);
+      }).catch(() => {
+      });
+    } catch {
+    }
+  }
+  function showCopyFeedback(el, originalText) {
+    el.textContent = "\u2713 Kopiert!";
+    setTimeout(() => {
+      if (el.textContent === "\u2713 Kopiert!") el.textContent = originalText;
+    }, 1500);
+  }
+  function buildPhotoContainer(userName) {
+    const container = document.createElement("div");
+    container.className = "bcc-popup-photo";
+    const avatar = document.createElement("div");
+    avatar.className = "bcc-popup-avatar";
+    avatar.textContent = userName[0]?.toUpperCase() ?? "?";
+    avatar.style.background = "hsl(" + nickToHue(userName) + ", 45%, 55%)";
+    container.appendChild(avatar);
+    const img = document.createElement("img");
+    img.alt = "";
+    container.appendChild(img);
+    return container;
+  }
+  function loadPhoto(container, userName) {
+    const img = container.querySelector("img");
+    const avatar = container.querySelector(".bcc-popup-avatar");
+    if (!img || !avatar) return;
+    getUserPhoto(userName).then((result) => {
+      if (!result.hasPhoto || !result.thumbUrl) return;
+      if (!openPopup?.contains(container)) return;
+      img.src = result.thumbUrl;
+      img.dataset.fullUrl = result.fullUrl || result.thumbUrl;
+      img.addEventListener(
+        "load",
+        () => {
+          img.classList.add("bcc-photo-loaded");
+          avatar.style.display = "none";
+        },
+        { once: true }
+      );
+      img.addEventListener(
+        "error",
+        () => {
+          evictImageCache(userName);
+        },
+        { once: true }
+      );
+    }).catch(() => {
+    });
+  }
+  function buildPin(isPinned, onToggle) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.title = opts.title;
-    btn.setAttribute("aria-label", opts.title);
-    if (opts.iconClass) btn.appendChild(iconElement(opts.iconClass));
-    if (opts.label) {
-      const text = document.createElement("span");
-      text.className = "bcc-action-label";
-      text.textContent = opts.label;
-      btn.appendChild(text);
-    }
+    btn.className = "bcc-popup-pin";
+    btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
+    btn.setAttribute("aria-label", btn.title);
+    const icon = iconElement("fa-thumbtack");
+    if (!isPinned) icon.style.transform = "rotate(45deg)";
+    btn.appendChild(icon);
+    if (isPinned) btn.classList.add("pinned");
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      opts.onClick();
+      onToggle();
     });
     return btn;
+  }
+  function updatePinButton(btn, isPinned) {
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.style.transform = isPinned ? "" : "rotate(45deg)";
+    }
+    btn.classList.toggle("pinned", isPinned);
+    btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
+    btn.setAttribute("aria-label", btn.title);
+  }
+  function buildToolbarCell(iconClass, shortcut, title, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "bcc-popup-toolbar-cell";
+    btn.title = title;
+    btn.setAttribute("aria-label", title);
+    const icon = document.createElement("i");
+    icon.className = "fas " + iconClass + " bcc-toolbar-icon";
+    icon.setAttribute("aria-hidden", "true");
+    btn.appendChild(icon);
+    const label = document.createElement("span");
+    label.className = "bcc-toolbar-shortcut";
+    label.textContent = shortcut;
+    btn.appendChild(label);
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick();
+    });
+    return btn;
+  }
+  function openUserPopup(anchor, user, isPinned, onTogglePin) {
+    if (currentUser === user.name) {
+      closePopup();
+      return;
+    }
+    closePopup();
+    currentUser = user.name;
+    const popup = document.createElement("div");
+    popup.className = "bcc-user-popup";
+    popup.setAttribute("role", "dialog");
+    popup.setAttribute("aria-modal", "false");
+    popup.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
+    const pinBtn = buildPin(isPinned, () => onTogglePin(user));
+    popup.appendChild(pinBtn);
+    unsubscribeStore = on("pinned", (pinned) => {
+      if (!openPopup) return;
+      updatePinButton(pinBtn, pinned.includes(user.key));
+    });
+    const photoContainer = buildPhotoContainer(user.name);
+    popup.appendChild(photoContainer);
+    const nameRow = document.createElement("div");
+    nameRow.className = "bcc-popup-name-row";
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "bcc-popup-username";
+    nameSpan.textContent = user.name;
+    nameSpan.title = "Klicken zum Kopieren";
+    nameSpan.addEventListener("click", (e) => {
+      e.stopPropagation();
+      copyToClipboard(nameSpan, user.name);
+    });
+    nameRow.appendChild(nameSpan);
+    const idBtn = document.createElement("button");
+    idBtn.type = "button";
+    idBtn.className = "bcc-popup-id-btn";
+    idBtn.title = "ID von " + user.name + " anzeigen";
+    idBtn.setAttribute("aria-label", idBtn.title);
+    idBtn.appendChild(iconElement("fa-id-card"));
+    idBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const url = "//www.chatcity.de/de/id/" + encodeChatLink(user.name) + ".html";
+      window.open(url, "IDCARD", "width=810,height=800,scrollbars=yes");
+      closePopup();
+    });
+    nameRow.appendChild(idBtn);
+    popup.appendChild(nameRow);
+    const toolbar = document.createElement("div");
+    toolbar.className = "bcc-popup-toolbar";
+    toolbar.appendChild(
+      buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " fl\xFCstern", () => {
+        const api = getBettercc();
+        if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
+        closePopup();
+      })
+    );
+    toolbar.appendChild(
+      buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
+        const api = getBettercc();
+        if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
+        closePopup();
+      })
+    );
+    toolbar.appendChild(
+      buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
+        const btn = toolbar.lastElementChild;
+        if (!btn) return;
+        if (btn.classList.contains("bcc-confirm")) {
+          sendCommand("/ignore " + user.name);
+          btn.classList.remove("bcc-confirm");
+          btn.classList.add("bcc-confirmed");
+          const icon = btn.querySelector("i");
+          if (icon) {
+            icon.className = "fas fa-check-double bcc-toolbar-icon";
+          }
+          const label = btn.querySelector(".bcc-toolbar-shortcut");
+          if (label) label.textContent = "ignoriert";
+          setTimeout(() => {
+            btn.classList.remove("bcc-confirmed");
+            if (icon) {
+              icon.className = "fas fa-ban bcc-toolbar-icon";
+            }
+            if (label) label.textContent = "/ig";
+          }, 1200);
+        } else if (!btn.classList.contains("bcc-confirmed")) {
+          btn.classList.add("bcc-confirm");
+          const icon = btn.querySelector("i");
+          if (icon) {
+            icon.className = "fas fa-check bcc-toolbar-icon";
+          }
+          const label = btn.querySelector(".bcc-toolbar-shortcut");
+          if (label) label.textContent = "sicher?";
+          const reset = (e) => {
+            if (!btn.contains(e.target)) {
+              btn.classList.remove("bcc-confirm");
+              if (icon) {
+                icon.className = "fas fa-ban bcc-toolbar-icon";
+              }
+              if (label) label.textContent = "/ig";
+              document.removeEventListener("click", reset);
+            }
+          };
+          setTimeout(() => document.addEventListener("click", reset), 0);
+        }
+      })
+    );
+    popup.appendChild(toolbar);
+    const mount = document.querySelector(".bcc-shell") ?? document.body;
+    mount.appendChild(popup);
+    popupAnchor = anchor;
+    const photoEl = popup.querySelector(".bcc-popup-photo");
+    const reposition = () => {
+      if (!popupAnchor) return;
+      const rect = popupAnchor.getBoundingClientRect();
+      const popupH = popup.offsetHeight || 200;
+      const popupW = popup.offsetWidth || 200;
+      const gap = 4;
+      const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
+      const sidebar = document.querySelector(".bcc-sidebar");
+      const edgeLeft = sidebar ? sidebar.getBoundingClientRect().left : rect.left;
+      popup.style.left = Math.max(8, edgeLeft - popupW - gap) + "px";
+      const chatbar = document.querySelector(".bcc-chatbar");
+      const maxBottom = chatbar ? chatbar.getBoundingClientRect().top - gap : window.innerHeight - 8;
+      const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
+      popup.style.top = Math.max(8, Math.min(maxBottom - popupH, idealTop)) + "px";
+    };
+    reposition();
+    onResize = reposition;
+    window.addEventListener("resize", onResize);
+    photoContainer.addEventListener("mouseenter", () => {
+      if (!get("hover_preview")) return;
+      if (previewByUser.has(user.name)) return;
+      const img = photoContainer.querySelector("img");
+      if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
+        dismissHover();
+        buildPreviewBox(img.dataset.fullUrl, user.name, void 0, user.name);
+      }
+    });
+    photoContainer.addEventListener("mouseleave", () => {
+      dismissHover();
+    });
+    photoContainer.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (previewByUser.has(user.name)) {
+        dismissPreview(user.name);
+        return;
+      }
+      const img = photoContainer.querySelector("img");
+      if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
+        dismissHover();
+        const box = buildPreviewBox(img.dataset.fullUrl, user.name, void 0, user.name);
+        previewByUser.set(user.name, box);
+      }
+    });
+    loadPhoto(photoContainer, user.name);
+    openPopup = popup;
+    window.addEventListener("bcc-iframe-interaction", onIframeInteraction);
+    document.addEventListener("keydown", onKeydown, true);
+    onOutsideClick = (e) => {
+      if (openPopup && !openPopup.contains(e.target)) closePopup();
+    };
+    document.addEventListener("click", onOutsideClick);
+  }
+
+  // src/session.ts
+  var timer = null;
+  function readSnapshot() {
+    const ui = getChatUi();
+    return {
+      nick: getChatNick(),
+      registered: ui.includes("R"),
+      guest: ui.includes("h") && !ui.includes("R"),
+      userId: getChatId(),
+      sessionId: getChatSid(),
+      channel: getChannel(),
+      authDead: isAuthDead()
+    };
+  }
+  function initSession() {
+    if (timer) clearInterval(timer);
+    const snapshot2 = readSnapshot();
+    set("session", snapshot2);
+    let prevChannel = snapshot2.channel;
+    let prevAuthDead = snapshot2.authDead;
+    timer = setInterval(() => {
+      const next = readSnapshot();
+      if (next.channel !== prevChannel || next.authDead !== prevAuthDead) {
+        prevChannel = next.channel;
+        prevAuthDead = next.authDead;
+        set("session", next);
+      }
+    }, 2e3);
+    cclog("session: init done \u2014 nick=" + snapshot2.nick + " channel=" + snapshot2.channel, "v3");
+  }
+  function getSession() {
+    return get("session");
+  }
+
+  // src/channel-select.ts
+  function parseChannels(ccc, ccg) {
+    if (!Array.isArray(ccg) || !Array.isArray(ccc)) return [];
+    const groups = [];
+    const byId = /* @__PURE__ */ new Map();
+    for (let i = 0; i + 1 < ccg.length; i += 2) {
+      const id = Number(ccg[i]);
+      const label = String(ccg[i + 1] ?? "");
+      if (!Number.isFinite(id)) continue;
+      byId.set(id, groups.length);
+      groups.push({ id, label, channels: [] });
+    }
+    for (let i = 0; i + 3 < ccc.length; i += 4) {
+      const name = ccc[i];
+      const groupId = Number(ccc[i + 2]);
+      if (typeof name !== "string" || name.length === 0) continue;
+      const idx = byId.get(groupId);
+      if (idx === void 0) continue;
+      groups[idx].channels.push(name);
+    }
+    return groups;
+  }
+  function buildChannelSelect() {
+    const ccc = getChannelCategories();
+    const ccg = getChannelGroups();
+    const groups = parseChannels(ccc, ccg);
+    const active = getSession().channel;
+    if (groups.length === 0) {
+      cclog("buildChannelSelect: ccc/ccg absent \u2014 falling back to static label", "v3");
+      const span = document.createElement("span");
+      span.className = "bcc-channel";
+      span.textContent = active || "Chatcity";
+      span.title = "Channel";
+      return span;
+    }
+    const select = document.createElement("select");
+    select.name = "bcc-channel";
+    select.className = "bcc-channel-select";
+    select.title = "Channel wechseln";
+    select.setAttribute("aria-label", "Channel wechseln");
+    for (const group of groups) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group.label;
+      for (const name of group.channels) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        if (name.toLowerCase() === active.toLowerCase()) option.selected = true;
+        optgroup.appendChild(option);
+      }
+      select.appendChild(optgroup);
+    }
+    select.addEventListener("change", () => {
+      sendCommand("/j " + select.value);
+    });
+    react("session", (s) => {
+      if (s.channel) {
+        const lower = s.channel.toLowerCase();
+        for (const opt of Array.from(select.options)) {
+          if (opt.value.toLowerCase() === lower) {
+            if (!opt.selected) opt.selected = true;
+            return;
+          }
+        }
+      }
+    });
+    return select;
+  }
+
+  // src/sidebar.ts
+  function getStatusClasses(user) {
+    const classes = ["bcc-userrow"];
+    if (user.sep) classes.push("bcc-sep");
+    return classes.join(" ");
+  }
+  function mergeUserlists(current, globalChannels, pinned) {
+    const merged = current.map((u) => ({ user: u, channel: null }));
+    const present = new Set(current.map((u) => u.key));
+    for (const [channel, users] of globalChannels) {
+      for (const user of users) {
+        if (pinned.has(user.key) && !present.has(user.key)) {
+          merged.push({ user, channel });
+          present.add(user.key);
+        }
+      }
+    }
+    return merged;
+  }
+  function abbrevChannels(channels) {
+    const used = /* @__PURE__ */ new Map();
+    const badges = /* @__PURE__ */ new Map();
+    for (const channel of [...new Set(channels)].sort()) {
+      const base = channelAbbrev(channel, 0);
+      const index = used.get(base) ?? 0;
+      used.set(base, index + 1);
+      badges.set(channel, channelAbbrev(channel, index));
+    }
+    return badges;
+  }
+  function applyUserState(row, merged, badges) {
+    const user = merged.user;
+    row.className = getStatusClasses(user);
+    row.classList.toggle("bcc-name-away", user.away || user.sep);
+    const nameSpan = row.querySelector(".bcc-userrow-name");
+    if (nameSpan) {
+      nameSpan.textContent = user.name;
+    }
+    const oldBadge = row.querySelector(".bcc-user-tag[data-bcc-badge]");
+    if (merged.channel) {
+      const text = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
+      if (oldBadge) {
+        if (oldBadge.textContent !== text) oldBadge.textContent = text;
+      } else {
+        const badge = document.createElement("span");
+        badge.className = "bcc-user-tag";
+        badge.dataset.bccBadge = "1";
+        badge.textContent = text;
+        row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
+      }
+    } else if (oldBadge) {
+      oldBadge.remove();
+    }
+    row.querySelectorAll(".bcc-user-tag:not([data-bcc-badge])").forEach((t) => t.remove());
+    if (user.away) {
+      const tag = document.createElement("span");
+      tag.className = "bcc-user-tag";
+      tag.textContent = "[A]";
+      row.appendChild(tag);
+    }
+    if (user.sep) {
+      const tag = document.createElement("span");
+      tag.className = "bcc-user-tag";
+      tag.textContent = "[S]";
+      row.appendChild(tag);
+    }
+  }
+  function buildRow(merged, badges) {
+    const user = merged.user;
+    const li = document.createElement("li");
+    li.dataset.name = user.name;
+    li.tabIndex = 0;
+    li.setAttribute("role", "button");
+    li.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "bcc-userrow-name";
+    li.appendChild(nameSpan);
+    applyUserState(li, merged, badges);
+    const open = (e) => {
+      e?.stopPropagation();
+      handleRowClick(user, li);
+    };
+    li.addEventListener("click", open);
+    li.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleRowClick(user, li);
+      }
+    });
+    return li;
+  }
+  var pinnedCache = /* @__PURE__ */ new Set();
+  async function togglePin(user) {
+    const list = [...get("pinned")];
+    const idx = list.indexOf(user.key);
+    if (idx === -1) {
+      list.push(user.key);
+    } else {
+      list.splice(idx, 1);
+    }
+    await set("pinned", list);
+  }
+  function handleRowClick(user, anchor) {
+    openUserPopup(anchor, user, pinnedCache.has(user.key), (u) => {
+      togglePin(u).catch(() => {
+        cclog("pin toggle failed for " + u.name, "v3");
+      });
+    });
+  }
+  var lastChannelUsers = null;
+  var lastGlobalChannels = null;
+  var globalTotal = 0;
+  var NO_GLOBAL = /* @__PURE__ */ new Map();
+  var rowMap = /* @__PURE__ */ new Map();
+  var pinnedUl = null;
+  var regularUl = null;
+  var scrollContainer = null;
+  var onlineCount = null;
+  function ensureContainers(sidebar) {
+    if (pinnedUl && pinnedUl.isConnected) return;
+    sidebar.innerHTML = "";
+    const toggle = document.createElement("button");
+    toggle.className = "bcc-sidebar-toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-label", "Userlist ein-/ausklappen");
+    toggle.title = "Userlist ein-/ausklappen";
+    toggle.appendChild(iconElement("fa-chevron-right"));
+    toggle.appendChild(iconElement("fa-chevron-left"));
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle("bcc-collapsed");
+      const collapsed2 = sidebar.classList.contains("bcc-collapsed");
+      toggle.setAttribute("aria-expanded", String(!collapsed2));
+      window.dispatchEvent(new Event("resize"));
+    });
+    sidebar.appendChild(toggle);
+    const onlineRow = document.createElement("div");
+    onlineRow.className = "bcc-online-row";
+    onlineCount = document.createElement("div");
+    onlineCount.className = "bcc-online-count";
+    onlineCount.setAttribute("role", "status");
+    onlineCount.setAttribute("aria-live", "polite");
+    onlineCount.innerHTML = '<span class="bcc-online-num">0</span> online';
+    onlineRow.appendChild(onlineCount);
+    const channelWrap = document.createElement("label");
+    channelWrap.className = "bcc-channel-select-wrap";
+    const channelSelect = buildChannelSelect();
+    channelSelect.className = (channelSelect.className || "") + " bcc-channel-select-native";
+    const channelFace = document.createElement("span");
+    channelFace.className = "bcc-channel-select-face";
+    channelFace.textContent = channelSelect.value || channelSelect.options[0]?.textContent || "";
+    channelSelect.addEventListener("change", () => {
+      channelFace.textContent = channelSelect.value || "";
+    });
+    react("session", (s) => {
+      if (s.channel && channelFace.isConnected) {
+        channelFace.textContent = s.channel;
+      }
+    });
+    channelWrap.appendChild(channelFace);
+    channelWrap.appendChild(channelSelect);
+    onlineRow.appendChild(channelWrap);
+    sidebar.appendChild(onlineRow);
+    const content = document.createElement("div");
+    content.className = "bcc-sidebar-content";
+    pinnedUl = document.createElement("ul");
+    pinnedUl.className = "bcc-userlist-pinned";
+    pinnedUl.setAttribute("role", "list");
+    regularUl = document.createElement("ul");
+    regularUl.className = "bcc-userlist-regular";
+    regularUl.setAttribute("role", "list");
+    scrollContainer = document.createElement("div");
+    scrollContainer.className = "bcc-userlist-scroll";
+    scrollContainer.appendChild(regularUl);
+    content.append(pinnedUl, scrollContainer);
+    sidebar.appendChild(content);
+    if (window.innerWidth < 600) sidebar.classList.add("bcc-collapsed");
+    const collapsed = sidebar.classList.contains("bcc-collapsed");
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+  function refreshSectionVisibility() {
+    const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
+    if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
+  }
+  function renderSidebar(merged) {
+    const sidebar = document.querySelector(".bcc-sidebar");
+    if (!sidebar || !pinnedUl || !regularUl) return;
+    const liveNames = new Set(merged.map((m) => m.user.name));
+    for (const [name, row] of rowMap) {
+      if (!liveNames.has(name)) {
+        row.remove();
+        rowMap.delete(name);
+      }
+    }
+    const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+    const byKey = new Map(merged.map((m) => [m.user.key, m]));
+    const sorted = sortUsers(
+      merged.map((m) => m.user),
+      pinnedCache
+    ).map((u) => byKey.get(u.key));
+    const badges = abbrevChannels(
+      sorted.filter((m) => m.channel !== null).map((m) => m.channel)
+    );
+    for (const m of sorted) {
+      const isPinned = pinnedCache.has(m.user.key);
+      const target = isPinned ? pinnedUl : regularUl;
+      let row = rowMap.get(m.user.name);
+      if (row) {
+        applyUserState(row, m, badges);
+      } else {
+        row = buildRow(m, badges);
+        rowMap.set(m.user.name, row);
+      }
+      target.appendChild(row);
+    }
+    if (scrollContainer)
+      scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
+    refreshSectionVisibility();
+    updateOnlineCount();
+  }
+  function updateOnlineCount() {
+    if (!onlineCount) return;
+    const n = lastChannelUsers ? lastChannelUsers.length : 0;
+    onlineCount.innerHTML = globalTotal > 0 ? '<span class="bcc-online-num">' + n + "/" + globalTotal + "</span> online" : '<span class="bcc-online-num">' + n + "</span> online";
+  }
+  function renderFromState() {
+    const merged = mergeUserlists(
+      lastChannelUsers ?? [],
+      lastGlobalChannels ?? NO_GLOBAL,
+      pinnedCache
+    );
+    renderSidebar(merged);
+  }
+  function mountSidebar() {
+    const sidebar = document.querySelector(".bcc-sidebar");
+    if (!sidebar) return;
+    ensureContainers(sidebar);
+    react("pinned", (list) => {
+      pinnedCache = new Set(list);
+      renderFromState();
+    });
+    react("userlist", (u) => {
+      lastChannelUsers = u.users;
+      renderFromState();
+    });
+    react("globalUserlist", (g) => {
+      lastGlobalChannels = g.channels;
+      let total = 0;
+      for (const users of g.channels.values()) total += users.length;
+      globalTotal = total;
+      renderFromState();
+    });
+    cclog("sidebar mounted \u2014 reacts to userlist + globalUserlist store keys", "v3");
+  }
+
+  // src/stats.ts
+  function parseStats(html) {
+    if (typeof html !== "string" || html.length === 0) return null;
+    const read = (cls) => {
+      const anchorRe = new RegExp('class="[^"]*\\b' + cls + '\\b[^"]*"[^]*?</a>', "i");
+      const anchorMatch = html.match(anchorRe);
+      if (!anchorMatch) return null;
+      const block = anchorMatch[0];
+      const valueRe = /<span\s+class="value(?:\s+[^"]*)?"\s*>\s*(\d+)\s*<\/span>/i;
+      const valueMatch = block.match(valueRe);
+      const n = valueMatch ? Number(valueMatch[1]) : 0;
+      return Number.isFinite(n) ? n : 0;
+    };
+    const friendsOnline = read("uonl");
+    const requests = read("ufri");
+    const messages = read("unc");
+    if (friendsOnline === null && requests === null && messages === null) return null;
+    return {
+      friendsOnline: friendsOnline ?? 0,
+      requests: requests ?? 0,
+      messages: messages ?? 0
+    };
+  }
+  var BADGES = [
+    {
+      statKey: "friendsOnline",
+      iconClass: "fa-users",
+      title: "Freunde Online",
+      // ID card: PPATH + 'id/' + Encode_Link(name) + '.html' (chat_pop_kylr.js:193)
+      url: (encNick) => "//www.chatcity.de/de/id/" + encNick + ".html"
+    },
+    {
+      statKey: "requests",
+      iconClass: "fa-user-plus",
+      title: "Neue Freundesanfragen",
+      // Upstream: /de/friends/<id-card-url> (e.g. /de/friends/https://.../id/username01:5F:.html)
+      url: (encNick) => "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encNick + ".html"
+    },
+    {
+      statKey: "messages",
+      iconClass: "fa-envelope",
+      title: "Neue Nachrichten",
+      url: () => "//www.chatcity.de/de/nc/index.html"
+    }
+  ];
+  var statsBar = null;
+  var pollTimer = null;
+  function buildStatsBar(nick) {
+    const bar = document.createElement("div");
+    bar.className = "bcc-stats";
+    const encNick = encodeChatLink(nick);
+    for (const spec of BADGES) {
+      const link = document.createElement("a");
+      link.className = "bcc-stat bcc-stat-" + spec.statKey;
+      link.href = "#";
+      link.title = spec.title;
+      link.setAttribute("role", "button");
+      link.setAttribute("aria-label", spec.title);
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        window.open(spec.url(encNick), "IDCARD", "width=810,height=800,scrollbars=yes");
+      });
+      const icon = document.createElement("i");
+      icon.className = "fas " + spec.iconClass;
+      icon.setAttribute("aria-hidden", "true");
+      link.appendChild(icon);
+      const count = document.createElement("span");
+      count.className = "bcc-stat-count bcc-stat-no";
+      count.textContent = "0";
+      link.appendChild(count);
+      bar.appendChild(link);
+    }
+    statsBar = bar;
+    return bar;
+  }
+  function renderStats(stats) {
+    if (!statsBar || stats === null) return;
+    for (const spec of BADGES) {
+      const link = statsBar.querySelector(".bcc-stat-" + spec.statKey);
+      if (!link) continue;
+      const count = link.querySelector(".bcc-stat-count");
+      if (!count) continue;
+      const value = stats[spec.statKey];
+      count.textContent = String(value);
+      count.classList.toggle("bcc-stat-no", value < 1);
+    }
+  }
+  function pollOnce3() {
+    try {
+      const ajax = getAjax();
+      const pajax = getPAjax();
+      if (typeof ajax !== "function" || typeof pajax !== "string") {
+        cclog("stats: upstream ajax/PAJAX unavailable \u2014 skipping poll", "v3");
+        return;
+      }
+      new ajax(pajax + "chat_info_friends_nc.html", {
+        onComplete: (transport) => {
+          try {
+            const parsed = parseStats(transport?.responseText ?? "");
+            if (parsed !== null) {
+              renderStats(parsed);
+              stampFreshness("statsAt");
+            }
+          } catch (e) {
+            cclog("stats: parse failed \u2014 " + e.message, "v3");
+          }
+        }
+      });
+    } catch (e) {
+      cclog("stats: poll error \u2014 " + e.message, "v3");
+    }
+  }
+  function mountStatsBar(parent) {
+    if (statsBar && statsBar.isConnected) return;
+    const nick = getChatNick();
+    parent.insertBefore(buildStatsBar(nick), parent.firstChild);
+    pollOnce3();
+    pollTimer = window.setInterval(pollOnce3, POLL_CADENCES.stats);
+    window.addEventListener("beforeunload", () => {
+      if (pollTimer !== null) window.clearInterval(pollTimer);
+    });
+  }
+
+  // src/patched-handler.ts
+  var AWAY_TIMER_NEEDLE = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){';
+  var AWAY_TIMER_REPLACEMENT = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){';
+  function patchAwayTimer(onSubmitOrigStr) {
+    if (!onSubmitOrigStr.includes(AWAY_TIMER_NEEDLE)) {
+      throw new Error(
+        `patchAwayTimer: upstream onsubmit needle not found \u2014 the away-timer condition changed upstream; "/w" messages will no longer reset the away timer. Inspect the hold form's onsubmit and update AWAY_TIMER_NEEDLE.`
+      );
+    }
+    return onSubmitOrigStr.replace(AWAY_TIMER_NEEDLE, AWAY_TIMER_REPLACEMENT);
+  }
+  function buildPatchedHandler(holdForm) {
+    const raw = holdForm?.getAttribute("onsubmit") || "";
+    if (!raw) return null;
+    return new Function(patchAwayTimer(raw));
   }
 
   // src/id-popup.ts
@@ -1647,13 +2777,13 @@
   }
   var overlayEl = null;
   var documentKeydown = null;
-  function renderState(el, state) {
+  function renderState(el, state2) {
     el.innerHTML = "";
     const div = document.createElement("div");
-    div.className = "bcc-id-" + state;
-    if (state === "loading") div.textContent = "Wird geladen...";
-    else if (state === "error") div.textContent = "Fehler beim Laden.";
-    else if (state === "empty") div.textContent = "Kein Ergebnis gefunden.";
+    div.className = "bcc-id-" + state2;
+    if (state2 === "loading") div.textContent = "Wird geladen...";
+    else if (state2 === "error") div.textContent = "Fehler beim Laden.";
+    else if (state2 === "empty") div.textContent = "Kein Ergebnis gefunden.";
     el.appendChild(div);
   }
   function renderResults(el, rows, searchTerm) {
@@ -2686,18 +3816,143 @@
     }
   }
 
+  // src/input-history.ts
+  var HISTORY_MAX = 50;
+  var ENTRY_MAX = 1023;
+  var DRAFT_DEBOUNCE_MS = 500;
+  var STRUCTURE_KEY_BASE = "bcc_input_history";
+  var LEGACY_DRAFT_KEY = "bcc_draft";
+  function recallUp(s, boxText) {
+    if (s.entries.length === 0) return s;
+    if (s.position === 0) return { ...s, position: 1, draft: boxText };
+    if (s.position >= s.entries.length) return s;
+    return { ...s, position: s.position + 1 };
+  }
+  function recallDown(s) {
+    if (s.position <= 0) return s;
+    return { ...s, position: s.position - 1 };
+  }
+  function recallEscape(s) {
+    if (s.position === 0) return s;
+    return { ...s, position: 0 };
+  }
+  function currentText(s) {
+    return s.position === 0 ? s.draft : s.entries[s.position - 1] ?? s.draft;
+  }
+  function pushEntry(entries, text) {
+    const t = text.trim().slice(0, ENTRY_MAX);
+    if (t === "" || entries.includes(t)) return entries;
+    return [t, ...entries].slice(0, HISTORY_MAX);
+  }
+  function parseStructure(raw) {
+    if (raw === null) return { ok: false };
+    let v;
+    try {
+      v = JSON.parse(raw);
+    } catch {
+      return { ok: false };
+    }
+    if (typeof v !== "object" || v === null) return { ok: false };
+    const rec = v;
+    if (typeof rec.draft !== "string" || !Array.isArray(rec.entries)) return { ok: false };
+    const entries = [];
+    for (const e of rec.entries) {
+      if (typeof e !== "string") return { ok: false };
+      entries.push(e);
+    }
+    return { ok: true, draft: rec.draft, entries: entries.slice(0, HISTORY_MAX) };
+  }
+  function serializeStructure(draft2, entries) {
+    return JSON.stringify({ draft: draft2, entries: entries.slice(0, HISTORY_MAX) });
+  }
+  function restoreState(storage, structureKey2) {
+    const raw = storage.getItem(structureKey2);
+    const parsed = parseStructure(raw);
+    if (parsed.ok) return { position: 0, draft: parsed.draft, entries: parsed.entries };
+    if (raw !== null) {
+      cclog("input-history: structure corrupt, starting empty", "v3");
+      return { position: 0, draft: "", entries: [] };
+    }
+    const legacy = storage.getItem(LEGACY_DRAFT_KEY);
+    if (legacy !== null) {
+      storage.removeItem(LEGACY_DRAFT_KEY);
+      return { position: 0, draft: legacy, entries: [] };
+    }
+    return { position: 0, draft: "", entries: [] };
+  }
+  var state = { position: 0, draft: "", entries: [] };
+  var structureKey = "";
+  var getBoxText = () => "";
+  var draftTimer = null;
+  function persist() {
+    sessionStorage.setItem(structureKey, serializeStructure(state.draft, state.entries));
+  }
+  function cancelDraftTimer() {
+    if (draftTimer !== null) {
+      clearTimeout(draftTimer);
+      draftTimer = null;
+    }
+  }
+  function initInputHistory(getBox) {
+    getBoxText = getBox;
+    structureKey = getUserKey(STRUCTURE_KEY_BASE);
+    state = restoreState(sessionStorage, structureKey);
+    window.addEventListener("pagehide", () => {
+      if (state.position !== 0) return;
+      cancelDraftTimer();
+      state.draft = getBoxText();
+      persist();
+    });
+    return state.draft;
+  }
+  function handleRecallKey(e, boxText) {
+    if (e.isComposing) return null;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key === "ArrowUp") {
+      if (state.entries.length === 0 || state.position >= state.entries.length) return null;
+      const leavingDraft = state.position === 0;
+      state = recallUp(state, boxText);
+      if (leavingDraft) {
+        cancelDraftTimer();
+        persist();
+      }
+      return currentText(state);
+    }
+    if (mod && e.key === "ArrowDown") {
+      if (state.position === 0) return null;
+      state = recallDown(state);
+      return currentText(state);
+    }
+    if (e.key === "Escape") {
+      if (state.position === 0) return null;
+      state = recallEscape(state);
+      return currentText(state);
+    }
+    return null;
+  }
+  function onDraftInput(boxText) {
+    if (state.position !== 0) return;
+    cancelDraftTimer();
+    draftTimer = setTimeout(() => {
+      draftTimer = null;
+      state.draft = boxText;
+      persist();
+    }, DRAFT_DEBOUNCE_MS);
+  }
+  function recordSubmit(rawMsg) {
+    const wasRecalling = state.position > 0;
+    cancelDraftTimer();
+    state.entries = pushEntry(state.entries, rawMsg);
+    state.position = 0;
+    if (!wasRecalling) state.draft = "";
+    persist();
+    return wasRecalling ? state.draft : "";
+  }
+  function resetRecall() {
+    state.position = 0;
+  }
+
   // src/input.ts
-  var DRAFT_KEY = "bcc_draft";
-  function saveDraft(storage, value) {
-    if (value.trim() === "") storage.removeItem(DRAFT_KEY);
-    else storage.setItem(DRAFT_KEY, value);
-  }
-  function takeDraft(storage) {
-    const v = storage.getItem(DRAFT_KEY);
-    if (v === null) return "";
-    storage.removeItem(DRAFT_KEY);
-    return v;
-  }
   function sendBlocked(conn) {
     return conn.phase !== "connected";
   }
@@ -2803,7 +4058,8 @@
             break;
         }
       }
-      clearInput(docHold);
+      docHold.OUT1.value = "";
+      if (textarea) textarea.value = recordSubmit(rawMsg);
       return;
     }
     if (sendBlocked(get("conn"))) return;
@@ -2811,14 +4067,11 @@
       docHold.OUT1.value = decision.message;
       onSubmitOrig();
     }
-    if (textarea) textarea.value = "";
-  }
-  function clearInput(docHold) {
-    docHold.OUT1.value = "";
-    if (textarea) textarea.value = "";
+    if (textarea) textarea.value = recordSubmit(rawMsg);
   }
   function prefillWhisper(nick) {
     if (!textarea) return;
+    resetRecall();
     textarea.value = "/w " + nick + " ";
     textarea.focus();
     const end = textarea.value.length;
@@ -2841,15 +4094,22 @@
     textarea.className = "bcc-input-field";
     textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
     textarea.placeholder = PLACEHOLDER_ALL;
-    textarea.addEventListener("keydown", (e) => {
+    const box = textarea;
+    box.addEventListener("keydown", (e) => {
+      const recalled = handleRecallKey(e, box.value);
+      if (recalled !== null) {
+        e.preventDefault();
+        box.value = recalled;
+        return;
+      }
       if (e.key === "Enter" && shouldSendOnEnter(get("send_on_enter"), e.shiftKey)) {
         e.preventDefault();
         doSubmit();
       }
     });
+    box.addEventListener("input", () => onDraftInput(box.value));
     inputArea.appendChild(textarea);
-    const draft2 = takeDraft(sessionStorage);
-    if (draft2) textarea.value = draft2;
+    textarea.value = initInputHistory(() => textarea?.value ?? "");
     const holdForm = document.querySelector('form[name="hold"]');
     try {
       onSubmitOrig = buildPatchedHandler(holdForm);
@@ -2877,1140 +4137,6 @@
     } else {
       textarea.placeholder = compact ? PLACEHOLDER_COMPACT_ALL : PLACEHOLDER_ALL;
     }
-  }
-  function stashDraft() {
-    saveDraft(sessionStorage, textarea?.value ?? "");
-  }
-
-  // src/shell.ts
-  function buildShell() {
-    const chatframe = document.getElementById("chatframe");
-    const table = document.querySelector("table.c_tab");
-    if (!chatframe || !table) {
-      cclog("v3 shell: chatframe or table not found \u2014 aborting", "v3");
-      return false;
-    }
-    if (document.querySelector(".bcc-shell")) return true;
-    const hold = document.querySelector('form[name="hold"]');
-    const of = document.querySelector('form[name="OF"]');
-    if (hold) {
-      document.body.appendChild(hold);
-      hold.style.display = "none";
-    }
-    if (of) {
-      document.body.appendChild(of);
-      of.style.display = "none";
-    }
-    const shell = document.createElement("div");
-    shell.className = "bcc-shell";
-    const sidebar = document.createElement("aside");
-    sidebar.className = "bcc-sidebar";
-    sidebar.innerHTML = '<div class="bcc-sidebar-placeholder">Userlist (T7)</div>';
-    const main = document.createElement("main");
-    main.className = "bcc-main";
-    main.appendChild(chatframe);
-    const inputArea = document.createElement("div");
-    inputArea.className = "bcc-chatbar";
-    inputArea.innerHTML = '<div class="bcc-chatbar-placeholder">Chatbar (T8/T9)</div>';
-    shell.append(sidebar, main, inputArea);
-    document.body.appendChild(shell);
-    table.style.display = "none";
-    cclog("v3 shell built \u2014 chatframe moved, table hidden", "v3");
-    return true;
-  }
-  function reloadChat() {
-    if (isAuthDead()) {
-      cclog("reloadChat: auth_dead, doing full page reload", "v3");
-      stashDraft();
-      location.reload();
-      return;
-    }
-    const ws = getChatoutWs();
-    if (ws) {
-      cclog("reloadChat: closing WS to trigger reconnect", "v3");
-      ws.close();
-    } else {
-      cclog("reloadChat: no WS \u2014 nothing to reconnect", "v3");
-    }
-  }
-
-  // src/userlist.ts
-  function parseUserlist(chaMy) {
-    const users = [];
-    for (let i = 0; i + 1 < chaMy.length; i += 2) {
-      const name = chaMy[i];
-      if (name === "") break;
-      const status = chaMy[i + 1] ?? "";
-      users.push(decodeStatus(name, status));
-    }
-    return users;
-  }
-  function decodeStatus(name, status) {
-    const registered = status.includes("R");
-    const guest = status.includes("h") && !registered;
-    return {
-      name,
-      key: name.toLowerCase(),
-      registered,
-      guest,
-      sep: status.includes("S"),
-      away: status.includes("A")
-    };
-  }
-  function diffUserlists(oldList, newList) {
-    const oldNames = new Set(oldList.map((u) => u.name));
-    const newNames = new Set(newList.map((u) => u.name));
-    const added = [];
-    const removed = [];
-    for (const u of newList) if (!oldNames.has(u.name)) added.push(u.name);
-    for (const u of oldList) if (!newNames.has(u.name)) removed.push(u.name);
-    return { added, removed };
-  }
-  var LOCALE = "de";
-  var SORT_OPTS = {
-    sensitivity: "base",
-    collation: "phonebk"
-  };
-  function sortUsers(users, pinned) {
-    const cmp = new Intl.Collator(LOCALE, SORT_OPTS);
-    return [...users].sort((a, b) => {
-      const pa = pinned.has(a.key) ? 0 : 1;
-      const pb = pinned.has(b.key) ? 0 : 1;
-      return pa - pb || cmp.compare(a.name, b.name);
-    });
-  }
-  var STRING_LITERAL = /"((?:[^"\\]|\\.)*)"/g;
-  function parseAw(raw) {
-    const channels = /* @__PURE__ */ new Map();
-    const arrayStart = raw.indexOf("new Array(");
-    if (arrayStart === -1) return channels;
-    const body = raw.slice(arrayStart);
-    const literals = body.match(STRING_LITERAL);
-    if (!literals) return channels;
-    for (let i = 0; i + 2 < literals.length; i += 3) {
-      const channel = literals[i].slice(1, -1);
-      if (channel === "") break;
-      channels.set(channel, parseAwUsers(literals[i + 2].slice(1, -1)));
-    }
-    return channels;
-  }
-  function parseAwUsers(raw) {
-    const users = [];
-    for (const entry of raw.split(" ")) {
-      if (entry === "") continue;
-      users.push(decodeAwEntry(entry));
-    }
-    return users;
-  }
-  function decodeAwEntry(entry) {
-    const guestMatch = entry.match(/\^(\d+)$/);
-    const name = guestMatch ? entry.slice(0, guestMatch.index) : entry;
-    return {
-      name,
-      key: name.toLowerCase(),
-      registered: false,
-      guest: guestMatch !== null,
-      sep: false,
-      away: false
-    };
-  }
-  function channelAbbrev(name, index) {
-    const hadHyphens = name.includes("-");
-    const stripped = name.replace(/-/g, "");
-    switch (stripped.toLowerCase()) {
-      case "mod":
-        return "MOD";
-      case "zauberwald":
-        return "Zaub";
-      case "bizarretalk":
-        return "BizT";
-      case "herzklopfen":
-        return "HerzK";
-      case "knuddelecke":
-        return "KnudE";
-      case "hexensabbat":
-        return "HexS";
-      case "bluemchensex":
-        return "Bluem";
-      case "manstreet":
-        return "ManS";
-      case "fortysomething":
-        return "Forty";
-      case "trauminsel":
-        return "Traum";
-      case "streikchannel":
-        return "Streik";
-      case "goldenfifty":
-        return "Golden";
-      case "herzschmerz":
-        return "HerzS";
-      case "nerdkultur":
-        return "NerdK";
-      case "query":
-        return "Query";
-      case "gaycruising":
-        return "Gay";
-      case "womencorner":
-        return "WoCo";
-      case "erorsp":
-        return "EroR";
-      case "erotik":
-        return "Ero";
-      case "erotik2":
-        return "Ero2";
-      case "erotik3":
-        return "Ero3";
-      case "erotik4":
-        return "Ero4";
-      case "registriert":
-        return "Reg";
-      case "chatcity":
-        return "CC";
-      case "international":
-        return "Intl";
-      case "baklava":
-        return "Bak";
-    }
-    if (stripped.length <= 3) return stripped;
-    let abbrev;
-    if (!hadHyphens) {
-      const internalCaps = stripped.slice(1).replace(/[^A-Z]/g, "");
-      if (internalCaps.length > 0) {
-        abbrev = stripped[0].toUpperCase() + stripped[1].toLowerCase() + internalCaps;
-      } else {
-        abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
-      }
-    } else {
-      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3).toLowerCase();
-    }
-    const digitMatch = stripped.match(/(\d+)$/);
-    if (digitMatch) {
-      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 2).toLowerCase() + digitMatch[1];
-    }
-    if (index > 0 && index < stripped.length - 2) {
-      abbrev = stripped[0].toUpperCase() + stripped.slice(1, 3 + index).toLowerCase();
-    }
-    return abbrev;
-  }
-
-  // src/ulist-poll.ts
-  var chatId = "";
-  var chatSid = "";
-  var pchatBase = "";
-  var prevList = [];
-  var timerId;
-  var running = false;
-  var stale = true;
-  function parseUlistResponse(text) {
-    const decl = text.match(/var\s+cha_my\s*=\s*new\s+Array\([\s\S]*?\)\s*;/);
-    if (!decl) return [];
-    try {
-      const fn = new Function(`${decl[0]} return cha_my;`);
-      return fn();
-    } catch {
-      return [];
-    }
-  }
-  function processUserlist(chaMy, prev) {
-    const newList = parseUserlist(chaMy);
-    const { added, removed } = diffUserlists(prev, newList);
-    return { newList, added, removed };
-  }
-  async function pollOnce() {
-    try {
-      const url = pchatBase + "/ulist?AKTION=j&ID=" + chatId + "&SID=" + chatSid + "&x=" + Math.random();
-      const resp = await fetch(url);
-      const text = await resp.text();
-      const chaMy = parseUlistResponse(text);
-      if (!chaMy.some((s) => s !== "")) return;
-      stale = false;
-      const { newList, added, removed } = processUserlist(chaMy, prevList);
-      prevList = newList;
-      await set("userlist", { users: newList, added, removed });
-      stampFreshness("ulistAt");
-    } catch (e) {
-      cclog("ulist-poll: poll error \u2014 " + e.message, "v3");
-    }
-  }
-  var STALE_RETRY_MS = 2e3;
-  function pollAndReschedule(intervalMs) {
-    pollOnce().finally(() => {
-      if (running) scheduleNext(intervalMs);
-    });
-  }
-  function scheduleNext(intervalMs) {
-    const effectiveInterval = stale ? STALE_RETRY_MS : intervalMs;
-    timerId = setTimeout(() => pollAndReschedule(intervalMs), effectiveInterval);
-  }
-  function startUlistPoll(intervalMs = POLL_CADENCES.ulist) {
-    chatId = getChatId();
-    chatSid = getChatSid();
-    pchatBase = getPChat();
-    if (running) return;
-    running = true;
-    const seed = getChaMy();
-    if (seed.length > 0) {
-      const { newList, added, removed } = processUserlist(seed, prevList);
-      prevList = newList;
-      void set("userlist", { users: newList, added, removed });
-      stampFreshness("ulistAt");
-    }
-    pollAndReschedule(intervalMs);
-    cclog("ulist-poll started \u2014 every ~" + intervalMs + " ms", "v3");
-  }
-  function stopUlistPoll() {
-    if (timerId !== void 0) clearTimeout(timerId);
-    timerId = void 0;
-    running = false;
-  }
-  function refreshUlistNow(intervalMs = POLL_CADENCES.ulist) {
-    if (timerId !== void 0) clearTimeout(timerId);
-    pollAndReschedule(intervalMs);
-  }
-
-  // src/global-userlist.ts
-  var lastSnapshot = /* @__PURE__ */ new Map();
-  var timerId2;
-  var running2 = false;
-  function diffGlobal(prev, next) {
-    const added = [];
-    const removed = [];
-    for (const [channel, users] of next) {
-      const prevKeys = new Set((prev.get(channel) ?? []).map((u) => u.key));
-      for (const user of users) {
-        if (!prevKeys.has(user.key)) added.push({ user, channel });
-      }
-    }
-    for (const [channel, users] of prev) {
-      const nextKeys = new Set((next.get(channel) ?? []).map((u) => u.key));
-      for (const user of users) {
-        if (!nextKeys.has(user.key)) removed.push({ user, channel });
-      }
-    }
-    return { added, removed };
-  }
-  async function pollOnce2() {
-    try {
-      const raw = await fetchAw();
-      const next = parseAw(raw);
-      if (next.size === 0) return;
-      const { added, removed } = diffGlobal(lastSnapshot, next);
-      lastSnapshot = next;
-      await set("globalUserlist", { channels: next, added, removed });
-      stampFreshness("awAt");
-    } catch (e) {
-      cclog("global-userlist: poll error \u2014 " + e.message, "v3");
-    }
-  }
-  function scheduleNext2(intervalMs) {
-    timerId2 = setTimeout(() => {
-      pollOnce2().finally(() => {
-        if (running2) scheduleNext2(intervalMs);
-      });
-    }, intervalMs);
-  }
-  function startPolling(intervalMs = POLL_CADENCES.aw) {
-    if (running2) return;
-    running2 = true;
-    pollOnce2().finally(() => {
-      if (running2) scheduleNext2(intervalMs);
-    });
-    cclog("global userlist poll started \u2014 aw.js every ~" + intervalMs + " ms", "v3");
-  }
-  function stopPolling() {
-    if (timerId2 !== void 0) clearTimeout(timerId2);
-    timerId2 = void 0;
-    running2 = false;
-  }
-
-  // src/popup.ts
-  function nickToHue(nick) {
-    let sum = 0;
-    for (let i = 0; i < nick.length; i++) {
-      sum += nick.charCodeAt(i);
-    }
-    return sum % 360;
-  }
-  var openPopup = null;
-  var onOutsideClick = null;
-  var currentUser = null;
-  var unsubscribeStore = null;
-  var popupAnchor = null;
-  var onResize = null;
-  function closePopup() {
-    if (!openPopup) return;
-    openPopup.remove();
-    openPopup = null;
-    currentUser = null;
-    popupAnchor = null;
-    document.removeEventListener("keydown", onKeydown, true);
-    window.removeEventListener("bcc-iframe-interaction", onIframeInteraction);
-    if (onOutsideClick) {
-      document.removeEventListener("click", onOutsideClick);
-      onOutsideClick = null;
-    }
-    if (unsubscribeStore) {
-      unsubscribeStore();
-      unsubscribeStore = null;
-    }
-    if (onResize) {
-      window.removeEventListener("resize", onResize);
-      onResize = null;
-    }
-  }
-  function onKeydown(e) {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      closePopup();
-      dismissAllPreviews();
-    }
-  }
-  function onIframeInteraction() {
-    if (openPopup) closePopup();
-  }
-  function copyToClipboard(el, text) {
-    const originalText = el.textContent ?? text;
-    try {
-      navigator.clipboard.writeText(text).then(() => {
-        showCopyFeedback(el, originalText);
-      }).catch(() => {
-      });
-    } catch {
-    }
-  }
-  function showCopyFeedback(el, originalText) {
-    el.textContent = "\u2713 Kopiert!";
-    setTimeout(() => {
-      if (el.textContent === "\u2713 Kopiert!") el.textContent = originalText;
-    }, 1500);
-  }
-  function buildPhotoContainer(userName) {
-    const container = document.createElement("div");
-    container.className = "bcc-popup-photo";
-    const avatar = document.createElement("div");
-    avatar.className = "bcc-popup-avatar";
-    avatar.textContent = userName[0]?.toUpperCase() ?? "?";
-    avatar.style.background = "hsl(" + nickToHue(userName) + ", 45%, 55%)";
-    container.appendChild(avatar);
-    const img = document.createElement("img");
-    img.alt = "";
-    container.appendChild(img);
-    return container;
-  }
-  function loadPhoto(container, userName) {
-    const img = container.querySelector("img");
-    const avatar = container.querySelector(".bcc-popup-avatar");
-    if (!img || !avatar) return;
-    getUserPhoto(userName).then((result) => {
-      if (!result.hasPhoto || !result.thumbUrl) return;
-      if (!openPopup?.contains(container)) return;
-      img.src = result.thumbUrl;
-      img.dataset.fullUrl = result.fullUrl || result.thumbUrl;
-      img.addEventListener(
-        "load",
-        () => {
-          img.classList.add("bcc-photo-loaded");
-          avatar.style.display = "none";
-        },
-        { once: true }
-      );
-      img.addEventListener(
-        "error",
-        () => {
-          evictImageCache(userName);
-        },
-        { once: true }
-      );
-    }).catch(() => {
-    });
-  }
-  function buildPin(isPinned, onToggle) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-popup-pin";
-    btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
-    btn.setAttribute("aria-label", btn.title);
-    const icon = iconElement("fa-thumbtack");
-    if (!isPinned) icon.style.transform = "rotate(45deg)";
-    btn.appendChild(icon);
-    if (isPinned) btn.classList.add("pinned");
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onToggle();
-    });
-    return btn;
-  }
-  function updatePinButton(btn, isPinned) {
-    const icon = btn.querySelector("i");
-    if (icon) {
-      icon.style.transform = isPinned ? "" : "rotate(45deg)";
-    }
-    btn.classList.toggle("pinned", isPinned);
-    btn.title = isPinned ? "Angeheftet entfernen" : "Anheften";
-    btn.setAttribute("aria-label", btn.title);
-  }
-  function buildToolbarCell(iconClass, shortcut, title, onClick) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "bcc-popup-toolbar-cell";
-    btn.title = title;
-    btn.setAttribute("aria-label", title);
-    const icon = document.createElement("i");
-    icon.className = "fas " + iconClass + " bcc-toolbar-icon";
-    icon.setAttribute("aria-hidden", "true");
-    btn.appendChild(icon);
-    const label = document.createElement("span");
-    label.className = "bcc-toolbar-shortcut";
-    label.textContent = shortcut;
-    btn.appendChild(label);
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onClick();
-    });
-    return btn;
-  }
-  function openUserPopup(anchor, user, isPinned, onTogglePin) {
-    if (currentUser === user.name) {
-      closePopup();
-      return;
-    }
-    closePopup();
-    currentUser = user.name;
-    const popup = document.createElement("div");
-    popup.className = "bcc-user-popup";
-    popup.setAttribute("role", "dialog");
-    popup.setAttribute("aria-modal", "false");
-    popup.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
-    const pinBtn = buildPin(isPinned, () => onTogglePin(user));
-    popup.appendChild(pinBtn);
-    unsubscribeStore = on("pinned", (pinned) => {
-      if (!openPopup) return;
-      updatePinButton(pinBtn, pinned.includes(user.key));
-    });
-    const photoContainer = buildPhotoContainer(user.name);
-    popup.appendChild(photoContainer);
-    const nameRow = document.createElement("div");
-    nameRow.className = "bcc-popup-name-row";
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "bcc-popup-username";
-    nameSpan.textContent = user.name;
-    nameSpan.title = "Klicken zum Kopieren";
-    nameSpan.addEventListener("click", (e) => {
-      e.stopPropagation();
-      copyToClipboard(nameSpan, user.name);
-    });
-    nameRow.appendChild(nameSpan);
-    const idBtn = document.createElement("button");
-    idBtn.type = "button";
-    idBtn.className = "bcc-popup-id-btn";
-    idBtn.title = "ID von " + user.name + " anzeigen";
-    idBtn.setAttribute("aria-label", idBtn.title);
-    idBtn.appendChild(iconElement("fa-id-card"));
-    idBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const url = "//www.chatcity.de/de/id/" + encodeChatLink(user.name) + ".html";
-      window.open(url, "IDCARD", "width=810,height=800,scrollbars=yes");
-      closePopup();
-    });
-    nameRow.appendChild(idBtn);
-    popup.appendChild(nameRow);
-    const toolbar = document.createElement("div");
-    toolbar.className = "bcc-popup-toolbar";
-    toolbar.appendChild(
-      buildToolbarCell("fa-paper-plane", "/w", "Einmal an " + user.name + " fl\xFCstern", () => {
-        const api = getBettercc();
-        if (typeof api?.prefillWhisper === "function") api.prefillWhisper(user.name);
-        closePopup();
-      })
-    );
-    toolbar.appendChild(
-      buildToolbarCell("fa-comment-dots", "/sw", "Dauerhaft an " + user.name + " fl\xFCstern", () => {
-        const api = getBettercc();
-        if (typeof api?.superwhisper === "function") api.superwhisper(user.name, false);
-        closePopup();
-      })
-    );
-    toolbar.appendChild(
-      buildToolbarCell("fa-ban", "/ig", "Benutzer ignorieren", () => {
-        const btn = toolbar.lastElementChild;
-        if (!btn) return;
-        if (btn.classList.contains("bcc-confirm")) {
-          sendCommand("/ignore " + user.name);
-          btn.classList.remove("bcc-confirm");
-          btn.classList.add("bcc-confirmed");
-          const icon = btn.querySelector("i");
-          if (icon) {
-            icon.className = "fas fa-check-double bcc-toolbar-icon";
-          }
-          const label = btn.querySelector(".bcc-toolbar-shortcut");
-          if (label) label.textContent = "ignoriert";
-          setTimeout(() => {
-            btn.classList.remove("bcc-confirmed");
-            if (icon) {
-              icon.className = "fas fa-ban bcc-toolbar-icon";
-            }
-            if (label) label.textContent = "/ig";
-          }, 1200);
-        } else if (!btn.classList.contains("bcc-confirmed")) {
-          btn.classList.add("bcc-confirm");
-          const icon = btn.querySelector("i");
-          if (icon) {
-            icon.className = "fas fa-check bcc-toolbar-icon";
-          }
-          const label = btn.querySelector(".bcc-toolbar-shortcut");
-          if (label) label.textContent = "sicher?";
-          const reset = (e) => {
-            if (!btn.contains(e.target)) {
-              btn.classList.remove("bcc-confirm");
-              if (icon) {
-                icon.className = "fas fa-ban bcc-toolbar-icon";
-              }
-              if (label) label.textContent = "/ig";
-              document.removeEventListener("click", reset);
-            }
-          };
-          setTimeout(() => document.addEventListener("click", reset), 0);
-        }
-      })
-    );
-    popup.appendChild(toolbar);
-    const mount = document.querySelector(".bcc-shell") ?? document.body;
-    mount.appendChild(popup);
-    popupAnchor = anchor;
-    const photoEl = popup.querySelector(".bcc-popup-photo");
-    const reposition = () => {
-      if (!popupAnchor) return;
-      const rect = popupAnchor.getBoundingClientRect();
-      const popupH = popup.offsetHeight || 200;
-      const popupW = popup.offsetWidth || 200;
-      const gap = 4;
-      const photoCenterOffset = photoEl ? photoEl.offsetTop + photoEl.offsetHeight / 2 : 40;
-      const sidebar = document.querySelector(".bcc-sidebar");
-      const edgeLeft = sidebar ? sidebar.getBoundingClientRect().left : rect.left;
-      popup.style.left = Math.max(8, edgeLeft - popupW - gap) + "px";
-      const chatbar = document.querySelector(".bcc-chatbar");
-      const maxBottom = chatbar ? chatbar.getBoundingClientRect().top - gap : window.innerHeight - 8;
-      const idealTop = rect.top + rect.height / 2 - photoCenterOffset;
-      popup.style.top = Math.max(8, Math.min(maxBottom - popupH, idealTop)) + "px";
-    };
-    reposition();
-    onResize = reposition;
-    window.addEventListener("resize", onResize);
-    photoContainer.addEventListener("mouseenter", () => {
-      if (!get("hover_preview")) return;
-      if (previewByUser.has(user.name)) return;
-      const img = photoContainer.querySelector("img");
-      if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
-        dismissHover();
-        buildPreviewBox(img.dataset.fullUrl, user.name, void 0, user.name);
-      }
-    });
-    photoContainer.addEventListener("mouseleave", () => {
-      dismissHover();
-    });
-    photoContainer.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (previewByUser.has(user.name)) {
-        dismissPreview(user.name);
-        return;
-      }
-      const img = photoContainer.querySelector("img");
-      if (img?.classList.contains("bcc-photo-loaded") && img.dataset.fullUrl) {
-        dismissHover();
-        const box = buildPreviewBox(img.dataset.fullUrl, user.name, void 0, user.name);
-        previewByUser.set(user.name, box);
-      }
-    });
-    loadPhoto(photoContainer, user.name);
-    openPopup = popup;
-    window.addEventListener("bcc-iframe-interaction", onIframeInteraction);
-    document.addEventListener("keydown", onKeydown, true);
-    onOutsideClick = (e) => {
-      if (openPopup && !openPopup.contains(e.target)) closePopup();
-    };
-    document.addEventListener("click", onOutsideClick);
-  }
-
-  // src/session.ts
-  var timer = null;
-  function readSnapshot() {
-    const ui = getChatUi();
-    return {
-      nick: getChatNick(),
-      registered: ui.includes("R"),
-      guest: ui.includes("h") && !ui.includes("R"),
-      userId: getChatId(),
-      sessionId: getChatSid(),
-      channel: getChannel(),
-      authDead: isAuthDead()
-    };
-  }
-  function initSession() {
-    if (timer) clearInterval(timer);
-    const snapshot2 = readSnapshot();
-    set("session", snapshot2);
-    let prevChannel = snapshot2.channel;
-    let prevAuthDead = snapshot2.authDead;
-    timer = setInterval(() => {
-      const next = readSnapshot();
-      if (next.channel !== prevChannel || next.authDead !== prevAuthDead) {
-        prevChannel = next.channel;
-        prevAuthDead = next.authDead;
-        set("session", next);
-      }
-    }, 2e3);
-    cclog("session: init done \u2014 nick=" + snapshot2.nick + " channel=" + snapshot2.channel, "v3");
-  }
-  function getSession() {
-    return get("session");
-  }
-
-  // src/channel-select.ts
-  function parseChannels(ccc, ccg) {
-    if (!Array.isArray(ccg) || !Array.isArray(ccc)) return [];
-    const groups = [];
-    const byId = /* @__PURE__ */ new Map();
-    for (let i = 0; i + 1 < ccg.length; i += 2) {
-      const id = Number(ccg[i]);
-      const label = String(ccg[i + 1] ?? "");
-      if (!Number.isFinite(id)) continue;
-      byId.set(id, groups.length);
-      groups.push({ id, label, channels: [] });
-    }
-    for (let i = 0; i + 3 < ccc.length; i += 4) {
-      const name = ccc[i];
-      const groupId = Number(ccc[i + 2]);
-      if (typeof name !== "string" || name.length === 0) continue;
-      const idx = byId.get(groupId);
-      if (idx === void 0) continue;
-      groups[idx].channels.push(name);
-    }
-    return groups;
-  }
-  function buildChannelSelect() {
-    const ccc = getChannelCategories();
-    const ccg = getChannelGroups();
-    const groups = parseChannels(ccc, ccg);
-    const active = getSession().channel;
-    if (groups.length === 0) {
-      cclog("buildChannelSelect: ccc/ccg absent \u2014 falling back to static label", "v3");
-      const span = document.createElement("span");
-      span.className = "bcc-channel";
-      span.textContent = active || "Chatcity";
-      span.title = "Channel";
-      return span;
-    }
-    const select = document.createElement("select");
-    select.name = "bcc-channel";
-    select.className = "bcc-channel-select";
-    select.title = "Channel wechseln";
-    select.setAttribute("aria-label", "Channel wechseln");
-    for (const group of groups) {
-      const optgroup = document.createElement("optgroup");
-      optgroup.label = group.label;
-      for (const name of group.channels) {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        if (name.toLowerCase() === active.toLowerCase()) option.selected = true;
-        optgroup.appendChild(option);
-      }
-      select.appendChild(optgroup);
-    }
-    select.addEventListener("change", () => {
-      sendCommand("/j " + select.value);
-    });
-    react("session", (s) => {
-      if (s.channel) {
-        const lower = s.channel.toLowerCase();
-        for (const opt of Array.from(select.options)) {
-          if (opt.value.toLowerCase() === lower) {
-            if (!opt.selected) opt.selected = true;
-            return;
-          }
-        }
-      }
-    });
-    return select;
-  }
-
-  // src/sidebar.ts
-  function getStatusClasses(user) {
-    const classes = ["bcc-userrow"];
-    if (user.sep) classes.push("bcc-sep");
-    return classes.join(" ");
-  }
-  function mergeUserlists(current, globalChannels, pinned) {
-    const merged = current.map((u) => ({ user: u, channel: null }));
-    const present = new Set(current.map((u) => u.key));
-    for (const [channel, users] of globalChannels) {
-      for (const user of users) {
-        if (pinned.has(user.key) && !present.has(user.key)) {
-          merged.push({ user, channel });
-          present.add(user.key);
-        }
-      }
-    }
-    return merged;
-  }
-  function abbrevChannels(channels) {
-    const used = /* @__PURE__ */ new Map();
-    const badges = /* @__PURE__ */ new Map();
-    for (const channel of [...new Set(channels)].sort()) {
-      const base = channelAbbrev(channel, 0);
-      const index = used.get(base) ?? 0;
-      used.set(base, index + 1);
-      badges.set(channel, channelAbbrev(channel, index));
-    }
-    return badges;
-  }
-  function applyUserState(row, merged, badges) {
-    const user = merged.user;
-    row.className = getStatusClasses(user);
-    row.classList.toggle("bcc-name-away", user.away || user.sep);
-    const nameSpan = row.querySelector(".bcc-userrow-name");
-    if (nameSpan) {
-      nameSpan.textContent = user.name;
-    }
-    const oldBadge = row.querySelector(".bcc-user-tag[data-bcc-badge]");
-    if (merged.channel) {
-      const text = badges.get(merged.channel) ?? channelAbbrev(merged.channel, 0);
-      if (oldBadge) {
-        if (oldBadge.textContent !== text) oldBadge.textContent = text;
-      } else {
-        const badge = document.createElement("span");
-        badge.className = "bcc-user-tag";
-        badge.dataset.bccBadge = "1";
-        badge.textContent = text;
-        row.insertBefore(badge, nameSpan ? nameSpan.nextSibling : row.firstChild);
-      }
-    } else if (oldBadge) {
-      oldBadge.remove();
-    }
-    row.querySelectorAll(".bcc-user-tag:not([data-bcc-badge])").forEach((t) => t.remove());
-    if (user.away) {
-      const tag = document.createElement("span");
-      tag.className = "bcc-user-tag";
-      tag.textContent = "[A]";
-      row.appendChild(tag);
-    }
-    if (user.sep) {
-      const tag = document.createElement("span");
-      tag.className = "bcc-user-tag";
-      tag.textContent = "[S]";
-      row.appendChild(tag);
-    }
-  }
-  function buildRow(merged, badges) {
-    const user = merged.user;
-    const li = document.createElement("li");
-    li.dataset.name = user.name;
-    li.tabIndex = 0;
-    li.setAttribute("role", "button");
-    li.setAttribute("aria-label", "Aktionen f\xFCr " + user.name);
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "bcc-userrow-name";
-    li.appendChild(nameSpan);
-    applyUserState(li, merged, badges);
-    const open = (e) => {
-      e?.stopPropagation();
-      handleRowClick(user, li);
-    };
-    li.addEventListener("click", open);
-    li.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        e.stopPropagation();
-        handleRowClick(user, li);
-      }
-    });
-    return li;
-  }
-  var pinnedCache = /* @__PURE__ */ new Set();
-  async function togglePin(user) {
-    const list = [...get("pinned")];
-    const idx = list.indexOf(user.key);
-    if (idx === -1) {
-      list.push(user.key);
-    } else {
-      list.splice(idx, 1);
-    }
-    await set("pinned", list);
-  }
-  function handleRowClick(user, anchor) {
-    openUserPopup(anchor, user, pinnedCache.has(user.key), (u) => {
-      togglePin(u).catch(() => {
-        cclog("pin toggle failed for " + u.name, "v3");
-      });
-    });
-  }
-  var lastChannelUsers = null;
-  var lastGlobalChannels = null;
-  var globalTotal = 0;
-  var NO_GLOBAL = /* @__PURE__ */ new Map();
-  var rowMap = /* @__PURE__ */ new Map();
-  var pinnedUl = null;
-  var regularUl = null;
-  var scrollContainer = null;
-  var onlineCount = null;
-  function ensureContainers(sidebar) {
-    if (pinnedUl && pinnedUl.isConnected) return;
-    sidebar.innerHTML = "";
-    const toggle = document.createElement("button");
-    toggle.className = "bcc-sidebar-toggle";
-    toggle.type = "button";
-    toggle.setAttribute("aria-label", "Userlist ein-/ausklappen");
-    toggle.title = "Userlist ein-/ausklappen";
-    toggle.appendChild(iconElement("fa-chevron-right"));
-    toggle.appendChild(iconElement("fa-chevron-left"));
-    toggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      sidebar.classList.toggle("bcc-collapsed");
-      const collapsed2 = sidebar.classList.contains("bcc-collapsed");
-      toggle.setAttribute("aria-expanded", String(!collapsed2));
-      window.dispatchEvent(new Event("resize"));
-    });
-    sidebar.appendChild(toggle);
-    const onlineRow = document.createElement("div");
-    onlineRow.className = "bcc-online-row";
-    onlineCount = document.createElement("div");
-    onlineCount.className = "bcc-online-count";
-    onlineCount.setAttribute("role", "status");
-    onlineCount.setAttribute("aria-live", "polite");
-    onlineCount.innerHTML = '<span class="bcc-online-num">0</span> online';
-    onlineRow.appendChild(onlineCount);
-    const channelWrap = document.createElement("label");
-    channelWrap.className = "bcc-channel-select-wrap";
-    const channelSelect = buildChannelSelect();
-    channelSelect.className = (channelSelect.className || "") + " bcc-channel-select-native";
-    const channelFace = document.createElement("span");
-    channelFace.className = "bcc-channel-select-face";
-    channelFace.textContent = channelSelect.value || channelSelect.options[0]?.textContent || "";
-    channelSelect.addEventListener("change", () => {
-      channelFace.textContent = channelSelect.value || "";
-    });
-    react("session", (s) => {
-      if (s.channel && channelFace.isConnected) {
-        channelFace.textContent = s.channel;
-      }
-    });
-    channelWrap.appendChild(channelFace);
-    channelWrap.appendChild(channelSelect);
-    onlineRow.appendChild(channelWrap);
-    sidebar.appendChild(onlineRow);
-    const content = document.createElement("div");
-    content.className = "bcc-sidebar-content";
-    pinnedUl = document.createElement("ul");
-    pinnedUl.className = "bcc-userlist-pinned";
-    pinnedUl.setAttribute("role", "list");
-    regularUl = document.createElement("ul");
-    regularUl.className = "bcc-userlist-regular";
-    regularUl.setAttribute("role", "list");
-    scrollContainer = document.createElement("div");
-    scrollContainer.className = "bcc-userlist-scroll";
-    scrollContainer.appendChild(regularUl);
-    content.append(pinnedUl, scrollContainer);
-    sidebar.appendChild(content);
-    if (window.innerWidth < 600) sidebar.classList.add("bcc-collapsed");
-    const collapsed = sidebar.classList.contains("bcc-collapsed");
-    toggle.setAttribute("aria-expanded", String(!collapsed));
-  }
-  function refreshSectionVisibility() {
-    const hasPinned = pinnedUl ? pinnedUl.children.length > 0 : false;
-    if (pinnedUl) pinnedUl.style.display = hasPinned ? "" : "none";
-  }
-  function renderSidebar(merged) {
-    const sidebar = document.querySelector(".bcc-sidebar");
-    if (!sidebar || !pinnedUl || !regularUl) return;
-    const liveNames = new Set(merged.map((m) => m.user.name));
-    for (const [name, row] of rowMap) {
-      if (!liveNames.has(name)) {
-        row.remove();
-        rowMap.delete(name);
-      }
-    }
-    const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-    const byKey = new Map(merged.map((m) => [m.user.key, m]));
-    const sorted = sortUsers(
-      merged.map((m) => m.user),
-      pinnedCache
-    ).map((u) => byKey.get(u.key));
-    const badges = abbrevChannels(
-      sorted.filter((m) => m.channel !== null).map((m) => m.channel)
-    );
-    for (const m of sorted) {
-      const isPinned = pinnedCache.has(m.user.key);
-      const target = isPinned ? pinnedUl : regularUl;
-      let row = rowMap.get(m.user.name);
-      if (row) {
-        applyUserState(row, m, badges);
-      } else {
-        row = buildRow(m, badges);
-        rowMap.set(m.user.name, row);
-      }
-      target.appendChild(row);
-    }
-    if (scrollContainer)
-      scrollContainer.scrollTop = Math.min(scrollTop, scrollContainer.scrollHeight);
-    refreshSectionVisibility();
-    updateOnlineCount();
-  }
-  function updateOnlineCount() {
-    if (!onlineCount) return;
-    const n = lastChannelUsers ? lastChannelUsers.length : 0;
-    onlineCount.innerHTML = globalTotal > 0 ? '<span class="bcc-online-num">' + n + "/" + globalTotal + "</span> online" : '<span class="bcc-online-num">' + n + "</span> online";
-  }
-  function renderFromState() {
-    const merged = mergeUserlists(
-      lastChannelUsers ?? [],
-      lastGlobalChannels ?? NO_GLOBAL,
-      pinnedCache
-    );
-    renderSidebar(merged);
-  }
-  function mountSidebar() {
-    const sidebar = document.querySelector(".bcc-sidebar");
-    if (!sidebar) return;
-    ensureContainers(sidebar);
-    react("pinned", (list) => {
-      pinnedCache = new Set(list);
-      renderFromState();
-    });
-    react("userlist", (u) => {
-      lastChannelUsers = u.users;
-      renderFromState();
-    });
-    react("globalUserlist", (g) => {
-      lastGlobalChannels = g.channels;
-      let total = 0;
-      for (const users of g.channels.values()) total += users.length;
-      globalTotal = total;
-      renderFromState();
-    });
-    cclog("sidebar mounted \u2014 reacts to userlist + globalUserlist store keys", "v3");
-  }
-
-  // src/stats.ts
-  function parseStats(html) {
-    if (typeof html !== "string" || html.length === 0) return null;
-    const read = (cls) => {
-      const anchorRe = new RegExp('class="[^"]*\\b' + cls + '\\b[^"]*"[^]*?</a>', "i");
-      const anchorMatch = html.match(anchorRe);
-      if (!anchorMatch) return null;
-      const block = anchorMatch[0];
-      const valueRe = /<span\s+class="value(?:\s+[^"]*)?"\s*>\s*(\d+)\s*<\/span>/i;
-      const valueMatch = block.match(valueRe);
-      const n = valueMatch ? Number(valueMatch[1]) : 0;
-      return Number.isFinite(n) ? n : 0;
-    };
-    const friendsOnline = read("uonl");
-    const requests = read("ufri");
-    const messages = read("unc");
-    if (friendsOnline === null && requests === null && messages === null) return null;
-    return {
-      friendsOnline: friendsOnline ?? 0,
-      requests: requests ?? 0,
-      messages: messages ?? 0
-    };
-  }
-  var BADGES = [
-    {
-      statKey: "friendsOnline",
-      iconClass: "fa-users",
-      title: "Freunde Online",
-      // ID card: PPATH + 'id/' + Encode_Link(name) + '.html' (chat_pop_kylr.js:193)
-      url: (encNick) => "//www.chatcity.de/de/id/" + encNick + ".html"
-    },
-    {
-      statKey: "requests",
-      iconClass: "fa-user-plus",
-      title: "Neue Freundesanfragen",
-      // Upstream: /de/friends/<id-card-url> (e.g. /de/friends/https://.../id/username01:5F:.html)
-      url: (encNick) => "//www.chatcity.de/de/friends/https://www.chatcity.de/de/id/" + encNick + ".html"
-    },
-    {
-      statKey: "messages",
-      iconClass: "fa-envelope",
-      title: "Neue Nachrichten",
-      url: () => "//www.chatcity.de/de/nc/index.html"
-    }
-  ];
-  var statsBar = null;
-  var pollTimer = null;
-  function buildStatsBar(nick) {
-    const bar = document.createElement("div");
-    bar.className = "bcc-stats";
-    const encNick = encodeChatLink(nick);
-    for (const spec of BADGES) {
-      const link = document.createElement("a");
-      link.className = "bcc-stat bcc-stat-" + spec.statKey;
-      link.href = "#";
-      link.title = spec.title;
-      link.setAttribute("role", "button");
-      link.setAttribute("aria-label", spec.title);
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        window.open(spec.url(encNick), "IDCARD", "width=810,height=800,scrollbars=yes");
-      });
-      const icon = document.createElement("i");
-      icon.className = "fas " + spec.iconClass;
-      icon.setAttribute("aria-hidden", "true");
-      link.appendChild(icon);
-      const count = document.createElement("span");
-      count.className = "bcc-stat-count bcc-stat-no";
-      count.textContent = "0";
-      link.appendChild(count);
-      bar.appendChild(link);
-    }
-    statsBar = bar;
-    return bar;
-  }
-  function renderStats(stats) {
-    if (!statsBar || stats === null) return;
-    for (const spec of BADGES) {
-      const link = statsBar.querySelector(".bcc-stat-" + spec.statKey);
-      if (!link) continue;
-      const count = link.querySelector(".bcc-stat-count");
-      if (!count) continue;
-      const value = stats[spec.statKey];
-      count.textContent = String(value);
-      count.classList.toggle("bcc-stat-no", value < 1);
-    }
-  }
-  function pollOnce3() {
-    try {
-      const ajax = getAjax();
-      const pajax = getPAjax();
-      if (typeof ajax !== "function" || typeof pajax !== "string") {
-        cclog("stats: upstream ajax/PAJAX unavailable \u2014 skipping poll", "v3");
-        return;
-      }
-      new ajax(pajax + "chat_info_friends_nc.html", {
-        onComplete: (transport) => {
-          try {
-            const parsed = parseStats(transport?.responseText ?? "");
-            if (parsed !== null) {
-              renderStats(parsed);
-              stampFreshness("statsAt");
-            }
-          } catch (e) {
-            cclog("stats: parse failed \u2014 " + e.message, "v3");
-          }
-        }
-      });
-    } catch (e) {
-      cclog("stats: poll error \u2014 " + e.message, "v3");
-    }
-  }
-  function mountStatsBar(parent) {
-    if (statsBar && statsBar.isConnected) return;
-    const nick = getChatNick();
-    parent.insertBefore(buildStatsBar(nick), parent.firstChild);
-    pollOnce3();
-    pollTimer = window.setInterval(pollOnce3, POLL_CADENCES.stats);
-    window.addEventListener("beforeunload", () => {
-      if (pollTimer !== null) window.clearInterval(pollTimer);
-    });
   }
 
   // src/status-button.ts
@@ -4273,12 +4399,12 @@
     return lines.join("\n");
   }
   function reportFields(context, reason, error, stack) {
-    let state;
+    let state2;
     try {
       const s = snapshot();
-      state = { conn: s.conn, bccHealth: s.bccHealth, freshness: s.freshness };
+      state2 = { conn: s.conn, bccHealth: s.bccHealth, freshness: s.freshness };
     } catch {
-      state = null;
+      state2 = null;
     }
     return {
       version: GM_info.script.version,
@@ -4289,7 +4415,7 @@
       url: location.href,
       userAgent: navigator.userAgent,
       time: (/* @__PURE__ */ new Date()).toISOString(),
-      state
+      state: state2
     };
   }
   async function copyText(text) {

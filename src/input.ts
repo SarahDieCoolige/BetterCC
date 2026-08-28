@@ -11,32 +11,17 @@ import { buildPatchedHandler } from "./patched-handler";
 import { reportSendPathBroken } from "./health";
 import { buildIdPopup } from "./id-popup";
 import { openSettings } from "./settings";
+import {
+  handleRecallKey,
+  initInputHistory,
+  onDraftInput,
+  recordSubmit,
+  resetRecall,
+} from "./input-history";
 import { get, set, react } from "./store";
 import type { ConnState } from "./health-core";
 
-// ─── Draft preservation (T5) ────────────────────────────────────────────────
-
-export interface StorageLike {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
-}
-
-export const DRAFT_KEY = "bcc_draft";
-
-/** Persist the draft; an empty draft clears the key so no stale text resurrects. */
-export function saveDraft(storage: StorageLike, value: string): void {
-  if (value.trim() === "") storage.removeItem(DRAFT_KEY);
-  else storage.setItem(DRAFT_KEY, value);
-}
-
-/** Read the draft once and clear it. Returns "" when none exists. */
-export function takeDraft(storage: StorageLike): string {
-  const v = storage.getItem(DRAFT_KEY);
-  if (v === null) return "";
-  storage.removeItem(DRAFT_KEY);
-  return v;
-}
+// ─── Send gate (offline) ────────────────────────────────────────────────────
 
 /** Hard gate: sending is blocked while the connection is not established.
  * Typing stays possible (the draft survives); the offline hint explains why. */
@@ -200,7 +185,8 @@ async function doSubmit(whispernick?: string): Promise<void> {
           break;
       }
     }
-    clearInput(docHold);
+    (docHold.OUT1 as HTMLInputElement).value = "";
+    if (textarea) textarea.value = recordSubmit(rawMsg);
     return;
   }
 
@@ -214,12 +200,10 @@ async function doSubmit(whispernick?: string): Promise<void> {
     (docHold.OUT1 as HTMLInputElement).value = decision.message;
     onSubmitOrig();
   }
-  if (textarea) textarea.value = "";
-}
-
-function clearInput(docHold: HTMLFormElement): void {
-  (docHold.OUT1 as HTMLInputElement).value = "";
-  if (textarea) textarea.value = "";
+  // Push AFTER the offline gate above and after the send itself:
+  // blocked sends never enter history, and a submission from a recall
+  // view returns the parked draft to the box.
+  if (textarea) textarea.value = recordSubmit(rawMsg);
 }
 
 // ─── Superwhisper (spec §3.2.4) ─────────────────────────────────────────────
@@ -231,6 +215,7 @@ function clearInput(docHold: HTMLFormElement): void {
  *  prefix isn't appended to a half-typed message. */
 function prefillWhisper(nick: string): void {
   if (!textarea) return;
+  resetRecall(); // programmatic box replacement — drop any recall view
   textarea.value = "/w " + nick + " ";
   textarea.focus();
   // Caret at the end so the user can keep typing the message body.
@@ -264,17 +249,25 @@ export function mountInput(): void {
   textarea.className = "bcc-input-field";
   textarea.setAttribute("aria-label", "Chat-Nachricht eingeben");
   textarea.placeholder = PLACEHOLDER_ALL;
-  textarea.addEventListener("keydown", (e: KeyboardEvent) => {
+  const box = textarea;
+  box.addEventListener("keydown", (e: KeyboardEvent) => {
+    const recalled = handleRecallKey(e, box.value);
+    if (recalled !== null) {
+      e.preventDefault();
+      box.value = recalled;
+      return;
+    }
     if (e.key === "Enter" && shouldSendOnEnter(get("send_on_enter"), e.shiftKey)) {
       e.preventDefault();
       doSubmit();
     }
   });
+  box.addEventListener("input", () => onDraftInput(box.value));
   inputArea.appendChild(textarea);
 
-  // Restore any draft from the previous page (survives full reload via sessionStorage).
-  const draft = takeDraft(sessionStorage);
-  if (draft) textarea.value = draft;
+  // Boot the input history (draft slot + ring) for this user in this
+  // tab; slot 0's draft is whatever survived the last reload.
+  textarea.value = initInputHistory(() => textarea?.value ?? "");
 
   // ── Send contract — reuse the hold form's patched onsubmit (O1) ──────
   // buildPatchedHandler surfaces an upstream needle change as a thrown error
@@ -321,9 +314,4 @@ function updatePlaceholder(): void {
   } else {
     textarea.placeholder = compact ? PLACEHOLDER_COMPACT_ALL : PLACEHOLDER_ALL;
   }
-}
-
-/** Stash the current textarea content. Called before a full page reload. */
-export function stashDraft(): void {
-  saveDraft(sessionStorage, textarea?.value ?? "");
 }
