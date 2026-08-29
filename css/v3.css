@@ -1271,15 +1271,25 @@
   padding: 8px 0 4px;
   border-bottom: 1px solid var(--bcc-border);
 }
+.bcc-aw-rows {
+  padding: 4px 0 10px;
+  line-height: 1.7;
+}
 .bcc-aw-row {
-  padding: 4px 8px;
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 1px 6px 1px 0;
+  border-radius: 4px;
   cursor: pointer;
 }
 .bcc-aw-row:hover {
   background: var(--bcc-surface-hover);
 }
 .bcc-aw-ghost {
-  padding: 4px 8px;
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 1px 6px 1px 0;
+  border-radius: 4px;
   color: var(--bcc-text-muted);
   cursor: default;
 }

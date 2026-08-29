@@ -10,9 +10,12 @@
 
 import { get, react, type Ephemeral, type User } from "./store";
 import { refreshAwNow, type GlobalDiff } from "./global-userlist";
-import { buildIdPopup, isIdPopupOpen } from "./id-popup";
+import { isIdPopupOpen } from "./id-popup";
+import { openUserPopup } from "./popup";
+import { togglePin } from "./sidebar";
 import { isSettingsOpen } from "./settings";
 import { iconElement } from "./dom";
+import { cclog } from "./utils";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Pure core (unit-tested)
@@ -187,6 +190,10 @@ let stateEl: HTMLElement | null = null;
 // store in renderBody: with static gating the filter must re-filter OUR
 // snapshot, not whatever the background poll pushed last.
 let model: AwModel | null = null;
+// Full User objects of the RENDERED snapshot, keyed by user key: the rows
+// carry only name/key, but the user popup wants the whole User. Refreshed
+// only on rendered paths, so it tracks what is on screen, not the store.
+let usersByKey = new Map<string, User>();
 
 /** Show or clear the inline state line ("" hides it via CSS :empty). */
 function setState(text: string): void {
@@ -211,21 +218,27 @@ function renderBody(): void {
     head.textContent = `${section.channel} (${section.rows.length})`;
     sectionEl.appendChild(head);
 
+    // Nicks flow inline and wrap, several per line (like upstream's own
+    // Anwesende lists), not one full-width row per user.
+    const rowsEl = document.createElement("div");
+    rowsEl.className = "bcc-aw-rows";
+
     for (const row of section.rows) {
-      const rowEl = document.createElement("div");
+      const rowEl = document.createElement("span");
       rowEl.className = "bcc-aw-row";
       rowEl.textContent = row.name;
-      rowEl.dataset.name = row.name;
-      sectionEl.appendChild(rowEl);
+      rowEl.dataset.key = row.key;
+      rowsEl.appendChild(rowEl);
     }
     for (const ghost of section.ghosts) {
       // Ghosts carry no bcc-aw-row class and no dataset: the delegated click
       // matches neither, so they are inert by construction.
-      const ghostEl = document.createElement("div");
+      const ghostEl = document.createElement("span");
       ghostEl.className = "bcc-aw-ghost";
       ghostEl.textContent = ghost.name;
-      sectionEl.appendChild(ghostEl);
+      rowsEl.appendChild(ghostEl);
     }
+    sectionEl.appendChild(rowsEl);
     bodyEl.appendChild(sectionEl);
   }
 
@@ -254,6 +267,10 @@ function renderList(payload: Ephemeral["globalUserlist"]): void {
     );
   }
   prevEmpty = model.total === 0;
+  usersByKey = new Map();
+  for (const users of payload.channels.values()) {
+    for (const u of users) usersByKey.set(u.key, u);
+  }
   renderBody();
 }
 
@@ -298,6 +315,7 @@ export function closeAwModal(): void {
   standSpan = null;
   stateEl = null;
   model = null;
+  usersByKey = new Map();
 }
 
 /** Open the Anwesende overview: snapshot first, then one forced fresh fetch. */
@@ -313,6 +331,7 @@ export function openAwModal(): void {
   prevEmpty = true;
   pendingOwnFetches = 0;
   model = null;
+  usersByKey = new Map();
 
   // ── Overlay ──
   overlayEl = document.createElement("div");
@@ -378,13 +397,21 @@ export function openAwModal(): void {
   // ── List body (rebuilt on every render) ──
   bodyEl = document.createElement("div");
   bodyEl.className = "bcc-aw-body";
-  // Delegated clicks: a row opens the /id popup pre-filled; the overview
-  // stays open underneath.
+  // Delegated clicks: a nick opens the standard user popup anchored on it
+  // (same surface as userlist rows); the overview stays open underneath.
   bodyEl.addEventListener("click", (e: MouseEvent) => {
-    const row = (e.target as HTMLElement).closest(".bcc-aw-row");
+    const row = (e.target as HTMLElement).closest(".bcc-aw-row") as HTMLElement | null;
     if (!row) return;
-    const name = (row as HTMLElement).dataset.name;
-    if (name) buildIdPopup(name);
+    // stopPropagation keeps popup.ts's document-level outside-click from
+    // closing the popup this same click just opened (sidebar rows do the same).
+    e.stopPropagation();
+    const user = usersByKey.get(row.dataset.key ?? "");
+    if (!user) return;
+    openUserPopup(row, user, get("pinned").includes(user.key), (u) => {
+      togglePin(u).catch(() => {
+        cclog("aw modal: pin toggle failed for " + u.name, "v3");
+      });
+    });
   });
   card.appendChild(bodyEl);
 

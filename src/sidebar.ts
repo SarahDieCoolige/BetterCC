@@ -180,7 +180,9 @@ function buildRow(merged: MergedUser, badges: Map<string, string>): HTMLLIElemen
 
 let pinnedCache: Set<string> = new Set();
 
-async function togglePin(user: User): Promise<void> {
+/** Toggle a user's pinned state in the store. Shared pin seam: the aw modal
+ *  opens user popups too and routes its pin toggles through here. */
+export async function togglePin(user: User): Promise<void> {
   const list = [...(get("pinned") as string[])];
   const idx = list.indexOf(user.key);
   if (idx === -1) {
