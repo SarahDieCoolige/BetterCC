@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=e97361b8
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=983246da
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -4581,12 +4581,16 @@
       e.stopPropagation();
       void toggleSchemeVersion();
     });
+    const swatch = buildColorSwatch();
+    swatch.classList.add("bcc-keep");
+    const awBtn = iconBtn("fa-users", "Anwesende", () => {
+      openAwModal();
+    });
+    awBtn.classList.add("bcc-keep");
     return pill(
       "bcc-bettercc",
-      buildColorSwatch(),
-      iconBtn("fa-users", "Anwesende", () => {
-        openAwModal();
-      }),
+      swatch,
+      awBtn,
       iconBtn("fa-cog", "Einstellungen", () => {
         openSettings();
       }),
@@ -4653,7 +4657,10 @@
     } else {
       chatbar.append(buildCompactToggle(chatbar));
     }
-    chatbar.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
+    const controls = document.createElement("div");
+    controls.className = "bcc-controls";
+    controls.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
+    chatbar.append(controls);
     cclog("footer mounted \u2014 pill groups + FA", "v3");
   }
 
