@@ -534,15 +534,11 @@
   opacity: 1;
 }
 
-/* Compact pill states: hide non-essential children.
-   Single-icon pills switch to single-column auto so the icon centers.
-   Chat pill switches to row flow and pulls keep items to the front. */
+/* Compact pill states: hide non-essential children; every pill flattens to a
+   single row (grid rule sits next to the base .bcc-pill below). Chat pill
+   keeps its keep items pulled to the front. */
 .bcc-compact .bcc-chat > :not(.bcc-keep) {
   display: none;
-}
-.bcc-compact .bcc-chat {
-  grid-auto-flow: row;
-  grid-template-rows: none;
 }
 .bcc-compact .bcc-chat > .bcc-keep {
   order: -1;
@@ -550,14 +546,8 @@
 .bcc-compact .bcc-bettercc > :not(:first-child) {
   display: none;
 }
-.bcc-compact .bcc-bettercc {
-  grid-template-columns: auto;
-}
 .bcc-compact .bcc-links > :not(:first-child) {
   display: none;
-}
-.bcc-compact .bcc-links {
-  grid-template-columns: auto;
 }
 
 /* ─── Input area (textarea fills the rest) ─── */
@@ -599,6 +589,8 @@
 /* ─── Pill container (translucent, rounded, grid) ─── */
 .bcc-pill {
   display: inline-grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
   gap: 3px;
   padding: 6px;
   border-radius: 10px;
@@ -608,29 +600,12 @@
   flex-shrink: 0;
 }
 
-/* Bare .bcc-pill = single centered column (children stack vertically); the
-   -N variants add N columns so children flow into rows of N (the last partial
-   row centers via justify-items: center on the container). Mirrors v2. */
-.bcc-pill-2 {
-  grid-template-columns: repeat(2, auto);
+/* Every pill fills column pairs top-to-bottom: 2 rows max in the extended
+   footer, growing in WIDTH as icons are added, never into a third row.
+   The .bcc-compact rule below flattens each pill to one row. */
+.bcc-compact .bcc-pill {
+  grid-template-rows: auto;
 }
-.bcc-pill-3 {
-  grid-template-columns: repeat(3, auto);
-}
-.bcc-pill-4 {
-  grid-template-columns: repeat(4, auto);
-}
-/* Chat pill: column flow → zigzag layout (top row then bottom row). */
-.bcc-chat {
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, auto);
-}
-/* Links pill (id + forum + help): the last child spans + centers, so a 3-item
-   2-col pill reads [id forum] / [help] centered, not [id forum] / [help _]. */
-/* .bcc-pill.bcc-links > :last-child {
-  grid-column: 1 / -1;
-  justify-self: center;
-} */
 
 /* ─── Icon buttons (32×32) ─── */
 .bcc-icon-btn {

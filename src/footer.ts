@@ -5,10 +5,10 @@
 //
 // Groups (left → right after the textarea):
 //   1. Chat pill      — upstream interaction: away / back / sysmsg on/off /
-//                       autoscroll / reload (4-col, 6 items)
+//                       autoscroll / reload (2-row, 6 items)
 //   2. BetterCC pill  — our added features: theme color / AW overview /
-//                       scheme toggle / help / settings (2-col, 5 items)
-//   3. Links pill     — upstream external: ID / forum / nick-color / help (2-col, 4 items)
+//                       scheme toggle / help / settings (2-row, 5 items)
+//   3. Links pill     — upstream external: ID / forum / nick-color / help (2-row, 4 items)
 //   4. Exit           — red sign-out icon button (standalone, always last)
 
 import { openAwModal } from "./aw-modal";
@@ -43,12 +43,13 @@ function iconBtn(iconClass: string, title: string, onClick: () => void): HTMLBut
 /**
  * A pill container — a translucent rounded grid wrapping a group of buttons.
  *
- * `columns`: 0 = bare .bcc-pill (vertical stack), 2/3/4 = N-column grid.
- * `extraClass` adds a modifier (e.g. "bcc-chat") for targeting in CSS.
+ * `extraClass` adds a modifier (e.g. "bcc-chat") for targeting in CSS. The
+ * pill lays its children out in column pairs (2 rows max, extending in width);
+ * compact mode flattens it to one row (see .bcc-pill in v3.css).
  */
-function pill(columns: number, extraClass: string, ...children: HTMLElement[]): HTMLElement {
+function pill(extraClass: string, ...children: HTMLElement[]): HTMLElement {
   const p = document.createElement("div");
-  p.className = columns > 0 ? "bcc-pill bcc-pill-" + columns : "bcc-pill";
+  p.className = "bcc-pill";
   if (extraClass) p.classList.add(extraClass);
   for (const c of children) p.appendChild(c);
 
@@ -141,7 +142,6 @@ function buildChatPill(): HTMLElement {
   reloadBtn.classList.add("bcc-keep");
 
   return pill(
-    4,
     "bcc-chat",
     awayBtn,
     backBtn,
@@ -176,7 +176,6 @@ function buildBetterccPill(): HTMLElement {
   });
 
   return pill(
-    2,
     "bcc-bettercc",
     buildColorSwatch(),
     iconBtn("fa-users", "Anwesende", () => {
@@ -209,7 +208,7 @@ function buildLinksPill(): HTMLElement {
     sendCommand("/color " + hex);
   });
 
-  return pill(2, "bcc-links", id, forum, nickColor, help);
+  return pill("bcc-links", id, forum, nickColor, help);
 }
 
 // ─── Group 4: Exit (red, standalone) ───────────────────────────────────────
