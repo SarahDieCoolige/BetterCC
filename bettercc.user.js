@@ -2,7 +2,7 @@
 // @name  BetterCC (dev)
 // @description  BetterCC
 // @author  Sarah
-// @version      3.15.0
+// @version      3.15.1
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=f6c17270
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=1235ccd6
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -3869,8 +3869,9 @@
         });
       }
     }
-    const total = sections.reduce((sum, s) => sum + s.total, 0);
-    return { sections, total };
+    const visible = sections.filter((s) => s.rows.length > 0 || s.ghosts.length > 0);
+    const total = visible.reduce((sum, s) => sum + s.total, 0);
+    return { sections: visible, total };
   }
   function applyFilter(model2, query) {
     const q = query.trim().toLowerCase();
@@ -3904,6 +3905,7 @@
   var prevEmpty = true;
   var pendingOwnFetches = 0;
   var live = false;
+  var resized = null;
   var expiredGhosts = /* @__PURE__ */ new Set();
   var ghostKey = (channel, key) => channel + "\0" + key;
   var bodyEl = null;
@@ -4034,6 +4036,50 @@
       if (overlayEl3 === overlay) pendingOwnFetches--;
     }
   }
+  var CARD_MIN_W = 360;
+  var CARD_MIN_H = 240;
+  function clampCardSize(width, height) {
+    return {
+      width: Math.min(Math.max(width, CARD_MIN_W), Math.floor(window.innerWidth * 0.95)),
+      height: Math.min(Math.max(height, CARD_MIN_H), Math.floor(window.innerHeight * 0.85))
+    };
+  }
+  function wireResize(card) {
+    if (resized) {
+      const { width, height } = clampCardSize(resized.width, resized.height);
+      card.style.width = width + "px";
+      card.style.height = height + "px";
+    }
+    const handle = document.createElement("div");
+    handle.className = "bcc-aw-resize";
+    handle.title = "Gr\xF6\xDFe \xE4ndern";
+    card.appendChild(handle);
+    handle.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const start = card.getBoundingClientRect();
+      const onMove = (ev) => {
+        const { width, height } = clampCardSize(
+          start.width + ev.clientX - startX,
+          start.height + ev.clientY - startY
+        );
+        card.style.width = width + "px";
+        card.style.height = height + "px";
+      };
+      const onUp = () => {
+        handle.removeEventListener("pointermove", onMove);
+        handle.removeEventListener("pointerup", onUp);
+        handle.removeEventListener("pointercancel", onUp);
+        const rect = card.getBoundingClientRect();
+        resized = { width: rect.width, height: rect.height };
+      };
+      handle.addEventListener("pointermove", onMove);
+      handle.addEventListener("pointerup", onUp);
+      handle.addEventListener("pointercancel", onUp);
+    });
+  }
   function closeAwModal() {
     if (documentKeydown3) {
       document.removeEventListener("keydown", documentKeydown3);
@@ -4088,7 +4134,6 @@
     card.appendChild(header);
     const { toolbar, filterInput } = buildToolbar();
     card.appendChild(toolbar);
-    card.appendChild(toolbar);
     bodyEl = document.createElement("div");
     bodyEl.className = "bcc-aw-body";
     bodyEl.addEventListener("click", (e) => {
@@ -4116,6 +4161,7 @@
     stateEl = document.createElement("div");
     stateEl.className = "bcc-aw-state";
     card.appendChild(stateEl);
+    wireResize(card);
     overlayEl3.appendChild(card);
     shell.appendChild(overlayEl3);
     documentKeydown3 = (e) => {
