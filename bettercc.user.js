@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=5845adb1
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=e97361b8
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -3908,6 +3908,7 @@
   var standSpan = null;
   var stateEl = null;
   var model = null;
+  var usersByKey = /* @__PURE__ */ new Map();
   function setState(text) {
     if (stateEl) stateEl.textContent = text;
   }
@@ -3922,19 +3923,22 @@
       head.className = "bcc-aw-section-head";
       head.textContent = `${section.channel} (${section.rows.length})`;
       sectionEl.appendChild(head);
+      const rowsEl = document.createElement("div");
+      rowsEl.className = "bcc-aw-rows";
       for (const row of section.rows) {
-        const rowEl = document.createElement("div");
+        const rowEl = document.createElement("span");
         rowEl.className = "bcc-aw-row";
         rowEl.textContent = row.name;
-        rowEl.dataset.name = row.name;
-        sectionEl.appendChild(rowEl);
+        rowEl.dataset.key = row.key;
+        rowsEl.appendChild(rowEl);
       }
       for (const ghost of section.ghosts) {
-        const ghostEl = document.createElement("div");
+        const ghostEl = document.createElement("span");
         ghostEl.className = "bcc-aw-ghost";
         ghostEl.textContent = ghost.name;
-        sectionEl.appendChild(ghostEl);
+        rowsEl.appendChild(ghostEl);
       }
+      sectionEl.appendChild(rowsEl);
       bodyEl.appendChild(sectionEl);
     }
     countSpan.textContent = filterQuery.trim() !== "" ? `${view.matched}/${view.total}` : String(view.total);
@@ -3954,6 +3958,10 @@
       );
     }
     prevEmpty = model.total === 0;
+    usersByKey = /* @__PURE__ */ new Map();
+    for (const users of payload.channels.values()) {
+      for (const u of users) usersByKey.set(u.key, u);
+    }
     renderBody();
   }
   async function fetchAndRender(overlay) {
@@ -3986,6 +3994,7 @@
     standSpan = null;
     stateEl = null;
     model = null;
+    usersByKey = /* @__PURE__ */ new Map();
   }
   function openAwModal() {
     closeAwModal();
@@ -3996,6 +4005,7 @@
     prevEmpty = true;
     pendingOwnFetches = 0;
     model = null;
+    usersByKey = /* @__PURE__ */ new Map();
     overlayEl3 = document.createElement("div");
     overlayEl3.className = "bcc-aw-overlay";
     const card = document.createElement("div");
@@ -4044,8 +4054,14 @@
     bodyEl.addEventListener("click", (e) => {
       const row = e.target.closest(".bcc-aw-row");
       if (!row) return;
-      const name = row.dataset.name;
-      if (name) buildIdPopup(name);
+      e.stopPropagation();
+      const user = usersByKey.get(row.dataset.key ?? "");
+      if (!user) return;
+      openUserPopup(row, user, get("pinned").includes(user.key), (u) => {
+        togglePin(u).catch(() => {
+          cclog("aw modal: pin toggle failed for " + u.name, "v3");
+        });
+      });
     });
     card.appendChild(bodyEl);
     stateEl = document.createElement("div");
@@ -4480,9 +4496,9 @@
     btn.className = isBnClass ? "bcc-icon-btn " + iconClass : "bcc-icon-btn";
     return btn;
   }
-  function pill(columns, extraClass, ...children) {
+  function pill(extraClass, ...children) {
     const p = document.createElement("div");
-    p.className = columns > 0 ? "bcc-pill bcc-pill-" + columns : "bcc-pill";
+    p.className = "bcc-pill";
     if (extraClass) p.classList.add(extraClass);
     for (const c of children) p.appendChild(c);
     return p;
@@ -4541,7 +4557,6 @@
     autoscrollBtn.classList.add("bcc-keep");
     reloadBtn.classList.add("bcc-keep");
     return pill(
-      4,
       "bcc-chat",
       awayBtn,
       backBtn,
@@ -4567,7 +4582,6 @@
       void toggleSchemeVersion();
     });
     return pill(
-      2,
       "bcc-bettercc",
       buildColorSwatch(),
       iconBtn("fa-users", "Anwesende", () => {
@@ -4594,7 +4608,7 @@
     const nickColor = buildColorPicker("Nick-Farbe w\xE4hlen", "bcc-nick-color", "#aa0000", (hex) => {
       sendCommand("/color " + hex);
     });
-    return pill(2, "bcc-links", id, forum, nickColor, help);
+    return pill("bcc-links", id, forum, nickColor, help);
   }
   function buildExitBtn() {
     const btn = iconBtn("b7", "Verlassen", () => leaveChat());
