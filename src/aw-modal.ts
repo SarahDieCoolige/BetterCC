@@ -278,6 +278,64 @@ function buildSectionEl(section: AwSection, filtering: boolean): HTMLElement {
 }
 
 /**
+ * The toolbar: filter input, Stand stamp, one-shot refresh, live toggle.
+ * Returns the input alongside so the caller can focus it once mounted
+ * (focusing a detached input is a no-op).
+ */
+function buildToolbar(): { toolbar: HTMLElement; filterInput: HTMLInputElement } {
+  const toolbar = document.createElement("div");
+  toolbar.className = "bcc-aw-toolbar";
+
+  const filterInput = document.createElement("input");
+  filterInput.type = "text";
+  filterInput.placeholder = "Nick filtern…";
+  // Re-filter only: no refetch, and the input is never rebuilt.
+  filterInput.addEventListener("input", () => {
+    filterQuery = filterInput.value;
+    renderBody();
+  });
+  toolbar.appendChild(filterInput);
+
+  standSpan = document.createElement("span");
+  standSpan.className = "bcc-aw-stand";
+  toolbar.appendChild(standSpan);
+
+  const refreshBtn = document.createElement("button");
+  // Same canonical .bcc-icon-btn shape as the /id search button; bcc-aw-sync
+  // is the hook the live mode hides it by.
+  refreshBtn.type = "button";
+  refreshBtn.className = "bcc-icon-btn bcc-aw-sync";
+  refreshBtn.setAttribute("aria-label", "Jetzt aktualisieren");
+  refreshBtn.title = "Jetzt aktualisieren";
+  refreshBtn.appendChild(iconElement("fa-sync"));
+  refreshBtn.addEventListener("click", () => {
+    if (overlayEl) void fetchAndRender(overlayEl);
+  });
+  toolbar.appendChild(refreshBtn);
+
+  // Live toggle (per-open, never stored): while live, Stand + sync hide via
+  // the bcc-aw-live class on the overlay; pausing restores them.
+  const liveBtn = document.createElement("button");
+  liveBtn.type = "button";
+  liveBtn.className = "bcc-icon-btn";
+  const applyLiveUi = (): void => {
+    overlayEl?.classList.toggle("bcc-aw-live", live);
+    liveBtn.replaceChildren(iconElement(live ? "fa-pause" : "fa-play"));
+    const label = live ? "Automatische Aktualisierung pausieren" : "Automatisch aktualisieren";
+    liveBtn.title = label;
+    liveBtn.setAttribute("aria-label", label);
+  };
+  liveBtn.addEventListener("click", () => {
+    live = !live;
+    applyLiveUi();
+  });
+  applyLiveUi();
+  toolbar.appendChild(liveBtn);
+
+  return { toolbar, filterInput };
+}
+
+/**
  * Rebuild triggers per mode. The mount render always draws. Live mode draws
  * every event except a fully idle one: the store notifies every 5s even with
  * an empty diff, and an idle list must not twitch. Static mode draws only the
@@ -401,54 +459,8 @@ export function openAwModal(): void {
   card.appendChild(header);
 
   // ── Toolbar ──
-  const toolbar = document.createElement("div");
-  toolbar.className = "bcc-aw-toolbar";
-
-  const filterInput = document.createElement("input");
-  filterInput.type = "text";
-  filterInput.placeholder = "Nick filtern…";
-  // Re-filter only: no refetch, and the input is never rebuilt.
-  filterInput.addEventListener("input", () => {
-    filterQuery = filterInput.value;
-    renderBody();
-  });
-  toolbar.appendChild(filterInput);
-
-  standSpan = document.createElement("span");
-  standSpan.className = "bcc-aw-stand";
-  toolbar.appendChild(standSpan);
-
-  const refreshBtn = document.createElement("button");
-  // Same canonical .bcc-icon-btn shape as the /id search button; bcc-aw-sync
-  // is the hook the live mode hides it by.
-  refreshBtn.type = "button";
-  refreshBtn.className = "bcc-icon-btn bcc-aw-sync";
-  refreshBtn.setAttribute("aria-label", "Jetzt aktualisieren");
-  refreshBtn.title = "Jetzt aktualisieren";
-  refreshBtn.appendChild(iconElement("fa-sync"));
-  refreshBtn.addEventListener("click", () => {
-    if (overlayEl) void fetchAndRender(overlayEl);
-  });
-  toolbar.appendChild(refreshBtn);
-
-  // Live toggle (per-open, never stored): while live, Stand + sync hide via
-  // the bcc-aw-live class on the overlay; pausing restores them.
-  const liveBtn = document.createElement("button");
-  liveBtn.type = "button";
-  liveBtn.className = "bcc-icon-btn";
-  const applyLiveUi = (): void => {
-    overlayEl?.classList.toggle("bcc-aw-live", live);
-    liveBtn.replaceChildren(iconElement(live ? "fa-pause" : "fa-play"));
-    const label = live ? "Automatische Aktualisierung pausieren" : "Automatisch aktualisieren";
-    liveBtn.title = label;
-    liveBtn.setAttribute("aria-label", label);
-  };
-  liveBtn.addEventListener("click", () => {
-    live = !live;
-    applyLiveUi();
-  });
-  applyLiveUi();
-  toolbar.appendChild(liveBtn);
+  const { toolbar, filterInput } = buildToolbar();
+  card.appendChild(toolbar);
 
   card.appendChild(toolbar);
 
