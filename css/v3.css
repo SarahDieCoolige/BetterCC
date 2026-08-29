@@ -1240,7 +1240,7 @@
 .bcc-aw-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--bcc-border);
   flex-shrink: 0;
@@ -1256,6 +1256,7 @@
   cursor: pointer;
   font-size: 16px;
   padding: 4px;
+  margin-left: auto;
 }
 .bcc-aw-toolbar {
   display: flex;
