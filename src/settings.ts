@@ -100,6 +100,13 @@ let previewChips: Map<string, HTMLElement> | null = null; // data-role → chip 
 let swatchButtons: HTMLButtonElement[] = [];
 
 /**
+ * Whether the settings modal is currently shown (lets lower overlays skip Esc).
+ */
+export function isSettingsOpen(): boolean {
+  return overlayEl !== null;
+}
+
+/**
  * Close the settings modal if open. Safe to call when no modal exists.
  * Unregisters the overlay closer and restores focus to the opener.
  */

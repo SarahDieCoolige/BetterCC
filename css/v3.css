@@ -1190,6 +1190,109 @@
   padding: 24px 16px;
 }
 
+/* ─── AW-Übersicht ─── */
+.bcc-aw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.bcc-aw-card {
+  background: var(--bcc-surface);
+  color: var(--bcc-text);
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  width: 480px;
+  max-width: 95vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bcc-aw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bcc-border);
+  flex-shrink: 0;
+}
+.bcc-aw-count {
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+}
+.bcc-aw-close {
+  background: none;
+  border: none;
+  color: var(--bcc-icon);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+.bcc-aw-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bcc-border);
+  flex-shrink: 0;
+}
+.bcc-aw-toolbar input {
+  flex: 1;
+  /* min-width:0 lets the input shrink; without it the fixed-size refresh
+     button gets pushed out of the card at narrow widths (as in .bcc-id-search). */
+  min-width: 0;
+  background: var(--bcc-surface-input);
+  color: var(--bcc-text-input);
+  border: 1px solid var(--bcc-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+.bcc-aw-stand {
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.bcc-aw-toolbar button {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bcc-aw-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px;
+}
+.bcc-aw-section-head {
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--bcc-border);
+}
+.bcc-aw-row {
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.bcc-aw-row:hover {
+  background: var(--bcc-surface-hover);
+}
+.bcc-aw-ghost {
+  padding: 4px 8px;
+  color: var(--bcc-text-muted);
+  cursor: default;
+}
+.bcc-aw-state {
+  color: var(--bcc-text-muted);
+  text-align: center;
+  padding: 24px 16px;
+  flex-shrink: 0;
+}
+.bcc-aw-state:empty {
+  display: none;
+}
+
 /* ─── Settings Modal (T10) ─── */
 .bcc-settings-overlay {
   position: fixed;

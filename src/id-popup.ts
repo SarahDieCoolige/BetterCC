@@ -147,6 +147,11 @@ async function doSearch(name: string, resultsEl: HTMLElement): Promise<void> {
 // Public API
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Whether the /id popup is currently shown (lets lower overlays skip Esc). */
+export function isIdPopupOpen(): boolean {
+  return overlayEl !== null;
+}
+
 /** Close the popup if open. Safe to call when no popup exists. */
 export function closeIdPopup(): void {
   if (documentKeydown) {
