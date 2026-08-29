@@ -82,10 +82,25 @@ describe("buildIdFixtureResponse — query-aware ID search mock", () => {
   });
 
   it("falls back to deterministic synthetic when no match at all", () => {
-    // "abc" matches nothing → a(97)+b(98)+c(99)=294 (even) → photo row
+    // "abc" matches nothing → a(97)+b(98)+c(99)=294 (even) → synthetic row;
+    // 294 % 3 === 0 → the no-photo subset, so the row carries default_3.jpg
     const html = buildIdFixtureResponse("abc", knownUsers);
     expect(html).toContain("userfiles/");
     expect(html).toContain("/id/abc.html");
+  });
+
+  it("emits upstream's default placeholder img for the no-photo subset", () => {
+    // testascii: char-sum 969, 969 % 3 === 0 → no-photo row shape
+    const html = buildIdFixtureResponse("testascii", knownUsers);
+    expect(html).toContain("default_3.jpg");
+    expect(html).not.toContain("mocktestascii_3.jpg");
+  });
+
+  it("emits a mock thumbnail for photo users", () => {
+    // testuser_one: char-sum 1312, 1312 % 3 === 1 → real thumbnail row
+    const html = buildIdFixtureResponse("testuser_one", knownUsers);
+    expect(html).toContain("mocktestuser:5F:one_3.jpg");
+    expect(html).not.toContain("default_3.jpg");
   });
 
   it("returns empty result (0 User gefunden) for blank/empty nick", () => {

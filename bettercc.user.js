@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=88a4dac8
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=369f7f0a
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1570,6 +1570,20 @@
     });
     return btn;
   }
+  function nickToHue(nick) {
+    let sum = 0;
+    for (let i = 0; i < nick.length; i++) {
+      sum += nick.charCodeAt(i);
+    }
+    return sum % 360;
+  }
+  function buildAvatar(nick) {
+    const avatar = document.createElement("div");
+    avatar.className = "bcc-popup-avatar";
+    avatar.textContent = nick[0]?.toUpperCase() ?? "?";
+    avatar.style.background = "hsl(" + nickToHue(nick) + ", 45%, 55%)";
+    return avatar;
+  }
 
   // src/user-image.ts
   function stripThumbnailSuffix(url) {
@@ -1960,13 +1974,6 @@
   }
 
   // src/popup.ts
-  function nickToHue(nick) {
-    let sum = 0;
-    for (let i = 0; i < nick.length; i++) {
-      sum += nick.charCodeAt(i);
-    }
-    return sum % 360;
-  }
   var openPopup = null;
   var onOutsideClick = null;
   var currentUser = null;
@@ -2023,11 +2030,7 @@
   function buildPhotoContainer(userName) {
     const container = document.createElement("div");
     container.className = "bcc-popup-photo";
-    const avatar = document.createElement("div");
-    avatar.className = "bcc-popup-avatar";
-    avatar.textContent = userName[0]?.toUpperCase() ?? "?";
-    avatar.style.background = "hsl(" + nickToHue(userName) + ", 45%, 55%)";
-    container.appendChild(avatar);
+    container.appendChild(buildAvatar(userName));
     const img = document.createElement("img");
     img.alt = "";
     container.appendChild(img);
@@ -2794,15 +2797,13 @@
     for (const row of rows) {
       const rowEl = document.createElement("div");
       rowEl.className = "bcc-id-row";
-      if (row.imgUrl) {
-        const fullUrl = stripThumbnailSuffix(row.imgUrl);
-        const hasPhoto = !/default/i.test(fullUrl);
-        const showPreview = hasPhoto && fullUrl !== row.imgUrl;
+      const { thumbUrl, fullUrl, hasPhoto } = deriveImageUrl(row.imgUrl);
+      if (hasPhoto && thumbUrl) {
         const thumb = document.createElement("img");
-        thumb.src = row.imgUrl;
+        thumb.src = thumbUrl;
         thumb.className = "bcc-id-thumb";
         thumb.setAttribute("alt", "");
-        if (showPreview) {
+        if (fullUrl) {
           thumb.addEventListener("mouseenter", () => {
             if (!get("hover_preview")) return;
             const rect = thumb.getBoundingClientRect();
@@ -2817,6 +2818,10 @@
           evictImageCache(searchTerm);
         });
         rowEl.appendChild(thumb);
+      } else {
+        const avatar = buildAvatar(row.name);
+        avatar.classList.add("bcc-id-avatar");
+        rowEl.appendChild(avatar);
       }
       const nameLink = document.createElement("a");
       nameLink.textContent = row.name;

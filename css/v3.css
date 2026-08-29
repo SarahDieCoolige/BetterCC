@@ -1165,6 +1165,15 @@
   flex-shrink: 0;
   cursor: pointer;
 }
+/* Initials avatar for no-photo rows: bcc-popup-avatar base at thumb scale */
+.bcc-id-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  border: 1px solid var(--bcc-border);
+  flex-shrink: 0;
+  font-size: 20px;
+}
 .bcc-id-name {
   color: var(--bcc-text);
   text-decoration: none;

@@ -6,7 +6,7 @@
 // implementations.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { nickToHue } from "../src/popup";
+import { nickToHue } from "../src/dom";
 
 // ─── Minimal DOM mock (Node environment has no document) ─────────────────────
 

@@ -1,14 +1,15 @@
 // ─── /id Popup — search overlay ────────────────────────────────────────────
 //
-// Opens on /id [name]. Shows multi-row search results with thumbnails +
-// clickable names linking to ID card pages. Hover preview via photo-preview.ts.
+// Opens on /id [name]. Shows multi-row search results with thumbnails (or
+// initials avatars when a user has no photo) + clickable names linking to ID
+// card pages. Hover preview via photo-preview.ts.
 // Singleton pattern — one popup at a time (matches popup.ts).
 
 import type { IdSearchRow } from "./user-image";
-import { fetchIdRows, evictImageCache, stripThumbnailSuffix } from "./user-image";
+import { fetchIdRows, evictImageCache, deriveImageUrl } from "./user-image";
 import { buildPreviewBox, dismissHover, dismissAllPreviews } from "./photo-preview";
 import { encodeChatLink } from "./utils";
-import { iconElement } from "./dom";
+import { iconElement, buildAvatar } from "./dom";
 import { get } from "./store";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -73,17 +74,18 @@ function renderResults(el: HTMLElement, rows: IdSearchRow[], searchTerm: string)
     const rowEl = document.createElement("div");
     rowEl.className = "bcc-id-row";
 
-    if (row.imgUrl) {
-      const fullUrl = stripThumbnailSuffix(row.imgUrl);
-      const hasPhoto = !/default/i.test(fullUrl);
-      const showPreview = hasPhoto && fullUrl !== row.imgUrl;
+    // No-photo rows carry upstream's default placeholder URL (or no img at
+    // all); deriveImageUrl classifies both, and they get our initials
+    // avatar instead of painting the upstream graphic.
+    const { thumbUrl, fullUrl, hasPhoto } = deriveImageUrl(row.imgUrl);
 
+    if (hasPhoto && thumbUrl) {
       const thumb = document.createElement("img");
-      thumb.src = row.imgUrl;
+      thumb.src = thumbUrl;
       thumb.className = "bcc-id-thumb";
       thumb.setAttribute("alt", "");
 
-      if (showPreview) {
+      if (fullUrl) {
         thumb.addEventListener("mouseenter", () => {
           if (!get("hover_preview")) return;
           // Pass the thumbnail's rect so the preview positions itself beside
@@ -106,6 +108,10 @@ function renderResults(el: HTMLElement, rows: IdSearchRow[], searchTerm: string)
       });
 
       rowEl.appendChild(thumb);
+    } else {
+      const avatar = buildAvatar(row.name);
+      avatar.classList.add("bcc-id-avatar");
+      rowEl.appendChild(avatar);
     }
 
     const nameLink = document.createElement("a");

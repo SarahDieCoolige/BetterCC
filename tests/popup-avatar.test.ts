@@ -1,7 +1,7 @@
 // Tests for the nickToHue helper — a stable HSL hue derived from the
-// username for the initial-letter avatar in the user popup.
+// username for the initial-letter avatars (user popup + /id rows).
 import { describe, it, expect } from "vitest";
-import { nickToHue } from "../src/popup";
+import { nickToHue } from "../src/dom";
 
 describe("nickToHue", () => {
   // ─── Deterministic ────────────────────────────────────────────────────

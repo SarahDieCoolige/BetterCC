@@ -29,7 +29,7 @@
 import { type User } from "./store";
 import { encodeChatLink } from "./utils";
 import { getBettercc, sendCommand } from "./upstream";
-import { iconElement } from "./dom";
+import { iconElement, buildAvatar } from "./dom";
 import { getUserPhoto, evictImageCache, type UserImageResult } from "./user-image";
 import { get, on } from "./store";
 import {
@@ -39,21 +39,6 @@ import {
   buildPreviewBox,
   previewByUser,
 } from "./photo-preview";
-
-/**
- * Stable HSL hue (0–359) derived from a username, for the
- * initial-letter avatar in the user popup.
- *
- * Algorithm: sum of all charCodeAt(i) values, then mod 360.
- * Deterministic — same input always returns the same output.
- */
-export function nickToHue(nick: string): number {
-  let sum = 0;
-  for (let i = 0; i < nick.length; i++) {
-    sum += nick.charCodeAt(i);
-  }
-  return sum % 360;
-}
 
 // ─── Popup state ───────────────────────────────────────────────────────────
 
@@ -146,11 +131,7 @@ function buildPhotoContainer(userName: string): HTMLElement {
   container.className = "bcc-popup-photo";
 
   // Avatar: initial letter with a deterministic background hue
-  const avatar = document.createElement("div");
-  avatar.className = "bcc-popup-avatar";
-  avatar.textContent = userName[0]?.toUpperCase() ?? "?";
-  avatar.style.background = "hsl(" + nickToHue(userName) + ", 45%, 55%)";
-  container.appendChild(avatar);
+  container.appendChild(buildAvatar(userName));
 
   // Hidden img (revealed when photo loads)
   const img = document.createElement("img");
