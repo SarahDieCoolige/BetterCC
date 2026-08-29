@@ -93,6 +93,27 @@ describe("buildAwModel — snapshot + diff → sectioned model", () => {
     expect(model.total).toBe(1);
   });
 
+  it("hides channels with no live rows and no ghosts (parseAw keeps empty ones)", () => {
+    const model = buildAwModel(
+      channelsOf(["Erotik", [mkUser("Alpha")]], ["MOD", []], ["Leere", []]),
+      EMPTY_DIFF,
+      {},
+    );
+    expect(model.sections.map((s) => s.channel)).toEqual(["Erotik"]);
+    expect(model.total).toBe(1);
+  });
+
+  it("keeps an emptied channel visible while it still shows a ghost", () => {
+    const model = buildAwModel(
+      channelsOf(["Erotik", []], ["MOD", [mkUser("Gamma")]]),
+      { added: [], removed: [mkDiffEntry("Beta", "Erotik")] },
+      {},
+    );
+    expect(model.sections.map((s) => s.channel)).toEqual(["Erotik", "MOD"]);
+    expect(model.sections[0].ghosts).toHaveLength(1);
+    expect(model.total).toBe(1);
+  });
+
   it("mountRender suppresses ghosts and joined flags: a cold open must not flash green", () => {
     const channels = channelsOf(["Erotik", [mkUser("Alpha")]], ["MOD", [mkUser("Beta")]]);
     const diff: GlobalDiff = {

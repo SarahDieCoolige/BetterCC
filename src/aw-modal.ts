@@ -128,8 +128,12 @@ export function buildAwModel(
     }
   }
 
-  const total = sections.reduce((sum, s) => sum + s.total, 0);
-  return { sections, total };
+  // Channels with neither live rows nor ghosts don't render: parseAw keeps
+  // empty channels in the Map, but a bare "(0)" head is noise. A channel that
+  // just emptied stays visible while its leavers fade out as ghosts.
+  const visible = sections.filter((s) => s.rows.length > 0 || s.ghosts.length > 0);
+  const total = visible.reduce((sum, s) => sum + s.total, 0);
+  return { sections: visible, total };
 }
 
 /**
