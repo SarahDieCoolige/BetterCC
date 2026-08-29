@@ -38,7 +38,9 @@ export interface AwSection {
   rows: AwRow[];
   /** Leavers from diff.removed, old channel. */
   ghosts: AwRow[];
-  /** rows.length; ghosts never count. */
+  /** Live users in the channel; ghosts never count. In a filtered view the
+   *  rows shrink to the matches while total keeps the channel's full live
+   *  count (section heads render matched/total). */
   total: number;
 }
 
@@ -149,7 +151,8 @@ export function applyFilter(model: AwModel, query: string): AwView {
     if (rows.length === 0) continue;
     matched += rows.length;
     const ghosts = s.ghosts.filter((g) => g.name.toLowerCase().includes(q));
-    sections.push({ channel: s.channel, rows, ghosts, total: rows.length });
+    // total keeps the channel's full live count for the n/m section heads.
+    sections.push({ channel: s.channel, rows, ghosts, total: s.total });
   }
   return { sections, matched, total: model.total };
 }
@@ -227,7 +230,10 @@ function renderBody(): void {
 
     const head = document.createElement("div");
     head.className = "bcc-aw-section-head";
-    head.textContent = `${section.channel} (${section.rows.length})`;
+    // Like the overall count: matched/total while filtering, plain otherwise.
+    const count =
+      filterQuery.trim() !== "" ? `${section.rows.length}/${section.total}` : `${section.total}`;
+    head.textContent = `${section.channel} (${count})`;
     sectionEl.appendChild(head);
 
     // Nicks flow inline and wrap, several per line (like upstream's own

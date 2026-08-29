@@ -171,6 +171,13 @@ describe("applyFilter — nick substring → filtered view", () => {
     expect(view.matched).toBe(1);
   });
 
+  it("filtered sections keep the channel's full total (heads render n/m)", () => {
+    const model = buildTestModel();
+    const view = applyFilter(model, "test");
+    // rows shrink to the matches, total stays the channel's full live count.
+    expect(view.sections[0].total).toBe(2);
+  });
+
   it("drops a section whose live rows all filter out, even when a ghost matches", () => {
     // The ghost's nick matches "test", but ghosts never keep a section alive.
     const model = buildAwModel(
