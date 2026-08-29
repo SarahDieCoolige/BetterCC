@@ -25,6 +25,7 @@ export const COMMANDS: { cmd: string; desc: string }[] = [
   { cmd: "/ignore Nick", desc: "benutzer ignorieren" },
   { cmd: "/id Nick", desc: "ID-Karte öffnen" },
   { cmd: "/pinned", desc: "angeheftete Benutzer anzeigen" },
+  { cmd: "/aw", desc: "Anwesende-Übersicht öffnen" },
   { cmd: "/color", desc: "Thema-Farbe anzeigen" },
   { cmd: "/scheme", desc: "Scheme-Version anzeigen" },
   { cmd: "/settings", desc: "Einstellungen öffnen" },
@@ -44,7 +45,8 @@ export type CommandResult =
   | { handled: true; type: "pinned-list" }
   | { handled: true; type: "color-info" }
   | { handled: true; type: "scheme-info" }
-  | { handled: true; type: "settings" };
+  | { handled: true; type: "settings" }
+  | { handled: true; type: "aw" };
 
 /**
  * Classify a chat message: is it a BetterCC command, or a regular message?
@@ -105,6 +107,11 @@ export function classifyMessage(mymsg: string): CommandResult {
   // /settings — print all config
   if (lower === "/settings") {
     return { handled: true, type: "settings" };
+  }
+
+  // /aw: opens the Anwesende overview modal (src/aw-modal.ts)
+  if (lower === "/aw") {
+    return { handled: true, type: "aw" };
   }
 
   // /sw nick or /superwhisper nick

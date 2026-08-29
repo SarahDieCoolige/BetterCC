@@ -102,6 +102,19 @@ describe("classifyMessage — command dispatch", () => {
     expect(classifyMessage("/SETTINGS")).toEqual({ handled: true, type: "settings" });
   });
 
+  it("/aw → handled as aw overview (bare exact match)", () => {
+    expect(classifyMessage("/aw")).toEqual({ handled: true, type: "aw" });
+    expect(classifyMessage("/AW")).toEqual({ handled: true, type: "aw" });
+  });
+
+  it("/away is NOT /aw — sends as a regular message (regression pin)", () => {
+    expect(classifyMessage("/away")).toEqual({ handled: false, message: "/away" });
+  });
+
+  it("/aw with trailing text is NOT handled (bare exact match only)", () => {
+    expect(classifyMessage("/aw Something")).toEqual({ handled: false, message: "/aw Something" });
+  });
+
   it("non-command messages are not handled", () => {
     expect(classifyMessage("Hello world")).toEqual({ handled: false, message: "Hello world" });
     expect(classifyMessage("Just chatting")).toEqual({ handled: false, message: "Just chatting" });
@@ -163,6 +176,12 @@ describe("COMMANDS table", () => {
     const settings = COMMANDS.find((c) => c.cmd === "/settings");
     expect(settings).toBeDefined();
     expect(settings!.desc).toBe("Einstellungen öffnen");
+  });
+
+  it('the /aw entry desc is exactly "Anwesende-Übersicht öffnen"', () => {
+    const aw = COMMANDS.find((c) => c.cmd === "/aw");
+    expect(aw).toBeDefined();
+    expect(aw!.desc).toBe("Anwesende-Übersicht öffnen");
   });
 
   it("cmd values are unique", () => {
