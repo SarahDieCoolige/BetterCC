@@ -626,6 +626,36 @@
   justify-content: flex-end;
   gap: 8px;
 }
+/* Narrow-width ladder: pills drop off one at a time, least essential first
+   (links, then bettercc, then chat), and the reservation shrinks by each
+   dropped pill so the input keeps filling up to the remaining controls.
+   Thresholds = input floor (200px) + chrome (60px) + reservation, so each
+   configuration is used exactly while it fits: 400 = all pills,
+   300 = no links, 180 = no links + no bettercc, auto = exit only. */
+@media (max-width: 659px) {
+  .bcc-controls .bcc-links {
+    display: none;
+  }
+  .bcc-controls {
+    flex-basis: 300px;
+  }
+}
+@media (max-width: 559px) {
+  .bcc-controls .bcc-bettercc {
+    display: none;
+  }
+  .bcc-controls {
+    flex-basis: 180px;
+  }
+}
+@media (max-width: 439px) {
+  .bcc-controls .bcc-chat {
+    display: none;
+  }
+  .bcc-controls {
+    flex-basis: auto;
+  }
+}
 
 /* ─── Icon buttons (32×32) ─── */
 .bcc-icon-btn {
