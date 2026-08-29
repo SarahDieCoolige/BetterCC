@@ -90,6 +90,18 @@ describe("session — initSession writes to store", () => {
     expect(s.authDead).toBe(false);
   });
 
+  it("initSession marks a session without the R flag as guest", async () => {
+    await initStore();
+    const { initSession } = await import("../src/session");
+
+    (unsafeWindow as any).chat_ui = "h"; // live guest value (checked 2026-08)
+    initSession();
+
+    const s = get("session");
+    expect(s.guest).toBe(true);
+    expect(s.registered).toBe(false);
+  });
+
   it("getSession returns the store value", async () => {
     await initStore();
     const { initSession, getSession } = await import("../src/session");

@@ -33,9 +33,17 @@ export function getBettercc(): any {
   return (unsafeWindow as any).bettercc;
 }
 
-/** The chat UI mode string ("h" = guest, "R" = registered, etc.). */
+/** The chat UI flags string the server renders inline ("R" = registered).
+ *  Contents beyond "R" are not contractual — upstream JS never reads it. */
 export function getChatUi(): string {
   return String((unsafeWindow as any).chat_ui ?? "");
+}
+
+/** True when the session is a guest. "R" in chat_ui marks registered; live
+ *  guests carry plain "h", and an unread chat_ui counts as guest too. The
+ *  storage suffix ("gast" vs nick) hangs on this, so keep one definition. */
+export function isGuest(): boolean {
+  return !getChatUi().includes("R");
 }
 
 /** The numeric user ID. */

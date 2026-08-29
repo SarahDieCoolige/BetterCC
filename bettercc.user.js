@@ -192,6 +192,86 @@
     userStore = isGast ? "gast" : nick.toLowerCase();
   }
 
+  // src/upstream.ts
+  function getChatNick() {
+    return String(unsafeWindow.chat_nick ?? "");
+  }
+  function getChannel() {
+    return String(unsafeWindow.chat_channel ?? "");
+  }
+  function isAuthDead() {
+    return !!unsafeWindow.chatout_auth_dead;
+  }
+  function getChatoutWs() {
+    return unsafeWindow.chatout_ws ?? null;
+  }
+  function getBettercc() {
+    return unsafeWindow.bettercc;
+  }
+  function getChatUi() {
+    return String(unsafeWindow.chat_ui ?? "");
+  }
+  function isGuest() {
+    return !getChatUi().includes("R");
+  }
+  function getChatId() {
+    return String(unsafeWindow.chat_id ?? "");
+  }
+  function getChatSid() {
+    return String(unsafeWindow.chat_sid ?? "");
+  }
+  function getPChat() {
+    return String(unsafeWindow.PCHAT ?? "");
+  }
+  function getChaMy() {
+    const v = unsafeWindow.cha_my;
+    return Array.isArray(v) ? v : [];
+  }
+  function getPAjax() {
+    return String(unsafeWindow.PAJAX ?? "");
+  }
+  function getAjax() {
+    return unsafeWindow.ajax;
+  }
+  function getChannelCategories() {
+    return unsafeWindow.ccc ?? [];
+  }
+  function getChannelGroups() {
+    return unsafeWindow.ccg ?? [];
+  }
+  function fetchAw() {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: "https://images.chatcity.de/script/aw.js?x=" + Date.now(),
+        onload: (resp) => resolve(resp.responseText),
+        onerror: (err) => reject(err)
+      });
+    });
+  }
+  function sendCommand(cmd) {
+    const w = unsafeWindow;
+    if (typeof w.com_set === "function") {
+      w.com_set(cmd);
+    } else {
+      cclog("sendCommand: com_set unavailable \u2014 dropped: " + cmd, "v3");
+    }
+  }
+  function wrapSetStatus(cb) {
+    const w = unsafeWindow;
+    if (typeof w.chatout_setstatus !== "function") return false;
+    const orig = w.chatout_setstatus;
+    w.chatout_setstatus = function(text, color, bold) {
+      cb(String(text), color || null);
+      orig.call(this, text, color, bold);
+    };
+    return true;
+  }
+  function leaveChat() {
+    sendCommand("/bye");
+    setTimeout(() => window.close(), 1e3);
+  }
+
   // src/chat.ts
   function addAutoscrollBanner(iframeDoc, iframeWin) {
     if (!iframeDoc || !iframeWin) return;
@@ -955,83 +1035,6 @@
     main.prepend(strip);
     react("bccHealth", () => render());
     render();
-  }
-
-  // src/upstream.ts
-  function getChatNick() {
-    return String(unsafeWindow.chat_nick ?? "");
-  }
-  function getChannel() {
-    return String(unsafeWindow.chat_channel ?? "");
-  }
-  function isAuthDead() {
-    return !!unsafeWindow.chatout_auth_dead;
-  }
-  function getChatoutWs() {
-    return unsafeWindow.chatout_ws ?? null;
-  }
-  function getBettercc() {
-    return unsafeWindow.bettercc;
-  }
-  function getChatUi() {
-    return String(unsafeWindow.chat_ui ?? "");
-  }
-  function getChatId() {
-    return String(unsafeWindow.chat_id ?? "");
-  }
-  function getChatSid() {
-    return String(unsafeWindow.chat_sid ?? "");
-  }
-  function getPChat() {
-    return String(unsafeWindow.PCHAT ?? "");
-  }
-  function getChaMy() {
-    const v = unsafeWindow.cha_my;
-    return Array.isArray(v) ? v : [];
-  }
-  function getPAjax() {
-    return String(unsafeWindow.PAJAX ?? "");
-  }
-  function getAjax() {
-    return unsafeWindow.ajax;
-  }
-  function getChannelCategories() {
-    return unsafeWindow.ccc ?? [];
-  }
-  function getChannelGroups() {
-    return unsafeWindow.ccg ?? [];
-  }
-  function fetchAw() {
-    return new Promise((resolve, reject) => {
-      GM_xmlhttpRequest({
-        method: "GET",
-        url: "https://images.chatcity.de/script/aw.js?x=" + Date.now(),
-        onload: (resp) => resolve(resp.responseText),
-        onerror: (err) => reject(err)
-      });
-    });
-  }
-  function sendCommand(cmd) {
-    const w = unsafeWindow;
-    if (typeof w.com_set === "function") {
-      w.com_set(cmd);
-    } else {
-      cclog("sendCommand: com_set unavailable \u2014 dropped: " + cmd, "v3");
-    }
-  }
-  function wrapSetStatus(cb) {
-    const w = unsafeWindow;
-    if (typeof w.chatout_setstatus !== "function") return false;
-    const orig = w.chatout_setstatus;
-    w.chatout_setstatus = function(text, color, bold) {
-      cb(String(text), color || null);
-      orig.call(this, text, color, bold);
-    };
-    return true;
-  }
-  function leaveChat() {
-    sendCommand("/bye");
-    setTimeout(() => window.close(), 1e3);
   }
 
   // src/health.ts
@@ -2267,11 +2270,11 @@
   // src/session.ts
   var timer = null;
   function readSnapshot() {
-    const ui = getChatUi();
+    const guest = isGuest();
     return {
       nick: getChatNick(),
-      registered: ui.includes("R"),
-      guest: ui.includes("h") && !ui.includes("R"),
+      registered: !guest,
+      guest,
       userId: getChatId(),
       sessionId: getChatSid(),
       channel: getChannel(),
@@ -4724,8 +4727,7 @@
     if (/cpop.html/.test(window.location.href)) {
       window.onunload = null;
       window.onbeforeunload = null;
-      let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
-      setUserStore(unsafeWindow.chat_nick, !!gast);
+      setUserStore(getChatNick(), isGuest());
       initV3().catch(handleBootFailure);
     }
   })();

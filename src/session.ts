@@ -6,17 +6,17 @@
 
 import { type SessionState, get, set } from "./store";
 import { cclog } from "./utils";
-import { getChatNick, getChannel, isAuthDead, getChatUi, getChatId, getChatSid } from "./upstream";
+import { getChatNick, getChannel, isAuthDead, isGuest, getChatId, getChatSid } from "./upstream";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 
 /** Read a fresh snapshot from the upstream globals. */
 function readSnapshot(): SessionState {
-  const ui = getChatUi();
+  const guest = isGuest();
   return {
     nick: getChatNick(),
-    registered: ui.includes("R"),
-    guest: ui.includes("h") && !ui.includes("R"),
+    registered: !guest,
+    guest,
     userId: getChatId(),
     sessionId: getChatSid(),
     channel: getChannel(),

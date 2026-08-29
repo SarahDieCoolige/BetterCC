@@ -12,6 +12,7 @@
 //   - scheme.ts (pure color-scheme engine — used by v3/theme)
 
 import { cclog, setUserStore } from "./utils";
+import { getChatNick, isGuest } from "./upstream";
 import { initV3 } from "./init";
 import { handleBootFailure } from "./health-ui";
 
@@ -28,8 +29,7 @@ import { handleBootFailure } from "./health-ui";
     window.onunload = null;
     window.onbeforeunload = null;
 
-    let gast = unsafeWindow.chat_ui === "h" ? 1 : 0;
-    setUserStore(unsafeWindow.chat_nick, !!gast);
+    setUserStore(getChatNick(), isGuest());
 
     initV3().catch(handleBootFailure);
   } // MAIN CHAT
