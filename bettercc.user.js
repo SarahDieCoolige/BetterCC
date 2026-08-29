@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=73866270
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=f6c17270
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -3921,39 +3921,82 @@
     const view = applyFilter(model, filterQuery);
     bodyEl.dataset.bccAwRender = String((Number(bodyEl.dataset.bccAwRender) || 0) + 1);
     bodyEl.replaceChildren();
-    for (const section of view.sections) {
-      const sectionEl = document.createElement("div");
-      sectionEl.className = "bcc-aw-section";
-      const head = document.createElement("div");
-      head.className = "bcc-aw-section-head";
-      const count = filtering ? `${section.rows.length}/${section.total}` : `${section.total}`;
-      head.textContent = `${section.channel} (${count})`;
-      sectionEl.appendChild(head);
-      const rowsEl = document.createElement("div");
-      rowsEl.className = "bcc-aw-rows";
-      for (const row of section.rows) {
-        const rowEl = document.createElement("span");
-        rowEl.className = "bcc-aw-row";
-        rowEl.textContent = row.name;
-        rowEl.dataset.key = row.key;
-        if (row.transient === "joined") rowEl.classList.add("bcc-joined");
-        rowsEl.appendChild(rowEl);
-      }
-      for (const ghost of section.ghosts) {
-        if (expiredGhosts.has(ghostKey(section.channel, ghost.key))) continue;
-        const ghostEl = document.createElement("span");
-        ghostEl.className = "bcc-aw-ghost";
-        ghostEl.textContent = ghost.name;
-        ghostEl.dataset.key = ghost.key;
-        ghostEl.dataset.channel = section.channel;
-        rowsEl.appendChild(ghostEl);
-      }
-      sectionEl.appendChild(rowsEl);
-      bodyEl.appendChild(sectionEl);
-    }
+    for (const section of view.sections) bodyEl.appendChild(buildSectionEl(section, filtering));
     countSpan.textContent = filtering ? `${view.matched}/${view.total}` : String(view.total);
     standSpan.textContent = formatStand(/* @__PURE__ */ new Date());
     setState(view.sections.length === 0 ? EMPTY_TEXT : "");
+  }
+  function buildSectionEl(section, filtering) {
+    const sectionEl = document.createElement("div");
+    sectionEl.className = "bcc-aw-section";
+    const head = document.createElement("div");
+    head.className = "bcc-aw-section-head";
+    const count = filtering ? `${section.rows.length}/${section.total}` : `${section.total}`;
+    head.textContent = `${section.channel} (${count})`;
+    sectionEl.appendChild(head);
+    const rowsEl = document.createElement("div");
+    rowsEl.className = "bcc-aw-rows";
+    for (const row of section.rows) {
+      const rowEl = document.createElement("span");
+      rowEl.className = "bcc-aw-row";
+      rowEl.textContent = row.name;
+      rowEl.dataset.key = row.key;
+      if (row.transient === "joined") rowEl.classList.add("bcc-joined");
+      rowsEl.appendChild(rowEl);
+    }
+    for (const ghost of section.ghosts) {
+      if (expiredGhosts.has(ghostKey(section.channel, ghost.key))) continue;
+      const ghostEl = document.createElement("span");
+      ghostEl.className = "bcc-aw-ghost";
+      ghostEl.textContent = ghost.name;
+      ghostEl.dataset.key = ghost.key;
+      ghostEl.dataset.channel = section.channel;
+      rowsEl.appendChild(ghostEl);
+    }
+    sectionEl.appendChild(rowsEl);
+    return sectionEl;
+  }
+  function buildToolbar() {
+    const toolbar = document.createElement("div");
+    toolbar.className = "bcc-aw-toolbar";
+    const filterInput = document.createElement("input");
+    filterInput.type = "text";
+    filterInput.placeholder = "Nick filtern\u2026";
+    filterInput.addEventListener("input", () => {
+      filterQuery = filterInput.value;
+      renderBody();
+    });
+    toolbar.appendChild(filterInput);
+    standSpan = document.createElement("span");
+    standSpan.className = "bcc-aw-stand";
+    toolbar.appendChild(standSpan);
+    const refreshBtn = document.createElement("button");
+    refreshBtn.type = "button";
+    refreshBtn.className = "bcc-icon-btn bcc-aw-sync";
+    refreshBtn.setAttribute("aria-label", "Jetzt aktualisieren");
+    refreshBtn.title = "Jetzt aktualisieren";
+    refreshBtn.appendChild(iconElement("fa-sync"));
+    refreshBtn.addEventListener("click", () => {
+      if (overlayEl3) void fetchAndRender(overlayEl3);
+    });
+    toolbar.appendChild(refreshBtn);
+    const liveBtn = document.createElement("button");
+    liveBtn.type = "button";
+    liveBtn.className = "bcc-icon-btn";
+    const applyLiveUi = () => {
+      overlayEl3?.classList.toggle("bcc-aw-live", live);
+      liveBtn.replaceChildren(iconElement(live ? "fa-pause" : "fa-play"));
+      const label = live ? "Automatische Aktualisierung pausieren" : "Automatisch aktualisieren";
+      liveBtn.title = label;
+      liveBtn.setAttribute("aria-label", label);
+    };
+    liveBtn.addEventListener("click", () => {
+      live = !live;
+      applyLiveUi();
+    });
+    applyLiveUi();
+    toolbar.appendChild(liveBtn);
+    return { toolbar, filterInput };
   }
   function renderList(payload) {
     if (firstRender) {
@@ -4043,45 +4086,8 @@
     closeBtn.addEventListener("click", closeAwModal);
     header.appendChild(closeBtn);
     card.appendChild(header);
-    const toolbar = document.createElement("div");
-    toolbar.className = "bcc-aw-toolbar";
-    const filterInput = document.createElement("input");
-    filterInput.type = "text";
-    filterInput.placeholder = "Nick filtern\u2026";
-    filterInput.addEventListener("input", () => {
-      filterQuery = filterInput.value;
-      renderBody();
-    });
-    toolbar.appendChild(filterInput);
-    standSpan = document.createElement("span");
-    standSpan.className = "bcc-aw-stand";
-    toolbar.appendChild(standSpan);
-    const refreshBtn = document.createElement("button");
-    refreshBtn.type = "button";
-    refreshBtn.className = "bcc-icon-btn bcc-aw-sync";
-    refreshBtn.setAttribute("aria-label", "Jetzt aktualisieren");
-    refreshBtn.title = "Jetzt aktualisieren";
-    refreshBtn.appendChild(iconElement("fa-sync"));
-    refreshBtn.addEventListener("click", () => {
-      if (overlayEl3) void fetchAndRender(overlayEl3);
-    });
-    toolbar.appendChild(refreshBtn);
-    const liveBtn = document.createElement("button");
-    liveBtn.type = "button";
-    liveBtn.className = "bcc-icon-btn";
-    const applyLiveUi = () => {
-      overlayEl3?.classList.toggle("bcc-aw-live", live);
-      liveBtn.replaceChildren(iconElement(live ? "fa-pause" : "fa-play"));
-      const label = live ? "Automatische Aktualisierung pausieren" : "Automatisch aktualisieren";
-      liveBtn.title = label;
-      liveBtn.setAttribute("aria-label", label);
-    };
-    liveBtn.addEventListener("click", () => {
-      live = !live;
-      applyLiveUi();
-    });
-    applyLiveUi();
-    toolbar.appendChild(liveBtn);
+    const { toolbar, filterInput } = buildToolbar();
+    card.appendChild(toolbar);
     card.appendChild(toolbar);
     bodyEl = document.createElement("div");
     bodyEl.className = "bcc-aw-body";
