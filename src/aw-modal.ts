@@ -188,6 +188,9 @@ let firstRender = true; // the react() immediate call is the mount render
 let prevEmpty = true; // was the previously rendered model empty (cold-open guard)
 let pendingOwnFetches = 0; // latch: fetches THIS modal triggered
 let live = false; // live mode renders every non-empty diff; per-open, never stored
+// Card size the user dragged to, reapplied on every open and reset by a reload.
+// Never stored, same lifetime rule as the live toggle.
+let resized: { width: number; height: number } | null = null;
 // Ghost keys (channel + NUL + key) whose fade already ran: renderBody skips
 // them so a filter re-render cannot resurrect an expired ghost. Cleared on
 // every event rebuild, where the fresh diff legitimately brings new ghosts.
@@ -393,6 +396,63 @@ async function fetchAndRender(overlay: HTMLElement): Promise<void> {
   }
 }
 
+/**
+ * Corner-handle drag resizing. Pointer capture keeps the moves flowing to the
+ * handle after the pointer leaves it; the clamps mirror the CSS caps on the
+ * default card (95vw/85vh) plus a floor the toolbar still fits into, so an
+ * inline size can never fight the stylesheet maxes. The dragged size is
+ * clamped again on apply: a window shrunk since the last drag must not
+ * resurrect an oversized card.
+ */
+const CARD_MIN_W = 360;
+const CARD_MIN_H = 240;
+
+function clampCardSize(width: number, height: number): { width: number; height: number } {
+  return {
+    width: Math.min(Math.max(width, CARD_MIN_W), Math.floor(window.innerWidth * 0.95)),
+    height: Math.min(Math.max(height, CARD_MIN_H), Math.floor(window.innerHeight * 0.85)),
+  };
+}
+
+function wireResize(card: HTMLElement): void {
+  if (resized) {
+    const { width, height } = clampCardSize(resized.width, resized.height);
+    card.style.width = width + "px";
+    card.style.height = height + "px";
+  }
+
+  const handle = document.createElement("div");
+  handle.className = "bcc-aw-resize";
+  handle.title = "Größe ändern";
+  card.appendChild(handle);
+
+  handle.addEventListener("pointerdown", (e: PointerEvent) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const start = card.getBoundingClientRect();
+    const onMove = (ev: PointerEvent): void => {
+      const { width, height } = clampCardSize(
+        start.width + ev.clientX - startX,
+        start.height + ev.clientY - startY,
+      );
+      card.style.width = width + "px";
+      card.style.height = height + "px";
+    };
+    const onUp = (): void => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      const rect = card.getBoundingClientRect();
+      resized = { width: rect.width, height: rect.height };
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  });
+}
+
 /** Close the modal if open. Safe to call when no modal exists. */
 export function closeAwModal(): void {
   if (documentKeydown) {
@@ -466,8 +526,6 @@ export function openAwModal(): void {
   const { toolbar, filterInput } = buildToolbar();
   card.appendChild(toolbar);
 
-  card.appendChild(toolbar);
-
   // ── List body (rebuilt on every render) ──
   bodyEl = document.createElement("div");
   bodyEl.className = "bcc-aw-body";
@@ -507,6 +565,8 @@ export function openAwModal(): void {
   stateEl = document.createElement("div");
   stateEl.className = "bcc-aw-state";
   card.appendChild(stateEl);
+
+  wireResize(card);
 
   // ── Assemble ──
   overlayEl.appendChild(card);
