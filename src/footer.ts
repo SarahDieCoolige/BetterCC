@@ -6,11 +6,12 @@
 // Groups (left → right after the textarea):
 //   1. Chat pill      — upstream interaction: away / back / sysmsg on/off /
 //                       autoscroll / reload (4-col, 6 items)
-//   2. BetterCC pill  — our added features: theme color / scheme toggle /
-//                       help / settings (2-col, 4 items)
+//   2. BetterCC pill  — our added features: theme color / AW overview /
+//                       scheme toggle / help / settings (2-col, 5 items)
 //   3. Links pill     — upstream external: ID / forum / nick-color / help (2-col, 4 items)
 //   4. Exit           — red sign-out icon button (standalone, always last)
 
+import { openAwModal } from "./aw-modal";
 import { cclog, printHelp } from "./utils";
 import { setColor, toggleSchemeVersion } from "./theme";
 import { getChatNick, sendCommand, leaveChat } from "./upstream";
@@ -178,6 +179,9 @@ function buildBetterccPill(): HTMLElement {
     2,
     "bcc-bettercc",
     buildColorSwatch(),
+    iconBtn("fa-users", "Anwesende", () => {
+      openAwModal();
+    }),
     iconBtn("fa-cog", "Einstellungen", () => {
       openSettings();
     }),

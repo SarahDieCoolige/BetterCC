@@ -4,6 +4,7 @@
 // through the reused upstream onsubmit handler for message normalization +
 // away-timer reset, and handles BetterCC commands + superwhisper.
 
+import { openAwModal } from "./aw-modal";
 import { cclog, printHelp, printToChat } from "./utils";
 import { classifyMessage, rewriteForWhisper } from "./commands";
 import { generateScheme } from "./scheme";
@@ -62,6 +63,7 @@ export function prepareMessage(rawMsg: string, whisperNick: string): SendDecisio
   const cmd = classifyMessage(rawMsg);
   if (cmd.handled) {
     switch (cmd.type) {
+      case "aw":
       case "help":
       case "reload":
       case "open-whisper":
@@ -129,6 +131,9 @@ async function doSubmit(whispernick?: string): Promise<void> {
           break;
         case "superban":
           break; // Stub for T12.
+        case "aw":
+          openAwModal();
+          break;
         case "id":
           buildIdPopup(cmd.name || "");
           break;
