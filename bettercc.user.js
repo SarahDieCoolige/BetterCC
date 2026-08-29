@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=369f7f0a
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=5845adb1
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -61,6 +61,7 @@
     { cmd: "/ignore Nick", desc: "benutzer ignorieren" },
     { cmd: "/id Nick", desc: "ID-Karte \xF6ffnen" },
     { cmd: "/pinned", desc: "angeheftete Benutzer anzeigen" },
+    { cmd: "/aw", desc: "Anwesende-\xDCbersicht \xF6ffnen" },
     { cmd: "/color", desc: "Thema-Farbe anzeigen" },
     { cmd: "/scheme", desc: "Scheme-Version anzeigen" },
     { cmd: "/settings", desc: "Einstellungen \xF6ffnen" },
@@ -100,6 +101,9 @@
     }
     if (lower === "/settings") {
       return { handled: true, type: "settings" };
+    }
+    if (lower === "/aw") {
+      return { handled: true, type: "aw" };
     }
     if (superwhisperMsgCmdRegex.test(lower)) {
       const nick = mymsg.replace(superwhisperMsgReplaceRegex, "").split(" ")[0];
@@ -1524,25 +1528,29 @@
       cclog("global-userlist: poll error \u2014 " + e.message, "v3");
     }
   }
+  function pollAndReschedule2(intervalMs) {
+    return pollOnce2().finally(() => {
+      if (running2) scheduleNext2(intervalMs);
+    });
+  }
   function scheduleNext2(intervalMs) {
-    timerId2 = setTimeout(() => {
-      pollOnce2().finally(() => {
-        if (running2) scheduleNext2(intervalMs);
-      });
-    }, intervalMs);
+    timerId2 = setTimeout(() => pollAndReschedule2(intervalMs), intervalMs);
   }
   function startPolling(intervalMs = POLL_CADENCES.aw) {
     if (running2) return;
     running2 = true;
-    pollOnce2().finally(() => {
-      if (running2) scheduleNext2(intervalMs);
-    });
+    pollAndReschedule2(intervalMs);
     cclog("global userlist poll started \u2014 aw.js every ~" + intervalMs + " ms", "v3");
   }
   function stopPolling() {
     if (timerId2 !== void 0) clearTimeout(timerId2);
     timerId2 = void 0;
     running2 = false;
+  }
+  function refreshAwNow(intervalMs = POLL_CADENCES.aw) {
+    if (timerId2 !== void 0) clearTimeout(timerId2);
+    timerId2 = void 0;
+    return pollAndReschedule2(intervalMs);
   }
 
   // src/dom.ts
@@ -2752,23 +2760,6 @@
     });
   }
 
-  // src/patched-handler.ts
-  var AWAY_TIMER_NEEDLE = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){';
-  var AWAY_TIMER_REPLACEMENT = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){';
-  function patchAwayTimer(onSubmitOrigStr) {
-    if (!onSubmitOrigStr.includes(AWAY_TIMER_NEEDLE)) {
-      throw new Error(
-        `patchAwayTimer: upstream onsubmit needle not found \u2014 the away-timer condition changed upstream; "/w" messages will no longer reset the away timer. Inspect the hold form's onsubmit and update AWAY_TIMER_NEEDLE.`
-      );
-    }
-    return onSubmitOrigStr.replace(AWAY_TIMER_NEEDLE, AWAY_TIMER_REPLACEMENT);
-  }
-  function buildPatchedHandler(holdForm) {
-    const raw = holdForm?.getAttribute("onsubmit") || "";
-    if (!raw) return null;
-    return new Function(patchAwayTimer(raw));
-  }
-
   // src/id-popup.ts
   function dedupRows(rows) {
     const seen = /* @__PURE__ */ new Set();
@@ -2847,6 +2838,9 @@
     } catch {
       renderState(resultsEl, "error");
     }
+  }
+  function isIdPopupOpen() {
+    return overlayEl !== null;
   }
   function closeIdPopup() {
     if (documentKeydown) {
@@ -3112,6 +3106,9 @@
   var revertBtn = null;
   var previewChips = null;
   var swatchButtons = [];
+  function isSettingsOpen() {
+    return overlayEl2 !== null;
+  }
   function closeSettings() {
     if (documentKeydown2) {
       document.removeEventListener("keydown", documentKeydown2);
@@ -3489,7 +3486,7 @@
     pinnedWrap.className = "bcc-manage-section";
     const listUl = document.createElement("ul");
     listUl.className = "bcc-manage-list";
-    function renderList() {
+    function renderList2() {
       if (!draft) return;
       listUl.innerHTML = "";
       for (const name of draft.pinned) {
@@ -3507,7 +3504,7 @@
         removeBtn.addEventListener("click", () => {
           if (!draft) return;
           draft.pinned = removePinned(draft.pinned, name);
-          renderList();
+          renderList2();
           void set("pinned", draft.pinned);
           updateRevertButton();
         });
@@ -3515,7 +3512,7 @@
         listUl.appendChild(li);
       }
     }
-    renderList();
+    renderList2();
     pinnedWrap.appendChild(listUl);
     const addRow = document.createElement("div");
     addRow.className = "bcc-manage-add";
@@ -3531,7 +3528,7 @@
       if (!draft) return;
       draft.pinned = addPinned(draft.pinned, addInput.value);
       addInput.value = "";
-      renderList();
+      renderList2();
       void set("pinned", draft.pinned);
       updateRevertButton();
     });
@@ -3824,6 +3821,267 @@
     }
   }
 
+  // src/aw-modal.ts
+  function buildAwModel(channels, diff, opts) {
+    const cold = diff === null || opts.mountRender === true || opts.prevEmpty === true;
+    const joined = /* @__PURE__ */ new Map();
+    if (!cold) {
+      for (const { user, channel } of diff.added) {
+        let keys = joined.get(channel);
+        if (!keys) {
+          keys = /* @__PURE__ */ new Set();
+          joined.set(channel, keys);
+        }
+        keys.add(user.key);
+      }
+    }
+    const sections = [];
+    const byChannel = /* @__PURE__ */ new Map();
+    const sectionFor = (channel) => {
+      let s = byChannel.get(channel);
+      if (!s) {
+        s = { channel, rows: [], ghosts: [], total: 0 };
+        byChannel.set(channel, s);
+        sections.push(s);
+      }
+      return s;
+    };
+    for (const [channel, users] of channels) {
+      const s = sectionFor(channel);
+      const keys = joined.get(channel);
+      for (const user of users) {
+        s.rows.push({
+          name: user.name,
+          key: user.key,
+          transient: keys !== void 0 && keys.has(user.key) ? "joined" : null,
+          ghost: false
+        });
+      }
+      s.total = s.rows.length;
+    }
+    if (!cold) {
+      for (const { user, channel } of diff.removed) {
+        sectionFor(channel).ghosts.push({
+          name: user.name,
+          key: user.key,
+          transient: null,
+          ghost: true
+        });
+      }
+    }
+    const total = sections.reduce((sum, s) => sum + s.total, 0);
+    return { sections, total };
+  }
+  function applyFilter(model2, query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      return { sections: model2.sections, matched: model2.total, total: model2.total };
+    }
+    const sections = [];
+    let matched = 0;
+    for (const s of model2.sections) {
+      const rows = s.rows.filter((r) => r.name.toLowerCase().includes(q));
+      if (rows.length === 0) continue;
+      matched += rows.length;
+      const ghosts = s.ghosts.filter((g) => g.name.toLowerCase().includes(q));
+      sections.push({ channel: s.channel, rows, ghosts, total: rows.length });
+    }
+    return { sections, matched, total: model2.total };
+  }
+  function formatStand(date) {
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `Stand: ${hh}:${mm}`;
+  }
+  var LOADING_TEXT = "Lade Anwesende\u2026";
+  var EMPTY_TEXT = "Keine Anwesenden gefunden.";
+  var ERROR_TEXT = "Anwesende konnten nicht geladen werden. Der Chat funktioniert weiter. Klicke erneut auf die Aktualisieren-Schaltfl\xE4che.";
+  var overlayEl3 = null;
+  var documentKeydown3 = null;
+  var unreact = null;
+  var filterQuery = "";
+  var firstRender = true;
+  var prevEmpty = true;
+  var pendingOwnFetches = 0;
+  var bodyEl = null;
+  var countSpan = null;
+  var standSpan = null;
+  var stateEl = null;
+  var model = null;
+  function setState(text) {
+    if (stateEl) stateEl.textContent = text;
+  }
+  function renderBody() {
+    if (!model || !bodyEl || !countSpan || !standSpan || !stateEl) return;
+    const view = applyFilter(model, filterQuery);
+    bodyEl.replaceChildren();
+    for (const section of view.sections) {
+      const sectionEl = document.createElement("div");
+      sectionEl.className = "bcc-aw-section";
+      const head = document.createElement("div");
+      head.className = "bcc-aw-section-head";
+      head.textContent = `${section.channel} (${section.rows.length})`;
+      sectionEl.appendChild(head);
+      for (const row of section.rows) {
+        const rowEl = document.createElement("div");
+        rowEl.className = "bcc-aw-row";
+        rowEl.textContent = row.name;
+        rowEl.dataset.name = row.name;
+        sectionEl.appendChild(rowEl);
+      }
+      for (const ghost of section.ghosts) {
+        const ghostEl = document.createElement("div");
+        ghostEl.className = "bcc-aw-ghost";
+        ghostEl.textContent = ghost.name;
+        sectionEl.appendChild(ghostEl);
+      }
+      bodyEl.appendChild(sectionEl);
+    }
+    countSpan.textContent = filterQuery.trim() !== "" ? `${view.matched}/${view.total}` : String(view.total);
+    standSpan.textContent = formatStand(/* @__PURE__ */ new Date());
+    setState(view.sections.length === 0 ? EMPTY_TEXT : "");
+  }
+  function renderList(payload) {
+    if (firstRender) {
+      model = buildAwModel(payload.channels, null, { mountRender: true });
+      firstRender = false;
+    } else {
+      if (pendingOwnFetches === 0) return;
+      model = buildAwModel(
+        payload.channels,
+        { added: payload.added, removed: payload.removed },
+        { prevEmpty }
+      );
+    }
+    prevEmpty = model.total === 0;
+    renderBody();
+  }
+  async function fetchAndRender(overlay) {
+    if (get("globalUserlist").channels.size === 0) setState(LOADING_TEXT);
+    pendingOwnFetches++;
+    try {
+      await refreshAwNow();
+      if (overlayEl3 === overlay && get("globalUserlist").channels.size === 0) {
+        setState(ERROR_TEXT);
+      }
+    } finally {
+      if (overlayEl3 === overlay) pendingOwnFetches--;
+    }
+  }
+  function closeAwModal() {
+    if (documentKeydown3) {
+      document.removeEventListener("keydown", documentKeydown3);
+      documentKeydown3 = null;
+    }
+    if (unreact) {
+      unreact();
+      unreact = null;
+    }
+    if (overlayEl3) {
+      overlayEl3.remove();
+      overlayEl3 = null;
+    }
+    bodyEl = null;
+    countSpan = null;
+    standSpan = null;
+    stateEl = null;
+    model = null;
+  }
+  function openAwModal() {
+    closeAwModal();
+    const shell = document.querySelector(".bcc-shell");
+    if (!shell) return;
+    filterQuery = "";
+    firstRender = true;
+    prevEmpty = true;
+    pendingOwnFetches = 0;
+    model = null;
+    overlayEl3 = document.createElement("div");
+    overlayEl3.className = "bcc-aw-overlay";
+    const card = document.createElement("div");
+    card.className = "bcc-aw-card";
+    const header = document.createElement("div");
+    header.className = "bcc-aw-header";
+    const title = document.createElement("span");
+    title.textContent = "Anwesende";
+    header.appendChild(title);
+    countSpan = document.createElement("span");
+    countSpan.className = "bcc-aw-count";
+    header.appendChild(countSpan);
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "bcc-aw-close";
+    closeBtn.setAttribute("aria-label", "Schlie\xDFen");
+    closeBtn.appendChild(iconElement("fa-xmark"));
+    closeBtn.addEventListener("click", closeAwModal);
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+    const toolbar = document.createElement("div");
+    toolbar.className = "bcc-aw-toolbar";
+    const filterInput = document.createElement("input");
+    filterInput.type = "text";
+    filterInput.placeholder = "Nick filtern\u2026";
+    filterInput.addEventListener("input", () => {
+      filterQuery = filterInput.value;
+      renderBody();
+    });
+    toolbar.appendChild(filterInput);
+    standSpan = document.createElement("span");
+    standSpan.className = "bcc-aw-stand";
+    toolbar.appendChild(standSpan);
+    const refreshBtn = document.createElement("button");
+    refreshBtn.type = "button";
+    refreshBtn.className = "bcc-icon-btn";
+    refreshBtn.setAttribute("aria-label", "Jetzt aktualisieren");
+    refreshBtn.title = "Jetzt aktualisieren";
+    refreshBtn.appendChild(iconElement("fa-sync"));
+    refreshBtn.addEventListener("click", () => {
+      if (overlayEl3) void fetchAndRender(overlayEl3);
+    });
+    toolbar.appendChild(refreshBtn);
+    card.appendChild(toolbar);
+    bodyEl = document.createElement("div");
+    bodyEl.className = "bcc-aw-body";
+    bodyEl.addEventListener("click", (e) => {
+      const row = e.target.closest(".bcc-aw-row");
+      if (!row) return;
+      const name = row.dataset.name;
+      if (name) buildIdPopup(name);
+    });
+    card.appendChild(bodyEl);
+    stateEl = document.createElement("div");
+    stateEl.className = "bcc-aw-state";
+    card.appendChild(stateEl);
+    overlayEl3.appendChild(card);
+    shell.appendChild(overlayEl3);
+    documentKeydown3 = (e) => {
+      if (e.key === "Escape" && !isIdPopupOpen() && !isSettingsOpen()) closeAwModal();
+    };
+    document.addEventListener("keydown", documentKeydown3);
+    overlayEl3.addEventListener("click", (e) => {
+      if (e.target === overlayEl3) closeAwModal();
+    });
+    unreact = react("globalUserlist", renderList);
+    filterInput.focus();
+    void fetchAndRender(overlayEl3);
+  }
+
+  // src/patched-handler.ts
+  var AWAY_TIMER_NEEDLE = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0)){';
+  var AWAY_TIMER_REPLACEMENT = 'if((msg.indexOf("/")!=0||msg.indexOf("/me ")==0||msg.indexOf("/w ")==0)){';
+  function patchAwayTimer(onSubmitOrigStr) {
+    if (!onSubmitOrigStr.includes(AWAY_TIMER_NEEDLE)) {
+      throw new Error(
+        `patchAwayTimer: upstream onsubmit needle not found \u2014 the away-timer condition changed upstream; "/w" messages will no longer reset the away timer. Inspect the hold form's onsubmit and update AWAY_TIMER_NEEDLE.`
+      );
+    }
+    return onSubmitOrigStr.replace(AWAY_TIMER_NEEDLE, AWAY_TIMER_REPLACEMENT);
+  }
+  function buildPatchedHandler(holdForm) {
+    const raw = holdForm?.getAttribute("onsubmit") || "";
+    if (!raw) return null;
+    return new Function(patchAwayTimer(raw));
+  }
+
   // src/input-history.ts
   var HISTORY_MAX = 50;
   var DRAFT_DEBOUNCE_MS = 500;
@@ -3981,6 +4239,7 @@
     const cmd = classifyMessage(rawMsg);
     if (cmd.handled) {
       switch (cmd.type) {
+        case "aw":
         case "help":
         case "reload":
         case "open-whisper":
@@ -4026,6 +4285,9 @@
           case "superban":
             break;
           // Stub for T12.
+          case "aw":
+            openAwModal();
+            break;
           case "id":
             buildIdPopup(cmd.name || "");
             break;
@@ -4308,6 +4570,9 @@
       2,
       "bcc-bettercc",
       buildColorSwatch(),
+      iconBtn("fa-users", "Anwesende", () => {
+        openAwModal();
+      }),
       iconBtn("fa-cog", "Einstellungen", () => {
         openSettings();
       }),
