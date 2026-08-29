@@ -8,7 +8,7 @@ import { buildAwModel, applyFilter, formatStand } from "../src/aw-modal";
 import type { User, UserWithChannel } from "../src/store";
 import type { GlobalDiff } from "../src/global-userlist";
 
-// Helper factories — placeholder names only, never real usernames.
+// Helper factories: placeholder names only, never real usernames.
 const mkUser = (name: string, extra: Partial<User> = {}): User => ({
   name,
   key: name.toLowerCase(),

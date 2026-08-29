@@ -217,6 +217,7 @@ function setState(text: string): void {
  */
 function renderBody(): void {
   if (!model || !bodyEl || !countSpan || !standSpan || !stateEl) return;
+  const filtering = filterQuery.trim() !== "";
   const view = applyFilter(model, filterQuery);
 
   // Smoke probe for the live-mode skip: every actual rebuild bumps this,
@@ -231,8 +232,7 @@ function renderBody(): void {
     const head = document.createElement("div");
     head.className = "bcc-aw-section-head";
     // Like the overall count: matched/total while filtering, plain otherwise.
-    const count =
-      filterQuery.trim() !== "" ? `${section.rows.length}/${section.total}` : `${section.total}`;
+    const count = filtering ? `${section.rows.length}/${section.total}` : `${section.total}`;
     head.textContent = `${section.channel} (${count})`;
     sectionEl.appendChild(head);
 
@@ -268,8 +268,7 @@ function renderBody(): void {
     bodyEl.appendChild(sectionEl);
   }
 
-  countSpan.textContent =
-    filterQuery.trim() !== "" ? `${view.matched}/${view.total}` : String(view.total);
+  countSpan.textContent = filtering ? `${view.matched}/${view.total}` : String(view.total);
   standSpan.textContent = formatStand(new Date());
 
   setState(view.sections.length === 0 ? EMPTY_TEXT : "");
