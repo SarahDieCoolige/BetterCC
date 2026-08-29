@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=618b3818
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=73866270
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -3884,7 +3884,7 @@
       if (rows.length === 0) continue;
       matched += rows.length;
       const ghosts = s.ghosts.filter((g) => g.name.toLowerCase().includes(q));
-      sections.push({ channel: s.channel, rows, ghosts, total: rows.length });
+      sections.push({ channel: s.channel, rows, ghosts, total: s.total });
     }
     return { sections, matched, total: model2.total };
   }
@@ -3925,7 +3925,8 @@
       sectionEl.className = "bcc-aw-section";
       const head = document.createElement("div");
       head.className = "bcc-aw-section-head";
-      head.textContent = `${section.channel} (${section.rows.length})`;
+      const count = filterQuery.trim() !== "" ? `${section.rows.length}/${section.total}` : `${section.total}`;
+      head.textContent = `${section.channel} (${count})`;
       sectionEl.appendChild(head);
       const rowsEl = document.createElement("div");
       rowsEl.className = "bcc-aw-rows";
