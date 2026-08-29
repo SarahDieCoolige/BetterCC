@@ -1281,6 +1281,12 @@
   font-size: 12px;
   white-space: nowrap;
 }
+/* Live mode: the Stand stamp and the manual refresh are hidden while the
+   toggle runs (the overlay carries .bcc-aw-live, see aw-modal.ts). */
+.bcc-aw-live .bcc-aw-stand,
+.bcc-aw-live .bcc-aw-sync {
+  display: none;
+}
 .bcc-aw-toolbar button {
   cursor: pointer;
   flex-shrink: 0;
@@ -1317,6 +1323,32 @@
   border-radius: 4px;
   color: var(--bcc-text-muted);
   cursor: default;
+}
+/* Transient diff highlights (aw-modal.ts): joined rows fade green, ghosts
+   fade red and drop to opacity 0, then remove themselves on animationend. */
+@keyframes bcc-aw-joined-fade {
+  from {
+    background-color: color-mix(in srgb, var(--bcc-ok) 22%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.bcc-aw-row.bcc-joined {
+  animation: bcc-aw-joined-fade 5s ease-out forwards;
+}
+@keyframes bcc-aw-ghost-fade {
+  from {
+    background-color: color-mix(in srgb, var(--bcc-danger) 22%, transparent);
+    opacity: 1;
+  }
+  to {
+    background-color: transparent;
+    opacity: 0;
+  }
+}
+.bcc-aw-ghost {
+  animation: bcc-aw-ghost-fade 5s ease-in forwards;
 }
 .bcc-aw-state {
   color: var(--bcc-text-muted);

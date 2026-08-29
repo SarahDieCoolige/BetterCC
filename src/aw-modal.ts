@@ -180,6 +180,14 @@ let filterQuery = "";
 let firstRender = true; // the react() immediate call is the mount render
 let prevEmpty = true; // was the previously rendered model empty (cold-open guard)
 let pendingOwnFetches = 0; // latch: fetches THIS modal triggered
+let live = false; // live mode renders every non-empty diff; per-open, never stored
+// Ghost keys (channel + NUL + key) whose fade already ran: renderBody skips
+// them so a filter re-render cannot resurrect an expired ghost. Cleared on
+// every event rebuild, where the fresh diff legitimately brings new ghosts.
+let expiredGhosts = new Set<string>();
+
+/** Expiry-set key for a ghost: the NUL keeps channel/key splits unambiguous. */
+const ghostKey = (channel: string, key: string): string => channel + "\u0000" + key;
 
 // Refs held across renders; rebuilt per open, nulled on close.
 let bodyEl: HTMLElement | null = null;
@@ -208,6 +216,10 @@ function renderBody(): void {
   if (!model || !bodyEl || !countSpan || !standSpan || !stateEl) return;
   const view = applyFilter(model, filterQuery);
 
+  // Smoke probe for the live-mode skip: every actual rebuild bumps this,
+  // a skipped event must not.
+  bodyEl.dataset.bccAwRender = String((Number(bodyEl.dataset.bccAwRender) || 0) + 1);
+
   bodyEl.replaceChildren();
   for (const section of view.sections) {
     const sectionEl = document.createElement("div");
@@ -228,14 +240,22 @@ function renderBody(): void {
       rowEl.className = "bcc-aw-row";
       rowEl.textContent = row.name;
       rowEl.dataset.key = row.key;
+      // Drives the joined fade (bcc-aw-joined-fade); the animationend
+      // listener strips it again once the fade ran.
+      if (row.transient === "joined") rowEl.classList.add("bcc-joined");
       rowsEl.appendChild(rowEl);
     }
     for (const ghost of section.ghosts) {
-      // Ghosts carry no bcc-aw-row class and no dataset: the delegated click
-      // matches neither, so they are inert by construction.
+      // An already-faded ghost stays gone: the model still contains it (so a
+      // filter re-render would rebuild it), the expiry set filters it here.
+      if (expiredGhosts.has(ghostKey(section.channel, ghost.key))) continue;
+      // Ghosts carry no bcc-aw-row class, so the delegated click never
+      // matches one; the dataset is expiry bookkeeping only.
       const ghostEl = document.createElement("span");
       ghostEl.className = "bcc-aw-ghost";
       ghostEl.textContent = ghost.name;
+      ghostEl.dataset.key = ghost.key;
+      ghostEl.dataset.channel = section.channel;
       rowsEl.appendChild(ghostEl);
     }
     sectionEl.appendChild(rowsEl);
@@ -250,21 +270,28 @@ function renderBody(): void {
 }
 
 /**
- * Static-mode gate: only the mount render and the modal's own fetches rebuild
- * the model. Background poll events return early, so the snapshot on screen
- * stays frozen until refresh. A later task adds live mode on top.
+ * Rebuild triggers per mode. The mount render always draws. Live mode draws
+ * every event except a fully idle one: the store notifies every 5s even with
+ * an empty diff, and an idle list must not twitch. Static mode draws only the
+ * modal's own fetches, empty diff included; background events are ignored.
  */
 function renderList(payload: Ephemeral["globalUserlist"]): void {
   if (firstRender) {
     model = buildAwModel(payload.channels, null, { mountRender: true });
     firstRender = false;
   } else {
-    if (pendingOwnFetches === 0) return;
+    if (live) {
+      if (payload.added.length === 0 && payload.removed.length === 0) return;
+    } else if (pendingOwnFetches === 0) {
+      return;
+    }
     model = buildAwModel(
       payload.channels,
       { added: payload.added, removed: payload.removed },
       { prevEmpty },
     );
+    // The model rebuilt from a new event: fresh ghosts are legitimate again.
+    expiredGhosts.clear();
   }
   prevEmpty = model.total === 0;
   usersByKey = new Map();
@@ -316,6 +343,7 @@ export function closeAwModal(): void {
   stateEl = null;
   model = null;
   usersByKey = new Map();
+  expiredGhosts = new Set();
 }
 
 /** Open the Anwesende overview: snapshot first, then one forced fresh fetch. */
@@ -325,13 +353,15 @@ export function openAwModal(): void {
   const shell = document.querySelector(".bcc-shell");
   if (!shell) return;
 
-  // Per-open reset: static mode always starts cold.
+  // Per-open reset: static mode always starts cold, live never persists.
   filterQuery = "";
   firstRender = true;
   prevEmpty = true;
   pendingOwnFetches = 0;
+  live = false;
   model = null;
   usersByKey = new Map();
+  expiredGhosts = new Set();
 
   // ── Overlay ──
   overlayEl = document.createElement("div");
@@ -381,9 +411,10 @@ export function openAwModal(): void {
   toolbar.appendChild(standSpan);
 
   const refreshBtn = document.createElement("button");
-  // Same canonical .bcc-icon-btn shape as the /id search button.
+  // Same canonical .bcc-icon-btn shape as the /id search button; bcc-aw-sync
+  // is the hook the live mode hides it by.
   refreshBtn.type = "button";
-  refreshBtn.className = "bcc-icon-btn";
+  refreshBtn.className = "bcc-icon-btn bcc-aw-sync";
   refreshBtn.setAttribute("aria-label", "Jetzt aktualisieren");
   refreshBtn.title = "Jetzt aktualisieren";
   refreshBtn.appendChild(iconElement("fa-sync"));
@@ -391,6 +422,25 @@ export function openAwModal(): void {
     if (overlayEl) void fetchAndRender(overlayEl);
   });
   toolbar.appendChild(refreshBtn);
+
+  // Live toggle (per-open, never stored): while live, Stand + sync hide via
+  // the bcc-aw-live class on the overlay; pausing restores them.
+  const liveBtn = document.createElement("button");
+  liveBtn.type = "button";
+  liveBtn.className = "bcc-icon-btn";
+  const applyLiveUi = (): void => {
+    overlayEl?.classList.toggle("bcc-aw-live", live);
+    liveBtn.replaceChildren(iconElement(live ? "fa-pause" : "fa-play"));
+    const label = live ? "Automatische Aktualisierung pausieren" : "Automatisch aktualisieren";
+    liveBtn.title = label;
+    liveBtn.setAttribute("aria-label", label);
+  };
+  liveBtn.addEventListener("click", () => {
+    live = !live;
+    applyLiveUi();
+  });
+  applyLiveUi();
+  toolbar.appendChild(liveBtn);
 
   card.appendChild(toolbar);
 
@@ -414,6 +464,20 @@ export function openAwModal(): void {
     });
   });
   card.appendChild(bodyEl);
+
+  // One delegated animationend for every fade (it bubbles): ghosts expire
+  // and remove themselves (no timers, no per-element listeners); joined rows
+  // drop the class, else the forwards fill keeps painting the faded
+  // background and kills the hover tint forever.
+  bodyEl.addEventListener("animationend", (e: AnimationEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains("bcc-aw-ghost")) {
+      expiredGhosts.add(ghostKey(target.dataset.channel ?? "", target.dataset.key ?? ""));
+      target.remove();
+    } else if (target.classList.contains("bcc-joined")) {
+      target.classList.remove("bcc-joined");
+    }
+  });
 
   // ── Inline state line (loading / error / empty) ──
   stateEl = document.createElement("div");
