@@ -554,8 +554,10 @@
 /* ─── Input area (textarea fills the rest) ─── */
 /* ─── Input area (textarea fills everything left of the controls box) ─── */
 .bcc-input-area {
-  flex: 1 1 200px;
-  min-width: 0;
+  /* Grows to fill, but never shrinks: when the window runs out of space the
+     controls box yields first, so the input keeps its 200px floor at any
+     width (mobile included). */
+  flex: 1 0 200px;
   align-self: stretch;
   display: flex;
   flex-direction: column;
@@ -608,13 +610,17 @@
 .bcc-compact .bcc-pill {
   grid-template-rows: auto;
 }
-/* The controls box: pills + exit, always flush right. Fixed width reserved
-   for the EXTENDED pill set so the input area never changes width when
-   compact mode hides icons (compact pills just leave slack here). Sized for
-   chat 6 / bettercc 5 / links 4 icons + exit + gaps; bump when the footer
-   gains icons. */
+/* The controls box: pills + exit, always flush right. Prefers 400px, sized
+   for the EXTENDED pill set so the input width never changes when compact
+   mode hides icons (compact pills just leave slack here). Below ~660px of
+   viewport the box yields instead of the input: it shrinks and clips its
+   leftmost pills (overflow hidden + flex-end keeps exit + right pills
+   visible), while the input holds its 200px floor. Bump the 400px when the
+   footer gains icons. */
 .bcc-controls {
-  flex: 0 0 400px;
+  flex: 0 1 400px;
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: flex-end;
