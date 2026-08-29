@@ -552,7 +552,7 @@
 }
 
 /* ─── Input area (textarea fills the rest) ─── */
-/* ─── Input area (textarea fills the rest) ─── */
+/* ─── Input area (textarea fills everything left of the controls box) ─── */
 .bcc-input-area {
   flex: 1 1 200px;
   min-width: 0;
@@ -607,6 +607,18 @@
    The .bcc-compact rule below flattens each pill to one row. */
 .bcc-compact .bcc-pill {
   grid-template-rows: auto;
+}
+/* The controls box: pills + exit, always flush right. Fixed width reserved
+   for the EXTENDED pill set so the input area never changes width when
+   compact mode hides icons (compact pills just leave slack here). Sized for
+   chat 6 / bettercc 5 / links 4 icons + exit + gaps; bump when the footer
+   gains icons. */
+.bcc-controls {
+  flex: 0 0 400px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* ─── Icon buttons (32×32) ─── */

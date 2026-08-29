@@ -286,8 +286,12 @@ export function mountFooter(): void {
   }
 
   // Append the pill groups AFTER the textarea (mountInput already put
-  // .bcc-input-area first; it's flex:1 so these sit to its right).
-  chatbar.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
+  // .bcc-input-area first). Pills + exit live in one fixed-width controls
+  // box so the input's width is identical in extended and compact mode.
+  const controls = document.createElement("div");
+  controls.className = "bcc-controls";
+  controls.append(buildChatPill(), buildBetterccPill(), buildLinksPill(), buildExitBtn());
+  chatbar.append(controls);
 
   cclog("footer mounted — pill groups + FA", "v3");
 }
