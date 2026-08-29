@@ -225,53 +225,56 @@ function renderBody(): void {
   bodyEl.dataset.bccAwRender = String((Number(bodyEl.dataset.bccAwRender) || 0) + 1);
 
   bodyEl.replaceChildren();
-  for (const section of view.sections) {
-    const sectionEl = document.createElement("div");
-    sectionEl.className = "bcc-aw-section";
-
-    const head = document.createElement("div");
-    head.className = "bcc-aw-section-head";
-    // Like the overall count: matched/total while filtering, plain otherwise.
-    const count = filtering ? `${section.rows.length}/${section.total}` : `${section.total}`;
-    head.textContent = `${section.channel} (${count})`;
-    sectionEl.appendChild(head);
-
-    // Nicks flow inline and wrap, several per line (like upstream's own
-    // Anwesende lists), not one full-width row per user.
-    const rowsEl = document.createElement("div");
-    rowsEl.className = "bcc-aw-rows";
-
-    for (const row of section.rows) {
-      const rowEl = document.createElement("span");
-      rowEl.className = "bcc-aw-row";
-      rowEl.textContent = row.name;
-      rowEl.dataset.key = row.key;
-      // Drives the joined fade (bcc-aw-joined-fade); the animationend
-      // listener strips it again once the fade ran.
-      if (row.transient === "joined") rowEl.classList.add("bcc-joined");
-      rowsEl.appendChild(rowEl);
-    }
-    for (const ghost of section.ghosts) {
-      // An already-faded ghost stays gone: the model still contains it (so a
-      // filter re-render would rebuild it), the expiry set filters it here.
-      if (expiredGhosts.has(ghostKey(section.channel, ghost.key))) continue;
-      // Ghosts carry no bcc-aw-row class, so the delegated click never
-      // matches one; the dataset is expiry bookkeeping only.
-      const ghostEl = document.createElement("span");
-      ghostEl.className = "bcc-aw-ghost";
-      ghostEl.textContent = ghost.name;
-      ghostEl.dataset.key = ghost.key;
-      ghostEl.dataset.channel = section.channel;
-      rowsEl.appendChild(ghostEl);
-    }
-    sectionEl.appendChild(rowsEl);
-    bodyEl.appendChild(sectionEl);
-  }
+  for (const section of view.sections) bodyEl.appendChild(buildSectionEl(section, filtering));
 
   countSpan.textContent = filtering ? `${view.matched}/${view.total}` : String(view.total);
   standSpan.textContent = formatStand(new Date());
 
   setState(view.sections.length === 0 ? EMPTY_TEXT : "");
+}
+
+/** One channel block: head with the n/m count, inline nick spans, ghosts. */
+function buildSectionEl(section: AwSection, filtering: boolean): HTMLElement {
+  const sectionEl = document.createElement("div");
+  sectionEl.className = "bcc-aw-section";
+
+  const head = document.createElement("div");
+  head.className = "bcc-aw-section-head";
+  // Like the overall count: matched/total while filtering, plain otherwise.
+  const count = filtering ? `${section.rows.length}/${section.total}` : `${section.total}`;
+  head.textContent = `${section.channel} (${count})`;
+  sectionEl.appendChild(head);
+
+  // Nicks flow inline and wrap, several per line (like upstream's own
+  // Anwesende lists), not one full-width row per user.
+  const rowsEl = document.createElement("div");
+  rowsEl.className = "bcc-aw-rows";
+
+  for (const row of section.rows) {
+    const rowEl = document.createElement("span");
+    rowEl.className = "bcc-aw-row";
+    rowEl.textContent = row.name;
+    rowEl.dataset.key = row.key;
+    // Drives the joined fade (bcc-aw-joined-fade); the animationend
+    // listener strips it again once the fade ran.
+    if (row.transient === "joined") rowEl.classList.add("bcc-joined");
+    rowsEl.appendChild(rowEl);
+  }
+  for (const ghost of section.ghosts) {
+    // An already-faded ghost stays gone: the model still contains it (so a
+    // filter re-render would rebuild it), the expiry set filters it here.
+    if (expiredGhosts.has(ghostKey(section.channel, ghost.key))) continue;
+    // Ghosts carry no bcc-aw-row class, so the delegated click never
+    // matches one; the dataset is expiry bookkeeping only.
+    const ghostEl = document.createElement("span");
+    ghostEl.className = "bcc-aw-ghost";
+    ghostEl.textContent = ghost.name;
+    ghostEl.dataset.key = ghost.key;
+    ghostEl.dataset.channel = section.channel;
+    rowsEl.appendChild(ghostEl);
+  }
+  sectionEl.appendChild(rowsEl);
+  return sectionEl;
 }
 
 /**
