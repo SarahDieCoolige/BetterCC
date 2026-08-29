@@ -1307,21 +1307,22 @@
   padding: 4px 0 10px;
   line-height: 1.7;
 }
-.bcc-aw-row {
+/* Rows and ghosts share the inline chip base; they differ in cursor, hover
+   and the ghost's muted text. */
+.bcc-aw-row,
+.bcc-aw-ghost {
   display: inline-block;
   padding: 2px 6px;
   margin: 1px 6px 1px 0;
   border-radius: 4px;
+}
+.bcc-aw-row {
   cursor: pointer;
 }
 .bcc-aw-row:hover {
   background: var(--bcc-surface-hover);
 }
 .bcc-aw-ghost {
-  display: inline-block;
-  padding: 2px 6px;
-  margin: 1px 6px 1px 0;
-  border-radius: 4px;
   color: var(--bcc-text-muted);
   cursor: default;
 }
