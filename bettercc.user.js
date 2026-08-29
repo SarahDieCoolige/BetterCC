@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=10db2cb2
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=618b3818
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -3903,6 +3903,9 @@
   var firstRender = true;
   var prevEmpty = true;
   var pendingOwnFetches = 0;
+  var live = false;
+  var expiredGhosts = /* @__PURE__ */ new Set();
+  var ghostKey = (channel, key) => channel + "\0" + key;
   var bodyEl = null;
   var countSpan = null;
   var standSpan = null;
@@ -3915,6 +3918,7 @@
   function renderBody() {
     if (!model || !bodyEl || !countSpan || !standSpan || !stateEl) return;
     const view = applyFilter(model, filterQuery);
+    bodyEl.dataset.bccAwRender = String((Number(bodyEl.dataset.bccAwRender) || 0) + 1);
     bodyEl.replaceChildren();
     for (const section of view.sections) {
       const sectionEl = document.createElement("div");
@@ -3930,12 +3934,16 @@
         rowEl.className = "bcc-aw-row";
         rowEl.textContent = row.name;
         rowEl.dataset.key = row.key;
+        if (row.transient === "joined") rowEl.classList.add("bcc-joined");
         rowsEl.appendChild(rowEl);
       }
       for (const ghost of section.ghosts) {
+        if (expiredGhosts.has(ghostKey(section.channel, ghost.key))) continue;
         const ghostEl = document.createElement("span");
         ghostEl.className = "bcc-aw-ghost";
         ghostEl.textContent = ghost.name;
+        ghostEl.dataset.key = ghost.key;
+        ghostEl.dataset.channel = section.channel;
         rowsEl.appendChild(ghostEl);
       }
       sectionEl.appendChild(rowsEl);
@@ -3950,12 +3958,17 @@
       model = buildAwModel(payload.channels, null, { mountRender: true });
       firstRender = false;
     } else {
-      if (pendingOwnFetches === 0) return;
+      if (live) {
+        if (payload.added.length === 0 && payload.removed.length === 0) return;
+      } else if (pendingOwnFetches === 0) {
+        return;
+      }
       model = buildAwModel(
         payload.channels,
         { added: payload.added, removed: payload.removed },
         { prevEmpty }
       );
+      expiredGhosts.clear();
     }
     prevEmpty = model.total === 0;
     usersByKey = /* @__PURE__ */ new Map();
@@ -3995,6 +4008,7 @@
     stateEl = null;
     model = null;
     usersByKey = /* @__PURE__ */ new Map();
+    expiredGhosts = /* @__PURE__ */ new Set();
   }
   function openAwModal() {
     closeAwModal();
@@ -4004,8 +4018,10 @@
     firstRender = true;
     prevEmpty = true;
     pendingOwnFetches = 0;
+    live = false;
     model = null;
     usersByKey = /* @__PURE__ */ new Map();
+    expiredGhosts = /* @__PURE__ */ new Set();
     overlayEl3 = document.createElement("div");
     overlayEl3.className = "bcc-aw-overlay";
     const card = document.createElement("div");
@@ -4040,7 +4056,7 @@
     toolbar.appendChild(standSpan);
     const refreshBtn = document.createElement("button");
     refreshBtn.type = "button";
-    refreshBtn.className = "bcc-icon-btn";
+    refreshBtn.className = "bcc-icon-btn bcc-aw-sync";
     refreshBtn.setAttribute("aria-label", "Jetzt aktualisieren");
     refreshBtn.title = "Jetzt aktualisieren";
     refreshBtn.appendChild(iconElement("fa-sync"));
@@ -4048,6 +4064,22 @@
       if (overlayEl3) void fetchAndRender(overlayEl3);
     });
     toolbar.appendChild(refreshBtn);
+    const liveBtn = document.createElement("button");
+    liveBtn.type = "button";
+    liveBtn.className = "bcc-icon-btn";
+    const applyLiveUi = () => {
+      overlayEl3?.classList.toggle("bcc-aw-live", live);
+      liveBtn.replaceChildren(iconElement(live ? "fa-pause" : "fa-play"));
+      const label = live ? "Automatische Aktualisierung pausieren" : "Automatisch aktualisieren";
+      liveBtn.title = label;
+      liveBtn.setAttribute("aria-label", label);
+    };
+    liveBtn.addEventListener("click", () => {
+      live = !live;
+      applyLiveUi();
+    });
+    applyLiveUi();
+    toolbar.appendChild(liveBtn);
     card.appendChild(toolbar);
     bodyEl = document.createElement("div");
     bodyEl.className = "bcc-aw-body";
@@ -4064,6 +4096,15 @@
       });
     });
     card.appendChild(bodyEl);
+    bodyEl.addEventListener("animationend", (e) => {
+      const target = e.target;
+      if (target.classList.contains("bcc-aw-ghost")) {
+        expiredGhosts.add(ghostKey(target.dataset.channel ?? "", target.dataset.key ?? ""));
+        target.remove();
+      } else if (target.classList.contains("bcc-joined")) {
+        target.classList.remove("bcc-joined");
+      }
+    });
     stateEl = document.createElement("div");
     stateEl.className = "bcc-aw-state";
     card.appendChild(stateEl);
