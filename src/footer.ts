@@ -175,12 +175,19 @@ function buildBetterccPill(): HTMLElement {
     void toggleSchemeVersion();
   });
 
+  // Compact mode keeps the swatch and the AW overview button (bcc-keep,
+  // same mechanism as the chat pill's kept icons).
+  const swatch = buildColorSwatch();
+  swatch.classList.add("bcc-keep");
+  const awBtn = iconBtn("fa-users", "Anwesende", () => {
+    openAwModal();
+  });
+  awBtn.classList.add("bcc-keep");
+
   return pill(
     "bcc-bettercc",
-    buildColorSwatch(),
-    iconBtn("fa-users", "Anwesende", () => {
-      openAwModal();
-    }),
+    swatch,
+    awBtn,
     iconBtn("fa-cog", "Einstellungen", () => {
       openSettings();
     }),

@@ -535,21 +535,23 @@
 }
 
 /* Compact pill states: hide non-essential children; every pill flattens to a
-   single row (grid rule sits next to the base .bcc-pill below). Chat pill
-   keeps its keep items pulled to the front. */
+   single row (grid rule sits next to the base .bcc-pill below). Kept icons
+   (bcc-keep) survive: the chat pill's interaction icons, the BetterCC pill's
+   swatch + overview button. */
 .bcc-compact .bcc-chat > :not(.bcc-keep) {
   display: none;
 }
 .bcc-compact .bcc-chat > .bcc-keep {
   order: -1;
 }
-.bcc-compact .bcc-bettercc > :not(:first-child) {
+.bcc-compact .bcc-bettercc > :not(.bcc-keep) {
   display: none;
 }
 .bcc-compact .bcc-links > :not(:first-child) {
   display: none;
 }
 
+/* ─── Input area (textarea fills the rest) ─── */
 /* ─── Input area (textarea fills the rest) ─── */
 .bcc-input-area {
   flex: 1 1 200px;
