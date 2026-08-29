@@ -81,12 +81,19 @@ async function pollOnce(): Promise<void> {
   }
 }
 
+/**
+ * Run one poll cycle, then reschedule the loop if still running. The shared
+ * body of startPolling / scheduleNext / refreshAwNow; names the
+ * "poll-then-rearm" concept so the three call sites don't drift apart.
+ */
+function pollAndReschedule(intervalMs: number): Promise<void> {
+  return pollOnce().finally(() => {
+    if (running) scheduleNext(intervalMs);
+  });
+}
+
 function scheduleNext(intervalMs: number): void {
-  timerId = setTimeout(() => {
-    pollOnce().finally(() => {
-      if (running) scheduleNext(intervalMs);
-    });
-  }, intervalMs);
+  timerId = setTimeout(() => pollAndReschedule(intervalMs), intervalMs);
 }
 
 /**
@@ -96,9 +103,7 @@ function scheduleNext(intervalMs: number): void {
 export function startPolling(intervalMs = POLL_CADENCES.aw): void {
   if (running) return;
   running = true;
-  pollOnce().finally(() => {
-    if (running) scheduleNext(intervalMs);
-  });
+  pollAndReschedule(intervalMs);
   cclog("global userlist poll started — aw.js every ~" + intervalMs + " ms", "v3");
 }
 
@@ -107,6 +112,17 @@ export function stopPolling(): void {
   if (timerId !== undefined) clearTimeout(timerId);
   timerId = undefined;
   running = false;
+}
+
+/**
+ * Immediate refresh: cancel any pending timer-fired poll, fetch now, reschedule
+ * one full interval from this cycle. Unlike refreshUlistNow this returns the
+ * poll promise so callers can await completion.
+ */
+export function refreshAwNow(intervalMs = POLL_CADENCES.aw): Promise<void> {
+  if (timerId !== undefined) clearTimeout(timerId);
+  timerId = undefined;
+  return pollAndReschedule(intervalMs);
 }
 
 // ─── Snapshot access ───────────────────────────────────────────────────────

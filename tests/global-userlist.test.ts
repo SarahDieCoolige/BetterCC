@@ -14,6 +14,7 @@ import { fetchAw } from "../src/upstream";
 import {
   startPolling,
   stopPolling,
+  refreshAwNow,
   diffGlobal,
   findUserChannel,
   getLastSnapshot,
@@ -320,6 +321,103 @@ describe("startPolling/stopPolling — fetch → parse → diff → set loop", (
     await vi.advanceTimersByTimeAsync(9000);
     // One 5s tick (t=5000) — a second 2s interval would have fired 4 more ×.
     expect(fetchAw).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ─── refreshAwNow (manual refresh seam) ─────────────────────────────────────
+
+describe("refreshAwNow — immediate fetch, cancels the pending poll", () => {
+  let storeEvents: Array<{ channels: Map<string, StoreUser[]>; added: any[]; removed: any[] }>;
+  let unsubscribe: () => void;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("GM_log", vi.fn());
+    vi.mocked(fetchAw).mockReset();
+    await initTestStore();
+    storeEvents = [];
+    unsubscribe = on("globalUserlist", (v) => {
+      storeEvents.push(v as { channels: Map<string, StoreUser[]>; added: any[]; removed: any[] });
+    });
+  });
+
+  afterEach(() => {
+    stopPolling();
+    unsubscribe();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("fetches immediately when called (no timer advance needed)", async () => {
+    vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
+    startPolling(5000);
+    await flushMicrotasks();
+    expect(fetchAw).toHaveBeenCalledTimes(1);
+
+    refreshAwNow();
+    expect(fetchAw).toHaveBeenCalledTimes(2); // synchronous fetch, like startPolling
+    await flushMicrotasks();
+  });
+
+  it("cancels the pending scheduled poll — no extra fetch at the old fire time", async () => {
+    vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
+    startPolling(5000);
+    await flushMicrotasks();
+    expect(fetchAw).toHaveBeenCalledTimes(1);
+
+    // Partway into the first interval: the loop's timer is due at t=5000.
+    await vi.advanceTimersByTimeAsync(2500); // now at t=2500
+
+    // Manual refresh fetches now and clears the timer due at t=5000.
+    refreshAwNow();
+    await flushMicrotasks();
+    expect(fetchAw).toHaveBeenCalledTimes(2);
+
+    // Advance to exactly the OLD timer's fire time; nothing may fire there.
+    await vi.advanceTimersByTimeAsync(2500); // now at t=5000
+    expect(fetchAw).toHaveBeenCalledTimes(2);
+
+    // The next fetch is one full interval after the refresh cycle (t=7500).
+    await vi.advanceTimersByTimeAsync(2500); // now at t=7500
+    await flushMicrotasks();
+    expect(fetchAw).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns a promise that resolves after the poll cycle", async () => {
+    vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
+    startPolling(5000);
+    await flushMicrotasks();
+    storeEvents = [];
+
+    let resolved = false;
+    const p = refreshAwNow().then(() => {
+      resolved = true;
+    });
+    // Nothing has been awaited yet; the cycle (fetch → parse → set) is still in flight.
+    expect(resolved).toBe(false);
+
+    await p;
+    // The cycle's store write happened before the promise resolved.
+    expect(resolved).toBe(true);
+    expect(storeEvents).toHaveLength(1);
+  });
+
+  it("the loop keeps rescheduling normally after a manual refresh", async () => {
+    vi.mocked(fetchAw).mockResolvedValue(AW_RAW);
+    startPolling(5000);
+    await flushMicrotasks(); // t=0: fetch 1
+    await vi.advanceTimersByTimeAsync(5000);
+    await flushMicrotasks(); // t=5000: fetch 2
+
+    refreshAwNow(); // fetch 3, re-arms at +5000
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(5000);
+    await flushMicrotasks(); // fetch 4
+    await vi.advanceTimersByTimeAsync(5000);
+    await flushMicrotasks(); // fetch 5
+
+    expect(fetchAw).toHaveBeenCalledTimes(5);
   });
 });
 
