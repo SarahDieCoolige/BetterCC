@@ -15,7 +15,7 @@ import { generateScheme as generateV2 } from "./scheme-v2";
 
 /** The panel's current applied values (a mirror of GM state). Compared against
  *  the open-time snapshot (`loaded`) to drive the Undo button. Covers every
- *  persisted store key, so export/import/reset/undo are complete — including
+ *  persisted store key, so export/import/reset/undo are complete, including
  *  the two keys without modal controls (compact toggles via the chatbar
  *  chevron, ban has no feature UI yet). */
 export interface SettingsDraft {

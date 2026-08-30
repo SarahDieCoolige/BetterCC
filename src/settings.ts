@@ -579,7 +579,7 @@ function buildChatPanel(panel: HTMLElement): void {
 
   panel.appendChild(field);
 
-  // Input-history hint (shipped 3.14.0). Purely informational — the recall
+  // Input-history hint (shipped 3.14.0). Purely informational: the recall
   // keys have no toggle, so discoverability lives here.
   const historyHint = document.createElement("p");
   historyHint.className = "bcc-settings-hint";
