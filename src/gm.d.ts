@@ -32,10 +32,17 @@ declare function GM_addValueChangeListener(
 ): number;
 declare function GM_removeValueChangeListener(id: number): void;
 
+// scriptHandler/version (the userscript manager, e.g. Violentmonkey) and the
+// script URLs are optional: exposure varies by manager. The Info tab renders
+// fallbacks when absent.
 declare var GM_info: {
   script: {
     version: string;
+    homepageURL?: string;
+    supportURL?: string;
   };
+  scriptHandler?: string;
+  version?: string;
 };
 
 declare var unsafeWindow: any;

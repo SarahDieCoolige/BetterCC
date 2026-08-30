@@ -7,15 +7,18 @@
 // z-index (2000) above the chat overlays (/id, user popup, photo preview) and
 // does not close them. Pure helpers live in settings-helpers.ts.
 
-import { iconElement } from "./dom";
+import { iconElement, copyText } from "./dom";
 import { get, set as storeSet } from "./store";
 import { setColor, setSchemeVersion } from "./theme";
 import { cclog, getUserKey } from "./utils";
 import { COMMANDS } from "./commands";
-import { getChatNick, getChannel } from "./upstream";
+import { getChatNick, getChannel, isGuest } from "./upstream";
 import { type BccColorScheme } from "./scheme-v1";
+import { INFO_MANAGER_UNKNOWN } from "./health-strings";
 import {
   type SettingsDraft,
+  type InfoRow,
+  type DiagnosticsFields,
   defaultDraft,
   schemeForPreview,
   validateColor,
@@ -27,6 +30,9 @@ import {
   serializeExport,
   exportFileName,
   parseImport,
+  connInfoRows,
+  healthInfoRows,
+  buildDiagnosticsText,
 } from "./settings-helpers";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -932,19 +938,11 @@ function buildDatenPanel(panel: HTMLElement): void {
 
 // ─── Info panel ──────────────────────────────────────────────────────────────
 
-/** Read-only diagnostics: version, user, channel, storage key example. */
-function buildInfoPanel(panel: HTMLElement): void {
+/** Wrap InfoRow[] into a .bcc-info-list (key/val rows, bad values tinted). */
+function renderInfoRows(rows: InfoRow[]): HTMLElement {
   const list = document.createElement("div");
   list.className = "bcc-info-list";
-
-  const rows: { key: string; val: string }[] = [
-    { key: "Version", val: GM_info.script.version },
-    { key: "Benutzer", val: getChatNick() || "\u2013" },
-    { key: "Kanal", val: getChannel() || "\u2013" },
-    { key: "Speicher-Schlüssel (Bsp.)", val: getUserKey("color") },
-  ];
-
-  for (const { key, val } of rows) {
+  for (const { key, val, bad } of rows) {
     const row = document.createElement("div");
     row.className = "bcc-info-row";
 
@@ -953,15 +951,117 @@ function buildInfoPanel(panel: HTMLElement): void {
     keyEl.textContent = key;
 
     const valEl = document.createElement("span");
-    valEl.className = "bcc-info-val";
+    valEl.className = "bcc-info-val" + (bad ? " bcc-info-bad" : "");
     valEl.textContent = val;
 
-    row.appendChild(keyEl);
-    row.appendChild(valEl);
+    row.append(keyEl, valEl);
     list.appendChild(row);
   }
+  return list;
+}
 
-  panel.appendChild(list);
+/** A headed section like the other panels' (heading + children). */
+function infoSection(heading: string, ...children: HTMLElement[]): HTMLElement {
+  const section = document.createElement("section");
+  section.className = "bcc-appearance-section";
+  const h = document.createElement("h3");
+  h.className = "bcc-appearance-heading";
+  h.textContent = heading;
+  section.appendChild(h);
+  section.append(...children);
+  return section;
+}
+
+/** An external link row (target blank, safe rel). */
+function infoLink(label: string, url: string): HTMLAnchorElement {
+  const a = document.createElement("a");
+  a.className = "bcc-info-link";
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.textContent = label;
+  return a;
+}
+
+/** Read-only diagnostics: environment, connection, self-checks, links.
+ *  Snapshotted once per open, like every other panel here (no react). */
+function buildInfoPanel(panel: HTMLElement): void {
+  const now = Date.now();
+  const nick = getChatNick();
+  const manager = GM_info.scriptHandler
+    ? GM_info.scriptHandler + (GM_info.version ? " " + GM_info.version : "")
+    : INFO_MANAGER_UNKNOWN;
+
+  // ── Umgebung ──
+  panel.appendChild(
+    infoSection(
+      "Umgebung",
+      renderInfoRows([
+        { key: "Version", val: GM_info.script.version },
+        { key: "Userscript-Manager", val: manager },
+        { key: "Benutzer", val: nick ? nick + (isGuest() ? " (Gast)" : "") : "\u2013" },
+        { key: "Kanal", val: getChannel() || "\u2013" },
+        { key: "Speicher-Schlüssel (Bsp.)", val: getUserKey("color") },
+      ]),
+    ),
+  );
+
+  // ── Verbindung + Datenquellen ──
+  panel.appendChild(
+    infoSection("Verbindung", renderInfoRows(connInfoRows(get("conn"), get("freshness"), now))),
+  );
+
+  // ── Diagnose + report copy button ──
+  const copyResult = document.createElement("span");
+  copyResult.className = "bcc-info-copy-result";
+  copyResult.setAttribute("aria-live", "polite");
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "bcc-settings-btn";
+  copyBtn.textContent = "Diagnose kopieren";
+  copyBtn.addEventListener("click", async () => {
+    const fields: DiagnosticsFields = {
+      version: GM_info.script.version,
+      manager,
+      user: nick || "gast",
+      channel: getChannel() || "",
+      storageKey: getUserKey("color"),
+      url: location.href,
+      userAgent: navigator.userAgent,
+      time: new Date().toISOString(),
+      conn: get("conn"),
+      bccHealth: get("bccHealth"),
+      freshness: get("freshness"),
+    };
+    const ok = await copyText(buildDiagnosticsText(fields));
+    copyResult.textContent = ok ? "Kopiert." : "Kopieren fehlgeschlagen.";
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "bcc-info-actions";
+  actions.append(copyBtn, copyResult);
+
+  panel.appendChild(
+    infoSection("Diagnose", renderInfoRows(healthInfoRows(get("bccHealth"))), actions),
+  );
+
+  // ── Links (only what the manager exposes in GM_info) ──
+  const home = GM_info.script.homepageURL;
+  const support = GM_info.script.supportURL;
+  if (home || support) {
+    const links = document.createElement("div");
+    links.className = "bcc-info-links";
+    if (support) links.appendChild(infoLink("Problem melden (GitHub Issues)", support));
+    if (home) links.appendChild(infoLink("BetterCC auf GitHub", home));
+    panel.appendChild(infoSection("Links", links));
+  }
+
+  // ── Full state pointer ──
+  const hint = document.createElement("p");
+  hint.className = "bcc-settings-hint";
+  hint.textContent = "Vollständiger Zustand: bettercc.state() in der Browser-Konsole.";
+  panel.appendChild(hint);
 }
 
 // ─── Befehle panel ──────────────────────────────────────────────────────────

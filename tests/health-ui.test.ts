@@ -288,8 +288,8 @@ describe("T6 source wiring", () => {
     expect(src).toContain("reportSendPathBroken(");
   });
 
-  it("health-ui.ts has clipboard execCommand fallback", () => {
-    const src = readFileSync(resolve(srcDir, "health-ui.ts"), "utf-8");
+  it("dom.ts has the clipboard execCommand fallback (copyText moved there)", () => {
+    const src = readFileSync(resolve(srcDir, "dom.ts"), "utf-8");
     expect(src).toContain('execCommand("copy")');
   });
 

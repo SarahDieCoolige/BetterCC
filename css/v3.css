@@ -1782,6 +1782,30 @@
   color: var(--bcc-text);
   word-break: break-all;
 }
+.bcc-info-val.bcc-info-bad {
+  color: var(--bcc-accent-ban);
+}
+.bcc-info-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.bcc-info-copy-result {
+  font-size: 12px;
+  color: var(--bcc-text-muted);
+}
+.bcc-info-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bcc-info-link {
+  color: var(--bcc-accent-whisper);
+  font-size: 13px;
+  text-decoration: underline;
+  width: fit-content;
+}
 
 /* ─── Veil + card for critical connection states (T5) ─────────────────────────
    Veil anchors to the main region; the card floats centered above it. */

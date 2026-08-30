@@ -7,6 +7,36 @@
 // live in one place.
 
 /**
+ * Copy text to the clipboard. Navigator API first, with an execCommand
+ * fallback for userscript contexts that lack clipboard permission.
+ * Resolves false when both paths fail.
+ */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Userscript context may lack clipboard permission; execCommand still works
+    // with a focused temp textarea.
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    let ok: boolean;
+    try {
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    }
+    ta.remove();
+    return ok;
+  }
+}
+
+/**
  * Build a Font Awesome icon element: `<i class="fas {cls}" aria-hidden="true">`.
  * Decorative icons get aria-hidden so screen readers skip them (the button's
  * aria-label carries the accessible name).

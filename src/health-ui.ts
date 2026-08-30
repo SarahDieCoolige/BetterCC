@@ -10,6 +10,7 @@ import { react, snapshot, get } from "./store";
 import { reloadChat } from "./shell";
 import { cclog } from "./utils";
 import { reportBootError } from "./health";
+import { copyText } from "./dom";
 import {
   CARD_AUTHDEAD_TITLE,
   CARD_AUTHDEAD_TEXT,
@@ -103,32 +104,7 @@ function reportFields(
   };
 }
 
-// ─── Clipboard with fallback (T6) ────────────────────────────────────────────
-
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Userscript context may lack clipboard permission; execCommand still works
-    // with a focused temp textarea.
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    let ok: boolean;
-    try {
-      ok = document.execCommand("copy");
-    } catch {
-      ok = false;
-    }
-    ta.remove();
-    return ok;
-  }
-}
+// copyText moved to dom.ts (second consumer: the settings Info tab).
 
 // ─── Card builder ────────────────────────────────────────────────────────────
 //
