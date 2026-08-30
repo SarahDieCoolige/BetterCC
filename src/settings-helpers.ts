@@ -8,6 +8,29 @@
 
 import { generateScheme as generateV1, type BccColorScheme } from "./scheme-v1";
 import { generateScheme as generateV2 } from "./scheme-v2";
+import type { BccHealthState, ConnState, FreshnessState } from "./health-core";
+import {
+  STATUS_TEXT,
+  retryText,
+  formatAgo,
+  bootDisplayFor,
+  invalidSettingsText,
+  PERSIST_FAILED_TEXT,
+  STALE_LABEL_ULIST,
+  STALE_LABEL_AW,
+  STALE_LABEL_STATS,
+  INFO_OK,
+  INFO_SETTINGS_VALID,
+  INFO_INJECTION_DEGRADED,
+  INFO_NEVER,
+  INFO_LABEL_STATUS,
+  INFO_LABEL_LAST_MESSAGE,
+  INFO_LABEL_BOOT,
+  INFO_LABEL_SEND_PATH,
+  INFO_LABEL_INJECTION,
+  INFO_LABEL_SETTINGS,
+  INFO_LABEL_PERSIST,
+} from "./health-strings";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Types
@@ -330,4 +353,104 @@ function coerceField(key: keyof SettingsDraft, value: unknown, draft: SettingsDr
       }
       return false;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Info tab: diagnostics rows + bug-report text
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** One read-only row in the Info tab. `bad` tints the value as a problem. */
+export interface InfoRow {
+  key: string;
+  val: string;
+  bad?: boolean;
+}
+
+/** "vor 12 s" / "vor 3 min" / "nie" (stamp 0 = the source never delivered). */
+export function ageOrNever(stamp: number, now: number): string {
+  if (stamp <= 0) return INFO_NEVER;
+  return "vor " + formatAgo(Math.max(0, now - stamp));
+}
+
+/** Connection + freshness rows for the Info tab. */
+export function connInfoRows(conn: ConnState, freshness: FreshnessState, now: number): InfoRow[] {
+  const status =
+    conn.phase === "connecting" && conn.attempt > 0
+      ? retryText(conn.attempt)
+      : STATUS_TEXT[conn.phase];
+  return [
+    { key: INFO_LABEL_STATUS, val: status, bad: conn.phase !== "connected" },
+    { key: INFO_LABEL_LAST_MESSAGE, val: ageOrNever(conn.lastMessageAt, now) },
+    { key: STALE_LABEL_ULIST, val: ageOrNever(freshness.ulistAt, now) },
+    { key: STALE_LABEL_AW, val: ageOrNever(freshness.awAt, now) },
+    { key: STALE_LABEL_STATS, val: ageOrNever(freshness.statsAt, now) },
+  ];
+}
+
+/** BetterCC self-check rows (bccHealth facts). */
+export function healthInfoRows(health: BccHealthState): InfoRow[] {
+  return [
+    {
+      key: INFO_LABEL_BOOT,
+      val: health.bootError ? (bootDisplayFor(health.bootError) ?? health.bootError) : INFO_OK,
+      bad: health.bootError !== null,
+    },
+    {
+      key: INFO_LABEL_SEND_PATH,
+      val: health.sendPathBroken ?? INFO_OK,
+      bad: health.sendPathBroken !== null,
+    },
+    {
+      key: INFO_LABEL_INJECTION,
+      val: health.injectionDegraded ? INFO_INJECTION_DEGRADED : INFO_OK,
+      bad: health.injectionDegraded,
+    },
+    {
+      key: INFO_LABEL_SETTINGS,
+      val: health.invalidSettings.length
+        ? invalidSettingsText(health.invalidSettings)
+        : INFO_SETTINGS_VALID,
+      bad: health.invalidSettings.length > 0,
+    },
+    {
+      key: INFO_LABEL_PERSIST,
+      val: health.persistFailed ? PERSIST_FAILED_TEXT : INFO_OK,
+      bad: health.persistFailed,
+    },
+  ];
+}
+
+/** Facts for the Info tab's copy-for-bug-report button. Assembled impurely
+ *  in settings.ts (GM_info, location, navigator); rendered purely here.
+ *  English keys on purpose: the report is pasted into GitHub issues, not
+ *  read in the UI (same contract as buildErrorReport in health-ui.ts). */
+export interface DiagnosticsFields {
+  version: string;
+  manager: string;
+  user: string;
+  channel: string;
+  storageKey: string;
+  url: string;
+  userAgent: string;
+  time: string;
+  conn: ConnState;
+  bccHealth: BccHealthState;
+  freshness: FreshnessState;
+}
+
+/** Plain-text diagnostics block, one fact per line. */
+export function buildDiagnosticsText(f: DiagnosticsFields): string {
+  return [
+    "BetterCC v" + f.version,
+    "manager: " + f.manager,
+    "user: " + f.user,
+    "channel: " + f.channel,
+    "storage-key: " + f.storageKey,
+    "url: " + f.url,
+    "ua: " + f.userAgent,
+    "time: " + f.time,
+    "conn: " + JSON.stringify(f.conn),
+    "bccHealth: " + JSON.stringify(f.bccHealth),
+    "freshness: " + JSON.stringify(f.freshness),
+  ].join("\n");
 }

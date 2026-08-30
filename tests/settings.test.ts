@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest";
 import {
   type SettingsDraft,
   type ExportBlob,
+  type DiagnosticsFields,
   validateColor,
   isDraftValid,
   isDirty,
@@ -20,7 +21,12 @@ import {
   defaultDraft,
   draftFromConfig,
   schemeForPreview,
+  ageOrNever,
+  connInfoRows,
+  healthInfoRows,
+  buildDiagnosticsText,
 } from "../src/settings-helpers";
+import type { BccHealthState, ConnState, FreshnessState } from "../src/health-core";
 import { isV2Scheme } from "../src/scheme";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -768,5 +774,157 @@ describe("exportFileName", () => {
 
   it("passes through different dates", () => {
     expect(exportFileName("Alice", "2025-12-31")).toBe("bettercc-backup-Alice-2025-12-31.json");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Info tab: ageOrNever / connInfoRows / healthInfoRows / buildDiagnosticsText
+// ═══════════════════════════════════════════════════════════════════════════
+
+const NOW = 1_000_000;
+
+function connFixture(): ConnState {
+  return { phase: "connected", attempt: 0, since: NOW - 60_000, lastMessageAt: NOW - 5_000 };
+}
+
+function freshnessFixture(): FreshnessState {
+  return { ulistAt: NOW - 12_000, awAt: NOW - 120_000, statsAt: 0 };
+}
+
+function healthFixture(): BccHealthState {
+  return {
+    bootError: null,
+    sendPathBroken: null,
+    injectionDegraded: false,
+    invalidSettings: [],
+    persistFailed: false,
+  };
+}
+
+describe("ageOrNever", () => {
+  it("returns 'nie' for stamp 0 (never delivered)", () => {
+    expect(ageOrNever(0, NOW)).toBe("nie");
+  });
+
+  it("formats seconds under a minute", () => {
+    expect(ageOrNever(NOW - 12_000, NOW)).toBe("vor 12 s");
+  });
+
+  it("formats minutes at a minute and above", () => {
+    expect(ageOrNever(NOW - 120_000, NOW)).toBe("vor 2 min");
+  });
+
+  it("clamps clock skew (now before stamp) to 0 s", () => {
+    expect(ageOrNever(NOW + 5_000, NOW)).toBe("vor 0 s");
+  });
+});
+
+describe("connInfoRows", () => {
+  it("renders status, last message and all three source ages", () => {
+    const rows = connInfoRows(connFixture(), freshnessFixture(), NOW);
+    expect(rows).toEqual([
+      { key: "Status", val: "verbunden", bad: false },
+      { key: "Letzte Chat-Nachricht", val: "vor 5 s" },
+      { key: "Nutzerliste", val: "vor 12 s" },
+      { key: "Globale Nutzerliste", val: "vor 2 min" },
+      { key: "Statistiken", val: "nie" },
+    ]);
+  });
+
+  it("shows the retry count while reconnecting and marks it bad", () => {
+    const conn = { ...connFixture(), phase: "connecting", attempt: 2 };
+    const rows = connInfoRows(conn, freshnessFixture(), NOW);
+    expect(rows[0]).toEqual({ key: "Status", val: "Versuch 2", bad: true });
+  });
+
+  it("marks authdead bad", () => {
+    const conn = { ...connFixture(), phase: "authdead" as const };
+    const rows = connInfoRows(conn, freshnessFixture(), NOW);
+    expect(rows[0].val).toBe("Session abgelaufen");
+    expect(rows[0].bad).toBe(true);
+  });
+});
+
+describe("healthInfoRows", () => {
+  it("renders all checks ok on a clean state", () => {
+    const rows = healthInfoRows(healthFixture());
+    expect(rows).toEqual([
+      { key: "Start", val: "ok", bad: false },
+      { key: "Sendepfad", val: "ok", bad: false },
+      { key: "Chatframe-Injektion", val: "ok", bad: false },
+      { key: "Einstellungen", val: "gültig", bad: false },
+      { key: "Speichern", val: "ok", bad: false },
+    ]);
+  });
+
+  it("boot code maps to the German reason text", () => {
+    const health = { ...healthFixture(), bootError: "structure-changed" as const };
+    const rows = healthInfoRows(health);
+    expect(rows[0].val).toBe(
+      "Unerwartete Seitenstruktur — vermutlich hat ChatCity etwas geändert.",
+    );
+    expect(rows[0].bad).toBe(true);
+  });
+
+  it("generic boot code falls back to the raw code (its text is lost)", () => {
+    const health = { ...healthFixture(), bootError: "error" as const };
+    const rows = healthInfoRows(health);
+    expect(rows[0].val).toBe("error");
+  });
+
+  it("sendPathBroken shows the raw message", () => {
+    const health = { ...healthFixture(), sendPathBroken: "needle not found" };
+    const rows = healthInfoRows(health);
+    expect(rows[1]).toEqual({ key: "Sendepfad", val: "needle not found", bad: true });
+  });
+
+  it("degraded injection shows 'eingeschränkt'", () => {
+    const health = { ...healthFixture(), injectionDegraded: true };
+    const rows = healthInfoRows(health);
+    expect(rows[2]).toEqual({ key: "Chatframe-Injektion", val: "eingeschränkt", bad: true });
+  });
+
+  it("invalid settings name the raw keys and values", () => {
+    const health = {
+      ...healthFixture(),
+      invalidSettings: [{ key: "color", value: "C9A227Q" }],
+    };
+    const rows = healthInfoRows(health);
+    expect(rows[3].val).toBe('Ungültige Einstellung — color: "C9A227Q"');
+    expect(rows[3].bad).toBe(true);
+  });
+
+  it("persist failure shows the persist text", () => {
+    const health = { ...healthFixture(), persistFailed: true };
+    const rows = healthInfoRows(health);
+    expect(rows[4].val).toBe("Speichern fehlgeschlagen — gilt nur bis zum Neuladen.");
+    expect(rows[4].bad).toBe(true);
+  });
+});
+
+describe("buildDiagnosticsText", () => {
+  it("renders one English fact per line with JSON state last", () => {
+    const f: DiagnosticsFields = {
+      version: "3.16.0",
+      manager: "Violentmonkey 2.24.1",
+      user: "TestUser",
+      channel: "Chatcity",
+      storageKey: "color_testuser",
+      url: "https://www.chatcity.de/de/cpop.html",
+      userAgent: "Mozilla/5.0 test",
+      time: "2026-08-30T08:00:00.000Z",
+      conn: connFixture(),
+      bccHealth: healthFixture(),
+      freshness: freshnessFixture(),
+    };
+    const text = buildDiagnosticsText(f);
+    const lines = text.split("\n");
+    expect(lines).toHaveLength(11);
+    expect(lines[0]).toBe("BetterCC v3.16.0");
+    expect(lines[1]).toBe("manager: Violentmonkey 2.24.1");
+    expect(lines[4]).toBe("storage-key: color_testuser");
+    expect(lines[8]).toBe("conn: " + JSON.stringify(f.conn));
+    expect(lines[9]).toBe("bccHealth: " + JSON.stringify(f.bccHealth));
+    expect(lines[10]).toBe("freshness: " + JSON.stringify(f.freshness));
   });
 });

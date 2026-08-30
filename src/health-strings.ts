@@ -91,3 +91,27 @@ function formatStoredValue(value: unknown): string {
 }
 
 export const PERSIST_FAILED_TEXT = "Speichern fehlgeschlagen \u2014 gilt nur bis zum Neuladen.";
+
+// ─── Info tab (settings modal) strings ──────────────────────────────────────
+// Read-only diagnostics rows. Facts only: the "what to do" copy for real
+// problems lives on the strip/cards, these rows just state status (mainly
+// for bug reports).
+
+/** Row value when a check passed. */
+export const INFO_OK = "ok";
+/** Row value for valid stored settings. */
+export const INFO_SETTINGS_VALID = "g\u00fcltig";
+/** Row value when the chatframe injection runs degraded. */
+export const INFO_INJECTION_DEGRADED = "eingeschr\u00e4nkt";
+/** Freshness/last-message value when a source never delivered. */
+export const INFO_NEVER = "nie";
+/** Userscript-manager fallback when GM_info exposes none. */
+export const INFO_MANAGER_UNKNOWN = "unbekannt";
+
+export const INFO_LABEL_STATUS = "Status";
+export const INFO_LABEL_LAST_MESSAGE = "Letzte Chat-Nachricht";
+export const INFO_LABEL_BOOT = "Start";
+export const INFO_LABEL_SEND_PATH = "Sendepfad";
+export const INFO_LABEL_INJECTION = "Chatframe-Injektion";
+export const INFO_LABEL_SETTINGS = "Einstellungen";
+export const INFO_LABEL_PERSIST = "Speichern";
