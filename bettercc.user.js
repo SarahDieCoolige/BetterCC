@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=33ccb7af
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=19ffd40f
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=ac91ed1a
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -281,6 +281,10 @@
     if (Math.abs(maxScroll - lastMaxScroll) > 1) return "resync";
     return st < lastSt ? "up" : "down";
   }
+  var bannerPauseUntil = 0;
+  function pauseBanner(ms) {
+    bannerPauseUntil = Date.now() + ms;
+  }
   function addAutoscrollBanner(iframeDoc, iframeWin) {
     if (!iframeDoc || !iframeWin) return;
     if (iframeDoc.getElementById("autoscroll-banner")) return;
@@ -297,6 +301,11 @@
     iframeWin.addEventListener("scroll", function() {
       const scrollPosition = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
       const maxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+      if (Date.now() < bannerPauseUntil) {
+        lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+        lastMaxScroll = maxScroll;
+        return;
+      }
       if (scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync") {
         lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
         lastMaxScroll = maxScroll;
@@ -1331,13 +1340,14 @@
         fraction = scrollFraction(win.scrollY, max);
         hadAnchor = true;
       }
+      pauseBanner(300);
       document.documentElement.dataset.bccZoom = z.toFixed(2);
       const shell = document.querySelector(".bcc-shell");
       shell?.style.setProperty("--bcc-chat-zoom", z.toFixed(2));
       if (hadAnchor) {
         setTimeout(() => {
           const max2 = doc.documentElement.scrollHeight - win.innerHeight;
-          win.scrollTo(0, Math.round(fraction * max2));
+          win.scrollTo({ top: Math.round(fraction * max2), behavior: "instant" });
         }, 60);
       }
     });

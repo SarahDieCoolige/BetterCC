@@ -1737,17 +1737,6 @@ html[data-bcc-zoom="1.45"] body {
   border-radius: 50%;
   background: var(--bcc-text);
 }
-/* Focus shows on the thumb, not the whole input: a slider keeps focus
-   after dragging, so a ring around the input would linger. */
-.bcc-appearance-row input[type="range"]:focus-visible {
-  outline: none;
-}
-.bcc-appearance-row input[type="range"]:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px var(--bcc-border);
-}
-.bcc-appearance-row input[type="range"]:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px var(--bcc-border);
-}
 .bcc-zoom-readout {
   flex-shrink: 0;
   min-width: 5ch;
