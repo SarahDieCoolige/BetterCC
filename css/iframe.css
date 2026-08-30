@@ -33,30 +33,39 @@ font[color] {
   color: var(--hightlightText) !important;
 } */
 
-::-webkit-scrollbar {
-  background-color: #171b1c;
-  color: #cfc6b7;
-  width: 10px;
+/* Themed scrollbars for the whole chat document. Same engine split as the
+   scrollbar block in v3.css: the standard pair is the baseline (Firefox only
+   ever supported scrollbar-color/width; Chromium 121+ / Safari 18.2+ adopted
+   them, and a non-auto value makes Chromium ignore ::-webkit-scrollbar
+   styling entirely), the pill variant only renders in engines without the
+   standard properties. */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--chatText) 35%, transparent) transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background-color: #484f53;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background-color: #60696e;
-}
-
-::-webkit-scrollbar-thumb:active {
-  background-color: #4c5458;
-}
-
-::-webkit-scrollbar-corner {
-  background-color: #0d0f11;
-}
-
-* {
-  scrollbar-color: #171b1c #484f53;
+@supports not (scrollbar-color: red blue) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--chatText) 35%, transparent);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--chatText) 55%, transparent);
+  }
+  ::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in srgb, var(--chatText) 70%, transparent);
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 table.helpTable {

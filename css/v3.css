@@ -44,6 +44,50 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+ * Scrollbars — slim and themed on every engine
+ *
+ * The standard pair is the baseline: Firefox only ever supported
+ * scrollbar-color/width (::-webkit-scrollbar rules never apply there), and
+ * Chromium 121+ / Safari 18.2+ adopted them; a non-auto value makes Chromium
+ * ignore ::-webkit-scrollbar styling entirely. Both properties inherit, so
+ * one rule on .bcc-shell covers every scroller below it (userlists, settings
+ * panels, popup, textarea). The pill variant is guarded by @supports and
+ * only renders in engines without the standard properties (older Chromium
+ * and Safari).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+.bcc-shell {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--bcc-text) 35%, transparent) transparent;
+}
+
+@supports not (scrollbar-color: red blue) {
+  .bcc-shell::-webkit-scrollbar,
+  .bcc-shell ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .bcc-shell::-webkit-scrollbar-thumb,
+  .bcc-shell ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--bcc-text) 35%, transparent);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+  }
+  .bcc-shell ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--bcc-text) 55%, transparent);
+  }
+  .bcc-shell ::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in srgb, var(--bcc-text) 70%, transparent);
+  }
+  .bcc-shell::-webkit-scrollbar-track,
+  .bcc-shell ::-webkit-scrollbar-track,
+  .bcc-shell ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
  * UI shell — CSS Grid layout (T6, spec §1.4)
  *
  *   ┌───────────────────────────┬──────────┐
