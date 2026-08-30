@@ -1698,6 +1698,56 @@ html[data-bcc-zoom="1.45"] body {
   align-items: center;
   gap: 8px;
 }
+
+/* ─── Font-size slider (Schriftgröße) ───
+ * Same colors as the switch: border track, raised thumb, whisper accent on
+ * focus. The readout is fixed-width so dragging never shifts the row. */
+.bcc-appearance-row input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px; /* thumb hit area, same as the switch track */
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+.bcc-appearance-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bcc-border);
+}
+.bcc-appearance-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px; /* center the thumb on the 4px track */
+  border: none;
+  border-radius: 50%;
+  background: var(--bcc-surface-raised);
+}
+.bcc-appearance-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bcc-border);
+}
+.bcc-appearance-row input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bcc-surface-raised);
+}
+.bcc-appearance-row input[type="range"]:focus-visible {
+  outline: 2px solid var(--bcc-accent-whisper);
+  outline-offset: 2px;
+}
+.bcc-zoom-readout {
+  flex-shrink: 0;
+  min-width: 5ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.0909rem;
+  color: var(--bcc-text-muted);
+}
 .bcc-appearance-picker {
   width: 32px;
   height: 28px;

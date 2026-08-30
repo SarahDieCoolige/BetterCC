@@ -31,6 +31,7 @@ import {
   INFO_LABEL_SETTINGS,
   INFO_LABEL_PERSIST,
 } from "./health-strings";
+import { isZoomStep } from "./store";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Types
@@ -50,6 +51,7 @@ export interface SettingsDraft {
   hoverPreview: boolean; // true (default) = hover preview on
   compact: boolean; // true = collapsed chatbar (chevron in footer.ts)
   ban: string[]; // superban list (T12, not built yet; stays [])
+  zoom: number; // font-size slider step (spec: font-size-slider)
 }
 
 /** Versioned export format for backup. */
@@ -79,6 +81,7 @@ export function defaultDraft(): SettingsDraft {
     hoverPreview: true,
     compact: false,
     ban: [],
+    zoom: 1,
   };
 }
 
@@ -121,6 +124,7 @@ export function isDirty(loaded: SettingsDraft, draft: SettingsDraft): boolean {
     loaded.sendOnEnter !== draft.sendOnEnter ||
     loaded.hoverPreview !== draft.hoverPreview ||
     loaded.compact !== draft.compact ||
+    loaded.zoom !== draft.zoom ||
     !pinnedEqual(loaded.pinned, draft.pinned) ||
     !pinnedEqual(loaded.ban, draft.ban)
   );
@@ -183,6 +187,7 @@ export function draftFromConfig(raw: {
   hover_preview?: unknown;
   compact?: unknown;
   ban?: unknown;
+  zoom?: unknown;
 }): SettingsDraft {
   return {
     color: typeof raw.color === "string" ? raw.color.replace(/^#/, "") : defaultDraft().color,
@@ -201,6 +206,7 @@ export function draftFromConfig(raw: {
       Array.isArray(raw.ban) && raw.ban.every((v) => typeof v === "string")
         ? [...(raw.ban as string[])]
         : [],
+    zoom: isZoomStep(raw.zoom) ? raw.zoom : defaultDraft().zoom,
   };
 }
 
@@ -221,6 +227,7 @@ const DRAFT_TO_CONFIG: Record<keyof SettingsDraft, string> = {
   hoverPreview: "hover_preview",
   compact: "compact",
   ban: "ban",
+  zoom: "zoom",
 };
 
 /** Config key back to draft field name — derived as the inverse of
@@ -349,6 +356,12 @@ function coerceField(key: keyof SettingsDraft, value: unknown, draft: SettingsDr
     case "ban":
       if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
         draft.ban = value as string[];
+        return true;
+      }
+      return false;
+    case "zoom":
+      if (isZoomStep(value)) {
+        draft.zoom = value;
         return true;
       }
       return false;

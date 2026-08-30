@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=33ccb7af
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=6b04a70d
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=ce9b2591
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -3027,7 +3027,8 @@
       sendOnEnter: true,
       hoverPreview: true,
       compact: false,
-      ban: []
+      ban: [],
+      zoom: 1
     };
   }
   function schemeForPreview(base, useV2) {
@@ -3037,7 +3038,7 @@
     return /^[0-9A-Fa-f]{6}$/.test(hex.replace(/^#/, "")) ? null : "Kein g\xFCltiger Hex-Wert";
   }
   function isDirty(loaded2, draft2) {
-    return loaded2.color !== draft2.color || loaded2.schemeV2 !== draft2.schemeV2 || loaded2.whisper !== draft2.whisper || loaded2.sendOnEnter !== draft2.sendOnEnter || loaded2.hoverPreview !== draft2.hoverPreview || loaded2.compact !== draft2.compact || !pinnedEqual(loaded2.pinned, draft2.pinned) || !pinnedEqual(loaded2.ban, draft2.ban);
+    return loaded2.color !== draft2.color || loaded2.schemeV2 !== draft2.schemeV2 || loaded2.whisper !== draft2.whisper || loaded2.sendOnEnter !== draft2.sendOnEnter || loaded2.hoverPreview !== draft2.hoverPreview || loaded2.compact !== draft2.compact || loaded2.zoom !== draft2.zoom || !pinnedEqual(loaded2.pinned, draft2.pinned) || !pinnedEqual(loaded2.ban, draft2.ban);
   }
   function dedupPinned(names) {
     const seen = /* @__PURE__ */ new Set();
@@ -3071,7 +3072,8 @@
       sendOnEnter: typeof raw.send_on_enter === "boolean" ? raw.send_on_enter : defaultDraft().sendOnEnter,
       hoverPreview: typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview,
       compact: typeof raw.compact === "boolean" ? raw.compact : defaultDraft().compact,
-      ban: Array.isArray(raw.ban) && raw.ban.every((v) => typeof v === "string") ? [...raw.ban] : []
+      ban: Array.isArray(raw.ban) && raw.ban.every((v) => typeof v === "string") ? [...raw.ban] : [],
+      zoom: isZoomStep(raw.zoom) ? raw.zoom : defaultDraft().zoom
     };
   }
   var DRAFT_TO_CONFIG = {
@@ -3082,7 +3084,8 @@
     sendOnEnter: "send_on_enter",
     hoverPreview: "hover_preview",
     compact: "compact",
-    ban: "ban"
+    ban: "ban",
+    zoom: "zoom"
   };
   var CONFIG_TO_DRAFT = Object.fromEntries(
     Object.entries(DRAFT_TO_CONFIG).map(([d, c]) => [c, d])
@@ -3184,6 +3187,12 @@
           return true;
         }
         return false;
+      case "zoom":
+        if (isZoomStep(value)) {
+          draft2.zoom = value;
+          return true;
+        }
+        return false;
     }
   }
   function ageOrNever(stamp, now) {
@@ -3276,6 +3285,7 @@
     if (current.whisper !== next.whisper) await set("whisper", next.whisper);
     if (current.compact !== next.compact) await set("compact", next.compact);
     if (!pinnedEqual(current.ban, next.ban)) await set("ban", next.ban);
+    if (current.zoom !== next.zoom) await set("zoom", next.zoom);
   }
   var TABS = ["Erscheinungsbild", "Chat", "Verwaltung", "Daten", "Info", "Befehle"];
   var overlayEl2 = null;
@@ -3327,7 +3337,8 @@
       send_on_enter: get("send_on_enter"),
       hover_preview: get("hover_preview"),
       compact: get("compact"),
-      ban: get("ban")
+      ban: get("ban"),
+      zoom: get("zoom")
     };
     loaded = draftFromConfig(raw);
     draft = draftFromConfig(raw);
@@ -3603,6 +3614,41 @@
     });
     toggleSection.appendChild(toggleLabel);
     panel.appendChild(toggleSection);
+    const zoomSection = document.createElement("section");
+    zoomSection.className = "bcc-appearance-section";
+    const zoomHeading = document.createElement("h3");
+    zoomHeading.className = "bcc-appearance-heading";
+    zoomHeading.textContent = "Schriftgr\xF6\xDFe";
+    zoomSection.appendChild(zoomHeading);
+    const zoomRow = document.createElement("div");
+    zoomRow.className = "bcc-appearance-row";
+    const zoomSlider = document.createElement("input");
+    zoomSlider.type = "range";
+    zoomSlider.min = "0.85";
+    zoomSlider.max = "1.45";
+    zoomSlider.step = "0.05";
+    zoomSlider.value = String(draft?.zoom ?? 1);
+    zoomSlider.setAttribute("aria-label", "Schriftgr\xF6\xDFe");
+    const zoomReadout = document.createElement("span");
+    zoomReadout.className = "bcc-zoom-readout";
+    zoomReadout.setAttribute("aria-live", "polite");
+    zoomReadout.textContent = Math.round((draft?.zoom ?? 1) * 100) + " %";
+    zoomSlider.addEventListener("input", () => {
+      if (!draft) return;
+      const z = parseFloat(zoomSlider.value);
+      draft.zoom = z;
+      zoomReadout.textContent = Math.round(z * 100) + " %";
+      void set("zoom", z);
+      updateRevertButton();
+    });
+    zoomRow.appendChild(zoomSlider);
+    zoomRow.appendChild(zoomReadout);
+    zoomSection.appendChild(zoomRow);
+    const zoomHint = document.createElement("p");
+    zoomHint.className = "bcc-settings-hint";
+    zoomHint.textContent = "Ver\xE4ndert die Textgr\xF6\xDFe im ganzen Chat. Gilt f\xFCr den Chatverlauf und alle BetterCC-Elemente.";
+    zoomSection.appendChild(zoomHint);
+    panel.appendChild(zoomSection);
     syncPresetActive();
     refreshPreview();
   }

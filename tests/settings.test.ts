@@ -91,6 +91,9 @@ describe("isDraftValid", () => {
     whisper: "",
     sendOnEnter: true,
     hoverPreview: true,
+    compact: false,
+    ban: [],
+    zoom: 1,
   };
 
   it("returns true for a valid draft", () => {
@@ -156,6 +159,10 @@ describe("isDirty", () => {
     expect(isDirty(loaded, { ...loaded, compact: true })).toBe(true);
   });
 
+  it("returns true when zoom differs", () => {
+    expect(isDirty(loaded, { ...loaded, zoom: 1.3 })).toBe(true);
+  });
+
   it("returns true when ban differs", () => {
     expect(isDirty(loaded, { ...loaded, ban: ["Spammer"] })).toBe(true);
   });
@@ -211,6 +218,7 @@ describe("serializeExport", () => {
       hoverPreview: true,
       compact: true,
       ban: ["Spammer"],
+      zoom: 1.3,
     };
     const blob = serializeExport(draft, "TestUser");
 
@@ -227,6 +235,7 @@ describe("serializeExport", () => {
       hover_preview: true,
       compact: true,
       ban: ["Spammer"],
+      zoom: 1.3,
     });
   });
 });
@@ -253,6 +262,7 @@ describe("parseImport", () => {
         hover_preview: true,
         compact: true,
         ban: ["Spammer"],
+        zoom: 1.3,
       },
     };
     const result = parseImport(JSON.stringify(blob));
@@ -266,6 +276,7 @@ describe("parseImport", () => {
     expect(result.draft.hoverPreview).toBe(true);
     expect(result.draft.compact).toBe(true);
     expect(result.draft.ban).toEqual(["Spammer"]);
+    expect(result.draft.zoom).toBe(1.3);
   });
 
   // ── Failure cases ───────────────────────────────────────────────────────
@@ -365,6 +376,7 @@ describe("parseImport", () => {
     expect(result.draft.whisper).toBe(""); // default
     expect(result.draft.sendOnEnter).toBe(true); // default
     expect(result.draft.hoverPreview).toBe(true); // default
+    expect(result.draft.zoom).toBe(1); // default
   });
 
   it("handles empty settings object (all defaults)", () => {
@@ -493,6 +505,62 @@ describe("parseImport", () => {
     expect(result.draft.ban).toEqual([]); // default
   });
 
+  it("keeps a valid zoom step on import", () => {
+    const blob = {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: "2026-08-13T12:00:00.000Z",
+      user: "U",
+      settings: { zoom: 1.3 },
+    };
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.zoom).toBe(1.3);
+  });
+
+  it("coerces an off-list zoom step to default 1", () => {
+    const blob = {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: "2026-08-13T12:00:00.000Z",
+      user: "U",
+      settings: { zoom: 0.87 },
+    };
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.zoom).toBe(1); // default
+  });
+
+  it("coerces a string zoom to default 1", () => {
+    const blob = {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: "2026-08-13T12:00:00.000Z",
+      user: "U",
+      settings: { zoom: "1.3" },
+    };
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.zoom).toBe(1); // default
+  });
+
+  it("coerces an undefined zoom to default 1", () => {
+    const blob = {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: "2026-08-13T12:00:00.000Z",
+      user: "U",
+      settings: { zoom: undefined },
+    };
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.zoom).toBe(1); // default
+  });
+
   // ── Independence (full replace semantics) ────────────────────────────────
 
   it("is independent of any current draft (full replace)", () => {
@@ -512,7 +580,7 @@ describe("parseImport", () => {
 
   // ── Round-trip ───────────────────────────────────────────────────────────
 
-  it("export→import round-trip preserves all 8 fields", () => {
+  it("export→import round-trip preserves all 9 fields", () => {
     const draft: SettingsDraft = {
       color: "FF0000",
       schemeV2: true,
@@ -522,12 +590,23 @@ describe("parseImport", () => {
       hoverPreview: true,
       compact: true,
       ban: ["Spammer"],
+      zoom: 1.3,
     };
     const blob = serializeExport(draft, "TestUser");
     const result = parseImport(JSON.stringify(blob));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.draft).toEqual(draft);
+  });
+
+  it("export→import round-trip carries zoom", () => {
+    const draft: SettingsDraft = { ...defaultDraft(), zoom: 1.3 };
+    const blob = serializeExport(draft, "TestUser");
+    expect(blob.settings.zoom).toBe(1.3);
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.zoom).toBe(1.3);
   });
 
   it("pre-compact export (6 keys) imports with compact/ban defaults", () => {
@@ -552,6 +631,7 @@ describe("parseImport", () => {
     if (!result.ok) return;
     expect(result.draft.compact).toBe(false);
     expect(result.draft.ban).toEqual([]);
+    expect(result.draft.zoom).toBe(1); // default
     expect(result.draft.color).toBe("FF0000");
   });
 
@@ -581,6 +661,7 @@ describe("defaultDraft", () => {
       hoverPreview: true,
       compact: false,
       ban: [],
+      zoom: 1,
     });
   });
 });
@@ -600,6 +681,7 @@ describe("draftFromConfig", () => {
       hover_preview: false,
       compact: true,
       ban: ["Spammer"],
+      zoom: 1.3,
     };
     expect(draftFromConfig(raw)).toEqual({
       color: "FF0000",
@@ -610,6 +692,7 @@ describe("draftFromConfig", () => {
       hoverPreview: false,
       compact: true,
       ban: ["Spammer"],
+      zoom: 1.3,
     });
   });
 
@@ -649,6 +732,22 @@ describe("draftFromConfig", () => {
     expect(draft.whisper).toBe("");
     expect(draft.sendOnEnter).toBe(true);
     expect(draft.hoverPreview).toBe(true);
+  });
+
+  it("carries a valid zoom step", () => {
+    expect(draftFromConfig({ zoom: 1.3 }).zoom).toBe(1.3);
+  });
+
+  it("defaults zoom to 1 when missing", () => {
+    expect(draftFromConfig({}).zoom).toBe(1);
+  });
+
+  it("defaults zoom to 1 for an off-list step", () => {
+    expect(draftFromConfig({ zoom: 0.87 }).zoom).toBe(1);
+  });
+
+  it("defaults zoom to 1 for a string value", () => {
+    expect(draftFromConfig({ zoom: "1.3" }).zoom).toBe(1);
   });
 });
 

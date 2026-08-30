@@ -83,6 +83,7 @@ async function applyDiff(current: SettingsDraft, next: SettingsDraft): Promise<v
   if (current.whisper !== next.whisper) await storeSet("whisper", next.whisper);
   if (current.compact !== next.compact) await storeSet("compact", next.compact);
   if (!pinnedEqual(current.ban, next.ban)) await storeSet("ban", next.ban);
+  if (current.zoom !== next.zoom) await storeSet("zoom", next.zoom);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -169,6 +170,7 @@ export async function openSettings(): Promise<void> {
     hover_preview: get("hover_preview"),
     compact: get("compact"),
     ban: get("ban"),
+    zoom: get("zoom"),
   };
   loaded = draftFromConfig(raw);
   draft = draftFromConfig(raw);
@@ -534,6 +536,53 @@ function buildAppearancePanel(panel: HTMLElement): void {
 
   toggleSection.appendChild(toggleLabel);
   panel.appendChild(toggleSection);
+
+  // ── Section: Schriftgröße (font-size slider) ──
+  const zoomSection = document.createElement("section");
+  zoomSection.className = "bcc-appearance-section";
+
+  const zoomHeading = document.createElement("h3");
+  zoomHeading.className = "bcc-appearance-heading";
+  zoomHeading.textContent = "Schriftgröße";
+  zoomSection.appendChild(zoomHeading);
+
+  const zoomRow = document.createElement("div");
+  zoomRow.className = "bcc-appearance-row";
+
+  const zoomSlider = document.createElement("input");
+  zoomSlider.type = "range";
+  zoomSlider.min = "0.85";
+  zoomSlider.max = "1.45";
+  zoomSlider.step = "0.05";
+  zoomSlider.value = String(draft?.zoom ?? 1);
+  zoomSlider.setAttribute("aria-label", "Schriftgröße");
+
+  const zoomReadout = document.createElement("span");
+  zoomReadout.className = "bcc-zoom-readout";
+  zoomReadout.setAttribute("aria-live", "polite");
+  zoomReadout.textContent = Math.round((draft?.zoom ?? 1) * 100) + " %";
+
+  // Live input event (same contract as the hex row): apply on every tick
+  zoomSlider.addEventListener("input", () => {
+    if (!draft) return;
+    const z = parseFloat(zoomSlider.value);
+    draft.zoom = z;
+    zoomReadout.textContent = Math.round(z * 100) + " %";
+    void storeSet("zoom", z);
+    updateRevertButton();
+  });
+
+  zoomRow.appendChild(zoomSlider);
+  zoomRow.appendChild(zoomReadout);
+  zoomSection.appendChild(zoomRow);
+
+  const zoomHint = document.createElement("p");
+  zoomHint.className = "bcc-settings-hint";
+  zoomHint.textContent =
+    "Verändert die Textgröße im ganzen Chat. Gilt für den Chatverlauf und alle BetterCC-Elemente.";
+  zoomSection.appendChild(zoomHint);
+
+  panel.appendChild(zoomSection);
 
   // Initial render
   syncPresetActive();
