@@ -9,7 +9,6 @@ import type { ConnState } from "../src/health-core";
 import {
   shouldShowCritical,
   bootErrorCode,
-  bootDisplayFor,
   buildErrorReport,
   type ReportFields,
 } from "../src/health-ui";
@@ -35,6 +34,7 @@ import {
   staleText,
   invalidSettingsText,
   PERSIST_FAILED_TEXT,
+  bootDisplayFor,
 } from "../src/health-strings";
 
 // ─── 1. shouldShowCritical truth table ────────────────────────────────────────

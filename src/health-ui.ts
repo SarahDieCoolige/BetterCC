@@ -16,14 +16,13 @@ import {
   ACTION_PAGE_RELOAD,
   ACTION_LATER,
   CARD_BOOT_TITLE,
-  BOOT_REASON_STRUCTURE,
-  BOOT_REASON_WS,
   CARD_BOOT_RUNS_ON,
   ACTION_COPY_DETAILS,
   ACTION_CONTINUE_CHAT,
   CARD_SEND_BROKEN_TITLE,
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
+  bootDisplayFor,
 } from "./health-strings";
 import type { BccHealthState, BootReasonCode, ConnState } from "./health-core";
 
@@ -42,14 +41,8 @@ export function bootErrorCode(err: unknown): BootReasonCode {
   return err instanceof TypeError ? "structure-changed" : "error";
 }
 
-/** German card text for a store-latched code. The generic "error" code maps
- * to null: its card is rendered by handleBootFailure from the live error; a
- * later react can't recover that text from the code alone. */
-export function bootDisplayFor(code: string): string | null {
-  if (code === "structure-changed") return BOOT_REASON_STRUCTURE;
-  if (code === "ws-takeover") return BOOT_REASON_WS;
-  return null;
-}
+// bootDisplayFor (code → German card text) moved to health-strings.ts, next
+// to the BOOT_REASON_* constants it maps to.
 
 // ─── Diagnostics payload (reworked: English, structured, for bug reports) ────
 

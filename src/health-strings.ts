@@ -23,6 +23,12 @@ export function retryText(n: number): string {
   return STATUS_TEXT.retry.replace("{n}", String(n));
 }
 
+/** "12 s" / "3 min" — compact age used by stale tooltips and the Info tab. */
+export function formatAgo(ageMs: number): string {
+  const secs = Math.floor(ageMs / 1000);
+  return secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
+}
+
 // Auth-dead veil + card strings (T5).
 export const CARD_AUTHDEAD_TITLE = "Session abgelaufen";
 export const CARD_AUTHDEAD_TEXT =
@@ -43,6 +49,15 @@ export const CARD_SEND_BROKEN_TEXT =
   "ChatCity hat den Sendeweg ge\u00e4ndert. Hilft nur ein BetterCC-Update.";
 export const ACTION_COPY_ERROR = "Fehler kopieren";
 
+/** German card text for a store-latched code. The generic "error" code maps
+ * to null: its card is rendered by handleBootFailure from the live error; a
+ * later react can't recover that text from the code alone. */
+export function bootDisplayFor(code: string): string | null {
+  if (code === "structure-changed") return BOOT_REASON_STRUCTURE;
+  if (code === "ws-takeover") return BOOT_REASON_WS;
+  return null;
+}
+
 // Warning banner + offline hint strings (T7).
 export const BANNER_OPTICS_TEXT =
   "Chat ohne BetterCC-Design \u2014 Senden l\u00e4uft normal, Neu laden behebt es";
@@ -56,9 +71,7 @@ export const STALE_LABEL_AW = "Globale Nutzerliste";
 export const STALE_LABEL_STATS = "Statistiken";
 
 export function staleText(label: string, ageMs: number): string {
-  const secs = Math.floor(ageMs / 1000);
-  const ago = secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
-  return label + " \u2014 zuletzt aktualisiert vor " + ago;
+  return label + " \u2014 zuletzt aktualisiert vor " + formatAgo(ageMs);
 }
 
 // D4 settings notices (T11), riding the strip's transient slot. Invalid
