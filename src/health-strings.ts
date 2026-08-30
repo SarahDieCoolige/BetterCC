@@ -74,6 +74,18 @@ export function staleText(label: string, ageMs: number): string {
   return label + " \u2014 zuletzt aktualisiert vor " + formatAgo(ageMs);
 }
 
+/** The three live-state lines shared by the diagnostics report (Info tab)
+ *  and the error report (health cards). One source so the two cannot
+ *  drift apart; unknown on purpose, the error path may hold partial
+ *  state. */
+export function reportStateLines(conn: unknown, bccHealth: unknown, freshness: unknown): string[] {
+  return [
+    "conn: " + JSON.stringify(conn),
+    "bccHealth: " + JSON.stringify(bccHealth),
+    "freshness: " + JSON.stringify(freshness),
+  ];
+}
+
 // D4 settings notices (T11), riding the strip's transient slot. Invalid
 // stored values are NOT written back or repaired: the notice names the raw
 // key and the garbage value verbatim, the session runs on defaults until

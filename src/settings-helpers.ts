@@ -15,6 +15,7 @@ import {
   formatAgo,
   bootDisplayFor,
   invalidSettingsText,
+  reportStateLines,
   PERSIST_FAILED_TEXT,
   STALE_LABEL_ULIST,
   STALE_LABEL_AW,
@@ -455,8 +456,6 @@ export function buildDiagnosticsText(f: DiagnosticsFields): string {
     "url: " + f.url,
     "ua: " + f.userAgent,
     "time: " + f.time,
-    "conn: " + JSON.stringify(f.conn),
-    "bccHealth: " + JSON.stringify(f.bccHealth),
-    "freshness: " + JSON.stringify(f.freshness),
+    ...reportStateLines(f.conn, f.bccHealth, f.freshness),
   ].join("\n");
 }

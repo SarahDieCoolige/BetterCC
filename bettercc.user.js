@@ -1014,6 +1014,13 @@
   function staleText(label, ageMs) {
     return label + " \u2014 zuletzt aktualisiert vor " + formatAgo(ageMs);
   }
+  function reportStateLines(conn, bccHealth, freshness) {
+    return [
+      "conn: " + JSON.stringify(conn),
+      "bccHealth: " + JSON.stringify(bccHealth),
+      "freshness: " + JSON.stringify(freshness)
+    ];
+  }
   function invalidSettingsText(entries) {
     const parts = entries.map((e) => e.key + ": " + formatStoredValue(e.value));
     const noun = entries.length === 1 ? "Ung\xFCltige Einstellung" : "Ung\xFCltige Einstellungen";
@@ -3256,9 +3263,7 @@
       "url: " + f.url,
       "ua: " + f.userAgent,
       "time: " + f.time,
-      "conn: " + JSON.stringify(f.conn),
-      "bccHealth: " + JSON.stringify(f.bccHealth),
-      "freshness: " + JSON.stringify(f.freshness)
+      ...reportStateLines(f.conn, f.bccHealth, f.freshness)
     ].join("\n");
   }
 
@@ -3477,12 +3482,7 @@
     setBg("surfaceRaised");
   }
   function buildAppearancePanel(panel) {
-    const colorSection = document.createElement("section");
-    colorSection.className = "bcc-appearance-section";
-    const colorHeading = document.createElement("h3");
-    colorHeading.className = "bcc-appearance-heading";
-    colorHeading.textContent = "Farbe";
-    colorSection.appendChild(colorHeading);
+    const colorSection = infoSection("Farbe");
     const presetsRow = document.createElement("div");
     presetsRow.className = "bcc-presets";
     for (const hex of COLOR_PRESETS) {
@@ -3564,12 +3564,7 @@
     colorSection.appendChild(inputRow);
     colorSection.appendChild(errorSpan);
     panel.appendChild(colorSection);
-    const previewSection = document.createElement("section");
-    previewSection.className = "bcc-appearance-section";
-    const previewHeading = document.createElement("h3");
-    previewHeading.className = "bcc-appearance-heading";
-    previewHeading.textContent = "Vorschau";
-    previewSection.appendChild(previewHeading);
+    const previewSection = infoSection("Vorschau");
     const previewRow = document.createElement("div");
     previewRow.className = "bcc-appearance-preview";
     const chipDefs = [
@@ -3622,12 +3617,7 @@
     });
     toggleSection.appendChild(toggleLabel);
     panel.appendChild(toggleSection);
-    const zoomSection = document.createElement("section");
-    zoomSection.className = "bcc-appearance-section";
-    const zoomHeading = document.createElement("h3");
-    zoomHeading.className = "bcc-appearance-heading";
-    zoomHeading.textContent = "Schriftgr\xF6\xDFe";
-    zoomSection.appendChild(zoomHeading);
+    const zoomSection = infoSection("Schriftgr\xF6\xDFe");
     const zoomRow = document.createElement("div");
     zoomRow.className = "bcc-appearance-row";
     const zoomSlider = document.createElement("input");
@@ -3719,12 +3709,7 @@
     panel.appendChild(hoverField);
   }
   function buildManagementPanel(panel) {
-    const pinnedSection = document.createElement("section");
-    pinnedSection.className = "bcc-appearance-section";
-    const pinnedHeading = document.createElement("h3");
-    pinnedHeading.className = "bcc-appearance-heading";
-    pinnedHeading.textContent = "Angeheftete Benutzer";
-    pinnedSection.appendChild(pinnedHeading);
+    const pinnedSection = infoSection("Angeheftete Benutzer");
     const pinnedWrap = document.createElement("div");
     pinnedWrap.className = "bcc-manage-section";
     const listUl = document.createElement("ul");
@@ -3786,12 +3771,7 @@
     pinnedWrap.appendChild(addRow);
     pinnedSection.appendChild(pinnedWrap);
     panel.appendChild(pinnedSection);
-    const whisperSection = document.createElement("section");
-    whisperSection.className = "bcc-appearance-section";
-    const whisperHeading = document.createElement("h3");
-    whisperHeading.className = "bcc-appearance-heading";
-    whisperHeading.textContent = "Fl\xFCsterziel (Superwhisper)";
-    whisperSection.appendChild(whisperHeading);
+    const whisperSection = infoSection("Fl\xFCsterziel (Superwhisper)");
     const whisperWrap = document.createElement("div");
     whisperWrap.className = "bcc-manage-section bcc-manage-whisper";
     const currentLine = document.createElement("div");
@@ -3873,12 +3853,7 @@
     URL.revokeObjectURL(url);
   }
   function buildDatenPanel(panel) {
-    const section = document.createElement("section");
-    section.className = "bcc-appearance-section";
-    const heading = document.createElement("h3");
-    heading.className = "bcc-appearance-heading";
-    heading.textContent = "Daten";
-    section.appendChild(heading);
+    const section = infoSection("Daten");
     const hint = document.createElement("p");
     hint.className = "bcc-settings-hint";
     hint.textContent = "Backup als Datei speichern, wiederherstellen oder zur\xFCcksetzen.";
@@ -5098,11 +5073,7 @@
     if (f.state === null) {
       lines.push("state: unavailable");
     } else {
-      lines.push(
-        "conn: " + JSON.stringify(f.state.conn),
-        "bccHealth: " + JSON.stringify(f.state.bccHealth),
-        "freshness: " + JSON.stringify(f.state.freshness)
-      );
+      lines.push(...reportStateLines(f.state.conn, f.state.bccHealth, f.state.freshness));
     }
     return lines.join("\n");
   }

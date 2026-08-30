@@ -358,13 +358,7 @@ function refreshPreview(): void {
  */
 function buildAppearancePanel(panel: HTMLElement): void {
   // ── Section: Farbe ──
-  const colorSection = document.createElement("section");
-  colorSection.className = "bcc-appearance-section";
-
-  const colorHeading = document.createElement("h3");
-  colorHeading.className = "bcc-appearance-heading";
-  colorHeading.textContent = "Farbe";
-  colorSection.appendChild(colorHeading);
+  const colorSection = infoSection("Farbe");
 
   // Preset swatches
   const presetsRow = document.createElement("div");
@@ -462,13 +456,7 @@ function buildAppearancePanel(panel: HTMLElement): void {
   panel.appendChild(colorSection);
 
   // ── Section: Vorschau ──
-  const previewSection = document.createElement("section");
-  previewSection.className = "bcc-appearance-section";
-
-  const previewHeading = document.createElement("h3");
-  previewHeading.className = "bcc-appearance-heading";
-  previewHeading.textContent = "Vorschau";
-  previewSection.appendChild(previewHeading);
+  const previewSection = infoSection("Vorschau");
 
   const previewRow = document.createElement("div");
   previewRow.className = "bcc-appearance-preview";
@@ -538,13 +526,7 @@ function buildAppearancePanel(panel: HTMLElement): void {
   panel.appendChild(toggleSection);
 
   // ── Section: Schriftgröße (font-size slider) ──
-  const zoomSection = document.createElement("section");
-  zoomSection.className = "bcc-appearance-section";
-
-  const zoomHeading = document.createElement("h3");
-  zoomHeading.className = "bcc-appearance-heading";
-  zoomHeading.textContent = "Schriftgröße";
-  zoomSection.appendChild(zoomHeading);
+  const zoomSection = infoSection("Schriftgröße");
 
   const zoomRow = document.createElement("div");
   zoomRow.className = "bcc-appearance-row";
@@ -689,13 +671,7 @@ function buildChatPanel(panel: HTMLElement): void {
  */
 function buildManagementPanel(panel: HTMLElement): void {
   // ── Section: Angeheftete Benutzer ──
-  const pinnedSection = document.createElement("section");
-  pinnedSection.className = "bcc-appearance-section";
-
-  const pinnedHeading = document.createElement("h3");
-  pinnedHeading.className = "bcc-appearance-heading";
-  pinnedHeading.textContent = "Angeheftete Benutzer";
-  pinnedSection.appendChild(pinnedHeading);
+  const pinnedSection = infoSection("Angeheftete Benutzer");
 
   const pinnedWrap = document.createElement("div");
   pinnedWrap.className = "bcc-manage-section";
@@ -772,13 +748,7 @@ function buildManagementPanel(panel: HTMLElement): void {
   panel.appendChild(pinnedSection);
 
   // ── Section: Flüsterziel (Superwhisper) ──
-  const whisperSection = document.createElement("section");
-  whisperSection.className = "bcc-appearance-section";
-
-  const whisperHeading = document.createElement("h3");
-  whisperHeading.className = "bcc-appearance-heading";
-  whisperHeading.textContent = "Flüsterziel (Superwhisper)";
-  whisperSection.appendChild(whisperHeading);
+  const whisperSection = infoSection("Flüsterziel (Superwhisper)");
 
   const whisperWrap = document.createElement("div");
   whisperWrap.className = "bcc-manage-section bcc-manage-whisper";
@@ -881,13 +851,7 @@ function handleExport(): void {
 /** Build the Daten panel content. Called once per openSettings,
  *  fills tabPanels[3] with export/import/reset controls. */
 function buildDatenPanel(panel: HTMLElement): void {
-  const section = document.createElement("section");
-  section.className = "bcc-appearance-section";
-
-  const heading = document.createElement("h3");
-  heading.className = "bcc-appearance-heading";
-  heading.textContent = "Daten";
-  section.appendChild(heading);
+  const section = infoSection("Daten");
 
   const hint = document.createElement("p");
   hint.className = "bcc-settings-hint";

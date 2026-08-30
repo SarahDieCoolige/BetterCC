@@ -24,6 +24,7 @@ import {
   CARD_SEND_BROKEN_TEXT,
   ACTION_COPY_ERROR,
   bootDisplayFor,
+  reportStateLines,
 } from "./health-strings";
 import type { BccHealthState, BootReasonCode, ConnState } from "./health-core";
 
@@ -67,11 +68,7 @@ export function buildErrorReport(f: ReportFields): string {
   if (f.state === null) {
     lines.push("state: unavailable");
   } else {
-    lines.push(
-      "conn: " + JSON.stringify(f.state.conn),
-      "bccHealth: " + JSON.stringify(f.state.bccHealth),
-      "freshness: " + JSON.stringify(f.state.freshness),
-    );
+    lines.push(...reportStateLines(f.state.conn, f.state.bccHealth, f.state.freshness));
   }
   return lines.join("\n");
 }
