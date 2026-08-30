@@ -10,6 +10,7 @@
 
 import { react } from "./store";
 import { getChatDoc, getChatWin } from "./utils";
+import { pauseBanner } from "./chat";
 
 /** Reading position as a 0…1 fraction of the scrollable range; 1 when the
  * doc doesn't scroll (bottom is the only position). Pure, tested. */
@@ -29,13 +30,19 @@ export function initZoom(): void {
       fraction = scrollFraction(win.scrollY, max);
       hadAnchor = true;
     }
+    // Arm the banner guard BEFORE the geometry change: Chromium re-anchors
+    // the scroll offset a few ms after the viewport settles, and that
+    // event must not read as a scroll-up.
+    pauseBanner(300);
     document.documentElement.dataset.bccZoom = z.toFixed(2);
     const shell = document.querySelector(".bcc-shell") as HTMLElement | null;
     shell?.style.setProperty("--bcc-chat-zoom", z.toFixed(2));
     if (hadAnchor) {
       setTimeout(() => {
         const max2 = doc!.documentElement.scrollHeight - win!.innerHeight;
-        win!.scrollTo(0, Math.round(fraction * max2));
+        // instant: the frame doc inherits smooth scrolling, a smooth
+        // anchor would crawl for hundreds of ms
+        win!.scrollTo({ top: Math.round(fraction * max2), behavior: "instant" });
       }, 60);
     }
   });

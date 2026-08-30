@@ -14,6 +14,17 @@ export function scrollEventDecision(
   return st < lastSt ? "up" : "down";
 }
 
+/** Pause the banner logic for a time window. Chromium re-anchors the
+ * frame's scroll offset by the zoom factor AFTER the viewport settles,
+ * with maxScroll already updated: that event looks exactly like a user
+ * scroll-up to the geometry check, so the only honest signal is "a zoom
+ * change just happened". The zoom react arms this before touching
+ * anything. */
+let bannerPauseUntil = 0;
+export function pauseBanner(ms: number): void {
+  bannerPauseUntil = Date.now() + ms;
+}
+
 export function addAutoscrollBanner(iframeDoc: Document, iframeWin: Window): void {
   if (!iframeDoc || !iframeWin) return;
   // Already present — re-injection after a full rewrite must not stack
@@ -36,6 +47,12 @@ export function addAutoscrollBanner(iframeDoc: Document, iframeWin: Window): voi
   iframeWin.addEventListener("scroll", function () {
     const scrollPosition = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
     const maxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+
+    if (Date.now() < bannerPauseUntil) {
+      lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+      lastMaxScroll = maxScroll;
+      return;
+    }
 
     if (scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync") {
       lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
