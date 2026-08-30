@@ -140,6 +140,9 @@
     const f = document.getElementById("chatframe");
     return f ? f.contentWindow : null;
   }
+  function chatScrollMax(doc, win) {
+    return doc.body.scrollHeight - win.innerHeight;
+  }
   function printToChat(message) {
     const doc = getChatDoc();
     if (!doc?.body) return;
@@ -297,10 +300,10 @@
       scrollbanner.style.display = "none";
     });
     let lastScrollTop = iframeWin.scrollY || iframeDoc.documentElement.scrollTop;
-    let lastMaxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+    let lastMaxScroll = chatScrollMax(iframeDoc, iframeWin);
     iframeWin.addEventListener("scroll", function() {
       const scrollPosition = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
-      const maxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+      const maxScroll = chatScrollMax(iframeDoc, iframeWin);
       const top = scrollPosition <= 0 ? 0 : scrollPosition;
       if (Date.now() < bannerPauseUntil || scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync") {
         lastScrollTop = top;
@@ -1340,10 +1343,7 @@
       const anchor = win && doc ? {
         win,
         doc,
-        fraction: scrollFraction(
-          win.scrollY,
-          doc.documentElement.scrollHeight - win.innerHeight
-        )
+        fraction: scrollFraction(win.scrollY, chatScrollMax(doc, win))
       } : null;
       pauseBanner(300);
       document.documentElement.dataset.bccZoom = step;
@@ -1351,7 +1351,7 @@
       shell?.style.setProperty("--bcc-chat-zoom", step);
       if (anchor) {
         setTimeout(() => {
-          const max = anchor.doc.documentElement.scrollHeight - anchor.win.innerHeight;
+          const max = chatScrollMax(anchor.doc, anchor.win);
           anchor.win.scrollTo({ top: Math.round(anchor.fraction * max), behavior: "instant" });
         }, 60);
       }

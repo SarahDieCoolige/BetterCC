@@ -39,6 +39,15 @@ export function getChatWin(): Window | null {
   return f ? f.contentWindow : null;
 }
 
+/** Scrollable range of the chat doc in px. body, not documentElement: the
+ * write()-filled quirks doc reports its scrollable height on body, and the
+ * banner guard and the zoom anchor must share this metric or a zoom
+ * restore can land a banner-tripping distance off. Callers hold a
+ * getChatDoc() doc, which guarantees body exists. */
+export function chatScrollMax(doc: Document, win: Window): number {
+  return doc.body.scrollHeight - win.innerHeight;
+}
+
 /** Write a styled message into the chat iframe's document stream.
  *  Splits on \n → <br>, prefixes with "BetterCC: ", and scrolls to bottom.
  *  If the iframe isn't ready this is a silent no-op.

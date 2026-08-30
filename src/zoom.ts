@@ -9,7 +9,7 @@
 // the matching reflow-resync and the zoom pause guard).
 
 import { react } from "./store";
-import { getChatDoc, getChatWin } from "./utils";
+import { getChatDoc, getChatWin, chatScrollMax } from "./utils";
 import { pauseBanner } from "./chat";
 
 /** Reading position as a 0…1 fraction of the scrollable range; 1 when the
@@ -31,10 +31,7 @@ export function initZoom(): void {
         ? {
             win,
             doc,
-            fraction: scrollFraction(
-              win.scrollY,
-              doc.documentElement.scrollHeight - win.innerHeight,
-            ),
+            fraction: scrollFraction(win.scrollY, chatScrollMax(doc, win)),
           }
         : null;
 
@@ -47,7 +44,7 @@ export function initZoom(): void {
     shell?.style.setProperty("--bcc-chat-zoom", step);
     if (anchor) {
       setTimeout(() => {
-        const max = anchor.doc.documentElement.scrollHeight - anchor.win.innerHeight;
+        const max = chatScrollMax(anchor.doc, anchor.win);
         // instant: the frame doc inherits smooth scrolling, a smooth
         // anchor would crawl for hundreds of ms
         anchor.win.scrollTo({ top: Math.round(anchor.fraction * max), behavior: "instant" });

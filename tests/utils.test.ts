@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { getUserKey, setUserStore, printToChat, printHelp } from "../src/utils";
+import { getUserKey, setUserStore, printToChat, printHelp, chatScrollMax } from "../src/utils";
 
 /** Parse a .bcc-chat-msg div from its HTML string into a fake element. */
 function parseMsgDiv(html: string): any {
@@ -215,5 +215,24 @@ describe("printToChat", () => {
     printToChat("Hilfe");
 
     expect(fakeWin._scrollY).toBe(2000);
+  });
+});
+
+// ─── chatScrollMax ──────────────────────────────────────────────────────
+// One scroll metric for the banner guard (chat.ts) and the zoom anchor
+// (zoom.ts): body height minus viewport, quirks-mode body being the box
+// that carries content height in the write()-filled frame doc.
+
+describe("chatScrollMax", () => {
+  it("is body scrollHeight minus the viewport height", () => {
+    const doc = { body: { scrollHeight: 800 } } as unknown as Document;
+    const win = { innerHeight: 300 } as unknown as Window;
+    expect(chatScrollMax(doc, win)).toBe(500);
+  });
+
+  it("goes negative when the viewport exceeds the content (nothing to scroll)", () => {
+    const doc = { body: { scrollHeight: 200 } } as unknown as Document;
+    const win = { innerHeight: 300 } as unknown as Window;
+    expect(chatScrollMax(doc, win)).toBe(-100);
   });
 });
