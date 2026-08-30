@@ -10,7 +10,7 @@
 
 import { react } from "./store";
 import { getChatDoc, getChatWin, chatScrollMax } from "./utils";
-import { pauseBanner } from "./chat";
+import { pauseBanner, hideStuckBanner } from "./chat";
 
 /** Reading position as a 0…1 fraction of the scrollable range; 1 when the
  * doc doesn't scroll (bottom is the only position). Pure, tested. */
@@ -48,6 +48,9 @@ export function initZoom(): void {
         // instant: the frame doc inherits smooth scrolling, a smooth
         // anchor would crawl for hundreds of ms
         anchor.win.scrollTo({ top: Math.round(anchor.fraction * max), behavior: "instant" });
+        // A zoom-out can collapse the scroll range entirely; nothing
+        // scrolls then, so clear a banner left over from mid-history.
+        hideStuckBanner(anchor.doc, anchor.win);
       }, 60);
     }
   });

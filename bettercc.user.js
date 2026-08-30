@@ -288,6 +288,12 @@
   function pauseBanner(ms) {
     bannerPauseUntil = Date.now() + ms;
   }
+  function hideStuckBanner(iframeDoc, iframeWin) {
+    if (chatScrollMax(iframeDoc, iframeWin) > 0) return;
+    iframeWin.scrolling = true;
+    const banner = iframeDoc.getElementById("autoscroll-banner");
+    if (banner) banner.style.display = "none";
+  }
   function addAutoscrollBanner(iframeDoc, iframeWin) {
     if (!iframeDoc || !iframeWin) return;
     if (iframeDoc.getElementById("autoscroll-banner")) return;
@@ -1353,6 +1359,7 @@
         setTimeout(() => {
           const max = chatScrollMax(anchor.doc, anchor.win);
           anchor.win.scrollTo({ top: Math.round(anchor.fraction * max), behavior: "instant" });
+          hideStuckBanner(anchor.doc, anchor.win);
         }, 60);
       }
     });

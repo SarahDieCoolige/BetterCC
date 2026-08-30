@@ -27,6 +27,17 @@ export function pauseBanner(ms: number): void {
   bannerPauseUntil = Date.now() + ms;
 }
 
+/** Hide the banner when the frame's scroll range is gone (a zoom-out can
+ * shrink the content below the fold). No scroll event fires in that
+ * state, so the listener would never run and a banner shown mid-history
+ * would stick. The zoom react calls this after the geometry change. */
+export function hideStuckBanner(iframeDoc: Document, iframeWin: Window): void {
+  if (chatScrollMax(iframeDoc, iframeWin) > 0) return;
+  (iframeWin as any).scrolling = true;
+  const banner = iframeDoc.getElementById("autoscroll-banner");
+  if (banner) banner.style.display = "none";
+}
+
 export function addAutoscrollBanner(iframeDoc: Document, iframeWin: Window): void {
   if (!iframeDoc || !iframeWin) return;
   // Already present — re-injection after a full rewrite must not stack
