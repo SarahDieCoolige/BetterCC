@@ -1707,6 +1707,7 @@ html[data-bcc-zoom="1.45"] body {
   min-width: 0;
   height: 20px; /* thumb hit area, same as the switch track */
   background: transparent;
+  border: none; /* the UA field border (dotted 1px) survives appearance:none */
   cursor: pointer;
   appearance: none;
 }
@@ -1722,7 +1723,7 @@ html[data-bcc-zoom="1.45"] body {
   margin-top: -6px; /* center the thumb on the 4px track */
   border: none;
   border-radius: 50%;
-  background: var(--bcc-surface-raised);
+  background: var(--bcc-text);
 }
 .bcc-appearance-row input[type="range"]::-moz-range-track {
   height: 4px;
@@ -1734,11 +1735,18 @@ html[data-bcc-zoom="1.45"] body {
   height: 16px;
   border: none;
   border-radius: 50%;
-  background: var(--bcc-surface-raised);
+  background: var(--bcc-text);
 }
+/* Focus shows on the thumb, not the whole input: a slider keeps focus
+   after dragging, so a ring around the input would linger. */
 .bcc-appearance-row input[type="range"]:focus-visible {
-  outline: 2px solid var(--bcc-accent-whisper);
-  outline-offset: 2px;
+  outline: none;
+}
+.bcc-appearance-row input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--bcc-border);
+}
+.bcc-appearance-row input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--bcc-border);
 }
 .bcc-zoom-readout {
   flex-shrink: 0;
