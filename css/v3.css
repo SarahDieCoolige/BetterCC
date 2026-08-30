@@ -172,7 +172,7 @@
   border-bottom: 1px solid var(--bcc-border);
 }
 .bcc-sidebar .bcc-online-count {
-  font-size: 11px;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -192,7 +192,7 @@
 .bcc-channel-select-face {
   display: block;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 1.0909rem;
   font-family: inherit;
   color: var(--bcc-text-muted);
   background: transparent;
@@ -223,7 +223,7 @@
   border: 0;
   padding: 0;
   /* Re-use the face's font-size so the native dropdown is readable */
-  font-size: 12px;
+  font-size: 1.0909rem;
   font-family: inherit;
 }
 
@@ -257,7 +257,7 @@
   justify-content: center;
   border-radius: 6px;
   color: var(--bcc-text-muted);
-  font-size: 12px;
+  font-size: 1.0909rem;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -285,7 +285,7 @@
   order: -1; /* first */
   width: 28px;
   height: 28px;
-  font-size: 14px;
+  font-size: 1.2727rem;
   margin: 0 auto; /* center in the narrow column */
 }
 
@@ -338,7 +338,7 @@
   max-width: 46px;
 }
 .bcc-sidebar.bcc-collapsed .bcc-channel-select-face {
-  font-size: 10px;
+  font-size: 0.9091rem;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 8px;
@@ -353,7 +353,7 @@
   text-align: center;
 }
 .bcc-sidebar.bcc-collapsed .bcc-online-num {
-  font-size: 11px;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -380,7 +380,7 @@
   border-radius: 10px;
   color: var(--bcc-text-sidebar);
   text-decoration: none;
-  font-size: 17px;
+  font-size: 1.5455rem;
   cursor: pointer;
   filter: brightness(0.95);
   transition:
@@ -413,7 +413,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 0.9091rem;
   font-weight: 700;
   line-height: 1;
   border-radius: 999px;
@@ -454,7 +454,7 @@
   align-items: center;
   gap: 0;
   padding: 2px 10px;
-  font-size: 14px;
+  font-size: 1.2727rem;
   line-height: 1.35;
   border-radius: 8px;
   margin: 1px 2px;
@@ -486,7 +486,7 @@
 /* Status tag — short [A]/[S] suffix after the name for away/sep users. */
 .bcc-user-tag {
   margin-left: 3px;
-  font-size: 10px;
+  font-size: 0.9091rem;
   color: inherit;
 }
 /* Consecutive tags ([A] [S]) are tighter together than name→tag. */
@@ -567,7 +567,7 @@
   background: transparent;
   color: var(--bcc-text-muted);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -710,7 +710,7 @@
   height: 32px;
   border-radius: 6px;
   color: var(--bcc-text-muted);
-  font-size: 16px;
+  font-size: 1.4545rem;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -767,7 +767,7 @@
   right: -4px;
   min-width: 14px;
   padding: 1px 3px;
-  font-size: 9px;
+  font-size: 0.8182rem;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
@@ -888,7 +888,7 @@
 .bcc-chatbar-placeholder {
   opacity: 0.6;
   font-style: italic;
-  font-size: 12px;
+  font-size: 1.0909rem;
 }
 
 /* ─── Responsive: <600px default-collapses the sidebar ────────────────────
@@ -959,7 +959,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1.4545rem;
   padding: 0;
   filter: brightness(0.95);
   transition:
@@ -981,7 +981,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   padding: 12px;
-  font-size: 13px;
+  font-size: 1.1818rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1014,7 +1014,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 2.1818rem;
   font-weight: 700;
   color: var(--bcc-text-raised);
   user-select: none;
@@ -1041,7 +1041,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 1.4545rem;
   padding: 0;
   border-radius: 4px;
   filter: brightness(0.95);
@@ -1119,12 +1119,12 @@
   pointer-events: none;
 }
 .bcc-toolbar-icon {
-  font-size: 16px;
+  font-size: 1.4545rem;
   line-height: 1;
   color: inherit;
 }
 .bcc-toolbar-shortcut {
-  font-size: 9px;
+  font-size: 0.8182rem;
   line-height: 1;
   font-family: monospace;
   color: var(--bcc-text-muted);
@@ -1184,7 +1184,7 @@
   border: none;
   color: var(--bcc-icon);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1.4545rem;
   padding: 4px;
 }
 .bcc-id-search {
@@ -1241,7 +1241,7 @@
   border-radius: 4px;
   border: 1px solid var(--bcc-border);
   flex-shrink: 0;
-  font-size: 20px;
+  font-size: 1.8182rem;
 }
 .bcc-id-name {
   color: var(--bcc-text);
@@ -1292,14 +1292,14 @@
 }
 .bcc-aw-count {
   color: var(--bcc-text-muted);
-  font-size: 12px;
+  font-size: 1.0909rem;
 }
 .bcc-aw-close {
   background: none;
   border: none;
   color: var(--bcc-icon);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1.4545rem;
   padding: 4px;
   margin-left: auto;
 }
@@ -1324,7 +1324,7 @@
 }
 .bcc-aw-stand {
   color: var(--bcc-text-muted);
-  font-size: 12px;
+  font-size: 1.0909rem;
   white-space: nowrap;
 }
 /* Live mode: the Stand stamp and the manual refresh are hidden while the
@@ -1344,7 +1344,7 @@
 }
 .bcc-aw-section-head {
   color: var(--bcc-text-muted);
-  font-size: 12px;
+  font-size: 1.0909rem;
   padding: 8px 0 4px;
   border-bottom: 1px solid var(--bcc-border);
 }
@@ -1463,7 +1463,7 @@
   border: none;
   color: var(--bcc-icon);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1.4545rem;
   padding: 4px;
 }
 /* ─── Tab strip ─── */
@@ -1480,7 +1480,7 @@
   border: none;
   color: var(--bcc-text-muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 1.1818rem;
   font-family: inherit;
   font-weight: 500;
   padding: 8px 12px;
@@ -1526,7 +1526,7 @@
   border: 1px solid var(--bcc-border);
   background: var(--bcc-surface-raised);
   color: var(--bcc-text-raised);
-  font-size: 13px;
+  font-size: 1.1818rem;
   font-family: inherit;
   cursor: pointer;
 }
@@ -1602,7 +1602,7 @@
   margin-bottom: 0;
 }
 .bcc-appearance-heading {
-  font-size: 13px;
+  font-size: 1.1818rem;
   font-weight: 600;
   margin: 0 0 8px 0;
   color: var(--bcc-text);
@@ -1649,13 +1649,13 @@
   border-radius: 4px;
   background: var(--bcc-surface-input);
   color: var(--bcc-text-input);
-  font-size: 13px;
+  font-size: 1.1818rem;
   font-family: inherit;
 }
 .bcc-appearance-error {
   display: block;
   min-height: 18px;
-  font-size: 12px;
+  font-size: 1.0909rem;
   color: var(--bcc-accent-ban);
   margin-top: 4px;
 }
@@ -1676,12 +1676,12 @@
   overflow: hidden;
 }
 .bcc-appearance-sample {
-  font-size: 16px;
+  font-size: 1.4545rem;
   font-weight: 600;
   line-height: 1;
 }
 .bcc-appearance-chip-label {
-  font-size: 9px;
+  font-size: 0.8182rem;
   color: var(--bcc-text-muted);
   margin-top: 2px;
   text-align: center;
@@ -1703,7 +1703,7 @@
 }
 .bcc-settings-hint {
   margin: 6px 0 0 0;
-  font-size: 12px;
+  font-size: 1.0909rem;
   color: var(--bcc-text-muted);
   line-height: 1.4;
 }
@@ -1729,7 +1729,7 @@
 }
 .bcc-manage-name {
   flex: 1;
-  font-size: 13px;
+  font-size: 1.1818rem;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1743,7 +1743,7 @@
   background: transparent;
   color: var(--bcc-text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 1.0909rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1768,7 +1768,7 @@
   border-radius: 4px;
   background: var(--bcc-surface-input);
   color: var(--bcc-text-input);
-  font-size: 13px;
+  font-size: 1.1818rem;
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -1776,7 +1776,7 @@
   /* no extra styles needed; the section + heading handle layout */
 }
 .bcc-manage-current {
-  font-size: 13px;
+  font-size: 1.1818rem;
   color: var(--bcc-text-muted);
   margin-bottom: 8px;
 }
@@ -1792,12 +1792,12 @@
   color: var(--bcc-text);
   white-space: nowrap;
   font-family: monospace;
-  font-size: 12px;
+  font-size: 1.0909rem;
 }
 .bcc-cmds-desc {
   padding: 3px 0;
   color: var(--bcc-text-muted);
-  font-size: 13px;
+  font-size: 1.1818rem;
 }
 
 /* ─── Info (Diagnostics) panel ─── */
@@ -1810,7 +1810,7 @@
   display: flex;
   gap: 8px;
   padding: 4px 0;
-  font-size: 13px;
+  font-size: 1.1818rem;
 }
 .bcc-info-row + .bcc-info-row {
   border-top: 1px solid var(--bcc-border);
@@ -1836,7 +1836,7 @@
   margin-top: 8px;
 }
 .bcc-info-copy-result {
-  font-size: 12px;
+  font-size: 1.0909rem;
   color: var(--bcc-text-muted);
 }
 .bcc-info-links {
@@ -1846,7 +1846,7 @@
 }
 .bcc-info-link {
   color: var(--bcc-accent-whisper);
-  font-size: 13px;
+  font-size: 1.1818rem;
   text-decoration: underline;
   width: fit-content;
 }
@@ -1881,7 +1881,7 @@
 .bcc-data-error {
   display: block;
   min-height: 18px;
-  font-size: 12px;
+  font-size: 1.0909rem;
   color: var(--bcc-accent-ban);
   margin-top: 4px;
 }
@@ -1903,7 +1903,7 @@
   padding: 6px 14px;
   background: var(--bcc-warn);
   color: #1d1206;
-  font-size: 13px;
+  font-size: 1.1818rem;
   border-radius: 999px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }
@@ -1919,7 +1919,7 @@
   border: 1px solid rgba(0, 0, 0, 0.4);
   border-radius: 6px;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: 1.0909rem;
   cursor: pointer;
 }
 
@@ -1933,7 +1933,7 @@
   margin-left: 6px;
   color: var(--bcc-warn);
   opacity: 0.75;
-  font-size: 11px;
+  font-size: 1rem;
   cursor: help;
 }
 
