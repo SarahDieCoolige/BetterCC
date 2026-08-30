@@ -146,6 +146,14 @@ describe("isDirty", () => {
     expect(isDirty(loaded, { ...loaded, hoverPreview: false })).toBe(true);
   });
 
+  it("returns true when compact differs", () => {
+    expect(isDirty(loaded, { ...loaded, compact: true })).toBe(true);
+  });
+
+  it("returns true when ban differs", () => {
+    expect(isDirty(loaded, { ...loaded, ban: ["Spammer"] })).toBe(true);
+  });
+
   it("returns false when pinned arrays have same entries and same order", () => {
     const draft: SettingsDraft = { ...loaded, pinned: ["Alice", "Bob"] };
     expect(isDirty(draft, { ...draft, pinned: ["Alice", "Bob"] })).toBe(false);
@@ -195,6 +203,8 @@ describe("serializeExport", () => {
       whisper: "TargetNick",
       sendOnEnter: false,
       hoverPreview: true,
+      compact: true,
+      ban: ["Spammer"],
     };
     const blob = serializeExport(draft, "TestUser");
 
@@ -209,6 +219,8 @@ describe("serializeExport", () => {
       whisper: "TargetNick",
       send_on_enter: false,
       hover_preview: true,
+      compact: true,
+      ban: ["Spammer"],
     });
   });
 });
@@ -233,6 +245,8 @@ describe("parseImport", () => {
         whisper: "TargetNick",
         send_on_enter: false,
         hover_preview: true,
+        compact: true,
+        ban: ["Spammer"],
       },
     };
     const result = parseImport(JSON.stringify(blob));
@@ -244,6 +258,8 @@ describe("parseImport", () => {
     expect(result.draft.whisper).toBe("TargetNick");
     expect(result.draft.sendOnEnter).toBe(false);
     expect(result.draft.hoverPreview).toBe(true);
+    expect(result.draft.compact).toBe(true);
+    expect(result.draft.ban).toEqual(["Spammer"]);
   });
 
   // ── Failure cases ───────────────────────────────────────────────────────
@@ -443,6 +459,34 @@ describe("parseImport", () => {
     expect(result.draft.hoverPreview).toBe(true); // default
   });
 
+  it("coerces wrong-type compact to default", () => {
+    const blob = {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: "2026-08-13T12:00:00.000Z",
+      user: "U",
+      settings: { compact: "1" },
+    };
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.compact).toBe(false); // default
+  });
+
+  it("coerces wrong-type ban to default", () => {
+    const blob = {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: "2026-08-13T12:00:00.000Z",
+      user: "U",
+      settings: { ban: ["ok", 42] },
+    };
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.ban).toEqual([]); // default
+  });
+
   // ── Independence (full replace semantics) ────────────────────────────────
 
   it("is independent of any current draft (full replace)", () => {
@@ -462,7 +506,7 @@ describe("parseImport", () => {
 
   // ── Round-trip ───────────────────────────────────────────────────────────
 
-  it("export→import round-trip preserves all 6 fields", () => {
+  it("export→import round-trip preserves all 8 fields", () => {
     const draft: SettingsDraft = {
       color: "FF0000",
       schemeV2: true,
@@ -470,12 +514,39 @@ describe("parseImport", () => {
       whisper: "TargetNick",
       sendOnEnter: false,
       hoverPreview: true,
+      compact: true,
+      ban: ["Spammer"],
     };
     const blob = serializeExport(draft, "TestUser");
     const result = parseImport(JSON.stringify(blob));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.draft).toEqual(draft);
+  });
+
+  it("pre-compact export (6 keys) imports with compact/ban defaults", () => {
+    // Backward compat: every export written before the draft covered all
+    // persisted keys lacks compact + ban. Those files must keep importing.
+    const blob = {
+      _format: "bettercc-settings",
+      version: 1,
+      exportedAt: "2026-01-01T00:00:00.000Z",
+      user: "U",
+      settings: {
+        color: "FF0000",
+        scheme_v2: true,
+        pinned: ["Alice"],
+        whisper: "TargetNick",
+        send_on_enter: false,
+        hover_preview: true,
+      },
+    };
+    const result = parseImport(JSON.stringify(blob));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.compact).toBe(false);
+    expect(result.draft.ban).toEqual([]);
+    expect(result.draft.color).toBe("FF0000");
   });
 
   it("round-trip preserves defaults too", () => {
@@ -502,6 +573,8 @@ describe("defaultDraft", () => {
       whisper: "",
       sendOnEnter: true,
       hoverPreview: true,
+      compact: false,
+      ban: [],
     });
   });
 });
@@ -519,6 +592,8 @@ describe("draftFromConfig", () => {
       whisper: "Charlie",
       send_on_enter: false,
       hover_preview: false,
+      compact: true,
+      ban: ["Spammer"],
     };
     expect(draftFromConfig(raw)).toEqual({
       color: "FF0000",
@@ -527,6 +602,8 @@ describe("draftFromConfig", () => {
       whisper: "Charlie",
       sendOnEnter: false,
       hoverPreview: false,
+      compact: true,
+      ban: ["Spammer"],
     });
   });
 

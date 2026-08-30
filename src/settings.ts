@@ -75,6 +75,8 @@ async function applyDiff(current: SettingsDraft, next: SettingsDraft): Promise<v
     await storeSet("hover_preview", next.hoverPreview);
   if (!pinnedEqual(current.pinned, next.pinned)) await storeSet("pinned", next.pinned);
   if (current.whisper !== next.whisper) await storeSet("whisper", next.whisper);
+  if (current.compact !== next.compact) await storeSet("compact", next.compact);
+  if (!pinnedEqual(current.ban, next.ban)) await storeSet("ban", next.ban);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -150,7 +152,8 @@ export async function openSettings(): Promise<void> {
   // Record the element that had focus before opening (for restore on close)
   openerEl = document.activeElement;
 
-  // Read the 6 managed keys from the sync store
+  // Read the managed keys from the sync store (every persisted key, including
+  // the two without modal controls — compact, ban)
   const raw = {
     color: get("color"),
     scheme_v2: get("scheme_v2"),
@@ -158,6 +161,8 @@ export async function openSettings(): Promise<void> {
     whisper: get("whisper"),
     send_on_enter: get("send_on_enter"),
     hover_preview: get("hover_preview"),
+    compact: get("compact"),
+    ban: get("ban"),
   };
   loaded = draftFromConfig(raw);
   draft = draftFromConfig(raw);

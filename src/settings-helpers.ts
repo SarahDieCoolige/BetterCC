@@ -14,7 +14,10 @@ import { generateScheme as generateV2 } from "./scheme-v2";
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** The panel's current applied values (a mirror of GM state). Compared against
- *  the open-time snapshot (`loaded`) to drive the Undo button. */
+ *  the open-time snapshot (`loaded`) to drive the Undo button. Covers every
+ *  persisted store key, so export/import/reset/undo are complete — including
+ *  the two keys without modal controls (compact toggles via the chatbar
+ *  chevron, ban has no feature UI yet). */
 export interface SettingsDraft {
   color: string; // hex without "#", e.g. "6AAED8"
   schemeV2: boolean; // generator version (v1 stable / v2 experimental)
@@ -22,6 +25,8 @@ export interface SettingsDraft {
   whisper: string; // superwhisper target, "" = none
   sendOnEnter: boolean; // true (default) = Enter sends
   hoverPreview: boolean; // true (default) = hover preview on
+  compact: boolean; // true = collapsed chatbar (chevron in footer.ts)
+  ban: string[]; // superban list (T12, not built yet; stays [])
 }
 
 /** Versioned export format for backup. */
@@ -30,7 +35,7 @@ export interface ExportBlob {
   version: 1;
   exportedAt: string; // ISO timestamp
   user: string; // chat_nick at export time
-  settings: Record<string, unknown>; // the 6 managed keys, snake_case names
+  settings: Record<string, unknown>; // every persisted store key, snake_case names
 }
 
 /** Result of an import operation. */
@@ -49,6 +54,8 @@ export function defaultDraft(): SettingsDraft {
     whisper: "",
     sendOnEnter: true,
     hoverPreview: true,
+    compact: false,
+    ban: [],
   };
 }
 
@@ -90,7 +97,9 @@ export function isDirty(loaded: SettingsDraft, draft: SettingsDraft): boolean {
     loaded.whisper !== draft.whisper ||
     loaded.sendOnEnter !== draft.sendOnEnter ||
     loaded.hoverPreview !== draft.hoverPreview ||
-    !pinnedEqual(loaded.pinned, draft.pinned)
+    loaded.compact !== draft.compact ||
+    !pinnedEqual(loaded.pinned, draft.pinned) ||
+    !pinnedEqual(loaded.ban, draft.ban)
   );
 }
 
@@ -149,6 +158,8 @@ export function draftFromConfig(raw: {
   whisper?: unknown;
   send_on_enter?: unknown;
   hover_preview?: unknown;
+  compact?: unknown;
+  ban?: unknown;
 }): SettingsDraft {
   return {
     color: typeof raw.color === "string" ? raw.color.replace(/^#/, "") : defaultDraft().color,
@@ -162,6 +173,11 @@ export function draftFromConfig(raw: {
       typeof raw.send_on_enter === "boolean" ? raw.send_on_enter : defaultDraft().sendOnEnter,
     hoverPreview:
       typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview,
+    compact: typeof raw.compact === "boolean" ? raw.compact : defaultDraft().compact,
+    ban:
+      Array.isArray(raw.ban) && raw.ban.every((v) => typeof v === "string")
+        ? [...(raw.ban as string[])]
+        : [],
   };
 }
 
@@ -180,6 +196,8 @@ const DRAFT_TO_CONFIG: Record<keyof SettingsDraft, string> = {
   whisper: "whisper",
   sendOnEnter: "send_on_enter",
   hoverPreview: "hover_preview",
+  compact: "compact",
+  ban: "ban",
 };
 
 /** Config key back to draft field name — derived as the inverse of
@@ -296,6 +314,18 @@ function coerceField(key: keyof SettingsDraft, value: unknown, draft: SettingsDr
     case "hoverPreview":
       if (typeof value === "boolean") {
         draft.hoverPreview = value;
+        return true;
+      }
+      return false;
+    case "compact":
+      if (typeof value === "boolean") {
+        draft.compact = value;
+        return true;
+      }
+      return false;
+    case "ban":
+      if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+        draft.ban = value as string[];
         return true;
       }
       return false;
