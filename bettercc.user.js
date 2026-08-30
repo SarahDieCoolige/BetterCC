@@ -567,6 +567,24 @@
   var isBoolean = (v) => typeof v === "boolean";
   var isStringArray = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
   var isHexColor = (v) => typeof v === "string" && /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
+  var ZOOM_STEPS = [
+    0.85,
+    0.9,
+    0.95,
+    1,
+    1.05,
+    1.1,
+    1.15,
+    1.2,
+    1.25,
+    1.3,
+    1.35,
+    1.4,
+    1.45
+  ];
+  function isZoomStep(v) {
+    return typeof v === "number" && ZOOM_STEPS.includes(v);
+  }
   var emptySession = {
     nick: "",
     registered: false,
@@ -632,6 +650,13 @@
       default: [],
       persisted: true,
       valid: isStringArray
+    },
+    zoom: {
+      encode: (v) => String(v),
+      decode: (r) => parseFloat(r),
+      default: 1,
+      persisted: true,
+      valid: isZoomStep
     },
     session: {
       encode: (v) => v,

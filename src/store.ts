@@ -48,6 +48,7 @@ export type Persisted = {
   send_on_enter: boolean;
   hover_preview: boolean;
   ban: string[];
+  zoom: number;
 };
 
 // Ephemeral: host-derived snapshots. Never persisted.
@@ -97,6 +98,15 @@ const isStringArray = (v: unknown): v is string[] =>
  * tripping the invalid-settings notice. */
 const isHexColor = (v: unknown): v is string =>
   typeof v === "string" && /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
+
+/** Zoom steps for the font-size slider (spec: font-size-slider). The
+ * dataset attr and CSS step rules use the same two-decimal format. */
+export const ZOOM_STEPS = [
+  0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45,
+] as const;
+export function isZoomStep(v: unknown): v is number {
+  return typeof v === "number" && (ZOOM_STEPS as readonly number[]).includes(v);
+}
 
 const emptySession: SessionState = {
   nick: "",
@@ -164,6 +174,13 @@ const codecs: { [K in StoreKey]: Codec<any> } = {
     default: [],
     persisted: true,
     valid: isStringArray,
+  },
+  zoom: {
+    encode: (v: number) => String(v),
+    decode: (r) => parseFloat(r as string),
+    default: 1,
+    persisted: true,
+    valid: isZoomStep,
   },
   session: {
     encode: (v) => v,

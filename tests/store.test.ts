@@ -118,6 +118,7 @@ describe("store — silent seed with defaults", () => {
     expect(get("send_on_enter")).toBe(true);
     expect(get("hover_preview")).toBe(true);
     expect(get("ban")).toEqual([]);
+    expect(get("zoom")).toBe(1);
   });
 
   it("seeds ephemeral keys to empty initial values", async () => {
@@ -337,6 +338,39 @@ describe("store — codec round-trip for compact", () => {
     await set("compact", false);
     expect(get("compact")).toBe(false);
     expect(gm.store.get("compact_testuser")).toBe("");
+  });
+});
+
+describe("store — zoom codec round-trip", () => {
+  let gm: ReturnType<typeof installGmFakeWithListeners>;
+
+  beforeEach(() => {
+    _resetStoreForTesting();
+    gm = installGmFakeWithListeners();
+  });
+
+  it("set(1) persists '1' to GM; get returns 1", async () => {
+    await initTestStore(gm);
+
+    await set("zoom", 1);
+    expect(get("zoom")).toBe(1);
+    expect(gm.store.get("zoom_testuser")).toBe("1");
+  });
+
+  it("set(1.3) persists '1.3' to GM; get returns 1.3", async () => {
+    await initTestStore(gm);
+
+    await set("zoom", 1.3);
+    expect(get("zoom")).toBe(1.3);
+    expect(gm.store.get("zoom_testuser")).toBe("1.3");
+  });
+
+  it("seeds from a persisted '1.3' via decode", async () => {
+    gm.store.set("zoom_testuser", "1.3");
+
+    await initStore();
+
+    expect(get("zoom")).toBe(1.3);
   });
 });
 
@@ -634,6 +668,7 @@ describe("snapshot()", () => {
     "send_on_enter",
     "hover_preview",
     "ban",
+    "zoom",
     "session",
     "userlist",
     "globalUserlist",
@@ -816,6 +851,24 @@ describe("store: T11 codec validation at boot", () => {
     expect(get("bccHealth").invalidSettings).toEqual([{ key: "ban", value: [123, 456] }]);
   });
 
+  it("corrupt zoom (step outside the list) falls back to default 1 and collects the key", async () => {
+    gm.store.set("zoom_testuser", "2");
+
+    await initStore();
+
+    expect(get("zoom")).toBe(1);
+    expect(get("bccHealth").invalidSettings).toEqual([{ key: "zoom", value: "2" }]);
+  });
+
+  it("corrupt zoom (non-numeric string) falls back to default 1 and collects the key", async () => {
+    gm.store.set("zoom_testuser", "abc");
+
+    await initStore();
+
+    expect(get("zoom")).toBe(1);
+    expect(get("bccHealth").invalidSettings).toEqual([{ key: "zoom", value: "abc" }]);
+  });
+
   it("multiple corrupt keys are all collected", async () => {
     gm.store.set("color_testuser", 42);
     gm.store.set("pinned_testuser", "bad");
@@ -929,6 +982,21 @@ describe("store: write guard rejects invalid values whole", () => {
 
     expect(get("color")).toBe("FF0000");
     expect(gm.store.get("color_testuser")).toBe("FF0000");
+  });
+
+  it("invalid zoom writes are a no-op: mirror and GM keep the old value", async () => {
+    await set("zoom", 1);
+
+    // off-step 0.87, out-of-range 2, and a string all fail isZoomStep
+    await set("zoom", 0.87 as any);
+    expect(get("zoom")).toBe(1);
+    expect(gm.store.get("zoom_testuser")).toBe("1");
+
+    await set("zoom", 2 as any);
+    expect(get("zoom")).toBe(1);
+
+    await set("zoom", "abc" as any);
+    expect(get("zoom")).toBe(1);
   });
 
   it("partially invalid array write is rejected whole", async () => {
