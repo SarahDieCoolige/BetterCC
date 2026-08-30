@@ -277,6 +277,10 @@
   }
 
   // src/chat.ts
+  function scrollEventDecision(st, lastSt, maxScroll, lastMaxScroll) {
+    if (Math.abs(maxScroll - lastMaxScroll) > 1) return "resync";
+    return st < lastSt ? "up" : "down";
+  }
   function addAutoscrollBanner(iframeDoc, iframeWin) {
     if (!iframeDoc || !iframeWin) return;
     if (iframeDoc.getElementById("autoscroll-banner")) return;
@@ -289,9 +293,15 @@
       scrollbanner.style.display = "none";
     });
     let lastScrollTop = iframeWin.scrollY || iframeDoc.documentElement.scrollTop;
+    let lastMaxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
     iframeWin.addEventListener("scroll", function() {
       const scrollPosition = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
       const maxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+      if (scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync") {
+        lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+        lastMaxScroll = maxScroll;
+        return;
+      }
       if (scrollPosition < lastScrollTop) {
         if (iframeWin.scrolling && scrollPosition < maxScroll - 1) {
           iframeWin.scrolling = false;
@@ -303,6 +313,7 @@
         iframeWin.scrolling = true;
       }
       lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+      lastMaxScroll = maxScroll;
     });
   }
 
