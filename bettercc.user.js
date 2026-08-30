@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=33ccb7af
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=a00d0f38
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=6b04a70d
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -1313,6 +1313,34 @@
     } else {
       cclog("reloadChat: no WS \u2014 nothing to reconnect", "v3");
     }
+  }
+
+  // src/zoom.ts
+  function scrollFraction(st, max) {
+    if (max <= 0) return 1;
+    return Math.min(1, Math.max(0, st / max));
+  }
+  function initZoom() {
+    react("zoom", (z) => {
+      const win = getChatWin();
+      const doc = getChatDoc();
+      let fraction = 1;
+      let hadAnchor = false;
+      if (win && doc && doc.documentElement) {
+        const max = doc.documentElement.scrollHeight - win.innerHeight;
+        fraction = scrollFraction(win.scrollY, max);
+        hadAnchor = true;
+      }
+      document.documentElement.dataset.bccZoom = z.toFixed(2);
+      const shell = document.querySelector(".bcc-shell");
+      shell?.style.setProperty("--bcc-chat-zoom", z.toFixed(2));
+      if (hadAnchor) {
+        setTimeout(() => {
+          const max2 = doc.documentElement.scrollHeight - win.innerHeight;
+          win.scrollTo(0, Math.round(fraction * max2));
+        }, 60);
+      }
+    });
   }
 
   // src/userlist.ts
@@ -5284,6 +5312,7 @@
     buildShell();
     initTheme();
     unsafeWindow.bettercc.setTheme = applyCurrentScheme;
+    initZoom();
     hookChatoutConnect();
     mountSidebar();
     startUlistPoll();

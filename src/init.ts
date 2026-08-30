@@ -36,6 +36,7 @@ import { cclog } from "./utils";
 import { hookChatoutConnect } from "./ws-hook";
 import { buildShell, reloadChat } from "./shell";
 import { initTheme, applyCurrentScheme } from "./theme";
+import { initZoom } from "./zoom";
 import { startUlistPoll, stopUlistPoll, refreshUlistNow } from "./ulist-poll";
 import { startPolling, stopPolling } from "./global-userlist";
 import { mountSidebar } from "./sidebar";
@@ -132,6 +133,13 @@ export async function initV3(): Promise<void> {
   // exposure is public-API only.
   initTheme();
   (unsafeWindow.bettercc as any).setTheme = applyCurrentScheme;
+
+  // Page-wide text zoom (slider backing): writes data-bcc-zoom on <html>
+  // and --bcc-chat-zoom on .bcc-shell, and scales #chatframe from outside.
+  // After buildShell so the var home and #chatframe exist; the frame's
+  // content arrives later, the react's first render just skips the anchor
+  // then.
+  initZoom();
 
   // Attach the WS hook so iframe.css + theme mirror + autoscroll banner inject
   // on the first message (spec §3.3). The hook only attaches listeners to

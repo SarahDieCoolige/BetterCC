@@ -15,7 +15,7 @@
  * ═══════════════════════════════════════════════════════════════════════ */
 
 .bcc-shell {
-  /* Fallbacks only — overwritten by the theme bridge at runtime. */
+  /* Fallbacks only, overwritten by the theme bridge at runtime. */
   --bcc-surface: #c8dae4;
   --bcc-text: #0e0f0f;
   --bcc-surface-raised: #ffffff;
@@ -33,7 +33,7 @@
   --bcc-border: #84acc2;
   --bcc-surface-hover: #b8cede;
   --bcc-surface-active: #a8bed2;
-  /* Userlist status accents — overridden by the theme bridge at runtime (scheme-
+  /* Userlist status accents, overridden by the theme bridge at runtime (scheme-
      derived, large-text AA against the sidebar). Fallbacks only; the live values
      come from generateScheme so the indicators stay readable on any theme. */
   --bcc-text-away: #6b7780;
@@ -43,8 +43,73 @@
   --bcc-danger: #e03131;
 }
 
+/* ─── Font-size zoom (spec: font-size-slider) ───
+ * The react writes data-bcc-zoom on <html> (NEVER an inline style on
+ * :root, the host wipes those) and --bcc-chat-zoom on .bcc-shell. Body
+ * must scale too: the host pins body, html, td at 11px separately. The
+ * frame magnifies from OUTSIDE (zoom + inverse dims), zooming inside
+ * the document breaks its scroll units. */
+html[data-bcc-zoom="0.85"],
+html[data-bcc-zoom="0.85"] body {
+  font-size: calc(11px * 0.85);
+}
+html[data-bcc-zoom="0.90"],
+html[data-bcc-zoom="0.90"] body {
+  font-size: calc(11px * 0.9);
+}
+html[data-bcc-zoom="0.95"],
+html[data-bcc-zoom="0.95"] body {
+  font-size: calc(11px * 0.95);
+}
+html[data-bcc-zoom="1.00"],
+html[data-bcc-zoom="1.00"] body {
+  font-size: calc(11px * 1);
+}
+html[data-bcc-zoom="1.05"],
+html[data-bcc-zoom="1.05"] body {
+  font-size: calc(11px * 1.05);
+}
+html[data-bcc-zoom="1.10"],
+html[data-bcc-zoom="1.10"] body {
+  font-size: calc(11px * 1.1);
+}
+html[data-bcc-zoom="1.15"],
+html[data-bcc-zoom="1.15"] body {
+  font-size: calc(11px * 1.15);
+}
+html[data-bcc-zoom="1.20"],
+html[data-bcc-zoom="1.20"] body {
+  font-size: calc(11px * 1.2);
+}
+html[data-bcc-zoom="1.25"],
+html[data-bcc-zoom="1.25"] body {
+  font-size: calc(11px * 1.25);
+}
+html[data-bcc-zoom="1.30"],
+html[data-bcc-zoom="1.30"] body {
+  font-size: calc(11px * 1.3);
+}
+html[data-bcc-zoom="1.35"],
+html[data-bcc-zoom="1.35"] body {
+  font-size: calc(11px * 1.35);
+}
+html[data-bcc-zoom="1.40"],
+html[data-bcc-zoom="1.40"] body {
+  font-size: calc(11px * 1.4);
+}
+html[data-bcc-zoom="1.45"],
+html[data-bcc-zoom="1.45"] body {
+  font-size: calc(11px * 1.45);
+}
+
+#chatframe {
+  zoom: var(--bcc-chat-zoom, 1);
+  width: calc(100% / var(--bcc-chat-zoom, 1));
+  height: calc(100% / var(--bcc-chat-zoom, 1));
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
- * Scrollbars — slim and themed on every engine
+ * Scrollbars, slim and themed on every engine
  *
  * The standard pair is the baseline: Firefox only ever supported
  * scrollbar-color/width (::-webkit-scrollbar rules never apply there), and
@@ -88,7 +153,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * UI shell — CSS Grid layout (T6, spec §1.4)
+ * UI shell, CSS Grid layout (T6, spec §1.4)
  *
  *   ┌───────────────────────────┬──────────┐
  *   │                           │          │
@@ -98,7 +163,7 @@
  *   │             chatbar                   │
  *   └──────────────────────────────────────┘
  *
- * Below 600px the sidebar collapses (hidden) — matches the spec's responsive
+ * Below 600px the sidebar collapses (hidden), matches the spec's responsive
  * collapse (§9 Q-adjacent: mobile/narrow viewports).
  * ═══════════════════════════════════════════════════════════════════════ */
 
@@ -106,10 +171,10 @@
   display: grid;
   /* rows: header auto, middle 1fr (sidebar+main), chatbar auto.
      chatbar collapses the old separate input + footer rows into one
-     horizontal bar (matches the v2 footer design — textarea + pill groups
+     horizontal bar (matches the v2 footer design, textarea + pill groups
      as flex siblings, see .bcc-chatbar). */
   grid-template-rows: 1fr auto;
-  /* columns: main (chatframe) on the left, sidebar on the right — the
+  /* columns: main (chatframe) on the left, sidebar on the right, the
      conventional chat layout (and the old ChatCity layout). The first track
      is the chat area (1fr); the sidebar track is a fixed-width column. */
   grid-template-columns: 1fr minmax(140px, 260px);
@@ -123,7 +188,7 @@
   background: var(--bcc-surface);
   color: var(--bcc-text);
   /* Warmer humanist stack: rounded system fonts first (Nunito Sans / Segoe UI
-   * Variable fall back to the generic humanist sans). No webfont shipped — the
+   * Variable fall back to the generic humanist sans). No webfont shipped, the
    * rounded forms from the OS-native rounds give the cozy vibe; the generic
    * fallback keeps it clean where those aren't installed. */
   font-family:
@@ -149,7 +214,7 @@
     border-color 0.45s ease,
     box-shadow 0.45s ease;
 }
-/* Userlist rows are interactive — hover must be instant, not animated. */
+/* Userlist rows are interactive, hover must be instant, not animated. */
 .bcc-userrow {
   transition: none;
 }
@@ -162,7 +227,7 @@
 }
 
 /* Channel-select + online-count row in the sidebar. Count on the left,
- * select on the right — both muted. */
+ * select on the right, both muted. */
 .bcc-online-row {
   display: flex;
   align-items: center;
@@ -179,7 +244,7 @@
   color: var(--bcc-text-muted);
   line-height: 1;
 }
-/* Channel select — invisible native <select> overlaid with a styled face.
+/* Channel select, invisible native <select> overlaid with a styled face.
    Same pattern as .bcc-color-input: the native control is opacity:0 + absolute
    on top, and a visible span (.bcc-channel-select-face) provides the styling.
    The wrap anchors the absolute positioning and sets the overall size. */
@@ -289,9 +354,9 @@
   margin: 0 auto; /* center in the narrow column */
 }
 
-/* ─── Sidebar content (the userlists — instant hide on collapse) ──────────
+/* ─── Sidebar content (the userlists, instant hide on collapse) ──────────
    visibility:hidden (not display:none) preserves the rows' rects so an open
-   user popup keeps a valid anchor while collapsed. No transition — hide
+   user popup keeps a valid anchor while collapsed. No transition, hide
    instantly (the content slide/fade looked bad). */
 .bcc-sidebar-content {
   display: flex;
@@ -307,7 +372,7 @@
 /* ─── Collapsed state: vertical mini-panel ────────────────────────────────
    When collapsed, the sidebar becomes a narrow column showing (top→bottom):
    toggle, stats icons (vertical), online count, channel select. The stats and
-   online-row are the SAME elements as expanded — CSS just flips their flow from
+   online-row are the SAME elements as expanded, CSS just flips their flow from
    horizontal rows to a vertical stack. The grid column snaps to fit (~52px). */
 .bcc-shell:has(.bcc-sidebar.bcc-collapsed) {
   grid-template-columns: 1fr 52px;
@@ -361,7 +426,7 @@
  * Sits at the very top of the sidebar, above the online-count heading.
  * Three centered icon-chips; each chip is a fixed square with the Font Awesome
  * icon centered and a red count badge in the top-right corner (hidden when 0).
- * Clean rewrite of the old #u_stats bar — no v2 code copied. */
+ * Clean rewrite of the old #u_stats bar, no v2 code copied. */
 .bcc-stats {
   display: flex;
   justify-content: center; /* chips centered as a group above the userlist */
@@ -398,7 +463,7 @@
   outline: 2px solid var(--bcc-accent-whisper);
   outline-offset: -2px;
 }
-/* Count badge — a red pill pinned to the chip's top-right corner. Stays red
+/* Count badge, a red pill pinned to the chip's top-right corner. Stays red
  * whether 0 or not is irrelevant: a 0 count hides the badge entirely (.bcc-stat-no
  * below), so the red only shows when there's something to count. Tuned vivid red
  * ( близко to the old layout's #ff0037 badge, a touch warmer). */
@@ -426,7 +491,7 @@
   display: none;
 }
 
-/* Scrollable regular-user area — fills the remaining sidebar height after the
+/* Scrollable regular-user area, fills the remaining sidebar height after the
  * fixed header (stats + online count + pinned panel). Only this scrolls; the
  * header stays pinned to the top. */
 .bcc-userlist-scroll {
@@ -483,7 +548,7 @@
   font-weight: 600;
   color: var(--bcc-text-sidebar);
 }
-/* Status tag — short [A]/[S] suffix after the name for away/sep users. */
+/* Status tag, short [A]/[S] suffix after the name for away/sep users. */
 .bcc-user-tag {
   margin-left: 3px;
   font-size: 0.9091rem;
@@ -519,7 +584,7 @@
   height: 100%;
   border: 0;
   z-index: 0; /* Upstream sets #chatframe { z-index: -1 } (behind popups).
-               In our Grid the iframe owns the main area — override it. */
+               In our Grid the iframe owns the main area, override it. */
   /* Cover the white flash while the iframe's internal document loads.
      The iframe element shows this background until its own <body> paints
      (which has a hardcoded white bg from cpop_kylr.html). --bcc-surface
@@ -530,7 +595,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * Chatbar — single horizontal bar (textarea + pill groups)
+ * Chatbar, single horizontal bar (textarea + pill groups)
  *
  * Replaces the old two-row input+footer design. Matches the v2 footer:
  * textarea fills the left (flex:1), pill groups of icon buttons sit to its
@@ -552,7 +617,7 @@
   transition: height 0.3s ease;
 }
 
-/* ─── Compact mode — single toggle compacts the entire chatbar ─────────── */
+/* ─── Compact mode, single toggle compacts the entire chatbar ─────────── */
 .bcc-compact.bcc-chatbar {
   height: 68px;
 }
@@ -627,7 +692,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * Chatbar pill groups — clean rewrite of the v2 footer design (--bcc-*)
+ * Chatbar pill groups, clean rewrite of the v2 footer design (--bcc-*)
  *
  * Visual language ported from the v2 footer (css/main.css), rebuilt clean
  * for the v3 namespace (no code copied): translucent rounded pill containers
@@ -867,7 +932,7 @@
   filter: brightness(0.9);
 }
 
-/* Local-theme color picker — a color circle whose dot is the current theme
+/* Local-theme color picker, a color circle whose dot is the current theme
    color. The native <input type=color> is layered invisibly over the circle. */
 .bcc-color-picker-wrap::after {
   background-color: var(--swatch-color, #6aaed8);
@@ -1888,7 +1953,7 @@
 
 /* ─── Notification strip: floating pill at the top of the chat area ──
    Shows only transient/upstream + BetterCC-internal messages (never
-   connection state — that lives on the status button). Absolute: no layout
+   connection state, that lives on the status button). Absolute: no layout
    shift, never resizes the input or footer. */
 .bcc-health-strip {
   display: none;
