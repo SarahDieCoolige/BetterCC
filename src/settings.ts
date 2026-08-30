@@ -579,6 +579,14 @@ function buildChatPanel(panel: HTMLElement): void {
 
   panel.appendChild(field);
 
+  // Input-history hint (shipped 3.14.0). Purely informational — the recall
+  // keys have no toggle, so discoverability lives here.
+  const historyHint = document.createElement("p");
+  historyHint.className = "bcc-settings-hint";
+  historyHint.textContent =
+    "Eingabeverlauf: Strg+↑/↓ blättert durch gesendete Nachrichten, Esc holt den Entwurf zurück.";
+  panel.appendChild(historyHint);
+
   // ── Hover-preview toggle ──
   const hoverField = document.createElement("div");
   hoverField.className = "bcc-settings-field";
