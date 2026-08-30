@@ -15,7 +15,7 @@
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=04ae35a7
-// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=1235ccd6
+// @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=a0b0a061
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -943,6 +943,10 @@
   function retryText(n) {
     return STATUS_TEXT.retry.replace("{n}", String(n));
   }
+  function formatAgo(ageMs) {
+    const secs = Math.floor(ageMs / 1e3);
+    return secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
+  }
   var CARD_AUTHDEAD_TITLE = "Session abgelaufen";
   var CARD_AUTHDEAD_TEXT = "L\xE4sst sich nicht automatisch erneuern. Seite neu laden meldet dich direkt wieder an \u2014 dein Text bleibt erhalten.";
   var ACTION_PAGE_RELOAD = "Seite neu laden";
@@ -956,15 +960,18 @@
   var CARD_SEND_BROKEN_TITLE = "Senden defekt";
   var CARD_SEND_BROKEN_TEXT = "ChatCity hat den Sendeweg ge\xE4ndert. Hilft nur ein BetterCC-Update.";
   var ACTION_COPY_ERROR = "Fehler kopieren";
+  function bootDisplayFor(code) {
+    if (code === "structure-changed") return BOOT_REASON_STRUCTURE;
+    if (code === "ws-takeover") return BOOT_REASON_WS;
+    return null;
+  }
   var BANNER_OPTICS_TEXT = "Chat ohne BetterCC-Design \u2014 Senden l\xE4uft normal, Neu laden behebt es";
   var ACTION_RELOAD = "Neu laden";
   var STALE_LABEL_ULIST = "Nutzerliste";
   var STALE_LABEL_AW = "Globale Nutzerliste";
   var STALE_LABEL_STATS = "Statistiken";
   function staleText(label, ageMs) {
-    const secs = Math.floor(ageMs / 1e3);
-    const ago = secs < 60 ? secs + " s" : Math.floor(secs / 60) + " min";
-    return label + " \u2014 zuletzt aktualisiert vor " + ago;
+    return label + " \u2014 zuletzt aktualisiert vor " + formatAgo(ageMs);
   }
   function invalidSettingsText(entries) {
     const parts = entries.map((e) => e.key + ": " + formatStoredValue(e.value));
@@ -976,6 +983,18 @@
     return s.length > 40 ? s.slice(0, 39) + "\u2026" : s;
   }
   var PERSIST_FAILED_TEXT = "Speichern fehlgeschlagen \u2014 gilt nur bis zum Neuladen.";
+  var INFO_OK = "ok";
+  var INFO_SETTINGS_VALID = "g\xFCltig";
+  var INFO_INJECTION_DEGRADED = "eingeschr\xE4nkt";
+  var INFO_NEVER = "nie";
+  var INFO_MANAGER_UNKNOWN = "unbekannt";
+  var INFO_LABEL_STATUS = "Status";
+  var INFO_LABEL_LAST_MESSAGE = "Letzte Chat-Nachricht";
+  var INFO_LABEL_BOOT = "Start";
+  var INFO_LABEL_SEND_PATH = "Sendepfad";
+  var INFO_LABEL_INJECTION = "Chatframe-Injektion";
+  var INFO_LABEL_SETTINGS = "Einstellungen";
+  var INFO_LABEL_PERSIST = "Speichern";
 
   // src/health-strip.ts
   var NOTICE_MS = 8e3;
@@ -1554,6 +1573,28 @@
   }
 
   // src/dom.ts
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      let ok;
+      try {
+        ok = document.execCommand("copy");
+      } catch {
+        ok = false;
+      }
+      ta.remove();
+      return ok;
+    }
+  }
   function iconElement(cls) {
     const i = document.createElement("i");
     i.className = "fas " + cls;
@@ -2920,7 +2961,9 @@
       pinned: [],
       whisper: "",
       sendOnEnter: true,
-      hoverPreview: true
+      hoverPreview: true,
+      compact: false,
+      ban: []
     };
   }
   function schemeForPreview(base, useV2) {
@@ -2930,7 +2973,7 @@
     return /^[0-9A-Fa-f]{6}$/.test(hex.replace(/^#/, "")) ? null : "Kein g\xFCltiger Hex-Wert";
   }
   function isDirty(loaded2, draft2) {
-    return loaded2.color !== draft2.color || loaded2.schemeV2 !== draft2.schemeV2 || loaded2.whisper !== draft2.whisper || loaded2.sendOnEnter !== draft2.sendOnEnter || loaded2.hoverPreview !== draft2.hoverPreview || !pinnedEqual(loaded2.pinned, draft2.pinned);
+    return loaded2.color !== draft2.color || loaded2.schemeV2 !== draft2.schemeV2 || loaded2.whisper !== draft2.whisper || loaded2.sendOnEnter !== draft2.sendOnEnter || loaded2.hoverPreview !== draft2.hoverPreview || loaded2.compact !== draft2.compact || !pinnedEqual(loaded2.pinned, draft2.pinned) || !pinnedEqual(loaded2.ban, draft2.ban);
   }
   function dedupPinned(names) {
     const seen = /* @__PURE__ */ new Set();
@@ -2962,7 +3005,9 @@
       pinned: Array.isArray(raw.pinned) && raw.pinned.every((v) => typeof v === "string") ? [...raw.pinned] : [],
       whisper: typeof raw.whisper === "string" ? raw.whisper : defaultDraft().whisper,
       sendOnEnter: typeof raw.send_on_enter === "boolean" ? raw.send_on_enter : defaultDraft().sendOnEnter,
-      hoverPreview: typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview
+      hoverPreview: typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview,
+      compact: typeof raw.compact === "boolean" ? raw.compact : defaultDraft().compact,
+      ban: Array.isArray(raw.ban) && raw.ban.every((v) => typeof v === "string") ? [...raw.ban] : []
     };
   }
   var DRAFT_TO_CONFIG = {
@@ -2971,7 +3016,9 @@
     pinned: "pinned",
     whisper: "whisper",
     sendOnEnter: "send_on_enter",
-    hoverPreview: "hover_preview"
+    hoverPreview: "hover_preview",
+    compact: "compact",
+    ban: "ban"
   };
   var CONFIG_TO_DRAFT = Object.fromEntries(
     Object.entries(DRAFT_TO_CONFIG).map(([d, c]) => [c, d])
@@ -3061,7 +3108,77 @@
           return true;
         }
         return false;
+      case "compact":
+        if (typeof value === "boolean") {
+          draft2.compact = value;
+          return true;
+        }
+        return false;
+      case "ban":
+        if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+          draft2.ban = value;
+          return true;
+        }
+        return false;
     }
+  }
+  function ageOrNever(stamp, now) {
+    if (stamp <= 0) return INFO_NEVER;
+    return "vor " + formatAgo(Math.max(0, now - stamp));
+  }
+  function connInfoRows(conn, freshness, now) {
+    const status = conn.phase === "connecting" && conn.attempt > 0 ? retryText(conn.attempt) : STATUS_TEXT[conn.phase];
+    return [
+      { key: INFO_LABEL_STATUS, val: status, bad: conn.phase !== "connected" },
+      { key: INFO_LABEL_LAST_MESSAGE, val: ageOrNever(conn.lastMessageAt, now) },
+      { key: STALE_LABEL_ULIST, val: ageOrNever(freshness.ulistAt, now) },
+      { key: STALE_LABEL_AW, val: ageOrNever(freshness.awAt, now) },
+      { key: STALE_LABEL_STATS, val: ageOrNever(freshness.statsAt, now) }
+    ];
+  }
+  function healthInfoRows(health) {
+    return [
+      {
+        key: INFO_LABEL_BOOT,
+        val: health.bootError ? bootDisplayFor(health.bootError) ?? health.bootError : INFO_OK,
+        bad: health.bootError !== null
+      },
+      {
+        key: INFO_LABEL_SEND_PATH,
+        val: health.sendPathBroken ?? INFO_OK,
+        bad: health.sendPathBroken !== null
+      },
+      {
+        key: INFO_LABEL_INJECTION,
+        val: health.injectionDegraded ? INFO_INJECTION_DEGRADED : INFO_OK,
+        bad: health.injectionDegraded
+      },
+      {
+        key: INFO_LABEL_SETTINGS,
+        val: health.invalidSettings.length ? invalidSettingsText(health.invalidSettings) : INFO_SETTINGS_VALID,
+        bad: health.invalidSettings.length > 0
+      },
+      {
+        key: INFO_LABEL_PERSIST,
+        val: health.persistFailed ? PERSIST_FAILED_TEXT : INFO_OK,
+        bad: health.persistFailed
+      }
+    ];
+  }
+  function buildDiagnosticsText(f) {
+    return [
+      "BetterCC v" + f.version,
+      "manager: " + f.manager,
+      "user: " + f.user,
+      "channel: " + f.channel,
+      "storage-key: " + f.storageKey,
+      "url: " + f.url,
+      "ua: " + f.userAgent,
+      "time: " + f.time,
+      "conn: " + JSON.stringify(f.conn),
+      "bccHealth: " + JSON.stringify(f.bccHealth),
+      "freshness: " + JSON.stringify(f.freshness)
+    ].join("\n");
   }
 
   // src/settings.ts
@@ -3093,6 +3210,8 @@
       await set("hover_preview", next.hoverPreview);
     if (!pinnedEqual(current.pinned, next.pinned)) await set("pinned", next.pinned);
     if (current.whisper !== next.whisper) await set("whisper", next.whisper);
+    if (current.compact !== next.compact) await set("compact", next.compact);
+    if (!pinnedEqual(current.ban, next.ban)) await set("ban", next.ban);
   }
   var TABS = ["Erscheinungsbild", "Chat", "Verwaltung", "Daten", "Info", "Befehle"];
   var overlayEl2 = null;
@@ -3142,7 +3261,9 @@
       pinned: get("pinned"),
       whisper: get("whisper"),
       send_on_enter: get("send_on_enter"),
-      hover_preview: get("hover_preview")
+      hover_preview: get("hover_preview"),
+      compact: get("compact"),
+      ban: get("ban")
     };
     loaded = draftFromConfig(raw);
     draft = draftFromConfig(raw);
@@ -3448,6 +3569,10 @@
     hint.textContent = "Ausgeschaltet: Shift+Enter sendet, Enter macht einen Zeilenumbruch.";
     field.appendChild(hint);
     panel.appendChild(field);
+    const historyHint = document.createElement("p");
+    historyHint.className = "bcc-settings-hint";
+    historyHint.textContent = "Eingabeverlauf: Strg+\u2191/\u2193 bl\xE4ttert durch gesendete Nachrichten, Esc holt den Entwurf zur\xFCck.";
+    panel.appendChild(historyHint);
     const hoverField = document.createElement("div");
     hoverField.className = "bcc-settings-field";
     const hoverLabel = document.createElement("label");
@@ -3712,29 +3837,104 @@
       updateRevertButton();
     });
   }
-  function buildInfoPanel(panel) {
+  function renderInfoRows(rows) {
     const list = document.createElement("div");
     list.className = "bcc-info-list";
-    const rows = [
-      { key: "Version", val: GM_info.script.version },
-      { key: "Benutzer", val: getChatNick() || "\u2013" },
-      { key: "Kanal", val: getChannel() || "\u2013" },
-      { key: "Speicher-Schl\xFCssel (Bsp.)", val: getUserKey("color") }
-    ];
-    for (const { key, val } of rows) {
+    for (const { key, val, bad } of rows) {
       const row = document.createElement("div");
       row.className = "bcc-info-row";
       const keyEl = document.createElement("span");
       keyEl.className = "bcc-info-key";
       keyEl.textContent = key;
       const valEl = document.createElement("span");
-      valEl.className = "bcc-info-val";
+      valEl.className = "bcc-info-val" + (bad ? " bcc-info-bad" : "");
       valEl.textContent = val;
-      row.appendChild(keyEl);
-      row.appendChild(valEl);
+      row.append(keyEl, valEl);
       list.appendChild(row);
     }
-    panel.appendChild(list);
+    return list;
+  }
+  function infoSection(heading, ...children) {
+    const section = document.createElement("section");
+    section.className = "bcc-appearance-section";
+    const h = document.createElement("h3");
+    h.className = "bcc-appearance-heading";
+    h.textContent = heading;
+    section.appendChild(h);
+    section.append(...children);
+    return section;
+  }
+  function infoLink(label, url) {
+    const a = document.createElement("a");
+    a.className = "bcc-info-link";
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = label;
+    return a;
+  }
+  function buildInfoPanel(panel) {
+    const now = Date.now();
+    const nick = getChatNick();
+    const manager = GM_info.scriptHandler ? GM_info.scriptHandler + (GM_info.version ? " " + GM_info.version : "") : INFO_MANAGER_UNKNOWN;
+    panel.appendChild(
+      infoSection(
+        "Umgebung",
+        renderInfoRows([
+          { key: "Version", val: GM_info.script.version },
+          { key: "Userscript-Manager", val: manager },
+          { key: "Benutzer", val: nick ? nick + (isGuest() ? " (Gast)" : "") : "\u2013" },
+          { key: "Kanal", val: getChannel() || "\u2013" },
+          { key: "Speicher-Schl\xFCssel (Bsp.)", val: getUserKey("color") }
+        ])
+      )
+    );
+    panel.appendChild(
+      infoSection("Verbindung", renderInfoRows(connInfoRows(get("conn"), get("freshness"), now)))
+    );
+    const copyResult = document.createElement("span");
+    copyResult.className = "bcc-info-copy-result";
+    copyResult.setAttribute("aria-live", "polite");
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "bcc-settings-btn";
+    copyBtn.textContent = "Diagnose kopieren";
+    copyBtn.addEventListener("click", async () => {
+      const fields = {
+        version: GM_info.script.version,
+        manager,
+        user: nick || "gast",
+        channel: getChannel() || "",
+        storageKey: getUserKey("color"),
+        url: location.href,
+        userAgent: navigator.userAgent,
+        time: (/* @__PURE__ */ new Date()).toISOString(),
+        conn: get("conn"),
+        bccHealth: get("bccHealth"),
+        freshness: get("freshness")
+      };
+      const ok = await copyText(buildDiagnosticsText(fields));
+      copyResult.textContent = ok ? "Kopiert." : "Kopieren fehlgeschlagen.";
+    });
+    const actions = document.createElement("div");
+    actions.className = "bcc-info-actions";
+    actions.append(copyBtn, copyResult);
+    panel.appendChild(
+      infoSection("Diagnose", renderInfoRows(healthInfoRows(get("bccHealth"))), actions)
+    );
+    const home = GM_info.script.homepageURL;
+    const support = GM_info.script.supportURL;
+    if (home || support) {
+      const links = document.createElement("div");
+      links.className = "bcc-info-links";
+      if (support) links.appendChild(infoLink("Problem melden (GitHub Issues)", support));
+      if (home) links.appendChild(infoLink("BetterCC auf GitHub", home));
+      panel.appendChild(infoSection("Links", links));
+    }
+    const hint = document.createElement("p");
+    hint.className = "bcc-settings-hint";
+    hint.textContent = "Vollst\xE4ndiger Zustand: bettercc.state() in der Browser-Konsole.";
+    panel.appendChild(hint);
   }
   function buildBefehlePanel(panel) {
     const heading = document.createElement("h3");
@@ -4394,8 +4594,8 @@
             await superwhisper(cmd.nick, false);
             break;
           case "superban":
+            printToChat("Superban ist noch nicht verf\xFCgbar.");
             break;
-          // Stub for T12.
           case "aw":
             openAwModal();
             break;
@@ -4766,11 +4966,6 @@
   function bootErrorCode(err) {
     return err instanceof TypeError ? "structure-changed" : "error";
   }
-  function bootDisplayFor(code) {
-    if (code === "structure-changed") return BOOT_REASON_STRUCTURE;
-    if (code === "ws-takeover") return BOOT_REASON_WS;
-    return null;
-  }
   function buildErrorReport(f) {
     const lines = ["BetterCC v" + f.version, "context: " + f.context, "reason: " + f.reason];
     if (f.error !== null) lines.push("error: " + f.error);
@@ -4806,28 +5001,6 @@
       time: (/* @__PURE__ */ new Date()).toISOString(),
       state: state2
     };
-  }
-  async function copyText(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      let ok;
-      try {
-        ok = document.execCommand("copy");
-      } catch {
-        ok = false;
-      }
-      ta.remove();
-      return ok;
-    }
   }
   function buildCardEl(title, text, actions) {
     const card = document.createElement("div");
