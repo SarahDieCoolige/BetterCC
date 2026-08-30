@@ -47,15 +47,16 @@ export function addAutoscrollBanner(iframeDoc: Document, iframeWin: Window): voi
   iframeWin.addEventListener("scroll", function () {
     const scrollPosition = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
     const maxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
+    const top = scrollPosition <= 0 ? 0 : scrollPosition;
 
-    if (Date.now() < bannerPauseUntil) {
-      lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
-      lastMaxScroll = maxScroll;
-      return;
-    }
-
-    if (scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync") {
-      lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+    // Zoom-paused or a geometry reflow: not a user scroll. Keep the
+    // lasts fresh so the NEXT real scroll classifies cleanly, and decide
+    // nothing.
+    if (
+      Date.now() < bannerPauseUntil ||
+      scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync"
+    ) {
+      lastScrollTop = top;
       lastMaxScroll = maxScroll;
       return;
     }
@@ -72,7 +73,7 @@ export function addAutoscrollBanner(iframeDoc: Document, iframeWin: Window): voi
       (iframeWin as any).scrolling = true;
     }
 
-    lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+    lastScrollTop = top;
     lastMaxScroll = maxScroll;
   });
 }

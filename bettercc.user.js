@@ -301,13 +301,9 @@
     iframeWin.addEventListener("scroll", function() {
       const scrollPosition = iframeDoc.documentElement.scrollTop || iframeDoc.body.scrollTop;
       const maxScroll = iframeDoc.body.scrollHeight - iframeWin.innerHeight;
-      if (Date.now() < bannerPauseUntil) {
-        lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
-        lastMaxScroll = maxScroll;
-        return;
-      }
-      if (scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync") {
-        lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+      const top = scrollPosition <= 0 ? 0 : scrollPosition;
+      if (Date.now() < bannerPauseUntil || scrollEventDecision(scrollPosition, lastScrollTop, maxScroll, lastMaxScroll) === "resync") {
+        lastScrollTop = top;
         lastMaxScroll = maxScroll;
         return;
       }
@@ -321,7 +317,7 @@
         scrollbanner.style.display = "none";
         iframeWin.scrolling = true;
       }
-      lastScrollTop = scrollPosition <= 0 ? 0 : scrollPosition;
+      lastScrollTop = top;
       lastMaxScroll = maxScroll;
     });
   }
@@ -1331,23 +1327,25 @@
   }
   function initZoom() {
     react("zoom", (z) => {
+      const step = z.toFixed(2);
       const win = getChatWin();
       const doc = getChatDoc();
-      let fraction = 1;
-      let hadAnchor = false;
-      if (win && doc && doc.documentElement) {
-        const max = doc.documentElement.scrollHeight - win.innerHeight;
-        fraction = scrollFraction(win.scrollY, max);
-        hadAnchor = true;
-      }
+      const anchor = win && doc ? {
+        win,
+        doc,
+        fraction: scrollFraction(
+          win.scrollY,
+          doc.documentElement.scrollHeight - win.innerHeight
+        )
+      } : null;
       pauseBanner(300);
-      document.documentElement.dataset.bccZoom = z.toFixed(2);
+      document.documentElement.dataset.bccZoom = step;
       const shell = document.querySelector(".bcc-shell");
-      shell?.style.setProperty("--bcc-chat-zoom", z.toFixed(2));
-      if (hadAnchor) {
+      shell?.style.setProperty("--bcc-chat-zoom", step);
+      if (anchor) {
         setTimeout(() => {
-          const max2 = doc.documentElement.scrollHeight - win.innerHeight;
-          win.scrollTo({ top: Math.round(fraction * max2), behavior: "instant" });
+          const max = anchor.doc.documentElement.scrollHeight - anchor.win.innerHeight;
+          anchor.win.scrollTo({ top: Math.round(anchor.fraction * max), behavior: "instant" });
         }, 60);
       }
     });

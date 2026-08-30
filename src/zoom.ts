@@ -5,8 +5,8 @@
 // pins body separately), the chatframe magnifies through outer zoom +
 // inverse dims on #chatframe (never zoom inside the frame, scroll units
 // break). The react also preserves the frame's reading position across a
-// change so the autoscroll banner never trips on geometry (chat.ts gains
-// the matching reflow-resync in ZM-1).
+// change so the autoscroll banner never trips on geometry (chat.ts carries
+// the matching reflow-resync and the zoom pause guard).
 
 import { react } from "./store";
 import { getChatDoc, getChatWin } from "./utils";
@@ -21,28 +21,36 @@ export function scrollFraction(st: number, max: number): number {
 
 export function initZoom(): void {
   react("zoom", (z) => {
+    const step = z.toFixed(2);
     const win = getChatWin();
     const doc = getChatDoc();
-    let fraction = 1;
-    let hadAnchor = false;
-    if (win && doc && doc.documentElement) {
-      const max = doc.documentElement.scrollHeight - win.innerHeight;
-      fraction = scrollFraction(win.scrollY, max);
-      hadAnchor = true;
-    }
+    // Reading position to restore after the geometry change; null when
+    // the frame has no content yet (first render at boot).
+    const anchor =
+      win && doc
+        ? {
+            win,
+            doc,
+            fraction: scrollFraction(
+              win.scrollY,
+              doc.documentElement.scrollHeight - win.innerHeight,
+            ),
+          }
+        : null;
+
     // Arm the banner guard BEFORE the geometry change: Chromium re-anchors
     // the scroll offset a few ms after the viewport settles, and that
     // event must not read as a scroll-up.
     pauseBanner(300);
-    document.documentElement.dataset.bccZoom = z.toFixed(2);
+    document.documentElement.dataset.bccZoom = step;
     const shell = document.querySelector(".bcc-shell") as HTMLElement | null;
-    shell?.style.setProperty("--bcc-chat-zoom", z.toFixed(2));
-    if (hadAnchor) {
+    shell?.style.setProperty("--bcc-chat-zoom", step);
+    if (anchor) {
       setTimeout(() => {
-        const max2 = doc!.documentElement.scrollHeight - win!.innerHeight;
+        const max = anchor.doc.documentElement.scrollHeight - anchor.win.innerHeight;
         // instant: the frame doc inherits smooth scrolling, a smooth
         // anchor would crawl for hundreds of ms
-        win!.scrollTo({ top: Math.round(fraction * max2), behavior: "instant" });
+        anchor.win.scrollTo({ top: Math.round(anchor.fraction * max), behavior: "instant" });
       }, 60);
     }
   });
