@@ -2,7 +2,7 @@
 // @name  BetterCC (dev)
 // @description  BetterCC
 // @author  Sarah
-// @version      3.15.1
+// @version      3.16.0
 // @icon  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/BetterCC.png
 //
 // @match  https://www.chatcity.de/de/cpop.html
