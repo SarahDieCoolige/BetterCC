@@ -130,7 +130,10 @@ async function doSubmit(whispernick?: string): Promise<void> {
           await superwhisper(cmd.nick, false);
           break;
         case "superban":
-          break; // Stub for T12.
+          // Matched so /sb never leaks to the server, but the feature is not
+          // built yet (T12): say so instead of silently eating the message.
+          printToChat("Superban ist noch nicht verfügbar.");
+          break;
         case "aw":
           openAwModal();
           break;
