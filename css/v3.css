@@ -469,11 +469,11 @@ html[data-bcc-zoom="1.45"] body {
  * ( близко to the old layout's #ff0037 badge, a touch warmer). */
 .bcc-stat-count {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
+  top: -0.5em;
+  right: -0.5em;
+  min-width: 1.7em;
+  height: 1.7em;
+  padding: 0 0.4em;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -484,7 +484,7 @@ html[data-bcc-zoom="1.45"] body {
   border-radius: 999px;
   background: #e8364c;
   color: #ffffff;
-  border: 1.5px solid var(--bcc-surface-raised); /* cut-out from the chip edge */
+  border: 0.15em solid var(--bcc-surface-raised); /* cut-out from the chip edge */
 }
 /* Zero count → hide the corner badge entirely (icon stays, no number shown). */
 .bcc-stat-count.bcc-stat-no {
