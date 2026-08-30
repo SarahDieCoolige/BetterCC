@@ -3075,12 +3075,12 @@
     return {
       color: typeof raw.color === "string" ? raw.color.replace(/^#/, "") : defaultDraft().color,
       schemeV2: typeof raw.scheme_v2 === "boolean" ? raw.scheme_v2 : defaultDraft().schemeV2,
-      pinned: Array.isArray(raw.pinned) && raw.pinned.every((v) => typeof v === "string") ? [...raw.pinned] : [],
+      pinned: isStringArray(raw.pinned) ? [...raw.pinned] : [],
       whisper: typeof raw.whisper === "string" ? raw.whisper : defaultDraft().whisper,
       sendOnEnter: typeof raw.send_on_enter === "boolean" ? raw.send_on_enter : defaultDraft().sendOnEnter,
       hoverPreview: typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview,
       compact: typeof raw.compact === "boolean" ? raw.compact : defaultDraft().compact,
-      ban: Array.isArray(raw.ban) && raw.ban.every((v) => typeof v === "string") ? [...raw.ban] : [],
+      ban: isStringArray(raw.ban) ? [...raw.ban] : [],
       zoom: isZoomStep(raw.zoom) ? raw.zoom : defaultDraft().zoom
     };
   }
@@ -3160,7 +3160,7 @@
         }
         return false;
       case "pinned":
-        if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+        if (isStringArray(value)) {
           draft2.pinned = value;
           return true;
         }
@@ -3190,7 +3190,7 @@
         }
         return false;
       case "ban":
-        if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+        if (isStringArray(value)) {
           draft2.ban = value;
           return true;
         }
@@ -3218,32 +3218,32 @@
     ];
   }
   function healthInfoRows(health) {
+    const checkRow = (key, broken, problem, ok) => ({
+      key,
+      val: broken ? problem : ok,
+      bad: broken
+    });
     return [
-      {
-        key: INFO_LABEL_BOOT,
-        val: health.bootError ? bootDisplayFor(health.bootError) ?? health.bootError : INFO_OK,
-        bad: health.bootError !== null
-      },
-      {
-        key: INFO_LABEL_SEND_PATH,
-        val: health.sendPathBroken ?? INFO_OK,
-        bad: health.sendPathBroken !== null
-      },
-      {
-        key: INFO_LABEL_INJECTION,
-        val: health.injectionDegraded ? INFO_INJECTION_DEGRADED : INFO_OK,
-        bad: health.injectionDegraded
-      },
-      {
-        key: INFO_LABEL_SETTINGS,
-        val: health.invalidSettings.length ? invalidSettingsText(health.invalidSettings) : INFO_SETTINGS_VALID,
-        bad: health.invalidSettings.length > 0
-      },
-      {
-        key: INFO_LABEL_PERSIST,
-        val: health.persistFailed ? PERSIST_FAILED_TEXT : INFO_OK,
-        bad: health.persistFailed
-      }
+      checkRow(
+        INFO_LABEL_BOOT,
+        health.bootError !== null,
+        health.bootError ? bootDisplayFor(health.bootError) ?? health.bootError : "",
+        INFO_OK
+      ),
+      checkRow(
+        INFO_LABEL_SEND_PATH,
+        health.sendPathBroken !== null,
+        health.sendPathBroken ?? "",
+        INFO_OK
+      ),
+      checkRow(INFO_LABEL_INJECTION, health.injectionDegraded, INFO_INJECTION_DEGRADED, INFO_OK),
+      checkRow(
+        INFO_LABEL_SETTINGS,
+        health.invalidSettings.length > 0,
+        invalidSettingsText(health.invalidSettings),
+        INFO_SETTINGS_VALID
+      ),
+      checkRow(INFO_LABEL_PERSIST, health.persistFailed, PERSIST_FAILED_TEXT, INFO_OK)
     ];
   }
   function buildDiagnosticsText(f) {
@@ -3994,14 +3994,20 @@
   function buildInfoPanel(panel) {
     const now = Date.now();
     const nick = getChatNick();
-    const manager = GM_info.scriptHandler ? GM_info.scriptHandler + (GM_info.version ? " " + GM_info.version : "") : INFO_MANAGER_UNKNOWN;
+    let manager = INFO_MANAGER_UNKNOWN;
+    if (GM_info.scriptHandler) {
+      manager = GM_info.scriptHandler;
+      if (GM_info.version) manager += " " + GM_info.version;
+    }
+    let user = "\u2013";
+    if (nick) user = isGuest() ? nick + " (Gast)" : nick;
     panel.appendChild(
       infoSection(
         "Umgebung",
         renderInfoRows([
           { key: "Version", val: GM_info.script.version },
           { key: "Userscript-Manager", val: manager },
-          { key: "Benutzer", val: nick ? nick + (isGuest() ? " (Gast)" : "") : "\u2013" },
+          { key: "Benutzer", val: user },
           { key: "Kanal", val: getChannel() || "\u2013" },
           { key: "Speicher-Schl\xFCssel (Bsp.)", val: getUserKey("color") }
         ])

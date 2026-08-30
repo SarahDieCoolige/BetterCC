@@ -1037,9 +1037,13 @@ function infoLink(label: string, url: string): HTMLAnchorElement {
 function buildInfoPanel(panel: HTMLElement): void {
   const now = Date.now();
   const nick = getChatNick();
-  const manager = GM_info.scriptHandler
-    ? GM_info.scriptHandler + (GM_info.version ? " " + GM_info.version : "")
-    : INFO_MANAGER_UNKNOWN;
+  let manager = INFO_MANAGER_UNKNOWN;
+  if (GM_info.scriptHandler) {
+    manager = GM_info.scriptHandler;
+    if (GM_info.version) manager += " " + GM_info.version;
+  }
+  let user = "\u2013";
+  if (nick) user = isGuest() ? nick + " (Gast)" : nick;
 
   // ── Umgebung ──
   panel.appendChild(
@@ -1048,7 +1052,7 @@ function buildInfoPanel(panel: HTMLElement): void {
       renderInfoRows([
         { key: "Version", val: GM_info.script.version },
         { key: "Userscript-Manager", val: manager },
-        { key: "Benutzer", val: nick ? nick + (isGuest() ? " (Gast)" : "") : "\u2013" },
+        { key: "Benutzer", val: user },
         { key: "Kanal", val: getChannel() || "\u2013" },
         { key: "Speicher-Schlüssel (Bsp.)", val: getUserKey("color") },
       ]),

@@ -31,7 +31,7 @@ import {
   INFO_LABEL_SETTINGS,
   INFO_LABEL_PERSIST,
 } from "./health-strings";
-import { isZoomStep } from "./store";
+import { isStringArray, isZoomStep } from "./store";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Types
@@ -192,20 +192,14 @@ export function draftFromConfig(raw: {
   return {
     color: typeof raw.color === "string" ? raw.color.replace(/^#/, "") : defaultDraft().color,
     schemeV2: typeof raw.scheme_v2 === "boolean" ? raw.scheme_v2 : defaultDraft().schemeV2,
-    pinned:
-      Array.isArray(raw.pinned) && raw.pinned.every((v) => typeof v === "string")
-        ? [...(raw.pinned as string[])]
-        : [],
+    pinned: isStringArray(raw.pinned) ? [...raw.pinned] : [],
     whisper: typeof raw.whisper === "string" ? raw.whisper : defaultDraft().whisper,
     sendOnEnter:
       typeof raw.send_on_enter === "boolean" ? raw.send_on_enter : defaultDraft().sendOnEnter,
     hoverPreview:
       typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview,
     compact: typeof raw.compact === "boolean" ? raw.compact : defaultDraft().compact,
-    ban:
-      Array.isArray(raw.ban) && raw.ban.every((v) => typeof v === "string")
-        ? [...(raw.ban as string[])]
-        : [],
+    ban: isStringArray(raw.ban) ? [...raw.ban] : [],
     zoom: isZoomStep(raw.zoom) ? raw.zoom : defaultDraft().zoom,
   };
 }
@@ -324,8 +318,8 @@ function coerceField(key: keyof SettingsDraft, value: unknown, draft: SettingsDr
       }
       return false;
     case "pinned":
-      if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
-        draft.pinned = value as string[];
+      if (isStringArray(value)) {
+        draft.pinned = value;
         return true;
       }
       return false;
@@ -354,8 +348,8 @@ function coerceField(key: keyof SettingsDraft, value: unknown, draft: SettingsDr
       }
       return false;
     case "ban":
-      if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
-        draft.ban = value as string[];
+      if (isStringArray(value)) {
+        draft.ban = value;
         return true;
       }
       return false;
@@ -400,36 +394,35 @@ export function connInfoRows(conn: ConnState, freshness: FreshnessState, now: nu
   ];
 }
 
-/** BetterCC self-check rows (bccHealth facts). */
+/** BetterCC self-check rows (bccHealth facts). Each row states its
+ *  broken-condition once; val and bad both follow from it. */
 export function healthInfoRows(health: BccHealthState): InfoRow[] {
+  const checkRow = (key: string, broken: boolean, problem: string, ok: string): InfoRow => ({
+    key,
+    val: broken ? problem : ok,
+    bad: broken,
+  });
   return [
-    {
-      key: INFO_LABEL_BOOT,
-      val: health.bootError ? (bootDisplayFor(health.bootError) ?? health.bootError) : INFO_OK,
-      bad: health.bootError !== null,
-    },
-    {
-      key: INFO_LABEL_SEND_PATH,
-      val: health.sendPathBroken ?? INFO_OK,
-      bad: health.sendPathBroken !== null,
-    },
-    {
-      key: INFO_LABEL_INJECTION,
-      val: health.injectionDegraded ? INFO_INJECTION_DEGRADED : INFO_OK,
-      bad: health.injectionDegraded,
-    },
-    {
-      key: INFO_LABEL_SETTINGS,
-      val: health.invalidSettings.length
-        ? invalidSettingsText(health.invalidSettings)
-        : INFO_SETTINGS_VALID,
-      bad: health.invalidSettings.length > 0,
-    },
-    {
-      key: INFO_LABEL_PERSIST,
-      val: health.persistFailed ? PERSIST_FAILED_TEXT : INFO_OK,
-      bad: health.persistFailed,
-    },
+    checkRow(
+      INFO_LABEL_BOOT,
+      health.bootError !== null,
+      health.bootError ? (bootDisplayFor(health.bootError) ?? health.bootError) : "",
+      INFO_OK,
+    ),
+    checkRow(
+      INFO_LABEL_SEND_PATH,
+      health.sendPathBroken !== null,
+      health.sendPathBroken ?? "",
+      INFO_OK,
+    ),
+    checkRow(INFO_LABEL_INJECTION, health.injectionDegraded, INFO_INJECTION_DEGRADED, INFO_OK),
+    checkRow(
+      INFO_LABEL_SETTINGS,
+      health.invalidSettings.length > 0,
+      invalidSettingsText(health.invalidSettings),
+      INFO_SETTINGS_VALID,
+    ),
+    checkRow(INFO_LABEL_PERSIST, health.persistFailed, PERSIST_FAILED_TEXT, INFO_OK),
   ];
 }
 
