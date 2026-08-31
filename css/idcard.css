@@ -104,11 +104,14 @@ body.bcc-idcard #ww_head_container {
   margin-bottom: 12px;
 }
 
-/* Nav tabs as bcc buttons, CSS-only. Upstream float geometry, the fixed
- * button box and .button's position:relative (the bubble anchor) all stay;
- * only the GIF face and text colors are replaced. */
+/* Nav tabs as bcc buttons, CSS-only. The .button box goes auto-width (it was
+ * a fixed 130px with a -5px left margin that made upstream's GIF tabs
+ * overlap; flat buttons read that as misalignment), the .inner pill keeps
+ * upstream's 118px minimum. position:relative stays (bubble anchor). */
 body.bcc-idcard #id_nav .button {
   background: none;
+  width: auto;
+  margin-left: 0;
 }
 
 body.bcc-idcard #id_nav .button a .inner {
@@ -162,16 +165,30 @@ body.bcc-idcard iframe#googlefcPresent {
 
 /* Section cards: the upstream headline-GIF tabs become raised panels.
  * ID-prefixed selectors outrank upstream's #ww_content_colN .cont_el rules;
- * the two !importants are catalogued above. */
+ * the two !importants are catalogued above.
+ *
+ * Upstream box model (id_*.css, measured in the 810px popup): col1 cards
+ * keep 508px of inner width (padding 14+23 on a 545px column), col2 175px
+ * (width 187 + padding-left 12). The px-fixed children inside (pinwand
+ * .child 509, .obj_owner_wrapper 180) were tuned to those budgets, so the
+ * card padding here must not shrink them: 2x10px + border leaves 523px
+ * (col1) / col2 gets its own tighter rule below. */
 body.bcc-idcard #ww_content_col1 .cont_el,
 body.bcc-idcard #ww_content_col1 .cont_el_2,
 body.bcc-idcard #ww_content_col2 .cont_el {
   background: var(--bcc-surface-raised) !important;
-  padding: 12px 14px !important;
+  padding: 12px 10px !important;
   border: 1px solid var(--bcc-border);
   border-radius: 10px;
   box-sizing: border-box;
   margin-bottom: 12px;
+}
+
+/* col2 is a 187px fixed-width float; rows are auto-width, so the regular
+ * card padding applies (the tighter 2px variant was only needed while the
+ * rows still carried upstream's fixed 180px). */
+body.bcc-idcard #ww_content_col2 .cont_el {
+  padding: 12px 10px !important;
 }
 
 /* Section labels, the .bcc-online-count idiom: small, bold, letterspaced
@@ -318,9 +335,11 @@ body.bcc-idcard #video_list iframe {
 /* Zoom replacement: every card embeds a .zom { padding: 50px } /
  * scale(2)-on-hover style block. The 50px gutter only existed to give the
  * zoom room; a 2x blowup clipped by the td's overflow:hidden reads broken.
- * Subtle raise instead, short transition. */
+ * Subtle raise instead, short transition. 8px padding keeps the gallery's
+ * per-thumb breathing room (upstream spacing WAS this padding). */
 body.bcc-idcard .cont_el .zom {
-  padding: 2px;
+  padding: 8px;
+  margin-bottom: 8px;
   transform: none;
   transition:
     filter 0.15s ease,
@@ -333,24 +352,23 @@ body.bcc-idcard .cont_el .zom:hover {
   border-color: var(--bcc-text-muted);
 }
 
+/* The foto grid rows carry upstream's table-cell borders (1px #EEE between
+ * td cells); with the white gallery box gone they read as stray hairlines
+ * through the thumb gaps. */
+body.bcc-idcard #foto_list td {
+  border: 0;
+}
+
 /* Youtube embed link: upstream pins #3F3F3F on #video_upload a, unreadable
  * on dark schemes. Decorative, so it rides the text var. */
 body.bcc-idcard #video_upload a {
   color: var(--bcc-text);
 }
 
-/* PINWAND rows as list items. Upstream paints .child links hard black and
- * .child_cont #3f3f58, both unreadable on dark; the date keeps its muted
- * gray (readable on both, earns its dimming). */
-body.bcc-idcard #gbook_list .childlist .child {
-  padding: 10px 2px;
-  border-bottom: 1px solid var(--bcc-border);
-}
-
-body.bcc-idcard #gbook_list .childlist_listelement:last-child .child {
-  border-bottom: 0;
-}
-
+/* PINWAND text colors. The entry card chrome itself lives in the audit fix
+ * round section below (upstream paints the entry as a background GIF).
+ * Upstream paints .child links hard black and .child_cont #3f3f58, both
+ * unreadable on dark. */
 body.bcc-idcard #gbook_list .childlist .child a {
   color: inherit;
 }
@@ -373,18 +391,21 @@ body.bcc-idcard #foffline .obj_list .obj_owner .textinfos a {
   color: inherit;
 }
 
-/* Pagination as small bcc buttons, CSS-only. Upstream hides .other/.lastpage
- * behind display:none and draws next/prev as 50x25 GIFs; un-hide the number
- * links, strip the GIF geometry, give nextpage a glyph since its arrow was
- * pure background image. position:relative keeps the absolutely-positioned
- * "Seite N von M" label anchored to the bar now that height is auto. */
+/* Pagination, rebuilt as one centered chip row. Upstream draws a light-blue
+ * uppercase strip with hidden number links and 50x25 arrow GIFs. */
 body.bcc-idcard .pager {
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
   background: none;
   color: var(--bcc-text-muted);
   height: auto;
-  min-height: 25px;
+  min-height: 0;
+  margin-top: 12px;
   font-size: 12px;
+  text-transform: none;
 }
 
 body.bcc-idcard #ww_content_col2 .pager {
@@ -392,12 +413,36 @@ body.bcc-idcard #ww_content_col2 .pager {
   margin-left: 0;
 }
 
+/* Upstream scatters <hr> separators; the UA inset-gray style reads as a
+ * bright stray line on dark schemes. Hairline everywhere, none inside the
+ * media lists (thumb rows carry their own rhythm). */
+body.bcc-idcard hr {
+  border: 0;
+  border-top: 1px solid var(--bcc-border);
+}
+
+body.bcc-idcard #foto_list hr,
+body.bcc-idcard #video_list hr {
+  display: none;
+}
+
+/* Label and chips: the "Seite" prefix is hidden (the anvs label carries the
+ * same words), the label drops upstream's uppercase shout. */
+body.bcc-idcard .pager .prefix {
+  display: none;
+}
+
 body.bcc-idcard .pager .anvs {
   position: static;
-  margin: 0;
+  margin: 0 6px;
+  color: var(--bcc-text);
+  font-weight: 600;
+  text-transform: none;
 }
 
 body.bcc-idcard #ww_content_col2 .pager .anvs {
+  position: static;
+  left: auto;
   margin-top: 0;
   font-size: 11px !important;
 }
@@ -408,14 +453,15 @@ body.bcc-idcard .pager a.nextpage,
 body.bcc-idcard .pager a.lastpage {
   display: inline-block;
   box-sizing: border-box;
+  min-width: 26px;
+  text-align: center;
   background: var(--bcc-surface);
   border: 1px solid var(--bcc-border);
   border-radius: 6px;
   color: var(--bcc-text);
-  padding: 1px 8px;
-  margin: 2px;
+  padding: 2px 6px;
   line-height: 18px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-decoration: none;
   vertical-align: middle;
@@ -430,6 +476,7 @@ body.bcc-idcard .pager a.nextpage {
 
 body.bcc-idcard .pager a.nextpage::after {
   content: "\203A";
+  margin-left: 2px;
 }
 
 body.bcc-idcard .pager a.other:hover,
@@ -506,4 +553,652 @@ body.bcc-idcard #t00ltip {
   color: var(--bcc-text-raised);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   max-width: 360px;
+}
+
+/* ─── Audit fix round (spec D4/D5) ────────────────────────────────────────
+ * Every rule here answers a defect the full-page vision audit found on the
+ * five ID-family pages (2026-08-31). Root causes upstream-wide: white boxes
+ * are background GIFs baked onto wrappers, not background-color, so the
+ * table flatten in the content section never touched them; link colors ride
+ * on :link-qualified rules upstream, which plain "a { color: inherit }"
+ * loses wherever upstream stacks ids on top.
+ *
+ * !important catalogue (one line per use):
+ * - .navi_main_nc a.active colors: upstream pins #850c04/!important there.
+ * - #nc .line0/.line1:hover background: upstream pins #E5E5E5 !important.
+ * - #gbook_list .formbutton border: upstream pins border:0 !important there;
+ *   the recolored text buttons need their border back.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/* Link base hardening: upstream colors links via a:link selectors with ids
+ * stacked on top, so the bare-inherit base loses those ties. The trio wins
+ * every non-id selector; the id-stacked ones get their own rules below. */
+body.bcc-idcard a:link,
+body.bcc-idcard a:visited,
+body.bcc-idcard a:active {
+  color: inherit;
+}
+
+/* Nav tabs: nowrap keeps long labels (FREUNDES-ANFRAGEN) on one line inside
+ * the now auto-width .button; the old fixed 118px box wrapped them into the
+ * unread bubble. */
+body.bcc-idcard #id_nav .button a .inner {
+  width: auto;
+  min-width: 118px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+/* Section labels never break mid-word; the "(0)" count tails (col2) were the
+ * visible wrap. */
+body.bcc-idcard .cont_el h5,
+body.bcc-idcard .cont_el_2 h5 {
+  white-space: nowrap;
+}
+
+/* PINWAND: entries as flat list rows inside the card (the card is the box;
+ * rows never get their own). Upstream painted the entry header as
+ * headline_2.jpg (white bar + speech-bubble tail baked in) on .child and
+ * the editor as gbook_back.jpg on #flush. The absolute avatar keeps its
+ * upstream slot (top 16/left 10), so the row's left padding reserves room. */
+body.bcc-idcard #gbook_list .childlist .child {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-sizing: border-box;
+  width: auto;
+  padding: 10px 2px 6px 54px;
+  margin-bottom: 0;
+}
+
+/* Entry actions (MELDEN | LÖSCHEN | top) render as a sibling row after
+ * .child; the hairline goes on the actions row so it never separates the
+ * actions from their entry. */
+body.bcc-idcard #gbook_list .childlist_listelement .child_actions {
+  border-bottom: 1px solid var(--bcc-border);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+body.bcc-idcard #gbook_list .childlist_listelement:last-child .child_actions {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* Entry avatar: bordered tile (an image frame, not a pill).
+ * pinnwand_userpix_bg.gif (white 33px frame) goes; the 3px inset keeps the
+ * 30px img geometry. */
+body.bcc-idcard #gbook_list .child .child_uimg {
+  background: var(--bcc-surface);
+  border: 1px solid var(--bcc-border);
+  border-radius: 6px;
+  top: 12px;
+}
+
+body.bcc-idcard #gbook_list .textinfos .child_cuname {
+  padding-left: 0;
+}
+
+/* Header line-up: nick and date center on the 38px avatar tile (upstream
+ * floated both to the top, 11px above the avatar's center). */
+body.bcc-idcard #gbook_list .textinfos .child_cuname .value,
+body.bcc-idcard #gbook_list .textinfos .child_gtime .value {
+  line-height: 38px;
+}
+
+/* 40px was the gap the old GIF header needed; 12 clears the avatar lane. */
+body.bcc-idcard #gbook_list .textinfos .child_cont {
+  margin-top: 12px;
+}
+
+body.bcc-idcard #gbook_list .textinfos .child_gtime {
+  color: var(--bcc-text-muted);
+}
+
+body.bcc-idcard #gbook_list .textinfos .child_cuname .value a:link,
+body.bcc-idcard #gbook_list .textinfos .child_cuname .value a:visited,
+body.bcc-idcard #gbook_list .textinfos .child_cuname .value a:active {
+  color: var(--bcc-text);
+}
+
+body.bcc-idcard #gbook_list .button_wrapper a:link,
+body.bcc-idcard #gbook_list .button_wrapper a:visited,
+body.bcc-idcard #gbook_list .button_wrapper a:active {
+  color: inherit;
+}
+
+/* Pinwand editor: #flush carried the white gbook_back.jpg at two
+ * specificities (plain and behind #child_list_wrapper); both selectors are
+ * mirrored here one id richer. Flat inside the card, no second box. */
+body.bcc-idcard #gbook_list #flush,
+body.bcc-idcard #gbook_list #child_list_wrapper #flush {
+  background: none;
+  border: 0;
+  width: auto;
+  height: auto;
+  padding: 0 0 8px 0;
+  box-sizing: border-box;
+}
+
+/* JETZT POSTEN/VORSCHAU (and the settings file input, same class): upstream
+ * makes .formbutton a borderless orange text button; bcc button look instead.
+ * float:right stays (upstream). */
+body.bcc-idcard #gbook_list .formbutton {
+  background: var(--bcc-surface);
+  border: 1px solid var(--bcc-border) !important;
+  border-radius: 6px;
+  color: var(--bcc-text);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+}
+
+body.bcc-idcard #gbook_list .formbutton:hover {
+  background: var(--bcc-surface-hover);
+}
+
+/* File inputs: the OS browse chrome is the last native control on the pages.
+ * ::file-selector-button styles the inner button (FF 121+, Chrome 89+); where
+ * it is unsupported the input degrades to the native control, acceptable. */
+body.bcc-idcard input[type="file"] {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--bcc-text);
+}
+
+body.bcc-idcard input[type="file"]::file-selector-button {
+  background: var(--bcc-surface);
+  color: var(--bcc-text);
+  border: 1px solid var(--bcc-border);
+  border-radius: 6px;
+  padding: 2px 10px;
+  margin-right: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* BILDER: the gallery sits on a hard #FFFFFF #foto_list, and both "flush"
+ * strips (the FOTOS header row, the settings PROFIBILD upload strip) carry
+ * headline_3.gif. Flatten strip + container, the h1 labels ride the muted
+ * label color. */
+body.bcc-idcard #foto_list {
+  background: none;
+}
+
+body.bcc-idcard #foto_list #flush,
+body.bcc-idcard #foto_list_settings #flush_foto_list_settings {
+  background: none;
+  height: auto;
+  min-height: 0;
+  padding: 6px 0;
+  margin-top: 0;
+  border-bottom: 1px solid var(--bcc-border);
+  border-radius: 0;
+}
+
+body.bcc-idcard #foto_list #flush h1,
+body.bcc-idcard #foto_list_settings #flush_foto_list_settings h1,
+body.bcc-idcard #foto_list #flush .prefix,
+body.bcc-idcard #foto_list_settings #flush_foto_list_settings .prefix {
+  color: var(--bcc-text-muted);
+  padding-top: 0;
+}
+
+/* Photo management previews (settings): img_bg.gif frames become bordered
+ * tiles like every other thumbnail. */
+body.bcc-idcard #obj_list_wrapperfoto .list .preview .obj_img .value {
+  background: none;
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+}
+
+/* SETTINGS: the per-form h2 headlines (Profibild, Onlinestatus, ...) draw
+ * headlinex.gif as a 545px white tab pulled 35px left of the card. The id
+ * list mirrors upstream's own selector list one prefix richer; same label
+ * recipe as the h5 rules in the shell section. */
+body.bcc-idcard #ww_profil_upd_991 h2,
+body.bcc-idcard #ww_profil_upd_951 h2,
+body.bcc-idcard #ww_profil_upd_941 h2,
+body.bcc-idcard #ww_profil_upd_931 h2,
+body.bcc-idcard #ww_profil_upd_921 h2,
+body.bcc-idcard #ww_profil_upd_911 h2,
+body.bcc-idcard #ww_profil_upd_811 .subheadline,
+body.bcc-idcard #ww_profil_upd_731 .prefix,
+body.bcc-idcard #ww_profil_upd_781 .prefix,
+body.bcc-idcard #ww_profil_upd_801 .prefix,
+body.bcc-idcard #ww_profil_upd_771 .prefix,
+body.bcc-idcard #ww_profil_upd_711 .prefix,
+body.bcc-idcard #ww_profil_upd_701 .prefix,
+body.bcc-idcard #ww_profil_upd_791 .prefix {
+  background: none;
+  width: auto;
+  height: auto;
+  margin-left: 0;
+  padding: 0 0 4px 0;
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--bcc-border);
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Settings form row labels and values: upstream pins #385F8D/#3f3f3f/#3f3f58
+ * per form; one flatten per selector shape. */
+body.bcc-idcard #ww_profil .settings .prefix,
+body.bcc-idcard #pers .prefix,
+body.bcc-idcard #nc_settings .prefix,
+body.bcc-idcard #nc_settings .suffix {
+  color: var(--bcc-text);
+}
+
+body.bcc-idcard #ww_profil .settings .value {
+  color: inherit;
+}
+
+/* The Hilfe card: div.help is a white help.gif box with #5D6268 text. Tinted
+ * inset, no border line (one visual signal less inside the card). */
+body.bcc-idcard #id_card_visible .help {
+  background: var(--bcc-surface);
+  border: 0;
+  border-radius: 8px;
+  width: auto;
+  height: auto;
+  padding: 10px 12px;
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+body.bcc-idcard .help h3 {
+  color: var(--bcc-text);
+  border-bottom: 1px solid var(--bcc-border);
+}
+
+/* Placeholder text rode the native gray, unreadable on dark inputs. */
+body.bcc-idcard input::placeholder,
+body.bcc-idcard textarea::placeholder {
+  color: var(--bcc-text-input);
+  opacity: 0.6;
+}
+
+/* Checkboxes/radios stay native widgets (chrome-free rule above), the modern
+ * accent-color paints their check/dot with the theme instead of UA blue. */
+body.bcc-idcard input[type="checkbox"],
+body.bcc-idcard input[type="radio"] {
+  accent-color: var(--bcc-icon);
+}
+
+/* VIDEOS: #video_upload carries a white background image (the old editor
+ * strip face); flatten it, then prefix/value/ADD float chain wraps out of
+ * alignment: one flex row. The input keeps roughly upstream's compact
+ * width, a flex-stretch turned it into a full-card light bar that read as
+ * a stray white box. The ADD span keeps its inline green. */
+body.bcc-idcard #video_upload {
+  background: none;
+}
+
+body.bcc-idcard #video_upload form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+body.bcc-idcard #video_upload .prefix {
+  float: none;
+  width: auto;
+  color: var(--bcc-text-muted);
+  padding-top: 0;
+}
+
+body.bcc-idcard #video_upload .value {
+  float: none;
+  flex: 0 0 auto;
+}
+
+body.bcc-idcard #video_upload .value input {
+  width: 180px;
+  box-sizing: border-box;
+}
+
+body.bcc-idcard #video_upload .suffix a {
+  color: inherit;
+  padding-top: 0;
+}
+
+/* col2 friend lists (Freunde online/offline, Besucher): the chat userlist
+ * row idiom on upstream's own float chain (obj_uimg float + textinfos
+ * float: the wrapper's nested .obj_owner block defeats flex attempts, so
+ * the float geometry stays and only the look changes). */
+body.bcc-idcard #idvisits .obj_list .obj_owner_wrapper,
+body.bcc-idcard #fonline .obj_list .obj_owner_wrapper,
+body.bcc-idcard #foffline .obj_list .obj_owner_wrapper {
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  width: auto;
+  height: auto;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  margin: 1px 2px;
+}
+
+body.bcc-idcard #idvisits .obj_list .obj_owner_wrapper:hover,
+body.bcc-idcard #fonline .obj_list .obj_owner_wrapper:hover,
+body.bcc-idcard #foffline .obj_list .obj_owner_wrapper:hover {
+  background: var(--bcc-surface-hover);
+}
+
+body.bcc-idcard #idvisits .obj_list,
+body.bcc-idcard #fonline .obj_list,
+body.bcc-idcard #foffline .obj_list {
+  margin: 0;
+}
+
+/* Thumb big enough to identify a user (48 was the old frame size, 24 too
+ * small to read a face; upstream sizes these via the same selector shape,
+ * not inline attrs). */
+body.bcc-idcard #idvisits .obj_list img,
+body.bcc-idcard #fonline .obj_list img,
+body.bcc-idcard #foffline .obj_list img {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  display: block;
+}
+
+/* 56px was padding for the 48px thumb; auto lets the nick follow tightly. */
+body.bcc-idcard #idvisits .obj_list .obj_uimg,
+body.bcc-idcard #fonline .obj_list .obj_uimg,
+body.bcc-idcard #foffline .obj_list .obj_uimg {
+  width: auto;
+}
+
+/* Nick cell: fixed width with ellipsis so the float pair (thumb + nick)
+ * always fits beside each other; the budget is obj_owner 145px = thumb 36
+ * + gap 6 + nick 96 + 7px slack, anything wider drops the float to a
+ * second line. */
+body.bcc-idcard #idvisits .obj_list .obj_owner .textinfos,
+body.bcc-idcard #fonline .obj_list .obj_owner .textinfos,
+body.bcc-idcard #foffline .obj_list .obj_owner .textinfos {
+  width: 96px;
+  height: 36px;
+  line-height: 36px;
+  padding-left: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Upstream paints online nicks green / offline pink, lowercased, 14px; the
+ * lists are already segregated, the color carries nothing: normal nicks,
+ * offline dimmed like the chat's away rows. */
+body.bcc-idcard #idvisits .obj_list .obj_owner .textinfos a,
+body.bcc-idcard #fonline .obj_list .obj_owner .textinfos a,
+body.bcc-idcard #foffline .obj_list .obj_owner .textinfos a,
+body.bcc-idcard #ww_content_col2 .cont_el .fonline,
+body.bcc-idcard #ww_content_col2 .cont_el .foffline {
+  color: inherit;
+  text-transform: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.bcc-idcard #foffline .obj_list .obj_owner .textinfos a {
+  opacity: 0.65;
+}
+
+/* FRIENDS request rows: freundesanfragen.gif is the 509px white strip; flat
+ * hairline-separated rows instead. The img/textinfos offsets were tuned for
+ * the GIF (margin-left 14 / padding-top 17), pulled back to real values. */
+body.bcc-idcard #f_inbox .obj_list .obj_owner_wrapper,
+body.bcc-idcard #f_outbox .obj_list .obj_owner_wrapper {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--bcc-border);
+  border-radius: 0;
+  width: auto;
+  height: auto;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 4px 0;
+}
+
+body.bcc-idcard #f_inbox .obj_list .obj_owner_wrapper:last-child,
+body.bcc-idcard #f_outbox .obj_list .obj_owner_wrapper:last-child {
+  border-bottom: 0;
+}
+
+body.bcc-idcard #f_inbox .obj_list .obj_owner_wrapper img,
+body.bcc-idcard #f_outbox .obj_list .obj_owner_wrapper img {
+  margin-left: 0;
+  margin-top: 0;
+}
+
+body.bcc-idcard #f_inbox .obj_list .textinfos,
+body.bcc-idcard #f_outbox .obj_list .textinfos {
+  padding-top: 2px;
+  padding-right: 0;
+}
+
+/* Annehmen/Ablehnen: semantic links, the chat health palette (ok/danger)
+ * replaces upstream's light-theme green/dark red pair. */
+body.bcc-idcard a.fbox_ok {
+  color: var(--bcc-ok) !important;
+}
+
+body.bcc-idcard a.fbox_del {
+  color: var(--bcc-danger) !important;
+}
+
+/* NC (message center): folder tabs, list panel, rows, action bar. The list
+ * is a .line0/.line1 zebra of floats inside a white .main_top panel with a
+ * bg_new.jpg gradient; panels go raised, rows go transparent + hover. */
+body.bcc-idcard .navi_main_nc a {
+  background: var(--bcc-surface);
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  color: var(--bcc-text);
+  font-weight: 600;
+}
+
+body.bcc-idcard .navi_main_nc a:hover {
+  background: var(--bcc-surface-hover);
+  text-decoration: none;
+}
+
+body.bcc-idcard .navi_main_nc a.active {
+  background: var(--bcc-surface-active) !important;
+  border-color: var(--bcc-text-muted);
+  color: var(--bcc-text) !important;
+}
+
+body.bcc-idcard #nc .main_top,
+body.bcc-idcard #nc .main_bottom {
+  background: var(--bcc-surface-raised);
+  border: 1px solid var(--bcc-border);
+  border-radius: 10px;
+}
+
+body.bcc-idcard #nc .line0,
+body.bcc-idcard #nc .line1 {
+  background: transparent;
+  border-radius: 6px;
+}
+
+body.bcc-idcard #nc .line0:hover,
+body.bcc-idcard #nc .line1:hover {
+  background: var(--bcc-surface-hover) !important;
+}
+
+/* The Gelesen/Neu status word reads as metadata, not content. */
+body.bcc-idcard #nc .ncrow.c1 {
+  color: var(--bcc-text-muted);
+}
+
+/* Mass-action bar (Antworten/Zitat antworten/...): upstream paints a #999999
+ * bar with white links and tiny dark GIF icons per action. Bar goes on the
+ * surface, links themed, icons dropped (their links carry the words). */
+body.bcc-idcard .obj_actions {
+  background: var(--bcc-surface);
+  border-top: 1px solid var(--bcc-border);
+}
+
+body.bcc-idcard .obj_actions .button a:link,
+body.bcc-idcard .obj_actions .button a:visited,
+body.bcc-idcard .obj_actions .button a:active {
+  color: var(--bcc-text);
+}
+
+body.bcc-idcard .obj_actions .button_on a {
+  color: var(--bcc-text) !important;
+}
+
+body.bcc-idcard .obj_actions .button_wrapper div[class^="obj_"] {
+  background: none;
+  padding-left: 2px;
+}
+
+/* Second audit pass leftovers. */
+
+/* Unread bubbles: bubble + bubbletxt are absolute SIBLINGS upstream (GIF +
+ * text on top), so both get the same box: an 18px pill at the tab's top-right
+ * corner, number centered by matching line-height. The ring shadow lifts
+ * the badge off the tab edge. */
+body.bcc-idcard #id_nav .button .bubble {
+  left: auto;
+  right: -7px;
+  top: -8px;
+  width: 18px;
+  height: 18px;
+  box-shadow: 0 0 0 2px var(--bcc-surface-raised);
+}
+
+body.bcc-idcard #id_nav .button .bubbletxt {
+  left: auto;
+  right: -7px;
+  top: -8px;
+  width: 18px;
+  line-height: 18px;
+  text-align: center;
+  font-size: 11px;
+}
+
+/* col2 action buttons (NACHRICHT HINTERLASSEN, FREUND WERDEN): upstream
+ * draws tan GIF faces via the .cont_button containers and vertically centers
+ * with a line-height hack; containers flatten (width 193px > the 187px col2
+ * card, it poked into the gutter), the anchors become bcc buttons. */
+body.bcc-idcard .cont_button,
+body.bcc-idcard .cont_button2 {
+  background: none;
+  width: auto;
+  height: auto;
+  line-height: normal;
+  padding-left: 0;
+  overflow: visible;
+}
+
+body.bcc-idcard .cont_button a,
+body.bcc-idcard .cont_button2 a {
+  display: block;
+  background: var(--bcc-surface);
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  color: var(--bcc-text);
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  text-decoration: none;
+}
+
+body.bcc-idcard .cont_button a:hover,
+body.bcc-idcard .cont_button2 a:hover {
+  background: var(--bcc-surface-hover);
+  text-decoration: none;
+}
+
+/* BBCode toolbar (pinwand editor): the format glyphs are white-tile GIFs;
+ * Font Awesome is on the page, so the five format anchors get real glyphs,
+ * the color swatches keep their colored GIFs. Ghost tiles: no box chrome,
+ * hover chip only. */
+body.bcc-idcard .obj_edit_textformat a {
+  background-color: transparent;
+  background-position: center;
+  border: 0;
+  border-radius: 6px;
+  box-sizing: border-box;
+  text-align: center;
+  line-height: 23px;
+  color: var(--bcc-text);
+  font-size: 12px;
+}
+
+body.bcc-idcard .obj_edit_textformat a:hover {
+  background-color: var(--bcc-surface-hover);
+}
+
+body.bcc-idcard .obj_edit_textformat a.tf_bold,
+body.bcc-idcard .obj_edit_textformat a.tf_it,
+body.bcc-idcard .obj_edit_textformat a.tf_st,
+body.bcc-idcard .obj_edit_textformat a.tf_linkto,
+body.bcc-idcard .obj_edit_textformat a.tf_mailto {
+  background-image: none;
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Free Solid";
+  font-weight: 900;
+}
+
+body.bcc-idcard .obj_edit_textformat a.tf_bold::after {
+  content: "\f032";
+}
+
+body.bcc-idcard .obj_edit_textformat a.tf_it::after {
+  content: "\f033";
+}
+
+body.bcc-idcard .obj_edit_textformat a.tf_st::after {
+  content: "\f0cc";
+}
+
+body.bcc-idcard .obj_edit_textformat a.tf_linkto::after {
+  content: "\f0c1";
+}
+
+body.bcc-idcard .obj_edit_textformat a.tf_mailto::after {
+  content: "\f1fa";
+}
+
+/* Action-bar entries (Speichern on settings, Antworten/Zitat antworten on
+ * nc): ghost buttons, hover chip, no border box (pills stay reserved for
+ * real buttons; these sit inside cards/bars). */
+body.bcc-idcard .obj_actions {
+  height: auto;
+  padding: 4px 0;
+}
+
+body.bcc-idcard .obj_actions .button {
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  margin: 3px 4px 3px 0;
+  padding: 0 8px;
+  line-height: 22px;
+  height: 22px;
+}
+
+body.bcc-idcard .obj_actions .button:hover {
+  background: var(--bcc-surface-hover);
+}
+
+/* NC folder tabs: absolute at margin-left 38/margin-top 22, they clipped the
+ * label card's heading (the headline-GIF layout they were tuned for is gone).
+ * Static row above the card instead. */
+body.bcc-idcard .navi_main_nc {
+  position: static;
+  margin: 0 0 10px 0;
 }
