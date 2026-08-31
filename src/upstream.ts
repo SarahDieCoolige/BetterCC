@@ -13,6 +13,14 @@ export function getChatNick(): string {
   return String((unsafeWindow as any).chat_nick ?? "");
 }
 
+/** The logged-in viewer's nick on ID-family pages (myiduname global). Present
+ *  on id (own AND other users' cards: it names the viewer, not the card
+ *  owner), settings, and friends. Absent on nc/index.html, which ships no
+ *  identity global: the caller falls back to decoding the nav href. */
+export function getMyIdName(): string {
+  return String((unsafeWindow as any).myiduname ?? "");
+}
+
 /** The active channel name (empty string if not set). */
 export function getChannel(): string {
   return String((unsafeWindow as any).chat_channel ?? "");

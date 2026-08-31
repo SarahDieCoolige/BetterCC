@@ -206,6 +206,44 @@
     }
     return encoded;
   }
+  function decodeChatLink(encoded) {
+    let decoded = "";
+    for (let i = 0; i < encoded.length; i++) {
+      const ch = encoded.charAt(i);
+      if (ch === "-") {
+        decoded += " ";
+        continue;
+      }
+      if (ch !== ":") {
+        decoded += ch;
+        continue;
+      }
+      const end = encoded.indexOf(":", i + 1);
+      let value = null;
+      if (end !== -1) {
+        const token = encoded.slice(i + 1, end);
+        if (token.includes("%")) {
+          try {
+            value = decodeURIComponent("%" + token);
+          } catch {
+            value = null;
+          }
+        } else if (/^u[0-9A-Fa-f]{4}$/.test(token)) {
+          value = String.fromCharCode(parseInt(token.slice(1), 16));
+        } else {
+          const code = parseInt(token, 16);
+          value = Number.isNaN(code) ? null : String.fromCharCode(code);
+        }
+      }
+      if (value === null) {
+        decoded += ":";
+      } else {
+        decoded += value;
+        i = end;
+      }
+    }
+    return decoded;
+  }
   var userStore = "";
   function getUserKey(key) {
     return `${key}_${userStore}`;
@@ -217,6 +255,9 @@
   // src/upstream.ts
   function getChatNick() {
     return String(unsafeWindow.chat_nick ?? "");
+  }
+  function getMyIdName() {
+    return String(unsafeWindow.myiduname ?? "");
   }
   function getChannel() {
     return String(unsafeWindow.chat_channel ?? "");
@@ -759,6 +800,11 @@
         cclog(`render for "${k}" threw: ${e.message}`, "store");
       }
     }
+  }
+  async function userHasStoredState(nick) {
+    const suffix = "_" + nick.toLowerCase();
+    const keys = await GM.listValues();
+    return keys.some((k) => k.endsWith(suffix));
   }
   async function initStore() {
     if (initialized) throw new Error("initStore already called");
@@ -5398,6 +5444,49 @@
     mountStaleMarkers();
   }
 
+  // src/idcard.ts
+  function isIdFamilyPath(pathname) {
+    return /\/de\/(id|settings|friends)\/.+\.html|\/de\/nc\/index\.html/.test(pathname);
+  }
+  function nickFromSettingsHref(href) {
+    const m = href.match(/\/de\/settings\/([^/?#]+)\.html/);
+    return m ? decodeChatLink(m[1]) : "";
+  }
+  function buildVarsRule(scheme) {
+    const decls = Object.entries(schemeToCssVars(scheme)).map(([name, value]) => `  ${name}: ${value};`).join("\n");
+    return `body.bcc-idcard {
+${decls}
+}`;
+  }
+  function getNickFromNav() {
+    const link = document.querySelector('#id_nav a[href*="/de/settings/"]');
+    return link ? nickFromSettingsHref(link.getAttribute("href") ?? "") : "";
+  }
+  function applyTouchups() {
+  }
+  async function initIdcard() {
+    try {
+      const nick = getMyIdName() || getNickFromNav();
+      if (!nick) return cclog("idcard: no viewer nick, leaving unstyled");
+      if (!await userHasStoredState(nick)) {
+        return cclog(`idcard: no BCC state for ${nick}, leaving unstyled`);
+      }
+      setUserStore(nick, false);
+      await initStore();
+      const varsRule = buildVarsRule(currentScheme());
+      const v3Css = GM_getResourceText("v3_css");
+      const idcardCss = GM_getResourceText("idcard_css");
+      document.body.classList.add("bcc-idcard");
+      GM_addStyle(varsRule);
+      if (v3Css) GM_addStyle(v3Css);
+      if (idcardCss) GM_addStyle(idcardCss);
+      injectFontAwesome();
+      applyTouchups();
+    } catch (e) {
+      cclog(`idcard: boot failed, leaving unstyled (${e.message})`);
+    }
+  }
+
   // src/index.ts
   (function() {
     "use strict";
@@ -5408,6 +5497,9 @@
       window.onbeforeunload = null;
       setUserStore(getChatNick(), isGuest());
       initV3().catch(handleBootFailure);
+    }
+    if (isIdFamilyPath(window.location.pathname)) {
+      void initIdcard();
     }
   })();
 })();

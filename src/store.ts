@@ -272,6 +272,18 @@ function notify<K extends StoreKey>(k: K, v: StateValue<K>): void {
 
 // ─── Public API ──────────────────────────────────────────────────────────
 
+/** True when any persisted row for this exact nick exists in GM. Rows only
+ *  exist after a chat boot as that nick, so this is exactly "has entered
+ *  chat", for THIS account, which is what a multi-account browser needs.
+ *  Awaited because managers disagree on sync vs promise listValues
+ *  (Violentmonkey returns a plain array, the dev mock a promise); await
+ *  handles both. */
+export async function userHasStoredState(nick: string): Promise<boolean> {
+  const suffix = "_" + nick.toLowerCase();
+  const keys = await GM.listValues();
+  return keys.some((k) => k.endsWith(suffix));
+}
+
 /** Read all persisted keys from GM, seed the mirror silently. Call once. */
 export async function initStore(): Promise<void> {
   if (initialized) throw new Error("initStore already called");

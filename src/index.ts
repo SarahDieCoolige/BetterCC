@@ -15,6 +15,7 @@ import { cclog, setUserStore } from "./utils";
 import { getChatNick, isGuest } from "./upstream";
 import { initV3 } from "./init";
 import { handleBootFailure } from "./health-ui";
+import { isIdFamilyPath, initIdcard } from "./idcard";
 
 (function () {
   "use strict";
@@ -33,4 +34,9 @@ import { handleBootFailure } from "./health-ui";
 
     initV3().catch(handleBootFailure);
   } // MAIN CHAT
+
+  // ─── ID-FAMILY PAGES ───
+  if (isIdFamilyPath(window.location.pathname)) {
+    void initIdcard(); // never rejects; failures leave the page unstyled
+  }
 })();
