@@ -30,7 +30,7 @@
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=33ccb7af
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=a85943ba
-// @resource  idcard_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/idcard.css?r=ed8423da
+// @resource  idcard_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/idcard.css?r=8644a912
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -5471,7 +5471,8 @@ ${decls}
     ["PINWAND", "fa-thumbtack"],
     ["BLOGS", "fa-rss"],
     ["BLOG", "fa-rss"],
-    ["FREUNDE", "fa-users"]
+    ["FREUNDE", "fa-users"],
+    ["BESUCHER", "fa-eye"]
   ];
   function applyTouchups() {
     try {

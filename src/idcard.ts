@@ -63,6 +63,7 @@ const H5_ICONS: ReadonlyArray<readonly [string, string]> = [
   ["BLOGS", "fa-rss"],
   ["BLOG", "fa-rss"],
   ["FREUNDE", "fa-users"],
+  ["BESUCHER", "fa-eye"],
 ];
 
 /** Wrap/move touch-up pass (spec D5). Additive only: icons are prepended to

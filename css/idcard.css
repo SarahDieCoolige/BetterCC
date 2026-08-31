@@ -218,3 +218,292 @@ body.bcc-idcard #ww_seitende {
   height: 12px;
   margin-top: 12px;
 }
+
+/* ─── Content (spec D4/D5) ────────────────────────────────────────────────
+ * Card interiors: forms, thumbnails, lists, pagination, lightbox. All vars
+ * come from the shell section. Inline CONTENT colors stay per the semantic
+ * policy: status pill (#aa0000/#eeeeee), delete-X spans (#cc6666/#ffffff),
+ * video ADD span (#00a500/#ffffff), "Ansehen" font links (#cc6666), and the
+ * info-table font bullets (#5555aa/#aa55aa/#aa5555/#55aa55). The decorative
+ * grays on these pages all live in upstream stylesheet rules (#3f3f3f base,
+ * #3F3F3F video-upload link, #3f3f58 list/nick text, #000 pinwand links),
+ * so plain specificity beats them and this section needs no !important
+ * against inline styles at all.
+ *
+ * !important catalogue (one line per use):
+ * - #ww_content_col2 .pager .anvs font-size: upstream pins 8px !important
+ *   there; the restyled inline label needs 11px to match the col1 pager.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/* Card text breathes a little; upstream pins line-height 100% on the base
+ * tags. NUTZERTEXT is a bare text block with no class of its own, this is
+ * the polish it gets. */
+body.bcc-idcard .cont_el,
+body.bcc-idcard .cont_el_2 {
+  line-height: 1.45;
+}
+
+/* "Foto hochladen" and friends: upstream's base rule paints h1 #3f3f3f,
+ * invisible on dark schemes. Size stays upstream's 12px. */
+body.bcc-idcard .cont_el h1,
+body.bcc-idcard .cont_el_2 h1 {
+  color: var(--bcc-text);
+}
+
+/* Generic form base, ahead of the settings work: white boxes off, vars on.
+ * Padding stays in the 2px range so control heights match upstream; width
+ * is never touched. Checkboxes/radios opt back out, a 1px border double-
+ * draws over the native widget. */
+body.bcc-idcard input,
+body.bcc-idcard select,
+body.bcc-idcard textarea,
+body.bcc-idcard button {
+  background: var(--bcc-surface-input);
+  color: var(--bcc-text-input);
+  border: 1px solid var(--bcc-border);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+body.bcc-idcard input[type="checkbox"],
+body.bcc-idcard input[type="radio"] {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+body.bcc-idcard button,
+body.bcc-idcard input[type="submit"],
+body.bcc-idcard input[type="button"] {
+  background: var(--bcc-surface);
+  color: var(--bcc-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+body.bcc-idcard button:hover,
+body.bcc-idcard input[type="submit"]:hover,
+body.bcc-idcard input[type="button"]:hover {
+  background: var(--bcc-surface-hover);
+}
+
+/* Header-card avatar: the info table's only rowspan cell holds the portrait
+ * (width= attribute stays, border-box keeps the box the same size). */
+body.bcc-idcard .cont_el td[rowspan] img {
+  box-sizing: border-box;
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  background: var(--bcc-surface);
+  padding: 4px;
+}
+
+/* Thumbnails: #foto_list/#video_list write img.zom at runtime via the smhw
+ * template, #idvisits renders plain imgs in .obj_uimg cells. Inline
+ * max-width/max-height stay untouched (D4 layout contract); border, radius
+ * and background don't collide with them, so no !important is needed. */
+body.bcc-idcard .cont_el img.zom,
+body.bcc-idcard #idvisits .obj_uimg img {
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  background: var(--bcc-surface);
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+body.bcc-idcard #video_list iframe {
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+}
+
+/* Zoom replacement: every card embeds a .zom { padding: 50px } /
+ * scale(2)-on-hover style block. The 50px gutter only existed to give the
+ * zoom room; a 2x blowup clipped by the td's overflow:hidden reads broken.
+ * Subtle raise instead, short transition. */
+body.bcc-idcard .cont_el .zom {
+  padding: 2px;
+  transform: none;
+  transition:
+    filter 0.15s ease,
+    border-color 0.15s ease;
+}
+
+body.bcc-idcard .cont_el .zom:hover {
+  transform: none;
+  filter: brightness(1.08);
+  border-color: var(--bcc-text-muted);
+}
+
+/* Youtube embed link: upstream pins #3F3F3F on #video_upload a, unreadable
+ * on dark schemes. Decorative, so it rides the text var. */
+body.bcc-idcard #video_upload a {
+  color: var(--bcc-text);
+}
+
+/* PINWAND rows as list items. Upstream paints .child links hard black and
+ * .child_cont #3f3f58, both unreadable on dark; the date keeps its muted
+ * gray (readable on both, earns its dimming). */
+body.bcc-idcard #gbook_list .childlist .child {
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--bcc-border);
+}
+
+body.bcc-idcard #gbook_list .childlist_listelement:last-child .child {
+  border-bottom: 0;
+}
+
+body.bcc-idcard #gbook_list .childlist .child a {
+  color: inherit;
+}
+
+body.bcc-idcard #gbook_list .textinfos .child_cont {
+  color: var(--bcc-text);
+}
+
+/* col2 lists (Freunde online/offline, Besucher): rows lose the hardcoded
+ * light-blue .textinfos box, nick links inherit like everywhere else. */
+body.bcc-idcard #idvisits .obj_list .obj_owner .textinfos,
+body.bcc-idcard #fonline .obj_list .obj_owner .textinfos,
+body.bcc-idcard #foffline .obj_list .obj_owner .textinfos {
+  background: none;
+}
+
+body.bcc-idcard #idvisits .obj_list .obj_owner .textinfos a,
+body.bcc-idcard #fonline .obj_list .obj_owner .textinfos a,
+body.bcc-idcard #foffline .obj_list .obj_owner .textinfos a {
+  color: inherit;
+}
+
+/* Pagination as small bcc buttons, CSS-only. Upstream hides .other/.lastpage
+ * behind display:none and draws next/prev as 50x25 GIFs; un-hide the number
+ * links, strip the GIF geometry, give nextpage a glyph since its arrow was
+ * pure background image. position:relative keeps the absolutely-positioned
+ * "Seite N von M" label anchored to the bar now that height is auto. */
+body.bcc-idcard .pager {
+  position: relative;
+  background: none;
+  color: var(--bcc-text-muted);
+  height: auto;
+  min-height: 25px;
+  font-size: 12px;
+}
+
+body.bcc-idcard #ww_content_col2 .pager {
+  width: auto;
+  margin-left: 0;
+}
+
+body.bcc-idcard .pager .anvs {
+  position: static;
+  margin: 0;
+}
+
+body.bcc-idcard #ww_content_col2 .pager .anvs {
+  margin-top: 0;
+  font-size: 11px !important;
+}
+
+body.bcc-idcard .pager a.other,
+body.bcc-idcard .pager a.current,
+body.bcc-idcard .pager a.nextpage,
+body.bcc-idcard .pager a.lastpage {
+  display: inline-block;
+  box-sizing: border-box;
+  background: var(--bcc-surface);
+  border: 1px solid var(--bcc-border);
+  border-radius: 6px;
+  color: var(--bcc-text);
+  padding: 1px 8px;
+  margin: 2px;
+  line-height: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+body.bcc-idcard .pager a.nextpage {
+  float: none;
+  width: auto;
+  height: auto;
+  background-image: none;
+}
+
+body.bcc-idcard .pager a.nextpage::after {
+  content: "\203A";
+}
+
+body.bcc-idcard .pager a.other:hover,
+body.bcc-idcard .pager a.current:hover,
+body.bcc-idcard .pager a.nextpage:hover,
+body.bcc-idcard .pager a.lastpage:hover {
+  background: var(--bcc-surface-hover);
+  text-decoration: none;
+}
+
+/* Current page, when upstream ever renders one as a link (page 1 ships as
+ * plain text in .anvs today). After the hover rule so it wins the tie. */
+body.bcc-idcard .pager a.current {
+  background: var(--bcc-surface-active);
+  border-color: var(--bcc-text-muted);
+}
+
+/* Lightbox recolor, geometry untouched: #overlay keeps upstream's absolute
+ * positioning and z-index 90 (100 for #lightbox), only the flat black dims
+ * down. Panel = raised surface split across its two containers, hairline
+ * between, upstream 4px corners stay. */
+body.bcc-idcard #overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+body.bcc-idcard #outerImageContainer {
+  background: var(--bcc-surface-raised);
+  border: 1px solid var(--bcc-border);
+  border-bottom: 0;
+}
+
+body.bcc-idcard #imageDataContainer {
+  background: var(--bcc-surface-raised);
+  border: 1px solid var(--bcc-border);
+  border-top: 0;
+}
+
+body.bcc-idcard #imageData {
+  color: var(--bcc-text-raised);
+}
+
+/* div.modf, defensive only: it ships empty in the served dumps (unexpanded
+ * includ marker) and nothing in the fixture references it, so the runtime
+ * markup is unobservable. These rules are inert today and make the module
+ * read as bcc buttons if it ever populates. */
+body.bcc-idcard .modf a,
+body.bcc-idcard .modf button {
+  display: inline-block;
+  background: var(--bcc-surface);
+  border: 1px solid var(--bcc-border);
+  border-radius: 6px;
+  color: var(--bcc-text);
+  padding: 2px 8px;
+  margin: 3px 4px 3px 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+body.bcc-idcard .modf a:hover,
+body.bcc-idcard .modf button:hover {
+  background: var(--bcc-surface-hover);
+  text-decoration: none;
+}
+
+/* ToolTip confirm boxes (LÖSCHEN etc): the template payload lands in the
+ * absolutely-positioned #t00ltip div. Upstream geometry (position, z-index,
+ * display toggling) stays; only the box look is ours. */
+body.bcc-idcard #t00ltip {
+  background: var(--bcc-surface-raised);
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--bcc-text-raised);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  max-width: 360px;
+}
