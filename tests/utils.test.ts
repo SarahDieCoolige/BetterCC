@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { getUserKey, setUserStore, printToChat, printHelp, chatScrollMax } from "../src/utils";
+import {
+  getUserKey,
+  setUserStore,
+  printToChat,
+  printHelp,
+  chatScrollMax,
+  encodeChatLink,
+  decodeChatLink,
+} from "../src/utils";
 
 /** Parse a .bcc-chat-msg div from its HTML string into a fake element. */
 function parseMsgDiv(html: string): any {
@@ -234,5 +242,57 @@ describe("chatScrollMax", () => {
     const doc = { body: { scrollHeight: 200 } } as unknown as Document;
     const win = { innerHeight: 300 } as unknown as Window;
     expect(chatScrollMax(doc, win)).toBe(-100);
+  });
+});
+
+describe("encodeChatLink/decodeChatLink", () => {
+  it.each([
+    "maja01_",
+    "Test User 42",
+    "a-b",
+    "Ä",
+    "ä",
+    "ß",
+    "Ünterstrich_1",
+    "nick:colon",
+    "100%dash",
+    "u2ver",
+  ])("round-trips %s", (name) => {
+    // A literal '-' survives because encodeChatLink maps it to :2D: first, so
+    // decode's '-'→space rule only ever sees dashes the encoder wrote.
+    expect(decodeChatLink(encodeChatLink(name))).toBe(name);
+  });
+
+  it("decodes a real dump segment (uppercase hex)", () => {
+    expect(decodeChatLink("maja01:5F:")).toBe("maja01_");
+  });
+
+  it("maps dashes to spaces", () => {
+    expect(decodeChatLink("a-b")).toBe("a b");
+  });
+
+  it("accepts lowercase hex", () => {
+    expect(decodeChatLink(":5f:")).toBe("_");
+  });
+
+  it("decodes the %XX escape form", () => {
+    expect(decodeChatLink(":C3%84:")).toBe("Ä");
+  });
+
+  it("decodes the upstream escape() :uXXXX: form", () => {
+    expect(decodeChatLink(":u016B:")).toBe("ū");
+  });
+
+  it("passes undecodable colons through verbatim instead of throwing", () => {
+    // No closing colon: the colon and what follows come back untouched.
+    expect(() => decodeChatLink("50%:odd")).not.toThrow();
+    expect(decodeChatLink("50%:odd")).toBe("50%:odd");
+    expect(() => decodeChatLink("a:b")).not.toThrow();
+    expect(decodeChatLink("a:b")).toBe("a:b");
+  });
+
+  it("passes a malformed escape token through verbatim instead of throwing", () => {
+    expect(() => decodeChatLink(":%zz:")).not.toThrow();
+    expect(decodeChatLink(":%zz:")).toBe(":%zz:");
   });
 });

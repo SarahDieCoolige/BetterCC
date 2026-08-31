@@ -228,7 +228,7 @@ function buildExitBtn(): HTMLElement {
 
 // ─── Font Awesome CDN injection ────────────────────────────────────────────
 
-function injectFontAwesome(): void {
+export function injectFontAwesome(): void {
   if (document.querySelector('link[href*="fontawesome"]')) return;
   const link = document.createElement("link");
   link.rel = "stylesheet";

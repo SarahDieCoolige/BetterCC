@@ -123,6 +123,55 @@ export function encodeChatLink(name: string): string {
   return encoded;
 }
 
+/**
+ * Inverse of encodeChatLink. Also decodes the upstream `escape()` producer's
+ * `:uXXXX:` form for charCode > 255 (the site's nav hrefs use it; our encoder
+ * emits the `:%XX:` form). Undecodable `:token:` groups come back verbatim:
+ * nicks in hrefs are user-supplied, so decode never throws and never invents
+ * characters the input didn't carry.
+ */
+export function decodeChatLink(encoded: string): string {
+  let decoded = "";
+  for (let i = 0; i < encoded.length; i++) {
+    const ch = encoded.charAt(i);
+    if (ch === "-") {
+      decoded += " ";
+      continue;
+    }
+    if (ch !== ":") {
+      decoded += ch;
+      continue;
+    }
+    const end = encoded.indexOf(":", i + 1);
+    let value: string | null = null;
+    if (end !== -1) {
+      const token = encoded.slice(i + 1, end);
+      if (token.includes("%")) {
+        // Our encoder's >255 form: encodeURIComponent minus its leading %.
+        try {
+          value = decodeURIComponent("%" + token);
+        } catch {
+          value = null; // malformed escape, falls through to verbatim
+        }
+      } else if (/^u[0-9A-Fa-f]{4}$/.test(token)) {
+        value = String.fromCharCode(parseInt(token.slice(1), 16));
+      } else {
+        const code = parseInt(token, 16);
+        value = Number.isNaN(code) ? null : String.fromCharCode(code);
+      }
+    }
+    if (value === null) {
+      // Undecodable: keep the colon, rescan what follows. Round-trips hold
+      // because encodeChatLink never emits an undecodable group.
+      decoded += ":";
+    } else {
+      decoded += value;
+      i = end; // consume the closing colon too
+    }
+  }
+  return decoded;
+}
+
 // ─── Storage key helper ───
 
 let userStore: string = ""; // set during init

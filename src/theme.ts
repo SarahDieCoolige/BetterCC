@@ -93,15 +93,22 @@ export function applyScheme(scheme: BccColorScheme): void {
 // ─── Store-driven theme API ──────────────────────────────────────────────
 
 /**
- * Select the scheme generator by the stored `scheme_v2` flag, regenerate from
- * the stored `color`, and apply. Called by reacts on both keys and by
+ * Build the scheme from the store: pick the generator by the `scheme_v2` flag
+ * and regenerate from `color`. Split from applyCurrentScheme so callers that
+ * only need the scheme (no DOM writes) can get it.
+ */
+export function currentScheme(): BccColorScheme {
+  if (get("scheme_v2")) enableV2Scheme();
+  else disableV2Scheme();
+  return generateScheme(get("color"));
+}
+
+/**
+ * Apply currentScheme() to the page. Called by reacts on both keys and by
  * injectIntoChatframe on reconnect.
  */
 export function applyCurrentScheme(): void {
-  if (get("scheme_v2")) enableV2Scheme();
-  else disableV2Scheme();
-  const scheme = generateScheme(get("color"));
-  applyScheme(scheme);
+  applyScheme(currentScheme());
 }
 
 /**
