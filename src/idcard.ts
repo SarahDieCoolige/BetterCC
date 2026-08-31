@@ -21,6 +21,7 @@ import { initStore, userHasStoredState } from "./store";
 import { currentScheme, schemeToCssVars } from "./theme";
 import type { BccColorScheme } from "./scheme";
 import { injectFontAwesome } from "./footer";
+import { iconElement } from "./dom";
 
 /** Path classifier for the entry branch (spec D1). True on the three
  *  nick-addressed page families and nc. */
@@ -49,9 +50,45 @@ function getNickFromNav(): string {
   return link ? nickFromSettingsHref(link.getAttribute("href") ?? "") : "";
 }
 
-/** Wrap/move touch-up pass (spec D5). Empty until the styling tasks land. */
+/** Section label → FA icon, matched as a contains-check on the uppercased
+ *  h5 text. Longer needles first: "BLOGS" would otherwise never see "BLOG".
+ *  Later touch-up tasks extend this table, nothing else. */
+const H5_ICONS: ReadonlyArray<readonly [string, string]> = [
+  ["REGDAT", "fa-id-card"],
+  ["NUTZERTEXT", "fa-user-pen"],
+  ["BILDER", "fa-images"],
+  ["FOTOS", "fa-images"],
+  ["VIDEOS", "fa-video"],
+  ["PINWAND", "fa-thumbtack"],
+  ["BLOGS", "fa-rss"],
+  ["BLOG", "fa-rss"],
+  ["FREUNDE", "fa-users"],
+];
+
+/** Wrap/move touch-up pass (spec D5). Additive only: icons are prepended to
+ *  section headers, the h5 itself never moves or loses children. A throw
+ *  lands in initIdcard's catch, so the page stays painted. */
 function applyTouchups(): void {
-  // intentionally empty
+  try {
+    document
+      .querySelectorAll<HTMLHeadingElement>(
+        "#ww_site_container .cont_el h5, #ww_site_container .cont_el_2 h5",
+      )
+      .forEach((h5) => {
+        // Marker class keeps the pass idempotent (boot can re-run it).
+        if (h5.classList.contains("bcc-h5-icon")) return;
+        const label = (h5.textContent ?? "")
+          .replace(/\u00a0/g, " ")
+          .trim()
+          .toUpperCase();
+        const hit = H5_ICONS.find(([needle]) => label.includes(needle));
+        if (!hit) return;
+        h5.insertBefore(iconElement(hit[1]), h5.firstChild);
+        h5.classList.add("bcc-h5-icon");
+      });
+  } catch (e) {
+    cclog(`idcard: h5 icon pass failed (${(e as Error).message})`);
+  }
 }
 
 /** ID-family entry. Never rejects: every failure path leaves the page

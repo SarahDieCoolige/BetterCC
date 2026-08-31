@@ -30,7 +30,7 @@
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=33ccb7af
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=a85943ba
-// @resource  idcard_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/idcard.css?r=e8c8301d
+// @resource  idcard_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/idcard.css?r=ed8423da
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -5462,7 +5462,32 @@ ${decls}
     const link = document.querySelector('#id_nav a[href*="/de/settings/"]');
     return link ? nickFromSettingsHref(link.getAttribute("href") ?? "") : "";
   }
+  var H5_ICONS = [
+    ["REGDAT", "fa-id-card"],
+    ["NUTZERTEXT", "fa-user-pen"],
+    ["BILDER", "fa-images"],
+    ["FOTOS", "fa-images"],
+    ["VIDEOS", "fa-video"],
+    ["PINWAND", "fa-thumbtack"],
+    ["BLOGS", "fa-rss"],
+    ["BLOG", "fa-rss"],
+    ["FREUNDE", "fa-users"]
+  ];
   function applyTouchups() {
+    try {
+      document.querySelectorAll(
+        "#ww_site_container .cont_el h5, #ww_site_container .cont_el_2 h5"
+      ).forEach((h5) => {
+        if (h5.classList.contains("bcc-h5-icon")) return;
+        const label = (h5.textContent ?? "").replace(/\u00a0/g, " ").trim().toUpperCase();
+        const hit = H5_ICONS.find(([needle]) => label.includes(needle));
+        if (!hit) return;
+        h5.insertBefore(iconElement(hit[1]), h5.firstChild);
+        h5.classList.add("bcc-h5-icon");
+      });
+    } catch (e) {
+      cclog(`idcard: h5 icon pass failed (${e.message})`);
+    }
   }
   async function initIdcard() {
     try {

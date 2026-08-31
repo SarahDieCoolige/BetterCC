@@ -36,3 +36,185 @@ body.bcc-idcard {
   --bcc-warn: #e8890c;
   --bcc-danger: #e03131;
 }
+
+/* ─── Shell chrome (spec D4) ──────────────────────────────────────────────
+ * The v3 design language rebuilt around the upstream page skeleton: cards
+ * on the scheme surface, raised panels, vars-only (no new --bcc-* names).
+ * .bcc-shell defaults don't reach these pages, so every rule here stands
+ * alone under body.bcc-idcard.
+ *
+ * !important catalogue (one line per use):
+ * - .cont_el/.cont_el_2 background: upstream pins its headline GIF with
+ *   !important on the settings page (.ww_content_col1_settings .cont_el).
+ * - same rule's padding: upstream pins padding-left: 35px !important there.
+ * - ad hide list: the dev ad-stub and live AdSense both set inline display
+ *   on the ins elements, only !important beats inline styles.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/* Base: scheme surface + the chat's font stack. Link color rides the text
+ * color; upstream already underlines on hover, restated so the section is
+ * self-contained (upstream's a:link white would tie on specificity). */
+body.bcc-idcard {
+  background: var(--bcc-surface);
+  color: var(--bcc-text);
+  font-family:
+    "Segoe UI Variable",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body.bcc-idcard a {
+  color: inherit;
+}
+
+body.bcc-idcard a:hover {
+  text-decoration: underline;
+}
+
+/* Page ground: back.jpg was the whole page graphic including 70px of header
+ * art above it; the panel chrome replaces both. Width stays px-fixed (D7),
+ * just centered on the surface. */
+body.bcc-idcard #ww_site_container {
+  background: none;
+  margin: 0 auto;
+  padding-top: 12px;
+}
+
+/* The paper texture behind the columns goes; the raised cards below float
+ * directly on the surface. */
+body.bcc-idcard #ww_content2 {
+  background: none;
+}
+
+/* Head panel: nav strip (and its hidden ad slot) as one raised card. Both
+ * container ids styled, id pages and settings/friends/nc alike. height:auto
+ * releases the fixed 37px the settings/friends/nc variant pins. */
+body.bcc-idcard #ww_head_container_id,
+body.bcc-idcard #ww_head_container {
+  background: var(--bcc-surface-raised);
+  border: 1px solid var(--bcc-border);
+  border-radius: 10px;
+  height: auto;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+}
+
+/* Nav tabs as bcc buttons, CSS-only. Upstream float geometry, the fixed
+ * button box and .button's position:relative (the bubble anchor) all stay;
+ * only the GIF face and text colors are replaced. */
+body.bcc-idcard #id_nav .button {
+  background: none;
+}
+
+body.bcc-idcard #id_nav .button a .inner {
+  background: var(--bcc-surface);
+  border: 1px solid var(--bcc-border);
+  border-radius: 8px;
+  box-sizing: border-box;
+  height: 29px;
+  padding: 0 6px;
+  line-height: 27px;
+  color: var(--bcc-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+body.bcc-idcard #id_nav .button a:hover .inner {
+  background: var(--bcc-surface-hover);
+  text-decoration: none;
+}
+
+/* Current tab: after the hover rule so it wins the tie on specificity. */
+body.bcc-idcard #id_nav .button.active a .inner {
+  background: var(--bcc-surface-active);
+  border-color: var(--bcc-text-muted);
+}
+
+body.bcc-idcard #id_nav .button a .inner.small {
+  font-size: 11px;
+}
+
+/* Unread bubbles: recolor + circle shape only. Upstream absolute positioning
+ * (left/top against the relative .button) stays untouched. Text sits on the
+ * accent, so it keeps the scheme text color per the badge recipe. */
+body.bcc-idcard #id_nav .button .bubble {
+  background: var(--bcc-accent-ban);
+  border-radius: 999px;
+}
+
+body.bcc-idcard #id_nav .button .bubbletxt {
+  color: var(--bcc-text);
+  font-weight: 700;
+}
+
+/* D5 hide list, display:none never removal. Ads wrapped in bare <center>
+ * stay wrapped (the nav lives in a center too); an empty center collapses. */
+body.bcc-idcard ins.adsbygoogle,
+body.bcc-idcard iframe[id^="aswift"],
+body.bcc-idcard iframe#googlefcPresent {
+  display: none !important;
+}
+
+/* Section cards: the upstream headline-GIF tabs become raised panels.
+ * ID-prefixed selectors outrank upstream's #ww_content_colN .cont_el rules;
+ * the two !importants are catalogued above. */
+body.bcc-idcard #ww_content_col1 .cont_el,
+body.bcc-idcard #ww_content_col1 .cont_el_2,
+body.bcc-idcard #ww_content_col2 .cont_el {
+  background: var(--bcc-surface-raised) !important;
+  padding: 12px 14px !important;
+  border: 1px solid var(--bcc-border);
+  border-radius: 10px;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+/* Section labels, the .bcc-online-count idiom: small, bold, letterspaced
+ * caps over a hairline. Status pill spans inside keep their upstream inline
+ * colors (semantic, D4) and win over this rule by being inline styles. */
+body.bcc-idcard .cont_el h5,
+body.bcc-idcard .cont_el_2 h5 {
+  color: var(--bcc-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--bcc-border);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+/* Section header icons, injected by applyTouchups (idcard.ts). */
+body.bcc-idcard .cont_el h5 i,
+body.bcc-idcard .cont_el_2 h5 i {
+  color: var(--bcc-icon);
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+/* Generic content base, light touch: upstream paints every table row hard
+ * white (basic css table tbody tr) plus a light-blue zebra, both foreign on
+ * scheme surfaces. They flatten to transparent; borders stay wherever
+ * upstream drew them. Deep content styling is the next task. */
+body.bcc-idcard .cont_el table,
+body.bcc-idcard .cont_el_2 table {
+  background: transparent;
+}
+
+body.bcc-idcard .cont_el table tbody tr {
+  background: transparent;
+}
+
+/* Empty upstream spacer under the columns; keep it a nothing, hairline only. */
+body.bcc-idcard #ww_seitende {
+  background: none;
+  border-top: 1px solid var(--bcc-border);
+  height: 12px;
+  margin-top: 12px;
+}
