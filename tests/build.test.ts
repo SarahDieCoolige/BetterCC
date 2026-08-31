@@ -96,6 +96,53 @@ describe("build output", () => {
     expect(content).toContain("getUserPhoto");
   });
 
+  // ── ID-card redesign foundations (IC-5): header pins ─────────────────────
+  // The @match expansion covers the ID-family pages (nc query, id,
+  // settings, friends) per specs/idcard-redesign.md Decision 1. src/index.ts
+  // branches on /cpop.html/, so these lines are inert until the ID branch
+  // lands. The idcard_css resource gets hash busting like the other CSS
+  // resources; only the stable prefix is pinned because the hash is
+  // content-derived.
+  it("declares the ID-family @match lines and the idcard_css resource", () => {
+    const content = readFileSync(OUTPUT_FILE, "utf-8");
+
+    const newMatches = [
+      "https://www.chatcity.de/de/nc/index.html?*",
+      "https://ccc.chatcity.de/de/nc/index.html?*",
+      "https://www.chatcity.de/de/id/*.html",
+      "https://www.chatcity.de/de/id/*.html?*",
+      "https://ccc.chatcity.de/de/id/*.html",
+      "https://ccc.chatcity.de/de/id/*.html?*",
+      "https://www.chatcity.de/de/settings/*.html",
+      "https://www.chatcity.de/de/settings/*.html?*",
+      "https://ccc.chatcity.de/de/settings/*.html",
+      "https://ccc.chatcity.de/de/settings/*.html?*",
+      "https://www.chatcity.de/de/friends/*.html",
+      "https://www.chatcity.de/de/friends/*.html?*",
+      "https://ccc.chatcity.de/de/friends/*.html",
+      "https://ccc.chatcity.de/de/friends/*.html?*",
+    ];
+    for (const url of newMatches) {
+      expect(content).toContain(`// @match  ${url}`);
+    }
+
+    expect(content).toContain(
+      "// @resource  idcard_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/idcard.css?r=",
+    );
+  });
+
+  // The idcard.css stub carries the same fallback --bcc-* values v3.css gives
+  // .bcc-shell, so ID-family pages paint a coherent default even when the
+  // scheme injection fails. Asserted against the source (same style as the
+  // v3.css sidebar test above) since the file ships as an @resource.
+  it("ships the idcard.css fallback stub", () => {
+    const idcardCss = resolve(import.meta.dirname, "../css/idcard.css");
+    expect(existsSync(idcardCss), "css/idcard.css must exist").toBe(true);
+    const css = readFileSync(idcardCss, "utf-8");
+    expect(css).toContain("body.bcc-idcard");
+    expect(css).toContain("--bcc-surface: #c8dae4;");
+  });
+
   // ── Sidebar sits to the RIGHT of the chatframe (layout-polish Task A) ─────
   // v3.css is an external @resource (not inlined by esbuild), so the layout
   // invariant is asserted against the CSS source directly. The conventional

@@ -24,12 +24,27 @@ const USERSCRIPT_HEADER = `// ==UserScript==
 // @match  https://ccc.chatcity.de/de/cpop.html
 // @match  https://ccc.chatcity.de/de/cpop.html?*
 // @match  https://www.chatcity.de/de/nc/index.html
+// @match  https://www.chatcity.de/de/nc/index.html?*
+// @match  https://ccc.chatcity.de/de/nc/index.html?*
+// @match  https://www.chatcity.de/de/id/*.html
+// @match  https://www.chatcity.de/de/id/*.html?*
+// @match  https://ccc.chatcity.de/de/id/*.html
+// @match  https://ccc.chatcity.de/de/id/*.html?*
+// @match  https://www.chatcity.de/de/settings/*.html
+// @match  https://www.chatcity.de/de/settings/*.html?*
+// @match  https://ccc.chatcity.de/de/settings/*.html
+// @match  https://ccc.chatcity.de/de/settings/*.html?*
+// @match  https://www.chatcity.de/de/friends/*.html
+// @match  https://www.chatcity.de/de/friends/*.html?*
+// @match  https://ccc.chatcity.de/de/friends/*.html
+// @match  https://ccc.chatcity.de/de/friends/*.html?*
 // @match  https://images.chatcity.de/*
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  ${BASE}/css/iframe.css?r=${hashCSS("css/iframe.css")}
 // @resource  v3_css  ${BASE}/css/v3.css?r=${hashCSS("css/v3.css")}
+// @resource  idcard_css  ${BASE}/css/idcard.css?r=${hashCSS("css/idcard.css")}
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue

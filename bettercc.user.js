@@ -10,12 +10,27 @@
 // @match  https://ccc.chatcity.de/de/cpop.html
 // @match  https://ccc.chatcity.de/de/cpop.html?*
 // @match  https://www.chatcity.de/de/nc/index.html
+// @match  https://www.chatcity.de/de/nc/index.html?*
+// @match  https://ccc.chatcity.de/de/nc/index.html?*
+// @match  https://www.chatcity.de/de/id/*.html
+// @match  https://www.chatcity.de/de/id/*.html?*
+// @match  https://ccc.chatcity.de/de/id/*.html
+// @match  https://ccc.chatcity.de/de/id/*.html?*
+// @match  https://www.chatcity.de/de/settings/*.html
+// @match  https://www.chatcity.de/de/settings/*.html?*
+// @match  https://ccc.chatcity.de/de/settings/*.html
+// @match  https://ccc.chatcity.de/de/settings/*.html?*
+// @match  https://www.chatcity.de/de/friends/*.html
+// @match  https://www.chatcity.de/de/friends/*.html?*
+// @match  https://ccc.chatcity.de/de/friends/*.html
+// @match  https://ccc.chatcity.de/de/friends/*.html?*
 // @match  https://images.chatcity.de/*
 //
 // @require  https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/dist/tinycolor-min.js
 //
 // @resource  iframe_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/iframe.css?r=33ccb7af
 // @resource  v3_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/v3.css?r=a85943ba
+// @resource  idcard_css  https://raw.githubusercontent.com/SarahDieCoolige/BetterCC/v3/css/idcard.css?r=e8c8301d
 //
 // @grant  GM_addStyle
 // @grant  GM.setValue
@@ -898,11 +913,13 @@
     }
     applyThemeToIframe("#" + scheme.surface, "#" + scheme.text);
   }
-  function applyCurrentScheme() {
+  function currentScheme() {
     if (get("scheme_v2")) enableV2Scheme();
     else disableV2Scheme();
-    const scheme = generateScheme3(get("color"));
-    applyScheme(scheme);
+    return generateScheme3(get("color"));
+  }
+  function applyCurrentScheme() {
+    applyScheme(currentScheme());
   }
   function initTheme() {
     react("color", applyCurrentScheme);

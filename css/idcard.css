@@ -1,0 +1,38 @@
+/* ═══════════════════════════════════════════════════════════════════════
+ * BetterCC ID-family stylesheet (spec: idcard-redesign)
+ *
+ * ID-family pages (id/settings/friends) don't get a .bcc-shell, so the
+ * fallback vars v3.css provides can't reach them. body.bcc-idcard carries
+ * the same fallback --bcc-* values instead: when the one-shot scheme rule
+ * fails to run, these pages still paint a coherent default instead of
+ * being half-themed. The actual restyle lands in later tasks.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+body.bcc-idcard {
+  /* Fallbacks only, overwritten by the one-shot scheme rule at runtime. */
+  --bcc-surface: #c8dae4;
+  --bcc-text: #0e0f0f;
+  --bcc-surface-raised: #ffffff;
+  --bcc-text-raised: #0e0f0f;
+  --bcc-surface-input: #ffffff;
+  --bcc-text-input: #000000;
+  --bcc-surface-footer: #84acc2;
+  --bcc-surface-sidebar: #b7cedc;
+  --bcc-text-sidebar: #0e0f0f;
+  --bcc-text-muted: #000000;
+  --bcc-text-placeholder: #0e0f0f;
+  --bcc-icon: #0e0f0f;
+  --bcc-accent-whisper: green;
+  --bcc-accent-ban: red;
+  --bcc-border: #84acc2;
+  --bcc-surface-hover: #b8cede;
+  --bcc-surface-active: #a8bed2;
+  /* Userlist status accents, overridden by the theme bridge at runtime (scheme-
+     derived, large-text AA against the sidebar). Fallbacks only; the live values
+     come from generateScheme so the indicators stay readable on any theme. */
+  --bcc-text-away: #6b7780;
+  /* Semantic severity colors: fixed hues; schemes never regenerate these. */
+  --bcc-ok: #2f9e44;
+  --bcc-warn: #e8890c;
+  --bcc-danger: #e03131;
+}
