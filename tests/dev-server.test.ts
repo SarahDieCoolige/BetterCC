@@ -10,7 +10,12 @@
 // HTML string mutation + file reads stay in the server.
 
 import { describe, it, expect } from "vitest";
-import { resolveBccInjection, buildIdFixtureResponse } from "../dev/server.mjs";
+import {
+  resolveBccInjection,
+  buildIdFixtureResponse,
+  resolveIdcardPage,
+  resolveIdcardAsset,
+} from "../dev/server.mjs";
 
 // ─── bcc injection resolver ─────────────────────────────────────────────
 
@@ -123,5 +128,73 @@ describe("buildIdFixtureResponse — query-aware ID search mock", () => {
     const html = buildIdFixtureResponse("Testuser_one", knownUsers);
     expect(html).toContain("testuser:5F:one"); // uses the knownUsers encoded form
     expect(html).toContain('title="testuser_one"');
+  });
+});
+
+// ─── ID-card page routing (IC-3) ───────────────────────────────────────────
+
+describe("resolveIdcardPage — real-path → fixture page mapping", () => {
+  it("maps /de/id/TestUser.html to own.html", () => {
+    expect(resolveIdcardPage("/de/id/TestUser.html")).toEqual({ file: "own.html" });
+  });
+
+  it("maps /de/id/TestUser,<digits>.html (pagination) to own.html", () => {
+    expect(resolveIdcardPage("/de/id/TestUser,4.html")).toEqual({ file: "own.html" });
+    expect(resolveIdcardPage("/de/id/TestUser,12.html")).toEqual({ file: "own.html" });
+  });
+
+  it("maps /de/id/ZweiteUser.html to other.html", () => {
+    expect(resolveIdcardPage("/de/id/ZweiteUser.html")).toEqual({ file: "other.html" });
+  });
+
+  it("maps /de/id/ZweiteUser,<digits>.html (pagination) to other.html", () => {
+    expect(resolveIdcardPage("/de/id/ZweiteUser,5.html")).toEqual({ file: "other.html" });
+    expect(resolveIdcardPage("/de/id/ZweiteUser,92.html")).toEqual({ file: "other.html" });
+  });
+
+  it("maps /de/settings/TestUser.html to settings.html", () => {
+    expect(resolveIdcardPage("/de/settings/TestUser.html")).toEqual({ file: "settings.html" });
+  });
+
+  it("maps /de/friends/TestUser.html to friends.html", () => {
+    expect(resolveIdcardPage("/de/friends/TestUser.html")).toEqual({ file: "friends.html" });
+  });
+
+  it("maps /de/nc/index.html to nc.html", () => {
+    expect(resolveIdcardPage("/de/nc/index.html")).toEqual({ file: "nc.html" });
+  });
+
+  it("returns null for a foreign nick under /de/id/ (404 = unknown user)", () => {
+    expect(resolveIdcardPage("/de/id/SomeoneElse.html")).toBeNull();
+    expect(resolveIdcardPage("/de/id/Bergbach361.html")).toBeNull();
+  });
+
+  it("returns null for non-ID-card pages (nc sent/new, chat, ajax)", () => {
+    expect(resolveIdcardPage("/de/nc/sent.html")).toBeNull();
+    expect(resolveIdcardPage("/de/nc/new.html")).toBeNull();
+    expect(resolveIdcardPage("/cpop.html")).toBeNull();
+    expect(resolveIdcardPage("/de/ajax/alive.html")).toBeNull();
+  });
+});
+
+describe("resolveIdcardAsset — /de/<section>/<dir>/… → idcard-relative path", () => {
+  it("maps /de/id/files/... into the idcard fixture tree", () => {
+    expect(resolveIdcardAsset("/de/id/files/aw_gSd6.js")).toBe("files/aw_gSd6.js");
+  });
+
+  it("maps /de/nc/grafiken/... into the idcard fixture tree", () => {
+    expect(resolveIdcardAsset("/de/nc/grafiken/x.jpg")).toBe("grafiken/x.jpg");
+  });
+
+  it("covers every asset dir for every section", () => {
+    expect(resolveIdcardAsset("/de/settings/images/nextlabel.gif")).toBe("images/nextlabel.gif");
+    expect(resolveIdcardAsset("/de/friends/lightbox/img/close.gif")).toBe("lightbox/img/close.gif");
+  });
+
+  it("returns null for non-asset subpaths", () => {
+    expect(resolveIdcardAsset("/de/id/style/other/x.css")).toBeNull();
+    expect(resolveIdcardAsset("/de/id/TestUser.html")).toBeNull();
+    expect(resolveIdcardAsset("/de/nc/index.html")).toBeNull();
+    expect(resolveIdcardAsset("/grafiken/basic/x.jpg")).toBeNull();
   });
 });
