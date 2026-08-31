@@ -84,6 +84,7 @@ async function applyDiff(current: SettingsDraft, next: SettingsDraft): Promise<v
   if (current.compact !== next.compact) await storeSet("compact", next.compact);
   if (!pinnedEqual(current.ban, next.ban)) await storeSet("ban", next.ban);
   if (current.zoom !== next.zoom) await storeSet("zoom", next.zoom);
+  if (current.idcardTheme !== next.idcardTheme) await storeSet("idcard_theme", next.idcardTheme);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -171,6 +172,7 @@ export async function openSettings(): Promise<void> {
     compact: get("compact"),
     ban: get("ban"),
     zoom: get("zoom"),
+    idcard_theme: get("idcard_theme"),
   };
   loaded = draftFromConfig(raw);
   draft = draftFromConfig(raw);
@@ -565,6 +567,43 @@ function buildAppearancePanel(panel: HTMLElement): void {
   zoomSection.appendChild(zoomHint);
 
   panel.appendChild(zoomSection);
+
+  // ── Section: ID-Card (WIP redesign, opt-in) ──
+  const idcardSection = infoSection("ID-Card");
+
+  const idcardLabel = document.createElement("label");
+  idcardLabel.className = "bcc-switch";
+
+  const idcardCheckbox = document.createElement("input");
+  idcardCheckbox.type = "checkbox";
+  idcardCheckbox.checked = draft?.idcardTheme ?? false;
+
+  const idcardTrack = document.createElement("span");
+  idcardTrack.className = "bcc-switch-track";
+
+  const idcardText = document.createElement("span");
+  idcardText.textContent = "ID-Card-Seiten im Chat-Design";
+
+  idcardLabel.appendChild(idcardCheckbox);
+  idcardLabel.appendChild(idcardTrack);
+  idcardLabel.appendChild(idcardText);
+
+  idcardCheckbox.addEventListener("change", () => {
+    if (!draft) return;
+    draft.idcardTheme = idcardCheckbox.checked;
+    void storeSet("idcard_theme", idcardCheckbox.checked);
+    updateRevertButton();
+  });
+
+  idcardSection.appendChild(idcardLabel);
+
+  const idcardHint = document.createElement("p");
+  idcardHint.className = "bcc-settings-hint";
+  idcardHint.textContent =
+    "Gestaltet die ID-Card, Einstellungen, Freunde und das Nachrichtencenter im Chat-Farbschema um. Ausgeschaltet bleiben die Seiten im Original-Design. Wirkt nach dem Neuladen der Seite.";
+  idcardSection.appendChild(idcardHint);
+
+  panel.appendChild(idcardSection);
 
   // Initial render
   syncPresetActive();

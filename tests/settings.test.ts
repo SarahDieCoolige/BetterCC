@@ -219,6 +219,7 @@ describe("serializeExport", () => {
       compact: true,
       ban: ["Spammer"],
       zoom: 1.3,
+      idcardTheme: true,
     };
     const blob = serializeExport(draft, "TestUser");
 
@@ -236,6 +237,7 @@ describe("serializeExport", () => {
       compact: true,
       ban: ["Spammer"],
       zoom: 1.3,
+      idcard_theme: true,
     });
   });
 });
@@ -580,7 +582,7 @@ describe("parseImport", () => {
 
   // ── Round-trip ───────────────────────────────────────────────────────────
 
-  it("export→import round-trip preserves all 9 fields", () => {
+  it("export→import round-trip preserves all 10 fields", () => {
     const draft: SettingsDraft = {
       color: "FF0000",
       schemeV2: true,
@@ -591,6 +593,7 @@ describe("parseImport", () => {
       compact: true,
       ban: ["Spammer"],
       zoom: 1.3,
+      idcardTheme: true,
     };
     const blob = serializeExport(draft, "TestUser");
     const result = parseImport(JSON.stringify(blob));
@@ -662,6 +665,7 @@ describe("defaultDraft", () => {
       compact: false,
       ban: [],
       zoom: 1,
+      idcardTheme: false,
     });
   });
 });
@@ -682,6 +686,7 @@ describe("draftFromConfig", () => {
       compact: true,
       ban: ["Spammer"],
       zoom: 1.3,
+      idcard_theme: true,
     };
     expect(draftFromConfig(raw)).toEqual({
       color: "FF0000",
@@ -693,6 +698,7 @@ describe("draftFromConfig", () => {
       compact: true,
       ban: ["Spammer"],
       zoom: 1.3,
+      idcardTheme: true,
     });
   });
 

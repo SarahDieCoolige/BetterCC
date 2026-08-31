@@ -669,6 +669,7 @@ describe("snapshot()", () => {
     "hover_preview",
     "ban",
     "zoom",
+    "idcard_theme",
     "session",
     "userlist",
     "globalUserlist",

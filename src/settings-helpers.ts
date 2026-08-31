@@ -53,6 +53,7 @@ export interface SettingsDraft {
   compact: boolean; // true = collapsed chatbar (chevron in footer.ts)
   ban: string[]; // superban list (T12, not built yet; stays [])
   zoom: number; // font-size slider step (spec: font-size-slider)
+  idcardTheme: boolean; // ID-family pages restyled (WIP, opt-in)
 }
 
 /** Versioned export format for backup. */
@@ -83,6 +84,7 @@ export function defaultDraft(): SettingsDraft {
     compact: false,
     ban: [],
     zoom: 1,
+    idcardTheme: false,
   };
 }
 
@@ -126,6 +128,7 @@ export function isDirty(loaded: SettingsDraft, draft: SettingsDraft): boolean {
     loaded.hoverPreview !== draft.hoverPreview ||
     loaded.compact !== draft.compact ||
     loaded.zoom !== draft.zoom ||
+    loaded.idcardTheme !== draft.idcardTheme ||
     !pinnedEqual(loaded.pinned, draft.pinned) ||
     !pinnedEqual(loaded.ban, draft.ban)
   );
@@ -189,6 +192,7 @@ export function draftFromConfig(raw: {
   compact?: unknown;
   ban?: unknown;
   zoom?: unknown;
+  idcard_theme?: unknown;
 }): SettingsDraft {
   return {
     color: typeof raw.color === "string" ? raw.color.replace(/^#/, "") : defaultDraft().color,
@@ -202,6 +206,8 @@ export function draftFromConfig(raw: {
     compact: typeof raw.compact === "boolean" ? raw.compact : defaultDraft().compact,
     ban: isStringArray(raw.ban) ? [...raw.ban] : [],
     zoom: isZoomStep(raw.zoom) ? raw.zoom : defaultDraft().zoom,
+    idcardTheme:
+      typeof raw.idcard_theme === "boolean" ? raw.idcard_theme : defaultDraft().idcardTheme,
   };
 }
 
@@ -223,6 +229,7 @@ const DRAFT_TO_CONFIG: Record<keyof SettingsDraft, string> = {
   compact: "compact",
   ban: "ban",
   zoom: "zoom",
+  idcardTheme: "idcard_theme",
 };
 
 /** Config key back to draft field name — derived as the inverse of
@@ -357,6 +364,12 @@ function coerceField(key: keyof SettingsDraft, value: unknown, draft: SettingsDr
     case "zoom":
       if (isZoomStep(value)) {
         draft.zoom = value;
+        return true;
+      }
+      return false;
+    case "idcardTheme":
+      if (typeof value === "boolean") {
+        draft.idcardTheme = value;
         return true;
       }
       return false;

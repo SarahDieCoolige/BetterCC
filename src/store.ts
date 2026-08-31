@@ -49,6 +49,7 @@ export type Persisted = {
   hover_preview: boolean;
   ban: string[];
   zoom: number;
+  idcard_theme: boolean;
 };
 
 // Ephemeral: host-derived snapshots. Never persisted.
@@ -181,6 +182,13 @@ const codecs: { [K in StoreKey]: Codec<any> } = {
     default: 1,
     persisted: true,
     valid: isZoomStep,
+  },
+  idcard_theme: {
+    encode: (v) => v,
+    decode: (r) => r as boolean,
+    default: false,
+    persisted: true,
+    valid: isBoolean,
   },
   session: {
     encode: (v) => v,

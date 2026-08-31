@@ -728,6 +728,13 @@
       persisted: true,
       valid: isZoomStep
     },
+    idcard_theme: {
+      encode: (v) => v,
+      decode: (r) => r,
+      default: false,
+      persisted: true,
+      valid: isBoolean
+    },
     session: {
       encode: (v) => v,
       decode: () => emptySession,
@@ -3113,7 +3120,8 @@
       hoverPreview: true,
       compact: false,
       ban: [],
-      zoom: 1
+      zoom: 1,
+      idcardTheme: false
     };
   }
   function schemeForPreview(base, useV2) {
@@ -3123,7 +3131,7 @@
     return /^[0-9A-Fa-f]{6}$/.test(hex.replace(/^#/, "")) ? null : "Kein g\xFCltiger Hex-Wert";
   }
   function isDirty(loaded2, draft2) {
-    return loaded2.color !== draft2.color || loaded2.schemeV2 !== draft2.schemeV2 || loaded2.whisper !== draft2.whisper || loaded2.sendOnEnter !== draft2.sendOnEnter || loaded2.hoverPreview !== draft2.hoverPreview || loaded2.compact !== draft2.compact || loaded2.zoom !== draft2.zoom || !pinnedEqual(loaded2.pinned, draft2.pinned) || !pinnedEqual(loaded2.ban, draft2.ban);
+    return loaded2.color !== draft2.color || loaded2.schemeV2 !== draft2.schemeV2 || loaded2.whisper !== draft2.whisper || loaded2.sendOnEnter !== draft2.sendOnEnter || loaded2.hoverPreview !== draft2.hoverPreview || loaded2.compact !== draft2.compact || loaded2.zoom !== draft2.zoom || loaded2.idcardTheme !== draft2.idcardTheme || !pinnedEqual(loaded2.pinned, draft2.pinned) || !pinnedEqual(loaded2.ban, draft2.ban);
   }
   function dedupPinned(names) {
     const seen = /* @__PURE__ */ new Set();
@@ -3158,7 +3166,8 @@
       hoverPreview: typeof raw.hover_preview === "boolean" ? raw.hover_preview : defaultDraft().hoverPreview,
       compact: typeof raw.compact === "boolean" ? raw.compact : defaultDraft().compact,
       ban: isStringArray(raw.ban) ? [...raw.ban] : [],
-      zoom: isZoomStep(raw.zoom) ? raw.zoom : defaultDraft().zoom
+      zoom: isZoomStep(raw.zoom) ? raw.zoom : defaultDraft().zoom,
+      idcardTheme: typeof raw.idcard_theme === "boolean" ? raw.idcard_theme : defaultDraft().idcardTheme
     };
   }
   var DRAFT_TO_CONFIG = {
@@ -3170,7 +3179,8 @@
     hoverPreview: "hover_preview",
     compact: "compact",
     ban: "ban",
-    zoom: "zoom"
+    zoom: "zoom",
+    idcardTheme: "idcard_theme"
   };
   var CONFIG_TO_DRAFT = Object.fromEntries(
     Object.entries(DRAFT_TO_CONFIG).map(([d, c]) => [c, d])
@@ -3278,6 +3288,12 @@
           return true;
         }
         return false;
+      case "idcardTheme":
+        if (typeof value === "boolean") {
+          draft2.idcardTheme = value;
+          return true;
+        }
+        return false;
     }
   }
   function ageOrNever(stamp, now) {
@@ -3369,6 +3385,8 @@
     if (current.compact !== next.compact) await set("compact", next.compact);
     if (!pinnedEqual(current.ban, next.ban)) await set("ban", next.ban);
     if (current.zoom !== next.zoom) await set("zoom", next.zoom);
+    if (current.idcardTheme !== next.idcardTheme)
+      await set("idcard_theme", next.idcardTheme);
   }
   var TABS = ["Erscheinungsbild", "Chat", "Verwaltung", "Daten", "Info", "Befehle"];
   var overlayEl2 = null;
@@ -3421,7 +3439,8 @@
       hover_preview: get("hover_preview"),
       compact: get("compact"),
       ban: get("ban"),
-      zoom: get("zoom")
+      zoom: get("zoom"),
+      idcard_theme: get("idcard_theme")
     };
     loaded = draftFromConfig(raw);
     draft = draftFromConfig(raw);
@@ -3717,6 +3736,31 @@
     zoomHint.textContent = "Ver\xE4ndert die Textgr\xF6\xDFe im ganzen Chat. Gilt f\xFCr den Chatverlauf und alle BetterCC-Elemente.";
     zoomSection.appendChild(zoomHint);
     panel.appendChild(zoomSection);
+    const idcardSection = infoSection("ID-Card");
+    const idcardLabel = document.createElement("label");
+    idcardLabel.className = "bcc-switch";
+    const idcardCheckbox = document.createElement("input");
+    idcardCheckbox.type = "checkbox";
+    idcardCheckbox.checked = draft?.idcardTheme ?? false;
+    const idcardTrack = document.createElement("span");
+    idcardTrack.className = "bcc-switch-track";
+    const idcardText = document.createElement("span");
+    idcardText.textContent = "ID-Card-Seiten im Chat-Design";
+    idcardLabel.appendChild(idcardCheckbox);
+    idcardLabel.appendChild(idcardTrack);
+    idcardLabel.appendChild(idcardText);
+    idcardCheckbox.addEventListener("change", () => {
+      if (!draft) return;
+      draft.idcardTheme = idcardCheckbox.checked;
+      void set("idcard_theme", idcardCheckbox.checked);
+      updateRevertButton();
+    });
+    idcardSection.appendChild(idcardLabel);
+    const idcardHint = document.createElement("p");
+    idcardHint.className = "bcc-settings-hint";
+    idcardHint.textContent = "Gestaltet die ID-Card, Einstellungen, Freunde und das Nachrichtencenter im Chat-Farbschema um. Ausgeschaltet bleiben die Seiten im Original-Design. Wirkt nach dem Neuladen der Seite.";
+    idcardSection.appendChild(idcardHint);
+    panel.appendChild(idcardSection);
     syncPresetActive();
     refreshPreview();
   }
@@ -5499,6 +5543,7 @@ ${decls}
       }
       setUserStore(nick, false);
       await initStore();
+      if (!get("idcard_theme")) return cclog("idcard: theme off (opt-in), leaving unstyled");
       const varsRule = buildVarsRule(currentScheme());
       const v3Css = GM_getResourceText("v3_css");
       const idcardCss = GM_getResourceText("idcard_css");

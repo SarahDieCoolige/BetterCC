@@ -17,7 +17,7 @@
 
 import { cclog, setUserStore, decodeChatLink } from "./utils";
 import { getMyIdName } from "./upstream";
-import { initStore, userHasStoredState } from "./store";
+import { initStore, userHasStoredState, get } from "./store";
 import { currentScheme, schemeToCssVars } from "./theme";
 import type { BccColorScheme } from "./scheme";
 import { injectFontAwesome } from "./footer";
@@ -93,7 +93,8 @@ function applyTouchups(): void {
 }
 
 /** ID-family entry. Never rejects: every failure path leaves the page
- *  upstream-styled with one cclog line (spec D6). */
+ *  upstream-styled with one cclog line (spec D6). The redesign is opt-in
+ *  (idcard_theme, default off) until it leaves WIP. */
 export async function initIdcard(): Promise<void> {
   try {
     const nick = getMyIdName() || getNickFromNav();
@@ -104,6 +105,7 @@ export async function initIdcard(): Promise<void> {
     // Compute everything, then paint in one batch (D6: no broken half-paint).
     setUserStore(nick, false); // these pages require login, never gast
     await initStore(); // read-only at boot: the ID branch never writes GM
+    if (!get("idcard_theme")) return cclog("idcard: theme off (opt-in), leaving unstyled");
     const varsRule = buildVarsRule(currentScheme());
     const v3Css = GM_getResourceText("v3_css");
     const idcardCss = GM_getResourceText("idcard_css");
